@@ -1,0 +1,11 @@
+{
+  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "name": "skill-issue",
+  "version": "1.0.0",
+  "description": "Cross-platform AI agent plugin marketplace (Claude Code + Codex)",
+  "author": {
+    "name": "g-bastianelli",
+    "url": "https://github.com/g-bastianelli"
+  },
+  "type": "marketplace"
+}
