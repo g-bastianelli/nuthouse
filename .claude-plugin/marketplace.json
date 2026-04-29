@@ -1,0 +1,8 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "skill-issue",
+  "owner": { "name": "g-bastianelli", "url": "https://github.com/g-bastianelli" },
+  "plugins": [
+    { "name": "saucy-status", "source": "./saucy-status", "category": "fun" }
+  ]
+}
