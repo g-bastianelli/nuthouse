@@ -16,7 +16,13 @@ Parse the argument the user passed after `/saucy`:
 | `uninstall` | retire `statusLine` de settings.json + supprime le flag |
 | (none) | toggle: `off` → `saucy`, else → `off` |
 
-Use this Node.js snippet, replacing `ARG` with the user's argument (or empty string):
+Compute the plugin root as the directory 2 levels above this skill's base directory (`BASE_DIR/../..`). Run the snippet by passing it as `CLAUDE_PLUGIN_ROOT`:
+
+```bash
+CLAUDE_PLUGIN_ROOT="$(cd "BASE_DIR/../.." && pwd)" node -e "SNIPPET"
+```
+
+Use this Node.js snippet, replacing `ARG` with the user's argument (or empty string) and `BASE_DIR` with the actual base directory path:
 
 ```javascript
 const fs = require('fs');
