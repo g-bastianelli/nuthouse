@@ -1,0 +1,4 @@
+node_modules/
+.claude/settings.local.json
+.agents/
+docs/superpowers/
