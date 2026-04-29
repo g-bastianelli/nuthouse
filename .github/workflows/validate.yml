@@ -12,4 +12,4 @@ jobs:
         with:
           node-version: 22
       - name: Lint & format check
-        run: npx --yes @biomejs/biome check .
+        run: npx --yes @biomejs/biome@2.4.13 check .
