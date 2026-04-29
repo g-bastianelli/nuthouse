@@ -1,4 +1,4 @@
 pre-commit:
   commands:
     biome:
-      run: npx --yes @biomejs/biome@2.4.13 check .
+      run: bunx biome check .
