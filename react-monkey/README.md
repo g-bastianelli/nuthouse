@@ -19,14 +19,6 @@ The `react-monkey:implement` skill auto-invokes when you work on React component
 4. **Shared data via select hooks** — siblings share a colocated hook, no extra requests
 5. **Split large components into subfolders** — max ~80 lines per component
 
-## Installation
-
-Add to your `marketplace.json`:
-
-```json
-{ "name": "react-monkey", "source": "./react-monkey", "category": "productivity" }
-```
-
 ## Trigger
 
 Auto-invokes on any React work. Also triggered by `/react-monkey:implement`.
