@@ -17,6 +17,7 @@ function isStatuslineConfigured() {
 }
 
 function autoConfigureStatusline() {
+  if (!PLUGIN_ROOT) return false;
   try {
     let settings = {};
     try { settings = JSON.parse(fs.readFileSync(SETTINGS_PATH, 'utf8')); } catch (e) {}
