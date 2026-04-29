@@ -1,0 +1,5 @@
+interface:
+  display_name: "React Monkey"
+  short_description: "Build React with strict component rules"
+  icon_large: "../../assets/banner.png"
+  default_prompt: "Use $implement to implement or refactor React components with strict architecture rules."

@@ -4,6 +4,6 @@
   "owner": { "name": "g-bastianelli", "url": "https://github.com/g-bastianelli" },
   "plugins": [
     { "name": "saucy-status", "source": "./saucy-status", "category": "fun" },
-    { "name": "react-monkey", "source": "./react-monkey", "category": "productivity" }
+    { "name": "react-monkey", "source": "./react-monkey/claudecode", "category": "productivity" }
   ]
 }

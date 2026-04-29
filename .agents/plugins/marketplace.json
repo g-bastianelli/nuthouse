@@ -3,5 +3,12 @@
   "interface": {
     "displayName": "Skill Issue"
   },
-  "plugins": []
+  "plugins": [
+    {
+      "name": "react-monkey",
+      "version": "1.0.0",
+      "description": "React implementation specialist with Codex-native exploration and strict component architecture rules.",
+      "source": "./react-monkey/codex"
+    }
+  ]
 }
