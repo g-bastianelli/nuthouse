@@ -1,0 +1,26 @@
+{
+  "name": "react-monkey",
+  "version": "1.0.0",
+  "description": "React implementation specialist with Codex-native exploration and strict component architecture rules.",
+  "author": {
+    "name": "g-bastianelli"
+  },
+  "homepage": "https://github.com/g-bastianelli/skill-issue",
+  "repository": "https://github.com/g-bastianelli/skill-issue",
+  "license": "MIT",
+  "keywords": ["react", "components", "codex", "skills"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "React Monkey",
+    "shortDescription": "Build React with strict component rules",
+    "longDescription": "Implement React components, hooks, and pages with Codex-native codebase exploration, design-system discovery, IDs-only props, colocated select hooks, and mirrored component folders.",
+    "developerName": "g-bastianelli",
+    "category": "Coding",
+    "capabilities": ["Interactive", "Write"],
+    "defaultPrompt": [
+      "Use React Monkey to implement or refactor React components with strict architecture rules"
+    ],
+    "logo": "./assets/banner.png",
+    "screenshots": []
+  }
+}
