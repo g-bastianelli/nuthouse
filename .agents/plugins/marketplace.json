@@ -1,0 +1,7 @@
+{
+  "name": "skill-issue",
+  "interface": {
+    "displayName": "Skill Issue"
+  },
+  "plugins": []
+}
