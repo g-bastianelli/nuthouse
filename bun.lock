@@ -6,7 +6,7 @@
       "name": "skill-issue",
       "devDependencies": {
         "@biomejs/biome": "2.4.13",
-        "lefthook": "*",
+        "lefthook": "2.1.6",
       },
     },
   },
