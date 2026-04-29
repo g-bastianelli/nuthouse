@@ -5,6 +5,7 @@ const path = require('path');
 
 const PLUGIN_ROOT = process.env.CLAUDE_PLUGIN_ROOT;
 const SETTINGS_PATH = path.join(os.homedir(), '.claude', 'settings.json');
+const FLAG_PATH = PLUGIN_ROOT ? path.join(PLUGIN_ROOT, 'data', '.state') : null;
 
 function isStatuslineConfigured() {
   try {

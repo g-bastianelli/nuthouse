@@ -13,6 +13,6 @@
     "enabled": false
   },
   "files": {
-    "ignore": [".git", "node_modules"]
+    "includes": ["**", "!.git/**", "!node_modules/**"]
   }
 }

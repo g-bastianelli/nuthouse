@@ -2,7 +2,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const FLAG_PATH = path.join(os.homedir(), '.claude', '.saucy-status');
+const FLAG_PATH = path.join(__dirname, '..', 'data', '.state');
 const VALID_MODES = new Set(['off', 'saucy', 'gooning']);
 
 let mode = 'off';
