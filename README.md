@@ -26,6 +26,7 @@ Plugins, skills, and agents for Claude Code and Codex. Each plugin ships cross-r
 |--------|-------------|---------|
 | [saucy-status](./saucy-status) | Rotates suggestive messages in statusline + conversation while Claude thinks | Claude Code |
 | [react-monkey](./react-monkey) | React implementation specialist — parallel exploration, strict component architecture | Claude Code + Codex |
+| [linear-simp](./linear-simp) | Détecte ton issue Linear au début de session, set In Progress, prépare un brief SDD, voix simp brainrot | Claude Code |
 
 ## Install
 
@@ -39,6 +40,7 @@ Add this marketplace, then install any plugin:
 
 ```
 /plugin install react-monkey
+/plugin install linear-simp@skill-issue
 /plugin install saucy-status@saucy-status
 ```
 

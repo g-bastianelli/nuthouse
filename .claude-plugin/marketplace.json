@@ -12,6 +12,15 @@
         "path": "react-monkey/claudecode"
       },
       "category": "productivity"
+    },
+    {
+      "name": "linear-simp",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/g-bastianelli/skill-issue",
+        "path": "linear-simp/claudecode"
+      },
+      "category": "productivity"
     }
   ]
 }
