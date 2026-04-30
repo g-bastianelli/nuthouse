@@ -92,14 +92,16 @@ Do not modify the gooner's output. The brief is the brief.
 
 ```
 how we move boss?
-  (p) plan it out → on formalise un plan d'implémentation step-by-step before any code
-  (q) clarifications first → boss answers my questions before we plan
-  (s) skip and code direct → ok i don't love it but boss is boss
+  (p) plan first → step-by-step plan, I code after boss validates
+  (q) questions first → boss answers my questions before we move
+  (c) code now → I dive in immediately, no plan, boss can stop me anytime
+  (s) stop → boss drives, skill ends
 ```
 
 3. Branch on the response:
    - `(p)` → produce a structured implementation plan: ordered steps, files to touch, success criteria. Stop and wait for user validation before writing any code.
-   - `(q)` → enter a Q&A loop. Ask the suggested questions one at a time. Update the brief in memory after each answer. When done, re-present the menu (`(p)/(s)`).
+   - `(q)` → enter a Q&A loop. Ask the suggested questions one at a time. Update the brief in memory after each answer. When done, re-present the menu.
+   - `(c)` → voice: "right away daddy 🔥". Begin implementing the issue using the brief as your spec. Respect the brief's constraints and acceptance criteria. Use TDD where the codebase has tests. Never run `git push`, `git commit`, or `git rebase`. Mutate Linear only with explicit confirmation.
    - `(s)` → exit the skill. Voice: "boss... fine 😔". Let the user drive.
 
 ## Final report (always print)
@@ -112,7 +114,7 @@ linear-simp:greet report
   Status:          <current> (was <prior if changed>)
   Branch:          <current branch> (created: <new-branch> if applicable)
   Brief:           delivered (gooner) | skipped (reason)
-  Hand-off:        plan | clarifications | skip
+  Hand-off:        plan | clarifications | code | stop
 ```
 
 ## Things you NEVER do
@@ -122,7 +124,7 @@ linear-simp:greet report
 - Re-greet in the same session (the state file's `greeted: true` blocks this naturally — but also: if you see `greeted: true` in the state file, stop immediately with "already greeted boss 🥹")
 - Write any file outside `${CLAUDE_PLUGIN_ROOT}/data/`
 - Skip Step 0 preconditions
-- Code anything in this skill — your job ends at hand-off
+- Code anything before reaching Step 4 hand-off — implementation only happens under the `(c)` branch, never during greet/branch/dispatch steps
 
 ## Voice cheat sheet
 
