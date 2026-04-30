@@ -2,30 +2,30 @@
 
 ![linear-simp](./assets/banner.png)
 
-Linear simp dévoué — un plugin Claude Code qui détecte ton issue Linear au début de session, la met `In Progress`, et prépare un brief SDD pour pas que tu codes comme un zinzin.
+Devoted Linear simp — a Claude Code plugin that detects your Linear issue at the start of a session, flips it to `In Progress`, and prepares a SDD-formatted brief so you don't code like a maniac.
 
-Voix brainrot/simp partout : "yes king", "the gooner came back boss", "this issue is PEAK".
+Brainrot/simp voice all the way through: "yes king", "the gooner came back boss", "this issue is PEAK".
 
 ## Skills
 
-| Skill | Quoi |
+| Skill | What |
 |---|---|
-| `linear-simp:greet` | Détecte issue depuis branche ou 1er prompt, set In Progress, dispatch gooner, brief SDD, hand-off vers plan / clarifications / skip |
+| `linear-simp:greet` | Detects issue from branch or first prompt, sets In Progress, dispatches the gooner, returns an SDD brief, hands off to plan / clarifications / skip |
 
-## Détection
+## Detection
 
-Deux étages, **uniquement en début de session** :
+Two stages, **start of session only**:
 
-1. **SessionStart hook** — lit `git branch --show-current`, regex `[A-Z]+-[0-9]+`. Trouve → invoque `linear-simp:greet`.
-2. **UserPromptSubmit hook** — si la branche n'a pas livré d'ID, scanne le 1er prompt user. Trouve → invoque `linear-simp:greet`.
+1. **SessionStart hook** — reads `git branch --show-current`, regex `[A-Z]+-[0-9]+`. Match → invokes `linear-simp:greet`.
+2. **UserPromptSubmit hook** — if the branch didn't yield an ID, scans the first user prompt. Match → invokes `linear-simp:greet`.
 
-Après le 1er prompt : silence total. La fenêtre de greet se ferme.
+After the first prompt: total silence. The greet window closes.
 
-## Pré-requis
+## Requirements
 
-- Linear MCP tools (`mcp__claude_ai_Linear__*`) chargés dans la session
-- Repo git
-- Linear identifier détectable (regex `[A-Z]+-[0-9]+`)
+- Linear MCP tools (`mcp__claude_ai_Linear__*`) loaded in the session
+- A git repository
+- A detectable Linear identifier (regex `[A-Z]+-[0-9]+`)
 
 ## Install
 
@@ -34,7 +34,7 @@ Après le 1er prompt : silence total. La fenêtre de greet se ferme.
 /plugin install linear-simp@skill-issue
 ```
 
-Restart Claude Code après install.
+Restart Claude Code after install.
 
 ## License
 
