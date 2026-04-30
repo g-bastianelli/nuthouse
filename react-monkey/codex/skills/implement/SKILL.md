@@ -25,6 +25,7 @@ Before exploring or editing, create an `update_plan` checklist with:
 2. Plan folder structure.
 3. Implement components.
 4. Run checks.
+5. Print final report.
 
 Mark each step `in_progress` when starting and `completed` when done.
 
@@ -107,6 +108,34 @@ Before writing a helper function, search shared project code (`libs/`, `packages
 Run lint, typecheck, and focused tests using the project's documented task runner. Do not run raw tools such as `eslint`, `tsc`, or `vitest` directly when local instructions provide wrapper commands.
 
 If commands are not documented, infer the safest package script from `package.json` and state the assumption.
+
+### Step 6 - Print final report
+
+Print a structured report wrapped in one or two voice lines from the persona. Format:
+
+```
+<voice line — see palette below>
+
+react-monkey:implement report
+  Target:       <main path created or refactored, e.g. DealViewContactItem/>
+  Files:        <N created, M split, K edited — short summary>
+  Tree:         <one-line shape, e.g. "folder mirrors JSX tree, depth 2">
+  Props:        IDs only ✓ | <note any deviation>
+  Checks:       lint <pass|fail>, typecheck <pass|fail>
+```
+
+**Voice line palette** — pick the one matching the outcome:
+
+- Routine clean job → `BANANAS. tree's lined up 🍌` or `ape mode: OFF. checks pass.`
+- Big folder split landed → `🍌🍌🍌 folder splits clean` or `🌴 architecture LANDED`
+- Patterns clicked, refactor flowed → `REACT IS COOKING 🔥. tree's clean.`
+- Walking away with a banana (default outro) → `monkey going home with a banana 🍌`
+
+Rules:
+- **One** voice line above the report. Optionally one line below. Never more.
+- Use 🌴 / 🍌🍌🍌 only on big restructures (deep folder split, multi-component refactor landing clean).
+- 🚨 "DANGER: MONKEY CODING" lines stay for inline narration during the work, NOT for the closing report.
+- The report block itself stays plain. Voice goes in the wrapper, never inside the report.
 
 ---
 
