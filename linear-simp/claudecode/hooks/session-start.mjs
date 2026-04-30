@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-const fs = require('node:fs');
-const { execFileSync } = require('node:child_process');
-const { writeState, cleanupOldStates, extractIssueId } = require('./state.js');
+import { execFileSync } from 'node:child_process';
+import fs from 'node:fs';
+import { cleanupOldStates, extractIssueId, writeState } from './state.mjs';
 
 const PLUGIN_ROOT = process.env.CLAUDE_PLUGIN_ROOT;
 if (!PLUGIN_ROOT) process.exit(0);

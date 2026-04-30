@@ -1,8 +1,8 @@
-const { test, expect, beforeEach, afterEach } = require('bun:test');
-const fs = require('node:fs');
-const os = require('node:os');
-const path = require('node:path');
-const { readState, writeState, cleanupOldStates, extractIssueId } = require('../hooks/state.js');
+import { afterEach, beforeEach, expect, test } from 'bun:test';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { cleanupOldStates, extractIssueId, readState, writeState } from '../hooks/state.mjs';
 
 let tmpRoot;
 

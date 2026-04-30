@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-const fs = require('node:fs');
-const { readState, writeState, extractIssueId } = require('./state.js');
+import fs from 'node:fs';
+import { extractIssueId, readState, writeState } from './state.mjs';
 
 const PLUGIN_ROOT = process.env.CLAUDE_PLUGIN_ROOT;
 if (!PLUGIN_ROOT) process.exit(0);
@@ -31,10 +31,12 @@ const updated = {
 writeState(PLUGIN_ROOT, session_id, updated);
 
 if (issue) {
-  process.stdout.write(JSON.stringify({
-    hookSpecificOutput: {
-      hookEventName: 'UserPromptSubmit',
-      additionalContext: `<EXTREMELY-IMPORTANT>linear-simp detected Linear issue ${issue} in your prompt. Invoke the \`linear-simp:greet\` skill BEFORE doing anything else (including answering or running other tools).</EXTREMELY-IMPORTANT>`,
-    },
-  }));
+  process.stdout.write(
+    JSON.stringify({
+      hookSpecificOutput: {
+        hookEventName: 'UserPromptSubmit',
+        additionalContext: `<EXTREMELY-IMPORTANT>linear-simp detected Linear issue ${issue} in your prompt. Invoke the \`linear-simp:greet\` skill BEFORE doing anything else (including answering or running other tools).</EXTREMELY-IMPORTANT>`,
+      },
+    }),
+  );
 }

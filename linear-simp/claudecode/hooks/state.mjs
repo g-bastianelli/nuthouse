@@ -1,11 +1,11 @@
-const fs = require('node:fs');
-const path = require('node:path');
+import fs from 'node:fs';
+import path from 'node:path';
 
 function statePath(pluginRoot, sessionId) {
   return path.join(pluginRoot, 'data', `state-${sessionId}.json`);
 }
 
-function readState(pluginRoot, sessionId) {
+export function readState(pluginRoot, sessionId) {
   try {
     const content = fs.readFileSync(statePath(pluginRoot, sessionId), 'utf8');
     return JSON.parse(content);
@@ -14,13 +14,13 @@ function readState(pluginRoot, sessionId) {
   }
 }
 
-function writeState(pluginRoot, sessionId, state) {
+export function writeState(pluginRoot, sessionId, state) {
   const dir = path.join(pluginRoot, 'data');
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(statePath(pluginRoot, sessionId), JSON.stringify(state, null, 2), 'utf8');
 }
 
-function cleanupOldStates(pluginRoot, maxAgeDays = 7) {
+export function cleanupOldStates(pluginRoot, maxAgeDays = 7) {
   const dir = path.join(pluginRoot, 'data');
   let entries;
   try {
@@ -43,12 +43,10 @@ function cleanupOldStates(pluginRoot, maxAgeDays = 7) {
 
 const ISSUE_ID_RE = /\b([a-z]{2,6})-([0-9]{2,})\b/i;
 
-function extractIssueId(input) {
+export function extractIssueId(input) {
   if (!input || typeof input !== 'string') return null;
   const stripped = input.includes('/') ? input.slice(input.indexOf('/') + 1) : input;
   const m = stripped.match(ISSUE_ID_RE);
   if (!m) return null;
   return `${m[1].toUpperCase()}-${m[2]}`;
 }
-
-module.exports = { readState, writeState, cleanupOldStates, extractIssueId };

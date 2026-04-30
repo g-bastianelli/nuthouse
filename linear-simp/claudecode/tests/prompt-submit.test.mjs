@@ -1,11 +1,11 @@
-const { test, expect, beforeEach, afterEach } = require('bun:test');
-const fs = require('node:fs');
-const os = require('node:os');
-const path = require('node:path');
-const { spawnSync } = require('node:child_process');
+import { afterEach, beforeEach, expect, test } from 'bun:test';
+import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
 let tmpRoot;
-const HOOK = path.resolve(__dirname, '../hooks/prompt-submit.js');
+const HOOK = path.resolve(import.meta.dir, '../hooks/prompt-submit.mjs');
 
 function runHook(stdinJson) {
   return spawnSync('node', [HOOK], {

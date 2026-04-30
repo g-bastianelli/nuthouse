@@ -1,12 +1,12 @@
-const { test, expect, beforeEach, afterEach } = require('bun:test');
-const fs = require('node:fs');
-const os = require('node:os');
-const path = require('node:path');
-const { spawnSync } = require('node:child_process');
+import { afterEach, beforeEach, expect, test } from 'bun:test';
+import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
 let tmpRoot;
 let tmpBin;
-const HOOK = path.resolve(__dirname, '../hooks/session-start.js');
+const HOOK = path.resolve(import.meta.dir, '../hooks/session-start.mjs');
 
 function runHook(stdinJson, env = {}) {
   return spawnSync('node', [HOOK], {
