@@ -62,6 +62,14 @@ Write the component(s), hook(s), and type(s). Use the design system components a
 
 **Before writing any helper function:** grep the codebase (`libs/`, shared packages) for the function name. Never reimplement what already exists in a shared library.
 
+**When a component grows too large (>~80 lines or multiple distinct blocks):**
+
+1. Create a folder `ComponentName/` next to (or replacing) the current file.
+2. Move the component to `ComponentName/index.tsx` — it becomes **layout-only** (no data fetching, no business logic).
+3. Extract each distinct block into its own child file inside `ComponentName/`.
+4. Each child receives **only IDs and primitives** as props — it fetches its own data.
+5. Compose children in `index.tsx` using flex/grid only.
+
 Then verify every rule in the checklist.
 
 Mark task "Implement components" as `completed`.
@@ -336,11 +344,31 @@ className={apply(KIND_CLASS[kind])}
 | Level | Tool | Use for |
 |-------|------|---------|
 | Server state | data fetching library (React Query, SWR…) | anything from the API |
-| URL state | router search params | selected item, active tab, filters, open modal |
+| URL state | router search params | selected item, active tab, filters, open modal, selected entity ID |
 | Global session | React Context | auth, current user, theme |
 | Local UI | `useState` | unsaved input value, hover, animation |
 
+### URL state rule
+
+**Before using `useState` for any value that determines what is displayed** (selected ID, active tab, open panel, detail view), ask: *can the user share this URL and land on the same view?*
+
+- If **yes** → use search params. Benefits: shareable URL, back button works, no state to synchronize.
+- If **no** (e.g. a confirmation popup triggered by an in-page action) → `useState` is fine.
+
+```tsx
+// BAD — selected entity lost on navigation, not shareable
+const [selectedContactId, setSelectedContactId] = useState<number | null>(null)
+
+// GOOD — selected entity in URL, shareable and navigable
+// (adapt to the project's router: TanStack Router, React Router, Next.js…)
+const { contactId } = useSearch() // or useSearchParams(), useRouter()
+```
+
+Check the project's CLAUDE.md for the exact search params API to use.
+
 ### Modal / dialog open state
+
+Same rule: if the modal is shareable or navigable → search params. If it's a transient confirmation → `useState`.
 
 **Always ask before writing `useState` for a modal:** can the user share this URL with the modal open? Can the back button close it?
 
