@@ -70,7 +70,7 @@ if (issue) {
     JSON.stringify({
       hookSpecificOutput: {
         hookEventName: 'SessionStart',
-        additionalContext: `<EXTREMELY-IMPORTANT>linear-simp detected Linear issue ${issue} on the current branch. Invoke the \`linear-simp:greet\` skill BEFORE doing anything else (including answering or running other tools).</EXTREMELY-IMPORTANT>`,
+        additionalContext: `<EXTREMELY-IMPORTANT>linear-devotee detected Linear issue ${issue} on the current branch. Invoke the \`linear-devotee:greet\` skill BEFORE doing anything else (including answering or running other tools).</EXTREMELY-IMPORTANT>`,
       },
     }),
   );

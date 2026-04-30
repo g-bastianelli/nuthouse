@@ -1,6 +1,6 @@
 ---
 name: scaffold-plugin
-description: Use when creating a brand-new plugin in this `skill-issue` marketplace (saucy-status / react-monkey / linear-simp pattern). Asks the user for plugin name (brainrot-check), description, target runtimes (claudecode / codex / both), whether the plugin needs hooks, persona tagline + emoji, and marketplace category. Generates the full folder skeleton: persona.md, plugin.json, README.md, optional hooks/ + data/. Updates root marketplace.json (git-subdir entry) and root README.md plugins table. Embeds all conventions from the legacy CLAUDE.md (naming rules, frontmatter shapes, hook contract, anti-patterns) so they are applied by construction.
+description: Use when creating a brand-new plugin in this `skill-issue` marketplace (saucy-status / react-monkey / linear-devotee pattern). Asks the user for plugin name (brainrot-check), description, target runtimes (claudecode / codex / both), whether the plugin needs hooks, persona tagline + emoji, and marketplace category. Generates the full folder skeleton: persona.md, plugin.json, README.md, optional hooks/ + data/. Updates root marketplace.json (git-subdir entry) and root README.md plugins table. Embeds all conventions from the legacy CLAUDE.md (naming rules, frontmatter shapes, hook contract, anti-patterns) so they are applied by construction.
 ---
 
 # scaffold-plugin
@@ -57,7 +57,7 @@ phrasing — or if the model already has a name proposal, jump to validation).
 - Must be **kebab-case**, lowercase, alphanumeric + hyphens only.
 - Must be a **fun/absurd brainrot internet-meme word** that announces a
   theme. Family-resemblance with `saucy-status`, `react-monkey`,
-  `linear-simp`. Acceptable directions: brainrot internet slang
+  `linear-devotee`. Acceptable directions: brainrot internet slang
   (skibidi, rizz, sigma — only if it lands), animal/creature,
   kink-adjacent personas, mythical figures.
 - **Avoid** corporate/technical names: `linear-helper`, `task-manager`,
@@ -162,7 +162,7 @@ Mood swings? Keep it 3–5 lines, concrete.>
 - "<phrase 1>"
 - "<phrase 2>"
 - "<phrase 3>"
-- (5–10 cues total, copy the shape from `linear-simp/persona.md` or
+- (5–10 cues total, copy the shape from `linear-devotee/persona.md` or
   `react-monkey/persona.md`)
 
 ## Emojis (sparingly, never piled)
@@ -197,7 +197,7 @@ Minimal (no hooks):
 ```
 
 With hooks (Q4 != none) — add a `hooks` block per selected event. Pattern
-from `linear-simp/claudecode/.claude-plugin/plugin.json`:
+from `linear-devotee/claudecode/.claude-plugin/plugin.json`:
 
 ```json
 {
@@ -276,8 +276,8 @@ generated file — escape them in your Write call as needed.)
 
 Reference the canonical implementations rather than copying them blindly:
 
-- `<plugin>/claudecode/hooks/state.mjs` — copy `linear-simp/claudecode/hooks/state.mjs` **verbatim** as a starter (`readState` / `writeState` / `cleanupOldStates`). Then strip the `extractIssueId` helper at the bottom (Linear-specific) — the user adds their own domain helpers.
-- `<plugin>/claudecode/hooks/session-start.mjs` (only if SessionStart selected) — adapt `linear-simp/claudecode/hooks/session-start.mjs`. Keep:
+- `<plugin>/claudecode/hooks/state.mjs` — copy `linear-devotee/claudecode/hooks/state.mjs` **verbatim** as a starter (`readState` / `writeState` / `cleanupOldStates`). Then strip the `extractIssueId` helper at the bottom (Linear-specific) — the user adds their own domain helpers.
+- `<plugin>/claudecode/hooks/session-start.mjs` (only if SessionStart selected) — adapt `linear-devotee/claudecode/hooks/session-start.mjs`. Keep:
   - `process.env.CLAUDE_PLUGIN_ROOT` guard.
   - `cleanupOldStates(PLUGIN_ROOT, 7)` call.
   - `readStdinJson()` for `{ session_id, ... }`.

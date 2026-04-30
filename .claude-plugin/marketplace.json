@@ -14,11 +14,11 @@
       "category": "productivity"
     },
     {
-      "name": "linear-simp",
+      "name": "linear-devotee",
       "source": {
         "source": "git-subdir",
         "url": "https://github.com/g-bastianelli/skill-issue",
-        "path": "linear-simp/claudecode"
+        "path": "linear-devotee/claudecode"
       },
       "category": "productivity"
     }
