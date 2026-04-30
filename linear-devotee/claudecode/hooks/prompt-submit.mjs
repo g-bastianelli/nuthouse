@@ -35,7 +35,7 @@ if (issue) {
     JSON.stringify({
       hookSpecificOutput: {
         hookEventName: 'UserPromptSubmit',
-        additionalContext: `<EXTREMELY-IMPORTANT>linear-simp detected Linear issue ${issue} in your prompt. Invoke the \`linear-simp:greet\` skill BEFORE doing anything else (including answering or running other tools).</EXTREMELY-IMPORTANT>`,
+        additionalContext: `<EXTREMELY-IMPORTANT>linear-devotee detected Linear issue ${issue} in your prompt. Invoke the \`linear-devotee:greet\` skill BEFORE doing anything else (including answering or running other tools).</EXTREMELY-IMPORTANT>`,
       },
     }),
   );

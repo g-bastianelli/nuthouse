@@ -1,6 +1,6 @@
 ---
 name: scaffold-skill
-description: Use when adding a new skill to an existing plugin in this `skill-issue` marketplace (saucy-status, react-monkey, linear-simp, or any plugin with a `persona.md` at its root). Asks for parent plugin, skill name (action verb, no prefix), description, target runtimes (intersected with parent's runtimes), whether the skill dispatches a subagent, whether it ends with a hand-off menu. Generates SKILL.md with the right frontmatter — `name: <plugin>:<skill>` for Claude Code, `name: <skill>` for Codex — plus a `## Voice` section pointing to the parent's persona.md, and the standard Step 0 / Steps / Rules / Final report skeleton. Embeds all naming and structural conventions from the legacy CLAUDE.md.
+description: Use when adding a new skill to an existing plugin in this `skill-issue` marketplace (saucy-status, react-monkey, linear-devotee, or any plugin with a `persona.md` at its root). Asks for parent plugin, skill name (action verb, no prefix), description, target runtimes (intersected with parent's runtimes), whether the skill dispatches a subagent, whether it ends with a hand-off menu. Generates SKILL.md with the right frontmatter — `name: <plugin>:<skill>` for Claude Code, `name: <skill>` for Codex — plus a `## Voice` section pointing to the parent's persona.md, and the standard Step 0 / Steps / Rules / Final report skeleton. Embeds all naming and structural conventions from the legacy CLAUDE.md.
 ---
 
 # scaffold-skill
@@ -84,7 +84,7 @@ AskUserQuestion, single-select:
 
 AskUserQuestion, single-select:
 - `no` — skill exits after final report (Recommended)
-- `yes` — present a menu like `linear-simp:greet` does (`(p)`, `(q)`,
+- `yes` — present a menu like `linear-devotee:greet` does (`(p)`, `(q)`,
   `(c)`, `(s)`). If yes, ask follow-up: comma-separated `letter:label`
   list (e.g. `p:plan, q:questions, c:code now, s:stop`).
 

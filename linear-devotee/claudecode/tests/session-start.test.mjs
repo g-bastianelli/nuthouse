@@ -27,8 +27,8 @@ function stubGit(script) {
 }
 
 beforeEach(() => {
-  tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'linear-simp-hook-'));
-  tmpBin = fs.mkdtempSync(path.join(os.tmpdir(), 'linear-simp-bin-'));
+  tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'linear-devotee-hook-'));
+  tmpBin = fs.mkdtempSync(path.join(os.tmpdir(), 'linear-devotee-bin-'));
   fs.mkdirSync(path.join(tmpRoot, 'data'), { recursive: true });
 });
 

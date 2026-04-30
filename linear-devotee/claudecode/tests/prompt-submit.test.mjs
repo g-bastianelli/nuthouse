@@ -23,7 +23,7 @@ function writeStateFile(sessionId, state) {
 }
 
 beforeEach(() => {
-  tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'linear-simp-hook-'));
+  tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'linear-devotee-hook-'));
   fs.mkdirSync(path.join(tmpRoot, 'data'), { recursive: true });
 });
 

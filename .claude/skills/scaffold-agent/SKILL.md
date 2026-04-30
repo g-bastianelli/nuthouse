@@ -46,7 +46,7 @@ l'organisme ?"*
 Free-text. Voice: *"comment l'organisme s'appelle-t-il ?"*
 
 **Validation rules**:
-- **Descriptive role or task name**: `explorer`, `gooner`,
+- **Descriptive role or task name**: `explorer`, `seer`,
   `code-reviewer`, `security-analyzer`, `parser`, `validator`. ✅
 - **No vague names**: `agent`, `helper`, `worker`, `bot`. ❌ Panic-correct:
   *"non non non, `helper` ne dit rien. quel **rôle** précis ? `scout`,
@@ -54,8 +54,8 @@ Free-text. Voice: *"comment l'organisme s'appelle-t-il ?"*
 - **Never the same as the plugin** (e.g. `react-monkey:react-monkey`). ❌
 - Kebab-case, lowercase.
 - **No prefix in the `name:` frontmatter** — the runtime prepends
-  `<plugin>:`. The user types `gooner`, the file says `name: gooner`,
-  the exposed ID is `linear-simp:gooner`.
+  `<plugin>:`. The user types `seer`, the file says `name: seer`,
+  the exposed ID is `linear-devotee:seer`.
 - Must not collide with an existing agent file in the parent plugin.
 
 ### Q3 — Description
@@ -98,7 +98,7 @@ Free-text. Voice: *"par quel canal je nourris l'organisme ?"*
 
 **Convention**: short structured plaintext. Examples from existing
 agents:
-- `gooner`: `ISSUE_ID: ENG-247\nPROJECT_ROOT: /abs/path`
+- `seer`: `ISSUE_ID: ENG-247\nPROJECT_ROOT: /abs/path`
 - `explorer`: `PROJECT_ROOT: /abs/path\nTARGET: src/features/foo.tsx`
 
 The agent's caller sends this as the `prompt` argument of the `Agent`
@@ -110,7 +110,7 @@ AskUserQuestion, single-select:
 - `SDD brief` — for semantic scouts that synthesize a ticket / spec.
   Goal / Context / Files / Constraints / Acceptance / Non-goals /
   Edges / Questions. Mark missing fields with `_unclear_`. Cap at 500
-  words. (See `gooner.md`.)
+  words. (See `seer.md`.)
 - `Structured technical report` — for discovery agents that scan a
   codebase. Sections defined explicitly with placeholder values. (See
   `explorer.md`.)
@@ -277,7 +277,7 @@ End with a voice exit line.
    the agent needs to mutate. Default agents are read-only scouts.
 4. **No `## Voice` section** in agent files. Agents stay neutral —
    voice happens in the calling skill (this is the convention from
-   `gooner.md` and `explorer.md`).
+   `seer.md` and `explorer.md`).
 5. **No prefix** in the `name:` frontmatter. The runtime prepends.
 6. **Never overwrite** an existing agent file. Read first; if it
    exists, abort or ask.

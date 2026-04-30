@@ -1,6 +1,6 @@
 # skill-issue
 
-Personal Claude Code (sometimes Codex) plugin marketplace. Three plugins right now: `saucy-status`, `react-monkey`, `linear-simp`.
+Personal Claude Code (sometimes Codex) plugin marketplace. Three plugins right now: `saucy-status`, `react-monkey`, `linear-devotee`.
 
 > **Pour créer un nouveau plugin / skill / agent**, invoque les skills locaux :
 > `/scaffold-plugin`, `/scaffold-skill`, `/scaffold-agent`. Ils embarquent
@@ -17,11 +17,11 @@ This marketplace is unapologetically **brainrot-coded**. **Brainrot forever.** E
 
 New plugins follow this energy:
 
-- **Plugin name** = fun/absurd internet-meme word that sets a theme: `saucy-status` (saucy/gooning), `react-monkey` (chaotic creature), `linear-simp` (devoted simp). Family-resemblance with the existing trio. Tier list of acceptable directions: brainrot internet slang (skibidi, rizz, sigma — only if it lands), animal/creature, kink-adjacent personas, mythical figures. **Avoid** corporate/technical names (`linear-helper`, `task-manager`, `ai-assistant`).
+- **Plugin name** = fun/absurd internet-meme word that sets a theme: `saucy-status` (saucy/gooning), `react-monkey` (chaotic creature), `linear-devotee` (feral devotee / carnal worship). Family-resemblance with the existing trio. Tier list of acceptable directions: brainrot internet slang (skibidi, rizz, sigma — only if it lands), animal/creature, kink-adjacent personas, mythical figures. **Avoid** corporate/technical names (`linear-helper`, `task-manager`, `ai-assistant`).
 - **Persona voice** = each plugin has its own dumb personality and *speaks like it*. Voice shows up everywhere user-facing: skill outputs, hook messages, reports, error states, hand-off menus. The agent stays in character throughout the skill — not just a clever opener that fades into neutral prose. **The canonical voice of each plugin lives in `<plugin>/persona.md`** (frontmatter `name`/`tagline`/`emoji` + body prose). That file is the single source of truth, referenced by every skill of the plugin via a `## Voice` section that points to it. **This CLAUDE.md does not define voices** — it only references them. Read the persona file to know how a plugin sounds.
   - `saucy-status` → see `saucy-status/persona.md`
   - `react-monkey` → see `react-monkey/persona.md`
-  - `linear-simp` → see `linear-simp/persona.md`
+  - `linear-devotee` → see `linear-devotee/persona.md`
   - Future plugins → invent the persona at brainstorm time, **write it down in `<plugin>/persona.md`**, and apply it consistently across the plugin's skills. Do not redeclare the voice in this CLAUDE.md.
 - **Reports follow the voice**. The structure stays plain, the surrounding 1-2 lines are brainrot. Same skill, same voice end-to-end.
 - **Hard rule**: actions stay serious, voice stays brainrot. No fantasy side-effects, no joke commits, no "lol whoops" failure modes. Only the *strings* are fun.
@@ -44,7 +44,7 @@ Rules:
 
 ## Stack & tooling
 
-- **Runtime hooks/scripts**: Node.js, **ESM** (`import` / `export`). **`.mjs`** extension is mandatory for hooks and tests (zero ambiguity for Node, no `package.json` needed in the plugin, plugin is self-contained regardless of install context). `saucy-status` stays on CJS for historical reasons. Every new plugin ships ESM `.mjs`. Reference: `linear-simp/claudecode/hooks/*.mjs`.
+- **Runtime hooks/scripts**: Node.js, **ESM** (`import` / `export`). **`.mjs`** extension is mandatory for hooks and tests (zero ambiguity for Node, no `package.json` needed in the plugin, plugin is self-contained regardless of install context). `saucy-status` stays on CJS for historical reasons. Every new plugin ships ESM `.mjs`. Reference: `linear-devotee/claudecode/hooks/*.mjs`.
 - **Package manager**: `bun@1.3.x` (declared in root `package.json`).
 - **Tests**: `bun test` (built-in, no dep added). Tests live in `<plugin>/<runtime>/tests/`.
 - **Lint/format**: `biome` (config in `biome.json`). Formatter off, linter on. Local rule: `noUnusedVariables` is on → use `catch {}` (not `catch (e)`) when the binding is unused. Biome will auto-organize imports — let it.
@@ -88,7 +88,7 @@ Global guidance — applies everywhere, not just at scaffold time:
 |---|---|---|---|---|---|
 | `saucy-status` | Saucy/gooning loading messages in statusline | SessionStart, UserPromptSubmit | — | — | `saucy-status/persona.md` |
 | `react-monkey` | React implementation specialist with parallel exploration | — | `implement` | `explorer` | `react-monkey/persona.md` |
-| `linear-simp` | Linear issue detection at session start, SDD brief, devoted simp persona | SessionStart, UserPromptSubmit | `greet` | `gooner` | `linear-simp/persona.md` |
+| `linear-devotee` | Linear issue detection at session start + cascading Project/Milestone/Issue creation, all SDD-formatted | SessionStart, UserPromptSubmit | `greet`, `consummate-project`, `bind-milestone`, `bare-issue` | `seer`, `oracle`, `chronicler`, `acolyte` | `linear-devotee/persona.md` |
 
 Repo-level: `.claude/hooks/persona-roulette.mjs` picks a random `persona.md` at SessionStart for the current session's default voice (see "Persona Roulette" section above). Local scaffold skills live at `.claude/skills/{scaffold-plugin,scaffold-skill,scaffold-agent}/SKILL.md` with shared `mad-scientist` voice at `.claude/skills/persona.md`.
 

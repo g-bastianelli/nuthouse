@@ -7,7 +7,7 @@ import { cleanupOldStates, extractIssueId, readState, writeState } from '../hook
 let tmpRoot;
 
 beforeEach(() => {
-  tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'linear-simp-test-'));
+  tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'linear-devotee-test-'));
   fs.mkdirSync(path.join(tmpRoot, 'data'), { recursive: true });
 });
 
