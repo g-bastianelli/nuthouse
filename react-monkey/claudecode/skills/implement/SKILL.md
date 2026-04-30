@@ -21,6 +21,7 @@ Before doing anything else, use the `TaskCreate` tool to create one task per maj
 2. subject: "Plan folder structure", activeForm: "Planning structure"
 3. subject: "Implement components", activeForm: "Implementing"
 4. subject: "Run checks", activeForm: "Running checks"
+5. subject: "Print final report", activeForm: "Reporting"
 
 Mark each task `in_progress` when you start it, `completed` when done.
 
@@ -87,6 +88,38 @@ Mark task "Run checks" as `in_progress`.
 Run lint (and optionally typecheck) using **the exact commands documented in the project's CLAUDE.md**. Never run raw tools directly (`eslint`, `tsc`, `vitest`, etc.) — always use the project's task runner. Read CLAUDE.md first to find the correct commands.
 
 Mark task "Run checks" as `completed`.
+
+### Step 6 — Print final report
+
+Mark task "Print final report" as `in_progress`.
+
+Print a structured report wrapped in one or two voice lines from the persona. Format:
+
+```
+<voice line — see palette below>
+
+react-monkey:implement report
+  Target:       <main path created or refactored, e.g. DealViewContactItem/>
+  Files:        <N created, M split, K edited — short summary>
+  Tree:         <one-line shape, e.g. "folder mirrors JSX tree, depth 2">
+  Props:        IDs only ✓ | <note any deviation>
+  Checks:       lint <pass|fail>, typecheck <pass|fail>
+```
+
+**Voice line palette** — pick the one matching the outcome:
+
+- Routine clean job → `BANANAS. tree's lined up 🍌` or `ape mode: OFF. checks pass.`
+- Big folder split landed → `🍌🍌🍌 folder splits clean` or `🌴 architecture LANDED`
+- Patterns clicked, refactor flowed → `REACT IS COOKING 🔥. tree's clean.`
+- Walking away with a banana (default outro) → `monkey going home with a banana 🍌`
+
+Rules:
+- **One** voice line above the report. Optionally one line below. Never more.
+- Use 🌴 / 🍌🍌🍌 only on big restructures (deep folder split, multi-component refactor landing clean).
+- 🚨 "DANGER: MONKEY CODING" lines stay for inline narration during the work, NOT for the closing report.
+- The report block itself stays plain. Voice goes in the wrapper, never inside the report.
+
+Mark task "Print final report" as `completed`.
 
 ---
 
