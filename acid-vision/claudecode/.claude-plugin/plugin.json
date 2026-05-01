@@ -1,0 +1,7 @@
+{
+  "name": "acid-vision",
+  "description": "Structured spec-writing skill. Asks one question at a time, proposes approaches, validates a written spec, then optionally hands off to linear-devotee for Linear project creation.",
+  "author": {
+    "name": "g-bastianelli"
+  }
+}

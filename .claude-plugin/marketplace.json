@@ -21,6 +21,15 @@
         "path": "linear-devotee"
       },
       "category": "productivity"
+    },
+    {
+      "name": "acid-vision",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/g-bastianelli/skill-issue",
+        "path": "acid-vision/claudecode"
+      },
+      "category": "productivity"
     }
   ]
 }

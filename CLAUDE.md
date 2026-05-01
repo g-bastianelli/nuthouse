@@ -78,6 +78,7 @@ Global guidance — applies everywhere, not just at scaffold time:
 - ❌ Bypassing pre-commit hook with `--no-verify` → **never**
 - ❌ Corporate/neutral plugin names → **the brainrot is the brand**
 - ❌ Banner or README in mixed languages → **English everywhere**
+- ❌ Any plugin file content (SKILL.md, persona.md, README.md, plugin.json) in any language other than English → **all plugin files are English, always. The voice adapts at runtime via the Language section in persona.md — the file itself is always English.**
 - ❌ Redeclaring a plugin's voice in this CLAUDE.md → **the voice lives in `<plugin>/persona.md` exclusively**
 
 ---
@@ -89,6 +90,7 @@ Global guidance — applies everywhere, not just at scaffold time:
 | `saucy-status` | Saucy/gooning loading messages in statusline | SessionStart, UserPromptSubmit | — | — | `saucy-status/persona.md` |
 | `react-monkey` | React implementation specialist with parallel exploration | — | `implement` | `explorer` | `react-monkey/persona.md` |
 | `linear-devotee` | Linear issue detection at session start + cascading Project/Milestone/Issue creation, all SDD-formatted | SessionStart, UserPromptSubmit | `greet`, `consummate-project`, `bind-milestone`, `bare-issue` | `seer`, `oracle`, `chronicler`, `acolyte` | `linear-devotee/persona.md` |
+| `acid-vision` | Structured spec-writing — Q&A → spec → optional handoff to `linear-devotee` | — | `trip` | — | `acid-vision/persona.md` |
 
 Repo-level: `.claude/hooks/persona-roulette.mjs` picks a random `persona.md` at SessionStart for the current session's default voice (see "Persona Roulette" section above). Local scaffold skills live at `.claude/skills/{scaffold-plugin,scaffold-skill,scaffold-agent}/SKILL.md` with shared `mad-scientist` voice at `.claude/skills/persona.md`.
 
