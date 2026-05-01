@@ -9,12 +9,9 @@
 
 ## Problem
 
-`linear-devotee:consummate-project` jumps straight into Linear mutations with minimal upfront structure. There's no enforced spec phase, no parallelizable SDD issue decomposition, no milestone planning before the first API call. The result: Linear projects created from vague ideas, large monolithic issues, hard-to-parallelize dev work.
+`linear-devotee:consummate-project` jumps straight into Linear mutations with minimal upfront structure. There's no enforced spec phase, no structured Q&A, no milestone planning before the first API call. The result: Linear projects created from vague ideas, large monolithic issues, hard-to-parallelize dev work.
 
-`superpowers:brainstorming` solves this for general projects but:
-- Cannot be a shipped dependency (superpowers:* must never leak into delivered plugins)
-- Terminates at `writing-plans`, not at a Linear handoff
-- Has no SDD issue decomposition step
+What's missing is a dedicated thinking phase — structured dialogue that extracts requirements, proposes approaches, and produces a validated spec before anything touches Linear.
 
 ---
 
@@ -141,7 +138,6 @@ Voice: fragmented poetic insight + brutal precision. Questions seem cosmic, outp
 
 - ESM `.mjs` for any hooks/scripts (none in V1, but future additions must follow this)
 - No npm/bun deps — node builtins only
-- No `superpowers:*` dependency in shipped plugin
 - Pre-commit: `lefthook` + `bunx biome check .` — never bypass with `--no-verify`
 - Plugin name, persona voice, and skill name must be consistent across all files
 
