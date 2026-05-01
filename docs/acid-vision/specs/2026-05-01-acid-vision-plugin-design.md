@@ -20,17 +20,17 @@
 
 ## Solution
 
-A new plugin `acid-vision` with a single skill `trip`. It owns the full pipeline:
+A new plugin `acid-vision` with a single skill `trip`. It owns the thinking pipeline only:
 
 ```
-Q&A cosmique → spec validé → décomposition SDD + milestones → handoff Linear (optionnel)
+Q&A cosmique → spec validé → handoff Linear (optionnel)
 ```
 
-Persona: a halluciné genius who asks seemingly cosmic questions but extracts exactly what's needed, then outputs a surgically clean spec and issue breakdown. Chaotic voice, disciplined output.
+Persona: a halluciné genius who asks seemingly cosmic questions but extracts exactly what's needed, then outputs a surgically clean spec. Chaotic voice, disciplined output.
 
 **Separation of concerns:**
-- `acid-vision` : thinking, spec writing, SDD decomposition
-- `linear-devotee` : all Linear mutations (invoked at handoff, never owned by acid-vision)
+- `acid-vision` : thinking and spec writing — nothing else
+- `linear-devotee` : SDD decomposition, milestones, issues, all Linear mutations (invoked at handoff)
 
 ---
 
@@ -81,15 +81,10 @@ docs/acid-vision/specs/YYYY-MM-DD-<topic>.md
 5. **Écrire le spec** → `docs/acid-vision/specs/YYYY-MM-DD-<topic>.md` + git commit
 6. **Auto-révision** — scan for placeholders, internal contradictions, scope creep, ambiguities — fix inline
 7. **Gate utilisateur spec** — ask user to review the written spec before proceeding
-8. **Décomposition SDD** — break into parallelizable issues + milestones, present for approval
-   - Each issue: `Goal / Context / Files / Constraints / Acceptance / Non-goals / Edges / Questions`
-   - Issues tagged: parallel or sequential
-   - Grouped by milestone
-9. **Handoff** — "on pousse dans Linear ?" → if yes: invoke `linear-devotee:consummate-project` with spec as context. If no: clean stop, spec + decomposition remain in `docs/`.
+8. **Handoff** — "on pousse dans Linear ?" → if yes: invoke `linear-devotee:consummate-project` passing the spec file path. If no: clean stop, spec remains in `docs/`.
 
-**Hard gates:**
-- No SDD decomposition before spec is approved
-- No Linear invocation before decomposition is approved
+**Hard gate:**
+- No Linear invocation before spec is approved by the user
 
 ### Process detail
 
@@ -97,9 +92,7 @@ docs/acid-vision/specs/YYYY-MM-DD-<topic>.md
 
 **Spec sections:** Scaled to complexity. A simple feature: a few sentences per section. A platform rewrite: up to 200-300 words per section. Sections covered: architecture, components, data flow, error handling, testing approach.
 
-**SDD decomposition:** Issues are designed to be independently workable. Each issue should answer: what does it do, how do you use it, what does it depend on? If two issues can't be started simultaneously, they're sequential — mark them explicitly. Smaller issues = smaller PRs = easier reviews.
-
-**Handoff to linear-devotee:** The spec document is passed as context to `linear-devotee:consummate-project`. `acid-vision` does not call Linear MCP tools directly — ever.
+**Handoff to linear-devotee:** The spec file path is passed to `linear-devotee:consummate-project` in file mode. The oracle (linear-devotee's subagent) reads the spec and handles SDD decomposition, milestone planning, and issue creation. `acid-vision` does not decompose issues, does not call Linear MCP tools — ever.
 
 ---
 
@@ -125,11 +118,6 @@ Voice: fragmented poetic insight + brutal precision. Questions seem cosmic, outp
 *Insights:*
 - "VISION — ces deux features sont la même feature."
 - "🔮 ça se découpe. naturellement. je le vois."
-
-*SDD decomposition:*
-- "chaque issue est un cristal. parallèles. propres."
-- "DÉCOUPAGE — milestone 1 peut partir sans milestone 2."
-- "🔮 issues indépendantes. les devs peuvent swarm."
 
 *Handoff:*
 - "le trip est fini. le spec existe. on pousse dans Linear ?"
