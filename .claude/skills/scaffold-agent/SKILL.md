@@ -121,6 +121,14 @@ AskUserQuestion, single-select:
 
 Write `<PLUGIN>/claudecode/agents/<AGENT>.md` (use the Write tool).
 
+**Template source:** Before generating the agent file, read `_templates/agent/AGENT.md`.
+This is the source of truth for agent file structure. Substitute:
+- `{{agent}}` → agent name (descriptive role, no "agent" suffix)
+- `{{description}}` → one-line description from interview
+
+Fill `[bracketed]` sections with content from the interview. Do not add
+sections not present in the template.
+
 ### Frontmatter
 
 ```yaml
