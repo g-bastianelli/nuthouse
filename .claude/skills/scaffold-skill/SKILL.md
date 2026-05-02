@@ -103,9 +103,10 @@ This is the source of truth for file structure. Substitute these variables from 
 - `{{persona_path}}` → relative path from skill dir to plugin's persona.md
   (e.g. `../../../persona.md` for `claudecode/skills/<skill>/SKILL.md`)
 
-Do not invent structure. Generate only what the template provides, replacing
-`{{variables}}` and filling the `[bracketed]` creative sections with AI-generated
-content appropriate to the plugin's voice.
+Use the template as the structural baseline: substitute `{{variables}}` and fill
+`[bracketed]` creative sections with AI-generated content appropriate to the
+plugin's voice. The sections defined below extend the template with plugin-specific
+conventions — do not omit them.
 
 ### 2a. Claude Code — `<PLUGIN>/claudecode/skills/<SKILL>/SKILL.md`
 

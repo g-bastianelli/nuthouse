@@ -7,13 +7,13 @@
 ### Claude Code
 
 ```
-/plugin install {{plugin}}@nuthouse
+/plugin install {{plugin}}@franken-agents
 ```
 
 ### Codex CLI
 
 ```
-codex plugin install {{plugin}}@nuthouse
+codex plugin install {{plugin}}@franken-agents
 ```
 
 ## Skills
