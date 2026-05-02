@@ -1,0 +1,5 @@
+{
+  "name": "{{plugin}}",
+  "description": "{{description}}",
+  "author": "{{author}}"
+}
