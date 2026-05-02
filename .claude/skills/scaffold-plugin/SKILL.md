@@ -110,6 +110,24 @@ AskUserQuestion, single-select:
 
 Generate the following files. **Use the Write tool** for each.
 
+**Template sources:** Before generating files, read the matching templates and use them as structure source of truth:
+- `persona.md` → `_templates/persona/persona.md`
+- `plugin.json` → `_templates/plugin/claudecode/.claude-plugin/plugin.json`
+- `plugin.toml` → `_templates/plugin/codex/.codex-plugin/plugin.toml`
+- `README.md` → `_templates/plugin/README.md`
+
+Variables to substitute in templates:
+- `{{plugin}}` → plugin directory name (kebab-case brainrot name)
+- `{{description}}` → one-line description
+- `{{author}}` → git user (`git config user.name`)
+- `{{tagline}}` → persona tagline from interview
+- `{{name}}` → persona display name
+- `{{emoji}}` → persona signature emoji
+
+For `persona.md`, fill the `[bracketed]` sections with AI-generated content
+in the plugin's voice. The `## Language` and `## Hard rule` sections must be
+present verbatim from the template — do not omit or paraphrase them.
+
 ### 2a. Folder skeleton (Bash via `mkdir -p`)
 
 For `claudecode` / `both`:
