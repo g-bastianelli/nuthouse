@@ -5,7 +5,7 @@
   "author": {
     "name": "g-bastianelli"
   },
-  "repository": "https://github.com/g-bastianelli/franken-agents",
+  "repository": "https://github.com/g-bastianelli/nuthouse",
   "skills": "./skills/",
   "interface": {
     "displayName": "React Monkey",
@@ -14,7 +14,7 @@
     "developerName": "g-bastianelli",
     "category": "Developer Tools",
     "capabilities": ["Read", "Write"],
-    "websiteURL": "https://github.com/g-bastianelli/franken-agents",
+    "websiteURL": "https://github.com/g-bastianelli/nuthouse",
     "defaultPrompt": [
       "Use React Monkey to implement this React component with strict architecture rules.",
       "Use React Monkey to refactor this React page while preserving local project conventions."

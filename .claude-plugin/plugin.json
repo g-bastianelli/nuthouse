@@ -1,6 +1,6 @@
 {
   "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
-  "name": "franken-agents",
+  "name": "nuthouse",
   "version": "1.0.0",
   "description": "Cross-platform AI agent plugin marketplace (Claude Code + Codex)",
   "author": {

@@ -1,7 +1,7 @@
 {
-  "name": "franken-agents",
+  "name": "nuthouse",
   "interface": {
-    "displayName": "Franken Agents"
+    "displayName": "Nuthouse"
   },
   "plugins": [
     {

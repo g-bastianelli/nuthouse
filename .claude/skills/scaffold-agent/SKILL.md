@@ -1,6 +1,6 @@
 ---
 name: scaffold-agent
-description: Use when adding a new dedicated subagent to an existing plugin in this `franken-agents` marketplace. Asks for parent plugin, agent name (descriptive role, no vague names like "agent" / "helper"), description, model (`claude-haiku-4-5-20251001` for parsing/fetch+summary vs default for reasoning), explicit tools allowlist, input format spec, output format spec (SDD vs structured report vs custom). Generates `<plugin>/claudecode/agents/<name>.md` with the right frontmatter (name, description, model, tools list) and the standard Mission / Input / Output / Hard rules sections. Encodes the subagent and SDD conventions from the legacy CLAUDE.md.
+description: Use when adding a new dedicated subagent to an existing plugin in this `nuthouse` marketplace. Asks for parent plugin, agent name (descriptive role, no vague names like "agent" / "helper"), description, model (`claude-haiku-4-5-20251001` for parsing/fetch+summary vs default for reasoning), explicit tools allowlist, input format spec, output format spec (SDD vs structured report vs custom). Generates `<plugin>/claudecode/agents/<name>.md` with the right frontmatter (name, description, model, tools list) and the standard Mission / Input / Output / Hard rules sections. Encodes the subagent and SDD conventions from the legacy CLAUDE.md.
 ---
 
 # scaffold-agent
@@ -23,7 +23,7 @@ declared `Q5 = "dedicated agent"`.
 
 ## Step 0 — Preconditions
 
-1. **Inside the `franken-agents` repo.** Verify cwd contains
+1. **Inside the `nuthouse` repo.** Verify cwd contains
    `.claude-plugin/marketplace.json`. If not, abort.
 2. **Discover existing plugins.** Glob `<repo>/*/persona.md`. List the
    parent-plugin candidates.

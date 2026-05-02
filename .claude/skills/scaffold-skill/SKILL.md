@@ -1,6 +1,6 @@
 ---
 name: scaffold-skill
-description: Use when adding a new skill to an existing plugin in this `franken-agents` marketplace (saucy-status, react-monkey, linear-devotee, or any plugin with a `persona.md` at its root). Asks for parent plugin, skill name (action verb, no prefix), description, target runtimes (intersected with parent's runtimes), whether the skill dispatches a subagent, whether it ends with a hand-off menu. Generates SKILL.md with the right frontmatter — `name: <plugin>:<skill>` for Claude Code, `name: <skill>` for Codex — plus a `## Voice` section pointing to the parent's persona.md, and the standard Step 0 / Steps / Rules / Final report skeleton. Embeds all naming and structural conventions from the legacy CLAUDE.md.
+description: Use when adding a new skill to an existing plugin in this `nuthouse` marketplace (saucy-status, react-monkey, linear-devotee, or any plugin with a `persona.md` at its root). Asks for parent plugin, skill name (action verb, no prefix), description, target runtimes (intersected with parent's runtimes), whether the skill dispatches a subagent, whether it ends with a hand-off menu. Generates SKILL.md with the right frontmatter — `name: <plugin>:<skill>` for Claude Code, `name: <skill>` for Codex — plus a `## Voice` section pointing to the parent's persona.md, and the standard Step 0 / Steps / Rules / Final report skeleton. Embeds all naming and structural conventions from the legacy CLAUDE.md.
 ---
 
 # scaffold-skill
@@ -23,10 +23,10 @@ called X".
 
 ## Step 0 — Preconditions
 
-1. **Inside the `franken-agents` repo.** Verify cwd contains
+1. **Inside the `nuthouse` repo.** Verify cwd contains
    `.claude-plugin/marketplace.json`. If not, abort:
    > "ce labo n'est pas le bon. j'ai besoin de la racine de
-   > `franken-agents`."
+   > `nuthouse`."
 2. **Discover existing plugins.** Glob `<repo>/*/persona.md` (Bash:
    `ls */persona.md 2>/dev/null`). The list of folders is the candidate
    parent-plugin set. If empty, abort with: *"aucun plugin n'existe

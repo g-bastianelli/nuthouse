@@ -1,6 +1,6 @@
 ---
 name: scaffold-plugin
-description: Use when creating a brand-new plugin in this `franken-agents` marketplace (saucy-status / react-monkey / linear-devotee pattern). Asks the user for plugin name (brainrot-check), description, target runtimes (claudecode / codex / both), whether the plugin needs hooks, persona tagline + emoji, and marketplace category. Generates the full folder skeleton: persona.md, plugin.json, README.md, optional hooks/ + data/. Updates root marketplace.json (git-subdir entry) and root README.md plugins table. Embeds all conventions from the legacy CLAUDE.md (naming rules, frontmatter shapes, hook contract, anti-patterns) so they are applied by construction.
+description: Use when creating a brand-new plugin in this `nuthouse` marketplace (saucy-status / react-monkey / linear-devotee pattern). Asks the user for plugin name (brainrot-check), description, target runtimes (claudecode / codex / both), whether the plugin needs hooks, persona tagline + emoji, and marketplace category. Generates the full folder skeleton: persona.md, plugin.json, README.md, optional hooks/ + data/. Updates root marketplace.json (git-subdir entry) and root README.md plugins table. Embeds all conventions from the legacy CLAUDE.md (naming rules, frontmatter shapes, hook contract, anti-patterns) so they are applied by construction.
 ---
 
 # scaffold-plugin
@@ -22,18 +22,18 @@ This skill is **rigid** — execute the steps below in order, no shortcuts.
 
 ## When you're invoked
 
-The user wants to create a new plugin in the `franken-agents` marketplace.
+The user wants to create a new plugin in the `nuthouse` marketplace.
 Either they typed `/scaffold-plugin` directly, or you (Claude) routed to
 this skill because the user asked something like "let's add a new
 plugin" / "I want to create a plugin called X".
 
 ## Step 0 — Preconditions
 
-1. **Inside the `franken-agents` repo.** Run `pwd` and verify the path ends
-   with `franken-agents`. Then verify `.claude-plugin/marketplace.json`
+1. **Inside the `nuthouse` repo.** Run `pwd` and verify the path ends
+   with `nuthouse`. Then verify `.claude-plugin/marketplace.json`
    exists at the cwd. If not, abort with:
    > "le labo n'est pas le bon. j'ai besoin de la racine du repo
-   > `franken-agents` (avec `.claude-plugin/marketplace.json`). repositionne
+   > `nuthouse` (avec `.claude-plugin/marketplace.json`). repositionne
    > le cwd."
 2. **Marketplace JSON parses.** Read `.claude-plugin/marketplace.json`
    and `JSON.parse` it. If it fails, abort with the parse error — never
@@ -288,8 +288,8 @@ wrote. Keep it short.>
 ## Install
 
 \`\`\`
-/plugin marketplace add g-bastianelli/franken-agents
-/plugin install <NAME>@franken-agents
+/plugin marketplace add g-bastianelli/nuthouse
+/plugin install <NAME>@nuthouse
 \`\`\`
 
 Restart Claude Code after install.
@@ -336,7 +336,7 @@ reorder existing entries). Use the `git-subdir` source pattern:
   "name": "<NAME>",
   "source": {
     "source": "git-subdir",
-    "url": "https://github.com/g-bastianelli/franken-agents",
+    "url": "https://github.com/g-bastianelli/nuthouse",
     "path": "<NAME>/claudecode"
   },
   "category": "<CATEGORY>"
@@ -365,7 +365,7 @@ based on Q3.
 
 Also add the install snippet under the Claude Code install block:
 ```
-/plugin install <NAME>@franken-agents
+/plugin install <NAME>@nuthouse
 ```
 
 (Only if it's a Claude Code-compatible plugin.)

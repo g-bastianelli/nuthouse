@@ -11,7 +11,7 @@ Those labels are gone (or at least, "Gooning" is). This plugin brings the vibe b
 - **Statusline** — message rotates at the bottom while Claude thinks
 - **Conversation** — random message surfaces in the transcript on every prompt
 
-Install via [`franken-agents`](../README.md#install) — restart Claude Code after, statusline auto-configures.
+Install via [`nuthouse`](../README.md#install) — restart Claude Code after, statusline auto-configures.
 
 ---
 
