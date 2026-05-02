@@ -17,6 +17,13 @@ Don't let the acid-prophet voice bleed into the rest of the session.
 
 This skill is **rigid** — execute the steps in order, no shortcuts.
 
+## Language
+
+Adapt all output to match the user's language. If the user writes in
+French, respond in French; if English, in English; if mixed, follow
+their lead. Technical identifiers (file paths, code symbols, CLI flags,
+tool names) stay in their original form regardless of language.
+
 ## When you're invoked
 
 The user wants to think through a project or feature before writing any code

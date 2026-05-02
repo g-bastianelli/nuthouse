@@ -1,6 +1,6 @@
 ---
 name: audit
-description: Scan all skills, agents, and personas in this nuthouse repo against the _templates/ source of truth. Reports missing ## Voice, ## Language, broken persona paths, and invalid frontmatter. Run after any convention change to catch drift.
+description: Scan all skills, agents, and personas in this nuthouse repo against the _templates/ source of truth. Reports missing ## Voice, ## Language, broken persona paths, invalid frontmatter, and missing assets/BANNER_PROMPT.md. Run after any convention change to catch drift.
 ---
 
 # audit
@@ -22,9 +22,9 @@ tool names) stay in their original form regardless of language.
 
 ## What this skill does
 
-Audits every plugin's SKILL.md, AGENT.md, and persona.md files against
-the `_templates/` source of truth. No auto-fix — reports deviations, the
-human decides what to do.
+Audits every plugin's SKILL.md, AGENT.md, persona.md, and
+`assets/BANNER_PROMPT.md` against the `_templates/` source of truth.
+No auto-fix — reports deviations, the human decides what to do.
 
 ## Step 1 — Preconditions
 
@@ -66,6 +66,9 @@ ls */claudecode/agents/*.md 2>/dev/null
 
 # Personas
 ls */persona.md 2>/dev/null
+
+# Banner prompts
+ls */assets/BANNER_PROMPT.md 2>/dev/null
 ```
 
 ## Step 4 — Check each file
@@ -91,6 +94,9 @@ For each file, check against the matching template's requirements.
 3. `## Language` section present — ❌ CRITIQUE if missing
 4. `## Hard rule` section present — ❌ CRITIQUE if missing
 
+**BANNER_PROMPT.md checks (per plugin):**
+1. `<plugin>/assets/BANNER_PROMPT.md` exists — ⚠️ WARNING if missing
+
 ## Step 5 — Report
 
 Output format:
@@ -102,10 +108,12 @@ Output format:
   ✅ claudecode/skills/<skill>/SKILL.md
   ❌ claudecode/skills/<skill>/SKILL.md — missing ## Language [CRITIQUE]
   ⚠️  persona.md — missing tagline in frontmatter [WARNING]
+  ⚠️  assets/BANNER_PROMPT.md — absent [WARNING]
 
 ### <plugin-name>
   ✅ claudecode/agents/<agent>.md
   ✅ persona.md
+  ✅ assets/BANNER_PROMPT.md
 
 ---
 <N> critiques · <N> warnings · <N> ok
