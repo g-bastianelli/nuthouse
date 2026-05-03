@@ -2,7 +2,7 @@
 
 ![linear-devotee](./assets/banner.png)
 
-Devoted Linear devotee — a Claude Code plugin that detects your Linear issue at the start of a session, sets it `In Progress`, and prepares an SDD-formatted brief so you don't code blind. Plus: a chainable trinity of skills that creates Linear projects, milestones, and issues from spec or vibe.
+Devoted Linear devotee — a Claude Code and Codex plugin that detects your Linear issue, sets it `In Progress` when approved by the runtime flow, and prepares an SDD-formatted brief so you don't code blind. Plus: a chainable trinity of skills that creates Linear projects, milestones, and issues from spec or vibe.
 
 Voice = feral devotee / carnal worship. The user is the god, the work is the offering.
 
@@ -28,12 +28,14 @@ All agents are read-only on Linear (no `save_*` tools). Skills do all writes, al
 
 ## Detection (`greet` only)
 
-Two stages, **start of session only**:
+Claude Code has two hook-driven stages, **start of session only**:
 
 1. **SessionStart hook** — reads `git branch --show-current`, regex `[A-Z]+-[0-9]+`. Match → invokes `linear-devotee:greet`.
 2. **UserPromptSubmit hook** — if the branch didn't yield an ID, scans the first user prompt. Match → invokes `linear-devotee:greet`.
 
 After the first prompt: total silence. The greet window closes.
+
+Codex does not expose the same hook model, so `linear-devotee:greet` is invoked explicitly and detects the Linear identifier from the invocation argument or current branch.
 
 ## Cascade chain
 
@@ -41,11 +43,13 @@ After the first prompt: total silence. The greet window closes.
 
 ## Requirements
 
-- Linear MCP tools (`mcp__claude_ai_Linear__*`) loaded in the session
+- Linear MCP/app tools loaded in the session
 - A git repository
 - For `greet`: a detectable Linear identifier (regex `[A-Z]+-[0-9]+`)
 
 ## Install
+
+### Claude Code
 
 ```
 /plugin marketplace add g-bastianelli/nuthouse
@@ -53,6 +57,29 @@ After the first prompt: total silence. The greet window closes.
 ```
 
 Restart Claude Code after install.
+
+### Codex CLI
+
+```
+codex plugin marketplace add g-bastianelli/nuthouse
+```
+
+Then open the plugin browser (`/plugins`) and install `linear-devotee`.
+
+## Runtime layout
+
+```text
+linear-devotee/
+|-- .codex-plugin/
+|-- assets/
+|-- claudecode/
+|   |-- agents/
+|   |-- hooks/
+|   |-- skills/
+|   `-- tests/
+`-- codex/
+    `-- skills/
+```
 
 ## License
 
