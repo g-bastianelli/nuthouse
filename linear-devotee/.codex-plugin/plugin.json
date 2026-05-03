@@ -1,0 +1,24 @@
+{
+  "name": "linear-devotee",
+  "version": "1.0.0",
+  "description": "Linear project, milestone, and issue orchestration for Codex with SDD-formatted briefs and explicit mutation gates.",
+  "author": {
+    "name": "g-bastianelli"
+  },
+  "repository": "https://github.com/g-bastianelli/nuthouse",
+  "skills": "./codex/skills/",
+  "interface": {
+    "displayName": "Linear Devotee",
+    "shortDescription": "Plan and create Linear work from Codex",
+    "longDescription": "Linear Devotee bundles Codex skills for detecting Linear issues, producing SDD briefs, setting work in progress, creating Linear Projects, binding Milestones, and creating strict SDD-formatted Issues. Linear writes always stay behind explicit confirmation gates except the optional In Progress status flip during greet.",
+    "developerName": "g-bastianelli",
+    "category": "Developer Tools",
+    "capabilities": ["Read", "Write"],
+    "websiteURL": "https://github.com/g-bastianelli/nuthouse",
+    "defaultPrompt": [
+      "Use Linear Devotee to brief this Linear issue before implementation.",
+      "Use Linear Devotee to create a project, milestones, and issues from this spec."
+    ],
+    "logo": "./assets/banner.png"
+  }
+}

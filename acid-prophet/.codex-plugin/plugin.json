@@ -1,0 +1,24 @@
+{
+  "name": "acid-prophet",
+  "version": "1.0.0",
+  "description": "Structured spec-writing for Codex: idea discovery, approach selection, reviewed specs, and optional Linear handoff.",
+  "author": {
+    "name": "g-bastianelli"
+  },
+  "repository": "https://github.com/g-bastianelli/nuthouse",
+  "skills": "./codex/skills/",
+  "interface": {
+    "displayName": "Acid Prophet",
+    "shortDescription": "Turn raw ideas into reviewed specs",
+    "longDescription": "Acid Prophet bundles Codex skills for structured product discovery: one-question-at-a-time clarification, approach tradeoff analysis, section-by-section spec validation, written markdown specs, self-review, and an optional handoff to Linear Devotee for Linear project creation.",
+    "developerName": "g-bastianelli",
+    "category": "Developer Tools",
+    "capabilities": ["Read", "Write"],
+    "websiteURL": "https://github.com/g-bastianelli/nuthouse",
+    "defaultPrompt": [
+      "Use Acid Prophet to turn this feature idea into a reviewed spec.",
+      "Use Acid Prophet to structure this project before creating Linear work."
+    ],
+    "logo": "./assets/banner.png"
+  }
+}

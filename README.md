@@ -26,8 +26,8 @@ Plugins, skills, and agents for Claude Code and Codex. Each plugin ships cross-r
 |--------|-------------|---------|
 | [saucy-status](./saucy-status) | Rotates suggestive messages in statusline + conversation while Claude thinks | Claude Code |
 | [react-monkey](./react-monkey) | React implementation specialist — parallel exploration, strict component architecture | Claude Code + Codex |
-| [linear-devotee](./linear-devotee) | Détecte ton issue Linear, prépare un brief SDD, et crée Projects / Milestones / Issues en cascade. Voix devotee / carnal worship | Claude Code |
-| [acid-prophet](./acid-prophet) | Structured spec-writing — Q&A → spec → optional Linear handoff | Claude Code |
+| [linear-devotee](./linear-devotee) | Détecte ton issue Linear, prépare un brief SDD, et crée Projects / Milestones / Issues en cascade. Voix devotee / carnal worship | Claude Code + Codex |
+| [acid-prophet](./acid-prophet) | Structured spec-writing — Q&A → spec → optional Linear handoff | Claude Code + Codex |
 
 ## Install
 
@@ -55,6 +55,14 @@ codex plugin marketplace add g-bastianelli/nuthouse
 ```
 
 Then open the plugin browser (`/plugins`) and install from there.
+
+Codex runtime folders are present for:
+
+```
+react-monkey
+linear-devotee
+acid-prophet
+```
 
 ## Development
 
