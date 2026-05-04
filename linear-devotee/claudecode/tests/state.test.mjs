@@ -48,6 +48,16 @@ test('writeState persists object as JSON', () => {
   expect(onDisk).toEqual(payload);
 });
 
+test('writeState terminates file with a trailing newline', () => {
+  const sessionId = 'sess-newline';
+  writeState(tmpRoot, sessionId, { greeted: true });
+  const raw = fs.readFileSync(
+    path.join(tmpRoot, 'data', `state-${sessionId}.json`),
+    'utf8',
+  );
+  expect(raw.endsWith('\n')).toBe(true);
+});
+
 test('writeState creates the data directory if missing', () => {
   fs.rmSync(path.join(tmpRoot, 'data'), { recursive: true, force: true });
   writeState(tmpRoot, 'sess-mkdir', { greeted: false });

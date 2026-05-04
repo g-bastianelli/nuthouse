@@ -17,7 +17,7 @@ export function readState(pluginRoot, sessionId) {
 export function writeState(pluginRoot, sessionId, state) {
   const dir = path.join(pluginRoot, 'data');
   fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(statePath(pluginRoot, sessionId), JSON.stringify(state, null, 2), 'utf8');
+  fs.writeFileSync(statePath(pluginRoot, sessionId), `${JSON.stringify(state, null, 2)}\n`, 'utf8');
 }
 
 export function cleanupOldStates(pluginRoot, maxAgeDays = 7) {
