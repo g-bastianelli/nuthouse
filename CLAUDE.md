@@ -81,6 +81,7 @@ Global guidance — applies everywhere, not just at scaffold time:
 - ❌ Banner or README in mixed languages → **English everywhere**
 - ❌ Any plugin file content (SKILL.md, persona.md, README.md, plugin.json) in any language other than English → **all plugin files are English, always. The voice adapts at runtime via the Language section in persona.md — the file itself is always English.**
 - ❌ Redeclaring a plugin's voice in this CLAUDE.md → **the voice lives in `<plugin>/persona.md` exclusively**
+- ❌ Creating skill/agent files manually without `/scaffold-skill`/`/scaffold-agent` → misses `plugin.json` `"skills"` field and template checks that the scaffold enforces by construction
 
 ---
 
