@@ -52,7 +52,11 @@ Otherwise use standalone mode.
 
 Chained mode:
 
-- Use `project.id`, `project.team_id`, current milestone id, and next uncreated suggested issue title from chain state.
+- Use `project.id`, `project.team_id`, current milestone id from chain state.
+- **Backward compatibility:** if `current_milestone.suggested_issues[]` is a flat array of strings, transparently coerce each string at position `i` into `{ idx: i, title: str, blocked_by: [] }`.
+- **Topological pick:** iterate the structured `suggested_issues[]` in source order and pick the first entry whose `title` is **not** in `created_issues[]` (filtered by milestone) **and** whose every `blocked_by` index resolves to a title that **is** in `created_issues[]` for this milestone. Capture the entry's `blocked_by` for Step 7 (Linear creation).
+- If no uncreated entry remains, exit with `Hand-off: nothing-to-do`.
+- If uncreated entries remain but none has all dependencies satisfied, surface the cycle/missing-dep error to the user and exit with `Hand-off: dependency_cycle`.
 
 Standalone mode:
 
@@ -125,6 +129,8 @@ Only continue on `y`.
 
 ### Step 7 - Create Linear issue
 
+In chained mode, resolve the picked entry's `blocked_by: [<idx>, ...]` to Linear identifiers: for each `idx`, look up the matching `title` in `current_milestone.suggested_issues[]`, then find that title in `created_issues[]` (same milestone) and collect its `identifier` (e.g. `ENG-247`). Drop any index that fails to resolve and surface a warning — never block the save. Standalone mode: skip this entirely.
+
 Create the issue with:
 
 - `teamId`
@@ -133,6 +139,7 @@ Create the issue with:
 - `projectId`
 - `projectMilestoneId`: only when selected.
 - `labelIds`: only confirmed existing labels.
+- `blockedBy`: resolved identifiers from the topological pick (only when non-empty — Linear's `save_issue` accepts identifiers and treats this field as append-only).
 
 On API failure, surface the error verbatim and stop.
 
@@ -164,7 +171,7 @@ linear-devotee:bare-issue report
   Milestone:          <milestone.name> | none
   Issue:              <identifier> - <url> | (cancelled) | (linear_error)
   Chain progress:     <created>/<total> issues for current milestone
-  Hand-off:           next-issue | stop | cancelled | linear_error | nothing-to-do | cross_project_violation
+  Hand-off:           next-issue | stop | cancelled | linear_error | nothing-to-do | cross_project_violation | dependency_cycle
 ```
 
 ## Things you never do

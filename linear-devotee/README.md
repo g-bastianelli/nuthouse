@@ -41,6 +41,8 @@ Codex does not expose the same hook model, so `linear-devotee:greet` is invoked 
 
 `consummate-project` → `bind-milestone` → `bare-issue` form a hand-off chain. Each skill is also invocable standalone. Chain state lives at `${CLAUDE_PLUGIN_ROOT}/data/chain-${CLAUDE_SESSION_ID}.json` and carries the project_id, drafted milestones, drafted issues, and created-vs-pending counters.
 
+The chronicler can annotate suggested issues with `[blocked-by: <idx>, <idx>]` to encode hard ordering inside a milestone. `bare-issue` then picks issues whose dependencies are already created first (topological cascade) and forwards the resolved Linear identifiers to `save_issue` as `blockedBy`, so the Linear UI shows the dep chain natively — and an empty `blocked_by` list means the issue is a safe entry point.
+
 ## Requirements
 
 - Linear MCP/app tools loaded in the session

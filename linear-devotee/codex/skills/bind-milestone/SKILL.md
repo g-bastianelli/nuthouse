@@ -70,7 +70,10 @@ Use this markdown shape:
 
 ### Suggested issues
 
+Each entry has an implicit 0-based `idx` matching its position. Append `[blocked-by: <idx>, <idx>]` after a title to express a hard ordering constraint inside this milestone. `bare-issue` picks issues whose dependencies are already created first, then passes the resolved Linear identifiers to `save_issue` as `blockedBy`.
+
 - <issue title>
+- <issue title> [blocked-by: 0]
 
 ---
 
@@ -114,6 +117,8 @@ On API failure, surface the error verbatim and stop.
 
 ### Step 7 - Update chain state
 
+Parse the milestone draft's **Suggested issues** list into structured entries. Each line `- <title> [blocked-by: <idx>, <idx>]` becomes `{ idx, title, blocked_by: [<int>, ...] }`. Lines without an annotation get `blocked_by: []`. Drop any `idx` that doesn't exist in the same list and surface a warning (don't abort).
+
 Append the milestone to `created_milestones[]` in `data/chain-<session>.json`, preserving existing project and draft fields:
 
 ```json
@@ -122,9 +127,14 @@ Append the milestone to `created_milestones[]` in `data/chain-<session>.json`, p
   "name": "<name>",
   "url": "<url>",
   "idx_in_drafts": 0,
-  "suggested_issues": ["<title>"]
+  "suggested_issues": [
+    { "idx": 0, "title": "<title>", "blocked_by": [] },
+    { "idx": 1, "title": "<title>", "blocked_by": [0] }
+  ]
 }
 ```
+
+**Backward compatibility:** when reading an existing chain file where `suggested_issues` is a flat array of strings, treat each string at position `i` as `{ idx: i, title: str, blocked_by: [] }`.
 
 Set `current` to `bind-milestone` and `current_milestone_id` to the created milestone id.
 

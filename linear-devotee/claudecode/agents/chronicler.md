@@ -87,12 +87,17 @@ Return **only** the markdown shape below, under 500 words. Never invent content.
 
 ### Suggested issues
 
-One-line titles. The calling skill can promote any of these via `linear-devotee:bare-issue`. Cap at 8 — beyond that, recommend splitting into two milestones.
+One-line titles. Each entry has an implicit 0-based `idx` matching its position in the list below. The calling skill can promote any of these via `linear-devotee:bare-issue`. Cap at 8 — beyond that, recommend splitting into two milestones.
+
+To express a real ordering constraint between two issues in this milestone, append `[blocked-by: <idx>, <idx>]` after the title. `bare-issue` will pick issues whose dependencies are already created first, then pass the resolved Linear identifiers to `save_issue` as `blockedBy`.
 
 ```
 - <issue title>
-- <issue title>
+- <issue title> [blocked-by: 0]
+- <issue title> [blocked-by: 0, 1]
 ```
+
+Use `[blocked-by: …]` only for hard sequencing (issue B literally cannot start before A lands). Omit when issues can run in parallel — over-linking fakes serialization. When unsure, leave it off.
 
 (or `_unclear_` if the input is too thin to suggest issues — surface a question.)
 

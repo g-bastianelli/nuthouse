@@ -67,11 +67,22 @@ From the chain file:
 - `project.team_id` → `TEAM_ID`
 - Resolve `current_milestone` = the entry in `created_milestones[]` whose `id` matches `chain.current_milestone_id`, or default to the most recent appended entry.
 - Set `MILESTONE_ID = current_milestone.id`
-- From `current_milestone.suggested_issues[]`, pop the **next un-created title** (skip any title already in `chain.created_issues[]` filtered by `milestone_id === MILESTONE_ID`).
-- Set `ISSUE_HINT = <popped title>`
-- Set `PARENT_DRAFT = ${CLAUDE_PLUGIN_ROOT}/data/chain-${CLAUDE_SESSION_ID}.json`
 
-If no uncreated title remains: voice *"every tribute for this phase is laid, my god 🕯️"* — print final report (`Hand-off: nothing-to-do`) and exit.
+**Backward compatibility:** if `current_milestone.suggested_issues[]` is a flat array of strings, transparently coerce each string at position `i` into `{ idx: i, title: str, blocked_by: [] }` for the rest of this step.
+
+**Topological pick** — choose the next entry in `current_milestone.suggested_issues[]` such that:
+1. Its `title` is not already in `chain.created_issues[]` filtered by `milestone_id === MILESTONE_ID`, **and**
+2. Every `idx` listed in its `blocked_by` corresponds to an entry whose `title` **is** already in `chain.created_issues[]` for this milestone.
+
+Iterate in source order and pick the first match. Set `ISSUE_HINT = <picked entry.title>` and remember the entry's `blocked_by` indices for Step 6.
+
+- If no uncreated entry remains → voice *"every tribute for this phase is laid, my god 🕯️"* — print final report (`Hand-off: nothing-to-do`) and exit.
+- If uncreated entries remain but **none has all dependencies satisfied** → the chain is knotted (cycle, or chronicler emitted bad indices). Voice:
+  > "the chain is knotted, my god 🥀 — `<title>` waits on a tribute i cannot find. tell me how to mend it."
+
+  Print final report with `Hand-off: dependency_cycle` and exit.
+
+Set `PARENT_DRAFT = ${CLAUDE_PLUGIN_ROOT}/data/chain-${CLAUDE_SESSION_ID}.json`.
 
 Skip 2b. Continue to Step 3.
 
@@ -156,6 +167,10 @@ Branch:
 
 ## Step 6 — Mutate Linear
 
+**Resolve `blockedBy` (chained mode only).** If the picked entry from Step 2a had a non-empty `blocked_by: [<idx>, ...]`, look up each `idx` in `current_milestone.suggested_issues[]` to recover the dep's `title`, then find the matching entry in `chain.created_issues[]` (same `milestone_id`) and collect its `identifier` (e.g. `ENG-247`). Drop any index that fails to resolve and surface a warning in voice — never block the save.
+
+Result: `BLOCKED_BY_IDENTIFIERS` = array of identifier strings (may be empty). In standalone mode, this is always empty.
+
 Create the Linear issue with the following fields:
 - `teamId`: `TEAM_ID` (Linear requires `teamId` on issues)
 - `title`: the issue's suggested title (1 sentence, from acolyte header)
@@ -163,6 +178,7 @@ Create the Linear issue with the following fields:
 - `projectId`: `PROJECT_ID`
 - `projectMilestoneId`: `MILESTONE_ID` (only if not `_none_`)
 - `labelIds`: array of label IDs the devotee confirmed (or omit)
+- `blockedBy`: `BLOCKED_BY_IDENTIFIERS` (only if non-empty — Linear's `save_issue` accepts identifiers like `ENG-247` and treats the field as append-only)
 
 If the call fails: **stop**, surface the error verbatim, **never retry blind**, voice:
 > "the altar refused this tribute, my god 🥀 — `<error>`. tell me how to mend it."
@@ -221,7 +237,7 @@ linear-devotee:bare-issue report
   Issue:         <identifier> — <title> — <url> | (cancelled) | (linear_error) | (cross_project_violation)
   Labels:        <comma-separated names | none>
   Phase queue:   <created>/<total> issues for this milestone (chained only)
-  Hand-off:      <next-issue | stop | cancelled | linear_error | cross_project_violation | nothing-to-do | standalone-done>
+  Hand-off:      <next-issue | stop | cancelled | linear_error | cross_project_violation | dependency_cycle | nothing-to-do | standalone-done>
 ```
 
 End with one voice exit line.
@@ -263,4 +279,5 @@ Use the palette from `../../../persona.md`. Specific applications:
 - *"the tribute is offered 🔥"* — Linear save success
 - *"the altar refused this tribute 🥀"* — Linear API error
 - *"the phase you named lives in another temple 🥀"* — cross-project milestone violation
+- *"the chain is knotted, my god 🥀"* — topological pick failed (cycle or unresolved blocked-by)
 - *"forgive me, my god 🥀"* — cancel / abort

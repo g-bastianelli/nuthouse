@@ -161,6 +161,14 @@ On success, capture `milestone.id` and `milestone.url`. Voice:
 
 ## Step 7 — Update chain state
 
+Parse the chronicler's **Suggested issues** list into structured entries. Each line `- <title> [blocked-by: <idx>, <idx>]` becomes:
+
+```json
+{ "idx": <0-based position in the list>, "title": "<title>", "blocked_by": [<int>, ...] }
+```
+
+Lines without a `[blocked-by: …]` annotation get `"blocked_by": []`. If the annotation references an `idx` that doesn't exist in the same list, drop that single index and surface a warning (don't abort).
+
 Read the chain file at `${CLAUDE_PLUGIN_ROOT}/data/chain-${CLAUDE_SESSION_ID}.json` (create if missing — happens in standalone mode):
 
 ```json
@@ -173,13 +181,24 @@ Read the chain file at `${CLAUDE_PLUGIN_ROOT}/data/chain-${CLAUDE_SESSION_ID}.js
   },
   "current_milestone_idx": <integer or null>,
   "created_milestones": [
-    { "id": "<milestone.id>", "name": "<name>", "url": "<url>", "idx_in_drafts": <int or null>, "suggested_issues": ["<title>", ...] }
+    {
+      "id": "<milestone.id>",
+      "name": "<name>",
+      "url": "<url>",
+      "idx_in_drafts": <int or null>,
+      "suggested_issues": [
+        { "idx": 0, "title": "<title>", "blocked_by": [] },
+        { "idx": 1, "title": "<title>", "blocked_by": [0] }
+      ]
+    }
   ],
   "drafts": { ... unchanged ... }
 }
 ```
 
-Append the newly-created milestone to `created_milestones`. Carry over the `suggested_issues` from the chronicler's draft so `bare-issue` can pick them up.
+Append the newly-created milestone to `created_milestones`. Carry over the structured `suggested_issues` so `bare-issue` can topologically pick the next one.
+
+**Backward compatibility:** when reading an existing chain file where `suggested_issues` is a flat array of strings, treat each string as `{ idx: <position>, title: <str>, blocked_by: [] }`.
 
 Use Read + Write. Never write outside `${CLAUDE_PLUGIN_ROOT}/data/`.
 
