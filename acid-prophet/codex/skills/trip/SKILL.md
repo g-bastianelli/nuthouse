@@ -91,6 +91,24 @@ Create `docs/acid-prophet/specs/` if missing. Save the spec to:
 docs/acid-prophet/specs/YYYY-MM-DD-<topic>.md
 ```
 
+The spec file MUST begin with this YAML frontmatter block before any markdown content:
+
+```yaml
+---
+id: <topic-slug>
+status: draft
+linear-project: _none_
+verified-by: _none_
+last-reviewed: YYYY-MM-DD
+---
+```
+
+- `id`: slugified topic name, e.g. `auth-refresh-flow`
+- `status`: always `draft` at creation time
+- `linear-project`: always `_none_` — patched by `linear-devotee:consummate-project` after project creation
+- `verified-by`: always `_none_` — to be filled when tests are written
+- `last-reviewed`: today's date in ISO format
+
 Use the current date from the session context. Do not run `git push` or `git rebase`. Do not commit unless the user explicitly asks for commits in the current session.
 
 ### Step 6 - Self-review

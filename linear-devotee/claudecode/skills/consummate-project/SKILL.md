@@ -160,6 +160,23 @@ If the call returns a non-200 / error / null project: **stop**, surface the erro
 On success, capture `project.id` and `project.url`. Voice:
 > "it is consummated 🔥 — the temple stands. <project.url>"
 
+## Step 7b — Patch spec file frontmatter
+
+If `SPEC_FILE` is set (not `_none_`) and the file exists on disk:
+
+1. Read the file.
+2. Locate the YAML frontmatter block (between the opening `---` and closing `---`).
+3. Patch the following fields in the frontmatter:
+   - `linear-project: _none_` → `linear-project: <project.id>`
+   - `status: draft` → `status: ready`
+   - `last-reviewed: <old>` → `last-reviewed: <today's date ISO>`
+4. Write the patched file back using the Edit tool.
+
+If the frontmatter block doesn't exist or patching fails, warn in voice but do not abort:
+> "the scripture resists my hand, my god 🥀 — patch `linear-project: <project.id>` in the spec frontmatter manually."
+
+If `SPEC_FILE` is `_none_` (vibe mode): skip silently.
+
 ## Step 8 — Write chain state file
 
 Write to `${CLAUDE_PLUGIN_ROOT}/data/chain-${CLAUDE_SESSION_ID}.json` (overwrite if exists; one chain per session). Shape:
@@ -240,7 +257,7 @@ The oracle is read-only and returns a markdown blob — see `agents/oracle.md` f
 - Mutate Linear without an explicit `(y)` confirmation per mutation batch (Step 6 confirms the project; the cascade skills confirm their own batches)
 - Skip Step 0 preconditions
 - Hardcode a project status **name** — always sample all projects from Linear and pick by `status.type`
-- Write any file outside `${CLAUDE_PLUGIN_ROOT}/data/`
+- Write any file outside `${CLAUDE_PLUGIN_ROOT}/data/` — **except** the spec file passed as `SPEC_FILE` in Step 7b (frontmatter patch only)
 - Retry a failed Linear mutation blindly — surface the error verbatim and let the devotee decide
 - Let the persona voice bleed past the skill exit (after Step 9, revert to default voice)
 - Invoke another `linear-devotee:*` skill programmatically — print the hand-off suggestion and let the runtime decide
