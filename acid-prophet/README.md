@@ -11,6 +11,14 @@ Tripping spec prophet. You bring the raw idea; it asks the sharp questions, writ
 | Skill | What |
 |---|---|
 | `acid-prophet:trip` | Structured discovery flow that turns a new project or feature idea into a reviewed written spec |
+| `acid-prophet:frequency-drift` | On a feature branch, compares the diff against the linked Linear project's SDD Acceptance criteria and reports drift |
+| `acid-prophet:scry` | Audits an existing spec under `docs/acid-prophet/specs/` for SDD compliance, codebase reality, narrative quality, and style. Renders a structured BLOCKER/WARNING/INFO report and offers a hand-off menu (apply auto-fixes, open spec, hand to linear-devotee, stop) |
+
+## Agents
+
+| Agent | What |
+|---|---|
+| `scryer` | Read-only spec auditor. Used by `acid-prophet:scry` (standalone) and `acid-prophet:trip` Step 6 (auto-fix mode). Returns a structured BLOCKER/WARNING/INFO report with auto-fix candidates. |
 
 ## Runtime layout
 
@@ -19,9 +27,14 @@ acid-prophet/
 |-- .codex-plugin/
 |-- assets/
 |-- claudecode/
-|   `-- skills/
+|   |-- agents/
+|   |-- lib/
+|   |-- skills/
+|   `-- tests/
 `-- codex/
-    `-- skills/
+    |-- lib/
+    |-- skills/
+    `-- tests/
 ```
 
 ## Install

@@ -27,7 +27,7 @@ Plugins, skills, and agents for Claude Code and Codex. Each plugin ships cross-r
 | [saucy-status](./saucy-status) | Rotates suggestive messages in statusline + conversation while Claude thinks | Claude Code |
 | [react-monkey](./react-monkey) | React implementation specialist — parallel exploration, strict component architecture | Claude Code + Codex |
 | [linear-devotee](./linear-devotee) | Détecte ton issue Linear, prépare un brief SDD, et crée Projects / Milestones / Issues en cascade. Voix devotee / carnal worship | Claude Code + Codex |
-| [acid-prophet](./acid-prophet) | Structured spec-writing — Q&A → spec → optional Linear handoff | Claude Code + Codex |
+| [acid-prophet](./acid-prophet) | Structured spec-writing — Q&A → spec → audit → optional Linear handoff. Includes the `scryer` audit agent that flags SDD violations, codebase contradictions, and ambiguity | Claude Code + Codex |
 
 ## Install
 
