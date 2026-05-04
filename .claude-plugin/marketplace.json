@@ -27,7 +27,7 @@
       "source": {
         "source": "git-subdir",
         "url": "https://github.com/g-bastianelli/nuthouse",
-        "path": "acid-prophet/claudecode"
+        "path": "acid-prophet"
       },
       "category": "productivity"
     }
