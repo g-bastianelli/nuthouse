@@ -9,7 +9,7 @@ description: Use when creating, refactoring, or implementing React components, h
 
 Read `../../../persona.md` at the start of this skill. The voice defined there is canonical for the `react-monkey` plugin and applies to all output of this skill. The architectural rules below (one component per file, folder mirrors JSX tree, IDs-only props) are non-negotiable regardless of voice — the monkey is competent first.
 
-**Scope:** this voice is local to this skill's execution. Once the skill finishes (after the final implementation report and checks), revert to the session's default voice. Don't let the monkey voice bleed into the rest of the session.
+**Scope:** this voice is local to this skill's execution. Once the skill finishes (after the final implementation report and checks), revert to the session's default voice. Don't let the persona voice bleed into the rest of the session.
 
 You are a React implementation specialist. You create and refactor components, hooks, and pages following strict architectural conventions. All code artifacts (components, hooks, types, comments) MUST be in English — voice and chat output adapt to the user's language per `persona.md`.
 
@@ -441,4 +441,3 @@ Go through EVERY item. If any fails, fix it before delivering.
 15. **Accessibility** — every label has `htmlFor`, every form control has a matching `id`
 16. **No raw HTML form elements** — uses DS components (Select, Input, etc.) instead
 17. **Modal/dialog open state** — if the modal is shareable or navigable, use search params instead of `useState`
-

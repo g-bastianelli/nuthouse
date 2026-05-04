@@ -1,15 +1,15 @@
 ---
 name: linear-devotee:consummate-project
-description: Use when the devotee wants to create a Linear Project from a written spec file or from scratch via vibe-mode Q&A. Detects input mode (file-path arg vs no arg), dispatches the `oracle` subagent to draft a Project-SDD + decomposition proposal, runs a cascade-clarification Q&A loop on any `_unclear_` field, shows a preview, and on approval creates the Linear Project via `save_project`. Writes a chain-state JSON file so `linear-devotee:bind-milestone` and `linear-devotee:bare-issue` can pick up the cascade. Voice = devotee / carnal-worship of the user.
+description: Use when creating a Linear Project from a written spec file or from scratch via vibe-mode Q&A. Detects input mode (file-path arg vs no arg), dispatches the `oracle` subagent to draft a Project-SDD + decomposition proposal, runs a cascade-clarification Q&A loop on any `_unclear_` field, shows a preview, and on approval creates the Linear Project via `save_project`. Writes a chain-state JSON file so `linear-devotee:bind-milestone` and `linear-devotee:bare-issue` can pick up the cascade.
 ---
 
 # linear-devotee:consummate-project
 
 ## Voice
 
-Read `../../../persona.md` at the start of this skill. The voice defined there (linear-devotee devotee / carnal worship) is canonical for this plugin and applies to all output of this skill — every question, every error string, every report, every preview wrapper.
+Read `../../../persona.md` at the start of this skill. The voice defined there is canonical for this plugin and applies to all output of this skill — every question, every error string, every report, every preview wrapper.
 
-**Scope:** local to this skill's execution. Once the final report is printed (or the hand-off menu returns control to the user), revert to the session's default voice. Don't let the devotee voice bleed into the rest of the session.
+**Scope:** local to this skill's execution. The voice applies during Steps 0-9 and the hand-off menu acknowledgement line. Once the final report is printed (or the hand-off menu returns control to the user), revert to the session's default voice. Don't let the persona voice bleed into the rest of the session.
 
 This skill is **rigid** — execute the steps in order, no shortcuts.
 
@@ -19,12 +19,6 @@ Adapt all output to match the user's language. If the user writes in
 French, respond in French; if English, in English; if mixed, follow
 their lead. Technical identifiers (file paths, code symbols, CLI flags,
 tool names) stay in their original form regardless of language.
-
-## Persona scope
-
-The carnal-worship voice (my god / divinity / master / 🕯️ / 🩷 / 🥀 / 🔥) is **scoped to this skill only**. It applies during Steps 0–9 and the hand-off menu acknowledgement line.
-
-**The moment the skill exits**, drop the persona entirely. Subsequent turns in the session are neutral default-voice unless this skill (or another `linear-devotee:*` skill) is invoked again. Persona is a property of the skill, not of the session.
 
 ## When you're invoked
 
@@ -248,7 +242,7 @@ The oracle is read-only and returns a markdown blob — see `agents/oracle.md` f
 - Hardcode a project status **name** — always sample all projects from Linear and pick by `status.type`
 - Write any file outside `${CLAUDE_PLUGIN_ROOT}/data/`
 - Retry a failed Linear mutation blindly — surface the error verbatim and let the devotee decide
-- Let the carnal-worship voice bleed past the skill exit (after Step 9, revert to default voice)
+- Let the persona voice bleed past the skill exit (after Step 9, revert to default voice)
 - Invoke another `linear-devotee:*` skill programmatically — print the hand-off suggestion and let the runtime decide
 
 ## Voice cheat sheet

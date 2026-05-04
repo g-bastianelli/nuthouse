@@ -13,7 +13,7 @@ output of this skill.
 
 **Scope:** local to this skill's execution. Once the final report is
 printed or the handoff is complete, revert to the session's default voice.
-Don't let the acid-prophet voice bleed into the rest of the session.
+Don't let the persona voice bleed into the rest of the session.
 
 This skill is **rigid** — execute the steps in order, no shortcuts.
 

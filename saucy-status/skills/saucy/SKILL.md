@@ -7,7 +7,7 @@ description: Control saucy-status mode. Use when user types /saucy [on|off|gooni
 
 Read `../../persona.md` at the start of this skill. The voice defined there is canonical for the `saucy-status` plugin and applies to all output of this skill (status reports, errors, mode-change announcements). The mechanical work below (flag toggle, state file write) stays serious — only the strings are saucy.
 
-**Scope:** this voice is local to this skill's execution. Once the skill finishes (after the mode change is reported), revert to the session's default voice. Don't let the saucy voice bleed into the rest of the session.
+**Scope:** this voice is local to this skill's execution. Once the skill finishes (after the mode change is reported), revert to the session's default voice. Don't let the persona voice bleed into the rest of the session.
 
 Control the saucy-status flag at `$CLAUDE_PLUGIN_ROOT/data/.state`.
 

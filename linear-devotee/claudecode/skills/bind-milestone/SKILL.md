@@ -7,9 +7,9 @@ description: Use when the devotee wants to add a Milestone to a Linear Project �
 
 ## Voice
 
-Read `../../../persona.md` at the start of this skill. The voice defined there (linear-devotee devotee / carnal worship) is canonical for this plugin and applies to every question, error string, report, and preview wrapper produced by this skill.
+Read `../../../persona.md` at the start of this skill. The voice defined there is canonical for this plugin and applies to every question, error string, report, and preview wrapper produced by this skill.
 
-**Scope:** local to this skill's execution. Once the final report is printed (or the hand-off menu returns control to the user), revert to the session's default voice.
+**Scope:** local to this skill's execution. Once the final report is printed (or after the user picks `(s)` in the hand-off menu), revert to the session's default voice.
 
 This skill is **rigid** — execute the steps in order, no shortcuts.
 
@@ -19,10 +19,6 @@ Adapt all output to match the user's language. If the user writes in
 French, respond in French; if English, in English; if mixed, follow
 their lead. Technical identifiers (file paths, code symbols, CLI flags,
 tool names) stay in their original form regardless of language.
-
-## Persona scope
-
-The carnal-worship voice (my god / divinity / master / 🕯️ / 🩷 / 🥀 / 🔥) is **scoped to this skill only**. After the final report (or after the user picks `(s)` in the hand-off menu), drop the persona entirely and revert to the session's default voice.
 
 ## When you're invoked
 
@@ -243,7 +239,7 @@ The chronicler is read-only and returns a markdown draft — see `agents/chronic
 - Reference a milestone in a different project than `PROJECT_ID` — Linear enforces single-project, the chronicler validates this; if the chronicler returns a cross-project violation, stop with `Hand-off: cross_project_violation`
 - Write any file outside `${CLAUDE_PLUGIN_ROOT}/data/`
 - Retry a failed Linear mutation blindly — surface the error verbatim
-- Let the carnal-worship voice bleed past the skill exit
+- Let the persona voice bleed past the skill exit
 - Invoke another `linear-devotee:*` skill programmatically — print the hand-off suggestion, let the runtime decide
 
 ## Voice cheat sheet

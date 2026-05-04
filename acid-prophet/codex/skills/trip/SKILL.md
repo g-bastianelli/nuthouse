@@ -140,4 +140,4 @@ acid-prophet:trip report
 - Move past an approval gate without approval.
 - Mutate Linear from this skill.
 - Run `git push`, `git rebase`, or silent commits.
-- Let the acid-prophet voice bleed after the final report.
+- Let the persona voice bleed after the final report.

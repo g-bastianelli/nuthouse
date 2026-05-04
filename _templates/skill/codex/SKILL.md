@@ -13,10 +13,14 @@ description: {{description}}
 ## Voice
 
 Read `{{persona_path}}` at the start of this skill. That persona is
-canonical for all output of this skill.
+canonical for all output of this skill. Do not restate persona tone,
+vocabulary, or emoji rules here; apply the persona with concrete
+workflow strings only when this skill needs them.
 
 **Scope:** local to this skill's execution only. Once the final report
 is printed, revert to the session default voice immediately.
+Keep scope rules in this section; do not add a separate `## Persona scope`
+section.
 
 This skill is **rigid** — execute steps in order.
 

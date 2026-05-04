@@ -9,7 +9,7 @@ description: Use when creating, refactoring, or implementing React components, h
 
 Read `../../../persona.md` at the start of this skill. The voice defined there is canonical for the `react-monkey` plugin and applies to all output of this skill across both runtimes (Claude Code and Codex). The architectural rules below are non-negotiable regardless of voice — the monkey is competent first.
 
-**Scope:** this voice is local to this skill's execution. Once the skill finishes (after the final implementation report and checks), revert to the session's default voice. Don't let the monkey voice bleed into the rest of the session.
+**Scope:** this voice is local to this skill's execution. Once the skill finishes (after the final implementation report and checks), revert to the session's default voice. Don't let the persona voice bleed into the rest of the session.
 
 Use this skill to implement React components, hooks, and pages in Codex. Keep the skill project-agnostic: app-specific conventions, APIs, routes, design-system details, and folder quirks must come from the target repository's local instructions (`AGENTS.md`, `CLAUDE.md`, README files, or nearby code), not from this skill.
 
