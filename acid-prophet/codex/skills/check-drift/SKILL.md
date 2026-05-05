@@ -1,5 +1,5 @@
 ---
-name: frequency-drift
+name: check-drift
 description: Use on a feature branch before or during PR creation to detect drift between the PR diff and the SDD Acceptance/Constraints of the linked project. Prefers the repo spec markdown as primary truth, falls back to Linear only when no spec markdown is found, generates a drift report, and optionally posts it as a PR comment.
 ---
 
@@ -117,7 +117,7 @@ On `y`: run `gh pr comment --body "<report>"`.
 Print one short voice line from `persona.md`, then:
 
 ```text
-acid-prophet:frequency-drift report
+acid-prophet:check-drift report
   Branch:      <current branch>
   Project:     <project name> (<project ID>)
   Source:      spec file <path> | linear (fallback)

@@ -6,6 +6,6 @@
   },
   "skills": "./claudecode/skills/",
   "agents": [
-    "./claudecode/agents/scryer.md"
+    "./claudecode/agents/spec-auditor.md"
   ]
 }

@@ -1,5 +1,5 @@
 ---
-name: scry
+name: audit-spec
 description: Use when auditing an existing acid-prophet spec for SDD compliance, codebase reality, narrative quality, and style. Takes a spec path, runs the scryer audit pipeline inline (Codex has no subagent dispatch), renders a structured BLOCKER/WARNING/INFO report, and offers a hand-off menu (apply auto-fixes, open spec, hand to linear-devotee, stop).
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: audit
-description: Scan all skills, agents, personas, and banner prompts in this nuthouse repo against the _templates/ source of truth. Reports missing ## Voice, ## Language, broken persona paths, invalid frontmatter, and BANNER_PROMPT.md convention drift. Run after any convention change to catch drift.
+description: Scan all skills, agents, personas, and banner prompts in this nuthouse repo against the _templates/ source of truth. Reports missing ## Workflow / ## Never, old-format ## Voice / ## Language artifacts, missing agent tools allowlist, persona-coded non-voice agent names, invalid frontmatter, and BANNER_PROMPT.md convention drift. Run after any convention change to catch drift.
 ---
 
 # audit
@@ -54,7 +54,7 @@ Read the `<!-- template-meta -->` block from each template:
 - `_templates/plugin/BANNER_PROMPT.md` → for all plugin banner prompts
 
 Requirements extracted:
-- **SKILL.md:** required_frontmatter `[name, description]`, required_sections `["## Voice", "## Language"]`
+- **SKILL.md:** required_frontmatter `[name, description]`, required_sections `["## Workflow", "## Never"]`
 - **AGENT.md:** required_frontmatter `[name, description]`, required_sections `[]`
 - **persona.md:** required_frontmatter `[name, tagline]`, required_sections `["## Language", "## Hard rule"]`
 - **BANNER_PROMPT.md:** required guidance: README banner, visible mascot/persona, existing nuthouse style, setting from persona world, functional props secondary, user-centered personas keep the user offscreen/implied/abstract, 3:1 target, no readable text unless exact English text is requested, final asset path `assets/banner.png`
@@ -90,15 +90,16 @@ For each file, check against the matching template's requirements.
 **SKILL.md checks (in order):**
 1. Frontmatter contains `name` field — ❌ CRITIQUE if missing
 2. Frontmatter contains `description` field — ❌ CRITIQUE if missing
-3. `## Voice` section present — ❌ CRITIQUE if missing
-4. `## Voice` body contains a path ending in `persona.md` — ❌ CRITIQUE if missing
-5. That `persona.md` path resolves to an existing file — ❌ CRITIQUE if broken
-6. `## Voice` body contains `**Scope:**` line — ⚠️ WARNING if missing
-7. `## Language` section present — ❌ CRITIQUE if missing
+3. `## Workflow` section present — ❌ CRITIQUE if missing (new format)
+4. `## Never` section present — ❌ CRITIQUE if missing (new format)
+5. `## Voice` section present WITHOUT `## Workflow` — ⚠️ WARNING: old format, migrate to compact `## Workflow` + `## Never`
+6. `## Language` section present WITHOUT `## Workflow` — ⚠️ WARNING: old format artifact, migrate to intro-line pattern
 
 **AGENT.md checks:**
 1. Frontmatter contains `name` field — ❌ CRITIQUE if missing
 2. Frontmatter contains `description` field — ❌ CRITIQUE if missing
+3. Frontmatter contains `tools:` block (non-empty list) — ❌ CRITIQUE if missing or empty (every agent must have an explicit allowlist)
+4. Agent `name` matches a persona/role word (`seer`, `oracle`, `acolyte`, `spirit`, `muse`, `ghost`, `herald`, etc.) AND the agent body does NOT reference `shared/persona-line-contract.md` — ⚠️ WARNING: persona-coded name on a non-voice agent; rename to a functional role
 
 **persona.md checks:**
 1. Frontmatter contains `name` field — ❌ CRITIQUE if missing

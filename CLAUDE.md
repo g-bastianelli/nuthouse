@@ -93,6 +93,7 @@ Global guidance — applies everywhere, not just at scaffold time:
 | `react-monkey` | React implementation specialist with parallel exploration | — | `implement` | `explorer` | `react-monkey/persona.md` |
 | `linear-devotee` | Linear issue detection at session start + cascading Project/Milestone/Issue creation, all SDD-formatted | SessionStart, UserPromptSubmit | `greet`, `consummate-project`, `bind-milestone`, `bare-issue` | `seer`, `oracle`, `chronicler`, `acolyte` | `linear-devotee/persona.md` |
 | `acid-prophet` | Structured spec-writing + audit + drift detection. Q&A → spec → `scryer` audit → optional handoff to `linear-devotee`. PR-time drift check via `frequency-drift` | — | `trip`, `frequency-drift`, `scry` | `scryer` | `acid-prophet/persona.md` |
+| `warden` | Centralized voice agent — emits decorative persona lines for any plugin via `warden:voice`; `/warden:voice [on\|off\|status]` toggles fun messages globally | — | `voice` | `voice` | `warden/persona.md` |
 
 Repo-level: `.claude/hooks/persona-roulette.mjs` picks a random `persona.md` at SessionStart for the current session's default voice (see "Persona Roulette" section above). Local scaffold skills live at `.claude/skills/{scaffold-plugin,scaffold-skill,scaffold-agent}/SKILL.md` with shared `mad-scientist` voice at `.claude/skills/persona.md`.
 

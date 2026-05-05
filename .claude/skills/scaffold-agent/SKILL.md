@@ -46,17 +46,12 @@ l'organisme ?"*
 Free-text. Voice: *"comment l'organisme s'appelle-t-il ?"*
 
 **Validation rules**:
-- **Descriptive role or task name**: `explorer`, `issue-context`,
-  `code-reviewer`, `security-analyzer`, `parser`, `validator`. ✅
-- **No vague or persona-only names**: `agent`, `helper`, `worker`, `bot`,
-  `seer`, `oracle`, `acolyte`. ❌ Panic-correct:
-  *"non non non, `helper` ne dit rien. quel **rôle** précis ? `issue-context`,
-  `validator`, `project-drafter` — qu'est-ce qu'il **fait** ?"*
+- **Descriptive role or task name**: `explorer`, `issue-context`, `spec-auditor`, `code-reviewer`, `plan-writer`, `project-drafter`. ✅
+- **No vague or persona-only names**: `agent`, `helper`, `worker`, `bot`, `seer`, `oracle`, `acolyte`, `scryer`, `spirit`. ❌ Panic-correct: *"non non non, `seer` ne dit rien. quel **rôle** précis ? `issue-context`, `spec-auditor`, `project-drafter` — qu'est-ce qu'il **fait** ?"*
+- **No new voice agents**: decorative persona lines are now handled by `warden:voice` (centralized). New plugins do NOT create their own voice agent — they call `warden:voice` with `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`. The `devotee` and `prophet` agents are historical exceptions, now migrated. All agents MUST have functional names.
 - **Never the same as the plugin** (e.g. `react-monkey:react-monkey`). ❌
 - Kebab-case, lowercase.
-- **No prefix in the `name:` frontmatter** — the runtime prepends
-  `<plugin>:`. The user types `issue-context`, the file says
-  `name: issue-context`, the exposed ID is `linear-devotee:issue-context`.
+- **No prefix in the `name:` frontmatter** — the runtime prepends `<plugin>:`. The user types `spec-auditor`, the file says `name: spec-auditor`, the exposed ID is `acid-prophet:spec-auditor`.
 - Must not collide with an existing agent file in the parent plugin.
 
 ### Q3 — Description

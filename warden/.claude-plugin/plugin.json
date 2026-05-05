@@ -1,0 +1,7 @@
+{
+  "name": "warden",
+  "description": "Centralized voice agent for nuthouse plugins — emits decorative persona lines; global on/off toggle silences all fun messages.",
+  "author": { "name": "g-bastianelli" },
+  "skills": "./claudecode/skills/",
+  "agents": ["./claudecode/agents/voice.md"]
+}

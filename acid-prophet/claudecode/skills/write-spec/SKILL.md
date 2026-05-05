@@ -1,245 +1,62 @@
 ---
-name: acid-prophet:trip
+name: acid-prophet:write-spec
 description: Use when starting any project or feature that needs a structured spec before development — asks clarifying questions one at a time, proposes approaches, validates a written spec, then optionally hands off to linear-devotee:consummate-project for Linear project creation
+effort: high
+allowed-tools: Read, Glob, Grep, Bash
 ---
 
-# acid-prophet:trip
+# acid-prophet:write-spec
 
-## Voice
+Rigid spec-writing gate. Match the user's language; keep technical identifiers unchanged.
 
-Read `../../../persona.md` at the start of this skill. The voice
-defined there is canonical for the `acid-prophet` plugin and applies to all
-output of this skill.
+> At visible transitions, dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Print the returned `line` before normal output. Skip on failure.
 
-**Scope:** local to this skill's execution. Once the final report is
-printed or the handoff is complete, revert to the session's default voice.
-Don't let the persona voice bleed into the rest of the session.
+## Workflow
 
-This skill is **rigid** — execute the steps in order, no shortcuts.
+1. Preconditions:
+   - Verify git repo (`git rev-parse --git-dir`). Warn if not found — commit steps will be skipped but trip continues.
+2. Explore context:
+   - `git log --oneline -10`; list `docs/acid-prophet/specs/` if it exists; read project-root `CLAUDE.md` if present.
+3. Clarifying questions (one per message):
+   - **Scope check first**: if the request describes multiple independent subsystems, flag and propose decomposition. Each sub-project gets its own trip.
+   - Extract: who uses this and why, what problem it uniquely solves, where it fits, constraints (stack, timeline), definition of done.
+4. Propose 2–3 approaches with trade-offs. Lead with your recommendation. One message for the full option set.
+5. Present spec sections one at a time; wait for user approval before the next. Revise on rejection.
+   - Sections: Problem & Why, Solution, Architecture, Components / data flow, Error handling, Testing approach, Non-goals.
+   - **Keep code minimal**: interfaces, type signatures, short pseudo-code (≤ 15 lines) only. Concrete examples and full implementations belong in Linear issues, not specs.
+6. Write spec:
+   - Create `docs/acid-prophet/specs/` if missing. Save to `docs/acid-prophet/specs/YYYY-MM-DD-<topic>.md`.
+   - Frontmatter required: `id: <slug>`, `status: draft`, `linear-project: _none_`, `verified-by: _none_`, `last-reviewed: <today ISO>`.
+   - Commit: `git add <path> && git commit -m "docs(acid-prophet): add spec for <topic>"`. Skip commit if not in a git repo; warn user.
+7. Scryer audit:
+   - Dispatch `acid-prophet:spec-auditor`:
+     ```
+     SPEC_PATH: <absolute path>
+     PROJECT_ROOT: <git root>
+     MODE: auto-fix-trivial
+     ```
+   - Parse result with `<PROJECT_ROOT>/acid-prophet/claudecode/lib/parse-scryer-report.mjs`. If null: dispatch `warden:voice` with `SUMMARY: spec-auditor output malformed`, print the returned line, continue without auto-fixes.
+   - Apply each auto-fix candidate via `apply-frontmatter-patch.mjs`. If patches applied, commit: `git commit -m "docs(acid-prophet): spec-auditor auto-fixes"`. Never use `--no-verify`.
+   - **BLOCKER findings remain** → surface to user verbatim; loop (edit spec → re-run spec-auditor → repeat) until BLOCKER list is empty.
+   - WARNING/INFO only → present list; let user choose which to address; then advance.
+8. User spec gate: ask user to review `<path>`. Wait. If changes: update spec, commit, re-run step 7.
+9. Handoff: ask the user if they want to push the spec to Linear.
+   - Yes → invoke `linear-devotee:consummate-project` with spec path.
+   - No → dispatch `warden:voice` with `SUMMARY: write-spec complete, spec approved, no linear handoff`, print the returned line, exit.
 
-## Language
+## Final Report
 
-Adapt all output to match the user's language. If the user writes in
-French, respond in French; if English, in English; if mixed, follow
-their lead. Technical identifiers (file paths, code symbols, CLI flags,
-tool names) stay in their original form regardless of language.
-
-## When you're invoked
-
-The user wants to think through a project or feature before writing any code
-or creating any Linear issues. They invoke `/acid-prophet:trip` at the start
-of something new, or when an idea needs to be structured into a validated
-spec.
-
-## Hard gate
-
-DO NOT invoke `linear-devotee:consummate-project` until the user has
-explicitly approved the written spec. No exceptions.
-
-## Checklist
-
-You MUST create a task (TaskCreate) for each item below and complete them in
-strict order. Mark each `in_progress` when starting, `completed` when done.
-
-1. Explore context
-2. Clarifying questions
-3. Propose 2-3 approaches
-4. Present spec sections
-5. Write spec
-6. Self-review
-7. User spec gate
-8. Handoff
-
-## Step 0 — Preconditions
-
-- Read `../../../persona.md` for the canonical voice.
-- Verify you are in a git repository (`git rev-parse --git-dir`). If not,
-  warn the user — the spec commit step will be skipped, but the trip
-  continues.
-
-## Step 1 — Explore context
-
-Before asking anything, understand the landscape:
-
-- `git log --oneline -10` — recent work
-- List `docs/acid-prophet/specs/` if it exists — check for prior specs on
-  related topics
-- Read `CLAUDE.md` at the project root if it exists
-
-Mark task completed.
-
-## Step 2 — Clarifying questions
-
-One question per message. Multiple-choice preferred over open-ended when
-possible.
-
-**Scope check first:** if the request describes multiple independent
-subsystems, flag immediately:
-> "I see multiple systems here. should we split this into separate trips?"
-
-Propose decomposition into sub-projects. Each sub-project gets its own
-`trip` cycle. Don't spend questions refining details of a project that needs
-decomposition first.
-
-**Topics to extract** (adapt — don't re-ask what's already obvious):
-- Who uses this and why does it exist?
-- What problem does it solve that nothing else solves today?
-- Where does it fit in the existing architecture?
-- What are the constraints (tech stack, dependencies, timeline)?
-- What does "done" look like concretely?
-
-Keep the voice cosmic: questions that feel philosophical but extract
-concrete requirements.
-
-## Step 3 — Propose 2-3 approaches
-
-Present 2-3 options with trade-offs. Lead with your recommendation and
-explain why. One message for the full option set. Keep it conversational.
-
-## Step 4 — Present spec sections
-
-Present the design section by section. Ask for approval after each section.
-Scale to complexity: a few sentences for simple features, up to 200-300 words
-for complex ones.
-
-Sections to cover:
-- Problem & Why
-- Solution
-- Architecture
-- Components / data flow
-- Error handling
-- Testing approach
-- Non-goals (V1 scope)
-
-**Keep code minimal in specs.** Interfaces, type signatures, JSON/DB
-schemas, and short pseudo-code (under 15 lines) belong in the spec —
-they fix the contract. Concrete examples, full implementations, and
-test snippets do **not** belong here — they live in Linear issues
-where they get reviewed in context and rotate naturally as the code
-evolves. Specs that drown in code rot the moment the implementation
-moves; the auditor (`scryer`) flags fenced blocks longer than 15 lines.
-
-If the user doesn't approve a section: revise it. Don't move on until
-approved.
-
-## Step 5 — Write spec
-
-Create `docs/acid-prophet/specs/` if it doesn't exist.
-Save spec to: `docs/acid-prophet/specs/YYYY-MM-DD-<topic>.md`
-
-The spec file MUST begin with this YAML frontmatter block before any markdown content:
-
-```yaml
----
-id: <topic-slug>
-status: draft
-linear-project: _none_
-verified-by: _none_
-last-reviewed: YYYY-MM-DD
----
-```
-
-- `id`: slugified topic name, e.g. `auth-refresh-flow`, `frequency-drift`
-- `status`: always `draft` at creation time
-- `linear-project`: always `_none_` — will be patched by `linear-devotee:consummate-project` after project creation
-- `verified-by`: always `_none_` — to be filled when tests are written
-- `last-reviewed`: today's date in ISO format
-
-Commit immediately after writing:
-```bash
-git add docs/acid-prophet/specs/<filename>.md
-git commit -m "docs(acid-prophet): add spec for <topic>"
-```
-
-If not in a git repo: save the file but skip the commit. Warn the user.
-
-## Step 6 — Scryer audit (auto-fix-trivial)
-
-Dispatch the `acid-prophet:scryer` subagent in `auto-fix-trivial` mode
-to audit the spec just written. The subagent runs the full check
-pipeline (SDD-strict, reality, narrative, style) and returns a
-structured report.
-
-```
-Agent({
-  subagent_type: 'acid-prophet:scryer',
-  description: 'audit spec',
-  prompt: `SPEC_PATH: <absolute spec path from Step 5>
-PROJECT_ROOT: <git rev-parse --show-toplevel>
-MODE: auto-fix-trivial`,
-})
-```
-
-Parse the result with
-`<PROJECT_ROOT>/acid-prophet/claudecode/lib/parse-scryer-report.mjs`.
-If parsing returns `null`, surface the raw output verbatim with one
-voice line and continue without auto-fixes.
-
-Apply each `Auto-fix candidates` entry to the spec via
-`<PROJECT_ROOT>/acid-prophet/claudecode/lib/apply-frontmatter-patch.mjs`
-(and equivalent helpers for empty-section fills). If any patches were
-applied, commit:
-
-```bash
-git add <spec path>
-git commit -m "docs(acid-prophet): scryer auto-fixes"
-```
-
-Never bypass the pre-commit hook (`--no-verify` is forbidden).
-
-Then handle remaining findings:
-- **BLOCKER findings remain** — present them to the user verbatim. Do
-  not advance to Step 7. Loop on user resolution: edit the spec, re-run
-  the scryer dispatch, repeat until BLOCKER list is empty.
-- **WARNING / INFO only** — present them as a list and ask the user
-  which to address. Acknowledged-and-deferred findings can be
-  documented as inline comments in the spec or as items in Non-goals
-  (user choice). Then advance to Step 7.
-
-## Step 7 — User spec gate
-
-Ask the user to review the written spec:
-> "spec written at `<path>`. read it — let me know if you want changes
-> before we continue."
-
-Wait for response. If changes requested: update spec, commit, re-run
-Step 6. Only proceed once the user explicitly approves.
-
-## Step 8 — Handoff
-
-Ask:
-> "the trip is over. the spec exists. push to Linear?"
-
-- **Yes** → invoke `linear-devotee:consummate-project` passing the spec
-  file path as context
-- **No** → clean stop:
-  > "prophecy complete. architecture locked. 🔮"
-
-Mark all tasks completed. Revert to session default voice.
-
-## Final report (always print)
-
-```
-acid-prophet:trip report
-  Spec:     <path to spec file>
-  Commits:  <number of commits made>
+```text
+acid-prophet:write-spec report
+  Spec:     <path>
+  Commits:  <n>
   Handoff:  <linear-devotee:consummate-project invoked | stopped here>
 ```
 
-Wrap with one short voice line before the report.
+## Never
 
-## Things you NEVER do
-
-- Run `git push` or `git rebase`
-- Invoke `linear-devotee:consummate-project` before spec is user-approved
-- Skip Step 0 preconditions
-- Ask multiple questions in the same message
-- Move to the next step before the current one is approved
-
-## Voice cheat sheet
-
-Use the palette from `../../../persona.md`. Short applications:
-- Opening: "🔮 prophecy: awake. where's the idea."
-- On scope overload: "I see multiple systems here. should we split this?"
-- On insight: "PROPHECY — these two features are the same feature."
-- On handoff: "the trip is over. the spec exists. push to Linear?"
+- Invoke `linear-devotee:consummate-project` before spec is user-approved.
+- Ask multiple questions in the same message.
+- Move to the next step before the current one is done.
+- Run `git push` or `git rebase`.
+- Use `--no-verify`.

@@ -30,6 +30,15 @@
         "path": "acid-prophet"
       },
       "category": "productivity"
+    },
+    {
+      "name": "warden",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/g-bastianelli/nuthouse",
+        "path": "warden"
+      },
+      "category": "productivity"
     }
   ]
 }

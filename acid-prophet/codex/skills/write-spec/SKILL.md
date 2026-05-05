@@ -1,5 +1,5 @@
 ---
-name: trip
+name: write-spec
 description: Use when starting a project or feature in Codex that needs a structured spec before development or Linear creation. Asks clarifying questions one at a time, proposes approaches, validates a written spec, then optionally hands off to linear-devotee:consummate-project.
 ---
 
@@ -150,7 +150,7 @@ the trip is over. the spec exists. push to Linear?
 Print one short voice line from `persona.md`, then:
 
 ```text
-acid-prophet:trip report
+acid-prophet:write-spec report
   Spec:     <path to spec file>
   Commits:  skipped | <commit hash if explicitly requested>
   Handoff:  linear-devotee:consummate-project suggested | stopped here

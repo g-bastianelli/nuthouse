@@ -1,6 +1,8 @@
 ---
-name: scryer
-description: Read-only spec auditor for `acid-prophet` specs. Validates frontmatter and SDD section structure, runs reality checks against the project's CLAUDE.md / package.json / referenced files, scans for narrative ambiguity and style issues. Returns a structured BLOCKER/WARNING/INFO report with auto-fix candidates. Used by `acid-prophet:scry` (standalone) and `acid-prophet:trip` Step 6 (auto-fix mode).
+name: spec-auditor
+description: Read-only spec auditor for `acid-prophet` specs. Validates frontmatter and SDD section structure, runs reality checks against the project's CLAUDE.md / package.json / referenced files, scans for narrative ambiguity and style issues. Returns a structured BLOCKER/WARNING/INFO report with auto-fix candidates. Used by `acid-prophet:audit-spec` (standalone) and `acid-prophet:write-spec` step 7 (auto-fix mode).
+model: haiku
+effort: low
 tools:
   - Read
   - Glob

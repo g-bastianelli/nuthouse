@@ -1,58 +1,58 @@
 <!-- template-meta
 required_frontmatter: [name, description]
 optional_frontmatter: [model, effort, allowed-tools]
-required_sections: ["## Voice", "## Language"]
-variables: [plugin, skill, description, persona_path]
+required_sections: ["## Workflow", "## Never"]
+variables: [plugin, skill, description]
 -->
 ---
 name: {{plugin}}:{{skill}}
 description: {{description}}
 # model: haiku            # haiku = lightweight read/report · omit = orchestration/reasoning
 # effort: high            # high = multi-step orchestration · low = cheap scout · omit = default
-# allowed-tools: Read, Glob, Grep   # explicit allowlist; never pre-approve git mutations or external writes
+# allowed-tools: Read, Glob, Grep, Bash   # explicit allowlist
 ---
 
-# {{skill}}
+# {{plugin}}:{{skill}}
 
-## Voice
+Rigid [gate type]. Match the user's language; keep technical identifiers unchanged.
 
-Read `{{persona_path}}` at the start of this skill. That persona is
-canonical for all output of this skill. Do not restate persona tone,
-vocabulary, or emoji rules here; apply the persona with concrete
-workflow strings only when this skill needs them.
+[IF plugin has persona-line-contract.md — warden voice]
+> At visible transitions, dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Print the returned `line` before normal output. Skip on failure.
+[/ENDIF]
 
-**Scope:** local to this skill's execution only. Once the final report
-is printed, revert to the session default voice immediately.
-Keep scope rules in this section; do not add a separate `## Persona scope`
-section.
+## Workflow
 
-This skill is **rigid** — execute steps in order.
+1. Preconditions:
+   - [List the things that must be true before this skill runs. Examples: MCP tools loaded, git repo verified, state file readable.]
+2. [Step name]:
+   - [Ordered actions. Use Bash / Read / MCP tools as needed. Keep bullets tight.]
+3. [Step name]:
+   - [...]
+N. [Final action — handoff, report, or stop]:
+   - [...]
 
-## Language
+[IF hand-off menu]
+Present numbered options after the final action:
+```
+[voice intro line]
+  (a) <label> → <what happens>
+  (b) <label> → <what happens>
+  (s) stop    → <clean exit message>
+```
+Branch on response. Exit skill when the chosen branch finishes.
+[/ENDIF]
 
-Adapt all output to match the user's language. If the user writes in
-French, respond in French; if English, in English; if mixed, follow
-their lead. Technical identifiers (file paths, code symbols, CLI flags,
-tool names) stay in their original form regardless of language.
+## Final Report
 
-## When you're invoked
+```text
+{{plugin}}:{{skill}} report
+  <Field>:        <value>
+  <Field>:        <value>
+```
 
-[Describe when this skill should be used]
+## Never
 
-## Step 0 — Preconditions
-
-1. Verify cwd contains `.claude-plugin/marketplace.json`. If not, abort.
-
-## Step 1 — [First step name]
-
-[Step description]
-
-## Final report
-
-[Describe what the skill reports back to the user]
-
-## Hard rules
-
-- Never `git commit`, `git push`, or `git rebase`.
-- Never mutate external services without explicit user confirmation.
-- Body stays under 500 lines (Anthropic skills doc).
+- Run `git push`, `git commit`, or `git rebase`.
+- Mutate external services without explicit user confirmation.
+- Skip the preconditions step.
+- [Skill-specific don'ts]

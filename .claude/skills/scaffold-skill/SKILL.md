@@ -44,17 +44,12 @@ Step 0. Voice: *"dans quelle créature on greffe ce nouvel organe ?"*
 Free-text. Voice: *"comment s'appelle l'organe ?"*
 
 **Validation rules**:
-- **Action verb or gerund**: `implement`, `greet`, `explore`,
-  `writing-plans`, `systematic-debugging`. ✅
+- **Action verb or gerund that describes the function**: `implement`, `plan`, `write-spec`, `audit-spec`, `check-drift`, `create-issue`. ✅
 - **No generic role names**: `coder`, `helper`, `utils`, `tool`. ❌
-  Panic-correct: *"non non non, `coder` ne dit rien. quel **acte**
-  effectue ce skill ? `implement`, `review`, `refactor` — un verbe."*
-- **No plugin prefix in the name itself.** The user types `implement`,
-  not `react-monkey:implement`. The prefix is added at write-time for
-  the Claude Code variant.
+- **No persona-coded names**: `trip`, `scry`, `prophecy`, `vision`, `revelation`. ❌ The skill name must be self-explanatory without knowing the plugin's persona vocabulary. Panic-correct: *"non non non, `trip` ne dit rien à quelqu'un qui voit le skill pour la première fois. quel **acte** ? `write-spec`, `audit`, `check-drift` — un verbe fonctionnel."*
+- **No plugin prefix in the name itself.** The user types `write-spec`, not `acid-prophet:write-spec`. The prefix is added at write-time for the Claude Code variant.
 - Kebab-case, lowercase.
-- Must not collide with an existing skill in the parent plugin (check
-  `ls <plugin>/claudecode/skills/<skill>/` and `ls <plugin>/codex/skills/<skill>/`).
+- Must not collide with an existing skill in the parent plugin (check `ls <plugin>/claudecode/skills/<skill>/` and `ls <plugin>/codex/skills/<skill>/`).
 
 ### Q3 — Description
 
@@ -126,15 +121,15 @@ AskUserQuestion, single-select. Voice: *"l'organe transmet directement à un aut
 
 [IF Q11 = yes] Follow-up free-text: *"nom du skill aval (ex. `<PLUGIN>:plan`) :"* → save as `DOWNSTREAM_SKILL`.
 
-### Q12 — Parent plugin has a voice/persona agent?
+### Q12 — Plugin uses warden:voice for decorative persona lines?
 
-Auto-detect first: glob `<PLUGIN>/claudecode/agents/*.md` and check whether any agent's body references `${CLAUDE_PLUGIN_ROOT}/shared/` for persona/voice content. If found, propose its name as the voice agent.
+Auto-detect first: check whether `<PLUGIN>/shared/persona-line-contract.md` exists. If it does, the plugin is warden-voice-ready — propose `yes` automatically.
 
-Otherwise AskUserQuestion, single-select. Voice: *"y a-t-il un agent dédié à la voix décorative dans ce plugin ?"*
+Otherwise AskUserQuestion, single-select. Voice: *"le plugin a-t-il un `shared/persona-line-contract.md` pour les lignes décoratives ?"*
 - `no` (Recommended for first skills) — skill stays neutral, no persona dispatch
-- `yes` — name it free-text → save as `VOICE_AGENT`
+- `yes` — the skill dispatches `warden:voice` at visible transitions using the plugin's persona-line contract
 
-[IF Q12 = yes] The skill itself stays voice-neutral; it only dispatches the voice agent at visible transitions with `SUMMARY: <≤15 words, in user's language>`. The skill never carries persona content beyond this dispatch.
+[IF Q12 = yes] The skill itself stays voice-neutral; it only dispatches `warden:voice` at visible transitions. The PERSONA_CONTRACT_PATH always points to `${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`. The skill never carries persona content beyond this dispatch. If `warden` is not installed, the dispatch fails silently — this is expected behavior.
 
 ## Step 2 — Generation
 
@@ -173,80 +168,48 @@ effort: high    # [from Q8 — omit if Q8 = default]
 ```markdown
 # <PLUGIN>:<SKILL>
 
-## Voice
+Rigid [gate type]. Match the user's language; keep technical identifiers unchanged.
 
-Read `../../../persona.md` at the start of this skill. The voice
-defined there is canonical for the `<PLUGIN>` plugin and applies to all
-output of this skill.
+[IF Q12 = yes — warden voice]
+> At visible transitions, dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Print the returned `line` before normal output. Skip on failure.
+[/ENDIF]
 
-**Scope:** local to this skill's execution. Once the final report is
-printed (or hand-off menu returns control to the user), revert to the
-session's default voice.
+## Workflow
 
-This skill is **rigid** — execute the steps in order, no shortcuts.
+1. Preconditions:
+   - <TODO: list what must be true before this skill runs. Examples: MCP tools loaded, git repo verified, state file readable.>
+2. <Step name>:
+   - <TODO: ordered actions. Use Bash / Read / MCP tools as needed. Keep bullets tight.>
+3. <Step name>:
+   - <TODO>
+N. <Final action — handoff, report, or stop>:
+   - <TODO>
 
-## When you're invoked
-
-<TODO: 1–2 sentences explaining the trigger condition. Hook injection?
-User keyword? Branch state? Be concrete.>
-
-## Step 0 — Preconditions
-
-<TODO: list the things that must be true before the skill runs.
-Examples from existing skills: MCP tools loaded, in a git repo, state
-file readable, parent plugin's data file exists.>
-
-## Step 1 — <name the step>
-
-<TODO: ordered actions. Use the Bash / Read / MCP tools as needed.>
-
-## Step 2 — <name the step>
-
-<TODO>
-
-## Step N — Final action
-
-<TODO>
-
-## Final report (always print)
-
+[IF hand-off menu]
+Present numbered options after the final action:
 \`\`\`
+<voice intro line>
+  (<L1>) <label 1> → <what happens>
+  (<L2>) <label 2> → <what happens>
+  (s) stop → <exit message>
+\`\`\`
+Branch on response. Exit skill when chosen branch finishes.
+[/ENDIF]
+
+## Final Report
+
+\`\`\`text
 <PLUGIN>:<SKILL> report
   <Field>:        <value>
   <Field>:        <value>
 \`\`\`
 
-Wrap with one short voice line before the report.
+## Never
 
-[IF hand-off menu]
-## Hand-off menu
-
-After the final report, present:
-
-\`\`\`
-<TODO: voice line introducing the choice>
-  (<L1>) <label 1> → <what happens>
-  (<L2>) <label 2> → <what happens>
-\`\`\`
-
-Branch on the response and act. Once the chosen branch finishes, exit
-the skill — revert to session default voice.
-[/ENDIF]
-
-## Things you NEVER do
-
-- Run `git push`, `git commit`, or `git rebase`
-- Mutate external services without explicit user confirmation
-- Skip Step 0 preconditions
-- Re-trigger in the same session if the action is one-shot (use a state
-  flag if applicable)
+- Run `git push`, `git commit`, or `git rebase`.
+- Mutate external services without explicit user confirmation.
+- Skip the preconditions step.
 - <TODO: skill-specific don'ts>
-
-## Voice cheat sheet
-
-Use the palette from `../../../persona.md`. Specific applications in
-this skill's strings (questions, error messages, reports) follow the
-voice but stay short.
 ```
 
 [IF Q5 = "dedicated agent"] After the body, append a `## Subagent
@@ -274,10 +237,10 @@ Agent({
 
 After substituting variables and filling `[bracketed]` sections in the generated SKILL.md, inject the following snippets **only when the corresponding interview answer enables them**. These snippets are kept here (not in the template file) so the template stays lean and unconditional.
 
-**[IF Q12 = yes — voice agent]** — insert after the `## Language` section, before `## When you're invoked`:
+**[IF Q12 = yes — warden voice]** — insert as the callout block before `## Workflow`:
 
 ```markdown
-> At visible transitions, dispatch `<PLUGIN>:<VOICE_AGENT>` with `SUMMARY: <≤15 words, in user's language>` and print the returned `line` before normal output. Skip on failure.
+> At visible transitions, dispatch `warden:voice` with `SUMMARY: <≤15 words, in user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Print the returned `line` before normal output. Skip on failure.
 ```
 
 **[IF Q9 = yes — project-level artifact]** — append to `## Step 0 — Preconditions`:
@@ -395,22 +358,19 @@ End with a voice exit line.
    - Claude Code SKILL.md → `name: <plugin>:<skill>` (full prefix).
    - Codex SKILL.md → `name: <skill>` (no prefix; runtime adds it).
    - Confusing the two breaks discovery.
-3. **Always emit a `## Voice` section** pointing to the parent's
-   `persona.md`. The voice scope (local to skill execution) must be
-   stated explicitly.
-4. **Never invent the persona.** The persona lives in
-   `<plugin>/persona.md`. Don't redeclare voice in this SKILL.md beyond
-   short cheat-sheet examples.
+3. **Skill body uses the compact format**: `## Workflow` (numbered bullets) + `## Final Report` + `## Never`. No `## Voice`, `## Language`, or `## Step N` sections. Voice is handled at runtime by the persona (injected via hook or persona.md read) — the skill does not redeclare it. If Q12 = yes, inject only the one-liner callout block above `## Workflow`.
+4. **Never invent the persona.** The persona lives in `<plugin>/persona.md`. The skill does not declare or redeclare voice inline.
 5. **Generic agent name reject**: if Q5 = "dedicated agent" and the user
    wants to call it `agent` or `helper`, push back: *"non non non,
    l'agent a un **rôle** précis. nomme-le par sa fonction —
    `scout`, `validator`, `parser` — pas un nom vide."*
-6. **Never overwrite** an existing SKILL.md without explicit user
+6. **Voice agent name is the one exception**: the plugin's voice-line agent (the one that emits persona lines via `persona-line-contract.md`) MAY have a persona-coded name (`devotee`, `prophet`, etc.). All other dedicated subagents MUST have functional names only.
+7. **Never overwrite** an existing SKILL.md without explicit user
    confirmation. Read first; if it exists, abort or ask.
-7. **Codex variant verification**: read an existing Codex SKILL.md
+8. **Codex variant verification**: read an existing Codex SKILL.md
    before generating one — don't trust memory for the relative paths or
    header conventions.
-8. **No `superpowers:*` dependency** in the generated SKILL.md.
+9. **No `superpowers:*` dependency** in the generated SKILL.md.
 
 ## Anti-patterns to detect and refuse
 
@@ -419,9 +379,9 @@ End with a voice exit line.
 - ❌ `name: <plugin>:implement` for Codex → must be `implement` (no prefix).
 - ❌ Skill name like `helper`, `tool`, `coder`. Push back.
 - ❌ Plugin/skill duplicate (e.g. `react-coder:react-coder`).
-- ❌ Missing `## Voice` section.
-- ❌ Voice scope unstated (no "revert to default voice after exit"
-  reminder).
+- ❌ `## Voice` section in the skill body → use the one-liner callout or nothing.
+- ❌ `## Language` section in the skill body → "Match the user's language" goes in the intro line only.
+- ❌ Persona/role name on a non-voice subagent (e.g. `oracle`, `seer`, `spirit`) → must be functional.
 
 ## Voice cheat sheet
 
