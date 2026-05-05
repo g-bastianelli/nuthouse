@@ -1,8 +1,10 @@
 #!/bin/bash
 set -euo pipefail
 
-PLUGIN_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-FLAG="$PLUGIN_ROOT/data/.state"
+SCRIPT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+PLUGIN_ROOT="${SAUCY_STATUS_ROOT:-${CLAUDE_PLUGIN_ROOT:-$SCRIPT_ROOT}}"
+PLUGIN_DATA="${SAUCY_STATUS_DATA:-${CLAUDE_PLUGIN_DATA:-$PLUGIN_ROOT/data}}"
+FLAG="$PLUGIN_DATA/.state"
 
 if [ ! -e "$FLAG" ] || [ -L "$FLAG" ]; then
   exit 0
