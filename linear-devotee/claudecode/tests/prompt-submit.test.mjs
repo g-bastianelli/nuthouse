@@ -5,30 +5,36 @@ import os from 'node:os';
 import path from 'node:path';
 
 let tmpRoot;
+let tmpData;
 const HOOK = path.resolve(import.meta.dir, '../hooks/prompt-submit.mjs');
 
 function runHook(stdinJson) {
   return spawnSync('node', [HOOK], {
     input: JSON.stringify(stdinJson),
     encoding: 'utf8',
-    env: { ...process.env, CLAUDE_PLUGIN_ROOT: tmpRoot },
+    env: {
+      ...process.env,
+      CLAUDE_PLUGIN_ROOT: tmpRoot,
+      CLAUDE_PLUGIN_DATA: tmpData,
+    },
   });
 }
 
 function writeStateFile(sessionId, state) {
   fs.writeFileSync(
-    path.join(tmpRoot, 'data', `state-${sessionId}.json`),
+    path.join(tmpData, `state-${sessionId}.json`),
     JSON.stringify(state),
   );
 }
 
 beforeEach(() => {
   tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'linear-devotee-hook-'));
-  fs.mkdirSync(path.join(tmpRoot, 'data'), { recursive: true });
+  tmpData = fs.mkdtempSync(path.join(os.tmpdir(), 'linear-devotee-data-'));
 });
 
 afterEach(() => {
   fs.rmSync(tmpRoot, { recursive: true, force: true });
+  fs.rmSync(tmpData, { recursive: true, force: true });
 });
 
 test('does nothing when awaiting_prompt is false', () => {
@@ -37,7 +43,7 @@ test('does nothing when awaiting_prompt is false', () => {
   expect(res.status).toBe(0);
   expect(res.stdout).toBe('');
   const state = JSON.parse(
-    fs.readFileSync(path.join(tmpRoot, 'data', 'state-sess-1.json'), 'utf8'),
+    fs.readFileSync(path.join(tmpData, 'state-sess-1.json'), 'utf8'),
   );
   expect(state.issue).toBe('ENG-12');
   expect(state.awaiting_prompt).toBe(false);
@@ -57,7 +63,7 @@ test('detects identifier in first prompt and outputs additionalContext', () => {
   const out = JSON.parse(res.stdout);
   expect(out.hookSpecificOutput.additionalContext).toContain('ENG-42');
   const state = JSON.parse(
-    fs.readFileSync(path.join(tmpRoot, 'data', 'state-sess-2.json'), 'utf8'),
+    fs.readFileSync(path.join(tmpData, 'state-sess-2.json'), 'utf8'),
   );
   expect(state.issue).toBe('ENG-42');
   expect(state.source).toBe('prompt');
@@ -76,7 +82,7 @@ test('first prompt without identifier closes the awaiting_prompt window', () => 
   expect(res.status).toBe(0);
   expect(res.stdout).toBe('');
   const state = JSON.parse(
-    fs.readFileSync(path.join(tmpRoot, 'data', 'state-sess-3.json'), 'utf8'),
+    fs.readFileSync(path.join(tmpData, 'state-sess-3.json'), 'utf8'),
   );
   expect(state.awaiting_prompt).toBe(false);
   expect(state.issue).toBeNull();

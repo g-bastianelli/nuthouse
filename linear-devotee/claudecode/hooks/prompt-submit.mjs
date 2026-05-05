@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
+import { createClaudeRuntime } from '../lib/runtime.mjs';
 import { extractIssueId, readState, writeState } from './state.mjs';
 
-const PLUGIN_ROOT = process.env.CLAUDE_PLUGIN_ROOT;
-if (!PLUGIN_ROOT) process.exit(0);
+const runtime = createClaudeRuntime();
+const PLUGIN_DATA = runtime.pluginData();
 
 function readStdinJson() {
   try {
@@ -17,7 +18,7 @@ function readStdinJson() {
 const { session_id, prompt } = readStdinJson();
 if (!session_id) process.exit(0);
 
-const state = readState(PLUGIN_ROOT, session_id);
+const state = readState(PLUGIN_DATA, session_id);
 if (!state || state.awaiting_prompt !== true) process.exit(0);
 
 const issue = extractIssueId(prompt || '');
@@ -28,7 +29,7 @@ const updated = {
   issue: issue ?? state.issue ?? null,
   source: issue ? 'prompt' : state.source,
 };
-writeState(PLUGIN_ROOT, session_id, updated);
+writeState(PLUGIN_DATA, session_id, updated);
 
 if (issue) {
   process.stdout.write(

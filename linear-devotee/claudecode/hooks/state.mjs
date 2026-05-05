@@ -1,42 +1,40 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-function statePath(pluginRoot, sessionId) {
-  return path.join(pluginRoot, 'data', `state-${sessionId}.json`);
+function statePath(pluginData, sessionId) {
+  return path.join(pluginData, `state-${sessionId}.json`);
 }
 
-export function readState(pluginRoot, sessionId) {
+export function readState(pluginData, sessionId) {
   try {
-    const content = fs.readFileSync(statePath(pluginRoot, sessionId), 'utf8');
+    const content = fs.readFileSync(statePath(pluginData, sessionId), 'utf8');
     return JSON.parse(content);
   } catch {
     return null;
   }
 }
 
-export function writeState(pluginRoot, sessionId, state) {
-  const dir = path.join(pluginRoot, 'data');
-  fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(statePath(pluginRoot, sessionId), `${JSON.stringify(state, null, 2)}\n`, 'utf8');
+export function writeState(pluginData, sessionId, state) {
+  fs.mkdirSync(pluginData, { recursive: true });
+  fs.writeFileSync(statePath(pluginData, sessionId), `${JSON.stringify(state, null, 2)}\n`, 'utf8');
 }
 
-export function cleanupOldStates(pluginRoot, maxAgeDays = 7) {
-  const dir = path.join(pluginRoot, 'data');
+export function cleanupOldStates(pluginData, maxAgeDays = 7) {
   let entries;
   try {
-    entries = fs.readdirSync(dir);
+    entries = fs.readdirSync(pluginData);
   } catch {
     return;
   }
   const cutoff = Date.now() - maxAgeDays * 24 * 3600 * 1000;
   for (const name of entries) {
     if (!name.startsWith('state-') || !name.endsWith('.json')) continue;
-    const full = path.join(dir, name);
+    const full = path.join(pluginData, name);
     try {
       const stat = fs.statSync(full);
       if (stat.mtimeMs < cutoff) fs.unlinkSync(full);
     } catch {
-      // best-effort, ignore
+      // Best effort cleanup only.
     }
   }
 }

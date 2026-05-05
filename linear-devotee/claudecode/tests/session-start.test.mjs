@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 let tmpRoot;
+let tmpData;
 let tmpBin;
 const HOOK = path.resolve(import.meta.dir, '../hooks/session-start.mjs');
 
@@ -15,6 +16,7 @@ function runHook(stdinJson, env = {}) {
     env: {
       ...process.env,
       CLAUDE_PLUGIN_ROOT: tmpRoot,
+      CLAUDE_PLUGIN_DATA: tmpData,
       PATH: `${tmpBin}:${process.env.PATH}`,
       ...env,
     },
@@ -27,13 +29,14 @@ function stubGit(script) {
 }
 
 beforeEach(() => {
-  tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'linear-devotee-hook-'));
+  tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'linear-devotee-root-'));
+  tmpData = fs.mkdtempSync(path.join(os.tmpdir(), 'linear-devotee-data-'));
   tmpBin = fs.mkdtempSync(path.join(os.tmpdir(), 'linear-devotee-bin-'));
-  fs.mkdirSync(path.join(tmpRoot, 'data'), { recursive: true });
 });
 
 afterEach(() => {
   fs.rmSync(tmpRoot, { recursive: true, force: true });
+  fs.rmSync(tmpData, { recursive: true, force: true });
   fs.rmSync(tmpBin, { recursive: true, force: true });
 });
 
@@ -43,7 +46,7 @@ test('exits silently when not in a git repo', () => {
   expect(res.status).toBe(0);
   expect(res.stdout).toBe('');
   const state = JSON.parse(
-    fs.readFileSync(path.join(tmpRoot, 'data', 'state-sess-1.json'), 'utf8'),
+    fs.readFileSync(path.join(tmpData, 'state-sess-1.json'), 'utf8'),
   );
   expect(state.in_repo).toBe(false);
   expect(state.greeted).toBe(true);
@@ -62,7 +65,7 @@ test('detects identifier from feature branch and outputs additionalContext', () 
   expect(out.hookSpecificOutput.hookEventName).toBe('SessionStart');
   expect(out.hookSpecificOutput.additionalContext).toContain('ENG-247');
   const state = JSON.parse(
-    fs.readFileSync(path.join(tmpRoot, 'data', 'state-sess-2.json'), 'utf8'),
+    fs.readFileSync(path.join(tmpData, 'state-sess-2.json'), 'utf8'),
   );
   expect(state.issue).toBe('ENG-247');
   expect(state.source).toBe('branch');
@@ -80,7 +83,7 @@ test('on main branch with no id, marks needs_branch and awaiting_prompt', () => 
   expect(res.status).toBe(0);
   expect(res.stdout).toBe('');
   const state = JSON.parse(
-    fs.readFileSync(path.join(tmpRoot, 'data', 'state-sess-3.json'), 'utf8'),
+    fs.readFileSync(path.join(tmpData, 'state-sess-3.json'), 'utf8'),
   );
   expect(state.issue).toBeNull();
   expect(state.needs_branch).toBe(true);
@@ -99,7 +102,7 @@ test('on neutral branch with no id, no needs_branch but awaiting_prompt', () => 
   expect(res.status).toBe(0);
   expect(res.stdout).toBe('');
   const state = JSON.parse(
-    fs.readFileSync(path.join(tmpRoot, 'data', 'state-sess-4.json'), 'utf8'),
+    fs.readFileSync(path.join(tmpData, 'state-sess-4.json'), 'utf8'),
   );
   expect(state.needs_branch).toBe(false);
   expect(state.awaiting_prompt).toBe(true);
