@@ -1,3 +1,8 @@
+// Source of truth: _shared/runtime/src/claude.mjs.
+// `bun run build:runtime` copies this file verbatim into each plugin's
+// lib/runtime.mjs. If you are reading this comment inside a plugin's
+// lib/, edit the source above instead — your changes here will be
+// overwritten on the next build.
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -53,14 +58,28 @@ export function createClaudeRuntime(options = {}) {
     }
   }
 
-  function writeJson(filePath, value) {
+  function atomicWrite(filePath, value) {
     ensureParent(filePath);
-    fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+    const tmpPath = `${filePath}.${process.pid}.tmp`;
+    try {
+      fs.writeFileSync(tmpPath, value, 'utf8');
+      fs.renameSync(tmpPath, filePath);
+    } catch (error) {
+      try {
+        fs.unlinkSync(tmpPath);
+      } catch {
+        // tmp file may not exist; nothing else we can do.
+      }
+      throw error;
+    }
+  }
+
+  function writeJson(filePath, value) {
+    atomicWrite(filePath, `${JSON.stringify(value, null, 2)}\n`);
   }
 
   function writeText(filePath, value) {
-    ensureParent(filePath);
-    fs.writeFileSync(filePath, value, 'utf8');
+    atomicWrite(filePath, value);
   }
 
   function sessionStatePath(kind, sessionId) {

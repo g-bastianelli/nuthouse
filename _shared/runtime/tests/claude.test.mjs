@@ -103,6 +103,44 @@ test('writes and reads text files', () => {
   expect(runtime.readText(runtime.dataPath('missing'), 'off')).toBe('off');
 });
 
+test('writeJson and writeText leave no temporary files on success', () => {
+  const runtime = createClaudeRuntime({
+    env: {
+      CLAUDE_PLUGIN_ROOT: tmpRoot,
+      CLAUDE_PLUGIN_DATA: tmpData,
+    },
+  });
+
+  runtime.writeJson(runtime.dataPath('json-target.json'), { ok: true });
+  runtime.writeText(runtime.dataPath('text-target'), 'hello\n');
+
+  const leftovers = fs
+    .readdirSync(tmpData)
+    .filter((name) => name.endsWith('.tmp') || name.includes('.tmp'));
+  expect(leftovers).toEqual([]);
+});
+
+test('atomic write preserves existing target when rename fails', () => {
+  const runtime = createClaudeRuntime({
+    env: {
+      CLAUDE_PLUGIN_ROOT: tmpRoot,
+      CLAUDE_PLUGIN_DATA: tmpData,
+    },
+  });
+  // Create a directory at the target path so rename(tmp -> target) fails.
+  const target = runtime.dataPath('blocked');
+  fs.mkdirSync(target);
+  fs.writeFileSync(path.join(target, 'sentinel'), 'still-here');
+
+  expect(() => runtime.writeText(target, 'new-payload')).toThrow();
+  // Existing directory + sentinel must be untouched.
+  expect(fs.statSync(target).isDirectory()).toBe(true);
+  expect(fs.readFileSync(path.join(target, 'sentinel'), 'utf8')).toBe('still-here');
+  // Tmp file must be cleaned up.
+  const leftovers = fs.readdirSync(tmpData).filter((name) => name.startsWith('blocked.'));
+  expect(leftovers).toEqual([]);
+});
+
 test('readText rethrows unexpected IO and path type errors', () => {
   const runtime = createClaudeRuntime({
     env: {
