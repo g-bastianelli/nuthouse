@@ -10,6 +10,10 @@ function ensureParent(filePath) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
 }
 
+function isMissingFileError(error) {
+  return error?.code === 'ENOENT';
+}
+
 export function createClaudeRuntime(options = {}) {
   const env = options.env ?? process.env;
   const root = options.pluginRoot ?? env.CLAUDE_PLUGIN_ROOT ?? null;
@@ -34,22 +38,24 @@ export function createClaudeRuntime(options = {}) {
   function readJson(filePath, fallback) {
     try {
       return JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    } catch {
-      return fallback;
+    } catch (error) {
+      if (isMissingFileError(error) || error instanceof SyntaxError) return fallback;
+      throw error;
+    }
+  }
+
+  function readText(filePath, fallback = '') {
+    try {
+      return fs.readFileSync(filePath, 'utf8');
+    } catch (error) {
+      if (isMissingFileError(error)) return fallback;
+      throw error;
     }
   }
 
   function writeJson(filePath, value) {
     ensureParent(filePath);
     fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
-  }
-
-  function readText(filePath, fallback = '') {
-    try {
-      return fs.readFileSync(filePath, 'utf8');
-    } catch {
-      return fallback;
-    }
   }
 
   function writeText(filePath, value) {

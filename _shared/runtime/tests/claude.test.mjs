@@ -74,6 +74,20 @@ test('readJson returns fallback for missing or malformed files', () => {
   expect(runtime.readJson(target, { ok: false })).toEqual({ ok: false });
 });
 
+test('readJson rethrows unexpected IO and path type errors', () => {
+  const runtime = createClaudeRuntime({
+    env: {
+      CLAUDE_PLUGIN_ROOT: tmpRoot,
+      CLAUDE_PLUGIN_DATA: tmpData,
+    },
+  });
+  const directory = runtime.dataPath('state-dir');
+  fs.mkdirSync(directory);
+
+  expect(() => runtime.readJson(directory, { ok: false })).toThrow();
+  expect(() => runtime.readJson(undefined, { ok: false })).toThrow(TypeError);
+});
+
 test('writes and reads text files', () => {
   const runtime = createClaudeRuntime({
     env: {
@@ -87,6 +101,20 @@ test('writes and reads text files', () => {
 
   expect(runtime.readText(target, 'off')).toBe('saucy\n');
   expect(runtime.readText(runtime.dataPath('missing'), 'off')).toBe('off');
+});
+
+test('readText rethrows unexpected IO and path type errors', () => {
+  const runtime = createClaudeRuntime({
+    env: {
+      CLAUDE_PLUGIN_ROOT: tmpRoot,
+      CLAUDE_PLUGIN_DATA: tmpData,
+    },
+  });
+  const directory = runtime.dataPath('mode-dir');
+  fs.mkdirSync(directory);
+
+  expect(() => runtime.readText(directory, 'off')).toThrow();
+  expect(() => runtime.readText(undefined, 'off')).toThrow(TypeError);
 });
 
 test('sessionStatePath prefixes state kind and session id', () => {
