@@ -3,5 +3,5 @@ pre-commit:
     biome:
       run: bunx biome check .
     runtime-bundles:
-      glob: "{_shared/runtime/src/claude.mjs,*/lib/runtime.mjs,*/*/lib/runtime.mjs}"
+      glob: "{_shared/runtime/src/claude.mjs,**/lib/runtime.mjs}"
       run: bun run check:runtime || { echo "runtime bundles drifted from source — run 'bun run build:runtime' and stage the result"; exit 1; }
