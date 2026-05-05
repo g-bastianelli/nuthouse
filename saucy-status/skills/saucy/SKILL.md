@@ -23,10 +23,10 @@ Parse the argument the user passed after `/saucy`:
 | `uninstall` | remove `statusLine` from `~/.claude/settings.json` when it points at `saucy-status`, then remove the mode flag |
 | (none) | toggle: `off` → `saucy`, else → `off` |
 
-Compute the plugin root as the directory 2 levels above this skill's base directory (`BASE_DIR/../..`). Run the snippet by passing it as `CLAUDE_PLUGIN_ROOT`:
+Compute the plugin root as the directory 2 levels above this skill's base directory (`BASE_DIR/../..`). Run the snippet by passing the computed root as `CLAUDE_PLUGIN_ROOT` and passing through the runtime-provided `CLAUDE_PLUGIN_DATA`. If `CLAUDE_PLUGIN_DATA` is unavailable, abort with an error and do not write state.
 
 ```bash
-CLAUDE_PLUGIN_ROOT="$(cd "BASE_DIR/../.." && pwd)" node -e "SNIPPET"
+CLAUDE_PLUGIN_ROOT="$(cd "BASE_DIR/../.." && pwd)" CLAUDE_PLUGIN_DATA="$CLAUDE_PLUGIN_DATA" node -e "SNIPPET"
 ```
 
 Use this Node.js snippet, replacing `ARG` with the user's argument (or empty string) and `BASE_DIR` with the actual base directory path:
@@ -36,7 +36,11 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT;
-const pluginData = process.env.CLAUDE_PLUGIN_DATA || path.join(pluginRoot, 'data');
+const pluginData = process.env.CLAUDE_PLUGIN_DATA;
+if (!pluginData) {
+  console.error('CLAUDE_PLUGIN_DATA is required for saucy-status state');
+  process.exit(1);
+}
 const flagPath = path.join(pluginData, '.state');
 const arg = 'ARG'.trim();
 let current = 'off';
