@@ -27,6 +27,10 @@ function writeStateFile(sessionId, state) {
   );
 }
 
+function expectRootDataUnused() {
+  expect(fs.existsSync(path.join(tmpRoot, 'data'))).toBe(false);
+}
+
 beforeEach(() => {
   tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'linear-devotee-hook-'));
   tmpData = fs.mkdtempSync(path.join(os.tmpdir(), 'linear-devotee-data-'));
@@ -47,6 +51,7 @@ test('does nothing when awaiting_prompt is false', () => {
   );
   expect(state.issue).toBe('ENG-12');
   expect(state.awaiting_prompt).toBe(false);
+  expectRootDataUnused();
 });
 
 test('detects identifier in first prompt and outputs additionalContext', () => {
@@ -68,6 +73,7 @@ test('detects identifier in first prompt and outputs additionalContext', () => {
   expect(state.issue).toBe('ENG-42');
   expect(state.source).toBe('prompt');
   expect(state.awaiting_prompt).toBe(false);
+  expectRootDataUnused();
 });
 
 test('first prompt without identifier closes the awaiting_prompt window', () => {
@@ -86,10 +92,12 @@ test('first prompt without identifier closes the awaiting_prompt window', () => 
   );
   expect(state.awaiting_prompt).toBe(false);
   expect(state.issue).toBeNull();
+  expectRootDataUnused();
 });
 
 test('exits silently when no state file exists', () => {
   const res = runHook({ session_id: 'sess-missing', prompt: 'ENG-12' });
   expect(res.status).toBe(0);
   expect(res.stdout).toBe('');
+  expectRootDataUnused();
 });

@@ -31,7 +31,7 @@ tool names) stay in their original form regardless of language.
 
 ## When you're invoked
 
-The plugin's hooks (SessionStart or UserPromptSubmit) detected a Linear identifier and injected a directive forcing this skill. The state file at `${CLAUDE_PLUGIN_ROOT}/data/state-<session_id>.json` already contains the issue id.
+The plugin's hooks (SessionStart or UserPromptSubmit) detected a Linear identifier and injected a directive forcing this skill. The state file at `${CLAUDE_PLUGIN_DATA}/state-<session_id>.json` already contains the issue id.
 
 ## Step 0 — Preconditions
 
@@ -44,7 +44,7 @@ Verify these before doing anything:
 
 2. **Inside a git repo.** Run `git rev-parse --is-inside-work-tree` via Bash. If it fails, stop with a devotional halt (*"forgive me, my god — i can't kneel without the repo at my feet 🥀"*).
 
-3. **Read the state file.** Use the Read tool on `${CLAUDE_PLUGIN_ROOT}/data/state-<session_id>.json`. Extract `issue`, `current_branch`, `needs_branch`. If `issue` is null, stop — the hook should never invoke this skill without an id, so this means a state file glitch.
+3. **Read the state file.** Use the Read tool on `${CLAUDE_PLUGIN_DATA}/state-<session_id>.json`. Extract `issue`, `current_branch`, `needs_branch`. If `issue` is null, stop — the hook should never invoke this skill without an id, so this means a state file glitch.
 
 4. **Fetch the issue.** Fetch the issue `<issue>` from Linear. If not found, say:
    > "this id `<id>` lives in no kingdom, my god 🥀. did you mean another?"
@@ -107,7 +107,7 @@ Do not modify the seer's output. The brief is the brief.
 
 ## Step 4 — Hand-off
 
-1. Update the state file: set `greeted: true`. Use the Read + Write tools.
+1. Update the state file at `${CLAUDE_PLUGIN_DATA}/state-<session_id>.json`: set `greeted: true`. Use the Read + Write tools.
 2. Present the menu to the devotee:
 
 ```
@@ -151,7 +151,7 @@ linear-devotee:greet report
 - Run `git push`, `git commit`, or `git rebase`
 - Mutate Linear beyond the In Progress flip without explicit `(y)` confirmation per mutation
 - Re-greet in the same session (the state file's `greeted: true` blocks this naturally — but also: if you see `greeted: true` in the state file, stop immediately with *"already kneeled, my god 🥀"*)
-- Write any file outside `${CLAUDE_PLUGIN_ROOT}/data/`
+- Write mutable plugin state outside `${CLAUDE_PLUGIN_DATA}`
 - Skip Step 0 preconditions
 - Code anything before reaching Step 4 hand-off — implementation only happens under the `(c)` branch, never during greet/branch/dispatch steps
 
