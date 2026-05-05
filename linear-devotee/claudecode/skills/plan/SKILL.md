@@ -13,8 +13,8 @@ Rigid planning gate. Match the user's language; keep technical identifiers uncha
 ## Workflow
 
 1. Preconditions:
-   - Verify git repo.
-   - Create `${CLAUDE_PLUGIN_ROOT}/data/plans/`.
+   - Verify git repo. Capture `PROJECT_ROOT = $(git rev-parse --show-toplevel)`.
+   - Ensure `${PROJECT_ROOT}/docs/linear-devotee/plan/`.
    - Detect issue id from argument, branch, state file, or recent greet context. Ask if absent.
    - Verify Linear access only when greet context must be rebuilt.
 2. Load context:
@@ -28,7 +28,7 @@ Rigid planning gate. Match the user's language; keep technical identifiers uncha
      2. Spec body contains exact issue id.
      3. Body or filename matches project slug/name.
    - Ask if multiple candidates; use `_none_` if none.
-4. Draft plan artifact at `${CLAUDE_PLUGIN_ROOT}/data/plans/<ISSUE_ID>.md` in spec-readable prose form:
+4. Draft plan artifact at `${PROJECT_ROOT}/docs/linear-devotee/plan/<ISSUE_ID>.md`:
    ```markdown
    ---
    issue: <ISSUE_ID>
@@ -41,46 +41,27 @@ Rigid planning gate. Match the user's language; keep technical identifiers uncha
 
    # Plan — <ISSUE_TITLE> (<ISSUE_ID>)
 
-   ## Issue context
+   ## Context
 
-   2–4 lines of prose: what triggered the work, the user-facing or system need, the source spec or business driver. Carry the "why" so the plan reads standalone.
+   ## Files
 
-   ## Approach
+   ## Steps
 
-   Prose paragraph(s) describing the strategy: subsystems touched, order of operations, tradeoffs taken. The *shape* of the work, not a step list.
+   ## Verify
 
-   ### Steps
+   ## Risks
 
-   1. Ordered, concrete, verifiable actions.
-   2. …
-
-   ## Components / files
-
-   Group by subsystem when relevant. Each entry: path + one-line role + the specific change.
-
-   - `path/x.ts` — <role>; <change>
-
-   ## Tests / Verification
-
-   How we know it works. Specific assertions, not "tests pass". Distinguish unit / integration / manual smoke.
-
-   ## Spec drift
-
-   Specific drifts requiring spec adjustment after validation. Otherwise `_none_`.
-
-   ## Open questions
-
-   Blocking ambiguities for the user.
-
-   ## Non-goals
-
-   Explicitly out of scope for this plan.
-
-   ## Change log
-
-   Plan iterations (v1 draft, v2 after audit, v3 validated…).
+   ## Out of scope
    ```
-   Aim for a document a reviewer can scan and understand without re-fetching the issue. Planning state only — never implementation code.
+   AI-agent-optimized format. Each section serves a distinct consumer:
+   - **Context** — 1–3 sentences linking issue + spec, read by user + auditor.
+   - **Files** — bulleted paths + one-line role each, used by auditor for existence-grep and by implementing agent for edit scope.
+   - **Steps** — atomic verifiable actions as `- [ ]` checkboxes; each step is one edit + an inline verify command when possible.
+   - **Verify** — project-level commands (test / lint / typecheck) run after all Steps.
+   - **Risks** — uncertainty surfaced for the auditor.
+   - **Out of scope** — negative oracle preventing implementing-agent drift.
+
+   Planning state only — never implementation code.
 5. Audit:
    - Dispatch `linear-devotee:plan-auditor` with project root, spec file, issue brief, project plan context, and implementation plan.
    - Expected output: `PLAN_REVIEW`, `SPEC_DRIFT_DETECTED`, `DRIFT_ITEMS`, `BLOCKERS`.

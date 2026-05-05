@@ -43,7 +43,7 @@ The line is display-only. It never goes into specs, plans, SDD drafts, Linear de
 
 `greet` is a context gate only. It never offers "code now", never drafts an implementation plan, and never edits implementation files. Linear issue/context loading is delegated to the `issue-context` scout so the main model only orchestrates, performs approved workflow mutations, resolves the source spec, and writes a small greet context artifact.
 
-`plan` owns planning. It loads greet context, resolves or verifies the Acid Prophet source spec, writes `data/plans/<issue>.md`, dispatches `plan-auditor`, and iterates until the plan is validated. Planning iterations only flag `SPEC_DRIFT_DETECTED`; they do not patch the spec. Once the user validates the plan, `plan` reviews the final plan against the issue and spec, patches accepted drift in one pass, updates `last-reviewed`, and runs the Acid Prophet audit when available.
+`plan` owns planning. It loads greet context, resolves or verifies the Acid Prophet source spec, writes `docs/linear-devotee/plan/<issue>.md` at the project root, dispatches `plan-auditor`, and iterates until the plan is validated. Planning iterations only flag `SPEC_DRIFT_DETECTED`; they do not patch the spec. Once the user validates the plan, `plan` reviews the final plan against the issue and spec, patches accepted drift in one pass, updates `last-reviewed`, and runs the Acid Prophet audit when available.
 
 ## Detection (`greet` only)
 
