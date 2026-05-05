@@ -1,11 +1,14 @@
 <!-- template-meta
 required_frontmatter: [name, description]
+optional_frontmatter: [model, effort]
 required_sections: ["## Voice", "## Language"]
 variables: [skill, description, persona_path]
 -->
 ---
 name: {{skill}}
 description: {{description}}
+# model: haiku   # haiku = lightweight read/report · omit = orchestration/reasoning
+# effort: high   # high = multi-step orchestration · low = cheap scout · omit = default
 ---
 
 # {{skill}}
@@ -46,3 +49,9 @@ tool names) stay in their original form regardless of language.
 ## Final report
 
 [Describe what the skill reports back to the user]
+
+## Hard rules
+
+- Never `git commit`, `git push`, or `git rebase`.
+- Never mutate external services without explicit user confirmation.
+- Body stays under 500 lines (Anthropic skills doc).

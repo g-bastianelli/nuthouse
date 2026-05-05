@@ -107,6 +107,22 @@ AskUserQuestion, single-select:
 - `productivity` (Recommended)
 - `fun`
 
+### Q7 — Plugin produces project-level artifacts?
+
+AskUserQuestion, single-select. Voice: *"la créature laisse-t-elle des marqueurs dans le repo de l'utilisateur ?"*
+- `no` (Recommended for first plugin) — skills only report, no files written to user's repo
+- `yes` — at least one skill writes Markdown/JSON files to `<PROJECT_ROOT>/docs/<plugin>/<artifact-type>/`
+
+[IF Q7 = yes] Save flag `WILL_PRODUCE_ARTIFACTS = true`. The convention is enforced per-skill at scaffold-skill time (Q9), but the plugin README will document the convention up-front.
+
+### Q8 — Plugin needs cross-cutting contracts?
+
+AskUserQuestion, single-select. Voice: *"des règles transverses entre organismes — une voix décorative partagée, un fallback de provider, un format de spec ?"*
+- `no` (Recommended for first plugin)
+- `yes` — at least one shared contract file under `<plugin>/shared/` will be referenced by multiple agents/skills
+
+[IF Q8 = yes] Save flag `WILL_HAVE_SHARED = true`. Reminder: contracts are pure Markdown, lean (1 paragraph for a fallback / 30-50 lines for a persona contract with input/output schema, hard limits, examples). Referenced from agents via `${CLAUDE_PLUGIN_ROOT}/shared/<contract>.md` — never relative paths. The contract files themselves are written separately (after `scaffold-plugin`) — this scaffold only creates the empty directory.
+
 ## Step 2 — Generation
 
 Generate the following files. **Use the Write tool** for each.
@@ -137,6 +153,7 @@ For `claudecode` / `both`:
 <plugin>/
 <plugin>/.claude-plugin/         # plugin.json lives here, NOT under claudecode/
 <plugin>/assets/
+<plugin>/shared/                 # only if Q7 = yes OR Q8 = yes (cross-cutting contracts / artifact convention notes)
 <plugin>/claudecode/
 <plugin>/claudecode/skills/
 <plugin>/claudecode/agents/      # only if user later runs scaffold-agent

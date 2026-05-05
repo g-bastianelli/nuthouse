@@ -76,6 +76,14 @@ AskUserQuestion, single-select:
 - `default` (no `model:` field — let the runtime pick. Use for: reasoning,
   code-writing, decision-making)
 
+### Q4b — Effort
+
+AskUserQuestion, single-select:
+- `low` (Recommended for haiku agents: fetch + parse + summary, no multi-step reasoning)
+- `high` (deep audit, spec review, multi-constraint comparison)
+- `xhigh` (complex reasoning, large context navigation)
+- `default` (no `effort:` field — let the runtime decide)
+
 ### Q5 — Tools allowlist (explicit)
 
 AskUserQuestion, multiSelect. Common categories:
@@ -118,6 +126,26 @@ AskUserQuestion, single-select:
 - `Custom` — free-form. Flag in final report; user must define the
   shape themselves.
 
+### Q8 — References a shared cross-cutting contract?
+
+AskUserQuestion, single-select. Voice: *"l'organisme partage-t-il un contrat avec d'autres organismes du même labo ?"*
+- `no` (Recommended for first agent in a plugin)
+- `yes` — agent body references a `<plugin>/shared/<contract>.md` for cross-cutting rules (style, fallback paths, persona)
+
+[IF Q8 = yes] Follow-up free-text:
+- *"nom du contrat (kebab-case, ex. `provider-selection`, `persona-line-contract`) :"* → save as `CONTRACT_NAME`
+- *"label de l'aspect (ex. `Provider selection`, `Persona`) :"* → save as `CONTRACT_ASPECT`
+
+At generation time, inject this line into the agent's `## Mission` (or wherever the contract applies):
+
+```markdown
+**<CONTRACT_ASPECT>.** See `${CLAUDE_PLUGIN_ROOT}/shared/<CONTRACT_NAME>.md`.
+```
+
+Rule: keep the reference one level deep. Never use relative paths (`../../shared/...`) — agent CWD is unpredictable; always `${CLAUDE_PLUGIN_ROOT}`.
+
+If `<PLUGIN>/shared/<CONTRACT_NAME>.md` does not yet exist, remind the user in the final report: *"le contrat n'est pas encore écrit. crée `<PLUGIN>/shared/<CONTRACT_NAME>.md` séparément (1 paragraphe suffit pour un fallback ; plus pour un persona contract avec input/output schema, hard limits, examples)."*
+
 ## Step 2 — Generation
 
 Write `<PLUGIN>/claudecode/agents/<AGENT>.md` (use the Write tool).
@@ -137,6 +165,7 @@ sections not present in the template.
 name: <AGENT>
 description: <DESCRIPTION>
 model: haiku    # or omit if Q4 = default
+effort: low     # or omit if Q4b = default
 tools:
   - <Tool 1>
   - <Tool 2>
@@ -146,6 +175,7 @@ tools:
 
 [IF Q4 = default] Omit the `model:` line entirely (don't set it to a
 placeholder). The runtime picks the default.
+[IF Q4b = default] Omit the `effort:` line entirely.
 
 ### Body
 
@@ -267,6 +297,7 @@ scaffold-agent report
   Agent:         <PLUGIN>:<AGENT>
   Description:   <DESCRIPTION>
   Model:         <haiku | default>
+  Effort:        <low | high | xhigh | default>
   Tools:         <comma-separated list>
   Input format:  <one-line summary>
   Output format: <SDD | structured report | custom>

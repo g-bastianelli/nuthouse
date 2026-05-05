@@ -88,6 +88,54 @@ AskUserQuestion, single-select:
   `(c)`, `(s)`). If yes, ask follow-up: comma-separated `letter:label`
   list (e.g. `p:plan, q:questions, c:code now, s:stop`).
 
+### Q7 — Model
+
+AskUserQuestion, single-select. Voice: *"quel modèle pour ce skill ?"*
+- `default` (Recommended — orchestration, raisonnement multi-step, gates d'approbation)
+- `haiku` (lecture légère / rapport simple — le skill ne prend pas de décisions complexes)
+
+[IF Q7 = haiku] Emit a voice warning: *"haiku sur un skill ? ok si c'est vraiment léger — pas de décisions, pas de mutations complexes. sinon remonte sur default."*
+
+### Q8 — Effort
+
+AskUserQuestion, single-select. Voice: *"quel budget de reasoning ?"*
+- `high` (Recommended for orchestration — multi-step, approval gates, mutations)
+- `low` (fetch simple, rapport direct, aucune décision)
+- `xhigh` (raisonnement profond, spec critique, plan d'architecture)
+- `default` (laisser le runtime décider)
+
+### Q9 — Project-level artifact?
+
+AskUserQuestion, single-select. Voice: *"l'organe écrit-il quelque chose dans le repo de l'utilisateur ?"*
+- `no` (Recommended for skills that only report) — skip Q10
+- `yes — single-file artifact` — skill writes one Markdown/JSON file per invocation
+
+[IF Q9 = yes] Follow-up free-text: *"slug du dossier — kebab-case, ex. `plan`, `spec`, `brief`, `doc` :"* → save as `ARTIFACT_TYPE`. The artifact will live at `${PROJECT_ROOT}/docs/<PLUGIN>/<ARTIFACT_TYPE>/<identifier>.md`. Plugin install storage (`${CLAUDE_PLUGIN_ROOT}/data/`) is for ephemeral state only, NEVER for user-facing artifacts.
+
+### Q10 — AI-agent plan format inside the artifact?
+
+[Only ask if Q9 = yes] AskUserQuestion, single-select. Voice: *"l'artifact est un plan d'implémentation pour un agent IA qui va l'exécuter ?"*
+- `no` (Recommended) — free-form artifact shape
+- `yes` — embed the research-backed 6-section template (Context / Files / Steps `- [ ]` / Verify / Risks / Out of scope) inside the artifact body
+
+### Q11 — Auto-chain to a downstream skill?
+
+AskUserQuestion, single-select. Voice: *"l'organe transmet directement à un autre, sans demander confirmation ?"*
+- `no` (Recommended)
+- `yes — print invocation, continue immediately`: only valid if the downstream skill has its own validation gate (e.g. `Validate this plan? (y / edit / stop)`). The user gates only there.
+
+[IF Q11 = yes] Follow-up free-text: *"nom du skill aval (ex. `<PLUGIN>:plan`) :"* → save as `DOWNSTREAM_SKILL`.
+
+### Q12 — Parent plugin has a voice/persona agent?
+
+Auto-detect first: glob `<PLUGIN>/claudecode/agents/*.md` and check whether any agent's body references `${CLAUDE_PLUGIN_ROOT}/shared/` for persona/voice content. If found, propose its name as the voice agent.
+
+Otherwise AskUserQuestion, single-select. Voice: *"y a-t-il un agent dédié à la voix décorative dans ce plugin ?"*
+- `no` (Recommended for first skills) — skill stays neutral, no persona dispatch
+- `yes` — name it free-text → save as `VOICE_AGENT`
+
+[IF Q12 = yes] The skill itself stays voice-neutral; it only dispatches the voice agent at visible transitions with `SUMMARY: <≤15 words, in user's language>`. The skill never carries persona content beyond this dispatch.
+
 ## Step 2 — Generation
 
 For each selected runtime, write the corresponding SKILL.md.
@@ -115,6 +163,8 @@ conventions — do not omit them.
 ---
 name: <PLUGIN>:<SKILL>
 description: <DESCRIPTION>
+model: haiku    # [IF Q7 = haiku, else omit this line]
+effort: high    # [from Q8 — omit if Q8 = default]
 ---
 ```
 
@@ -220,6 +270,86 @@ Agent({
 
 [/ENDIF]
 
+### 2a-bis. Conditional snippets to inject (Claude Code)
+
+After substituting variables and filling `[bracketed]` sections in the generated SKILL.md, inject the following snippets **only when the corresponding interview answer enables them**. These snippets are kept here (not in the template file) so the template stays lean and unconditional.
+
+**[IF Q12 = yes — voice agent]** — insert after the `## Language` section, before `## When you're invoked`:
+
+```markdown
+> At visible transitions, dispatch `<PLUGIN>:<VOICE_AGENT>` with `SUMMARY: <≤15 words, in user's language>` and print the returned `line` before normal output. Skip on failure.
+```
+
+**[IF Q9 = yes — project-level artifact]** — append to `## Step 0 — Preconditions`:
+
+```markdown
+2. Capture `PROJECT_ROOT = $(git rev-parse --show-toplevel)`. Abort if not in a git repo.
+3. Ensure `${PROJECT_ROOT}/docs/<PLUGIN>/<ARTIFACT_TYPE>/`.
+```
+
+And inside `## Step 1 — [First step name]` (or whichever step writes the artifact), document:
+
+```markdown
+Write the artifact at `${PROJECT_ROOT}/docs/<PLUGIN>/<ARTIFACT_TYPE>/<identifier>.md`.
+```
+
+And in the `## Final report` section, ensure the report carries the absolute path on its own line:
+
+```markdown
+  <ARTIFACT_TYPE> artifact:   ${PROJECT_ROOT}/docs/<PLUGIN>/<ARTIFACT_TYPE>/<identifier>.md
+```
+
+(Cmd-clickable in modern terminals — no Markdown link syntax needed.)
+
+**[IF Q10 = yes — AI-agent plan format]** — embed inside the artifact write step:
+
+```markdown
+The artifact body uses the AI-agent-optimized 6-section template:
+
+\`\`\`markdown
+---
+issue: <id>
+spec: <spec-path | _none_>
+status: draft
+plan-version: 1
+validated-at: _none_
+spec-synced-at: _none_
+---
+
+# Plan — <title> (<id>)
+
+## Context
+
+## Files
+
+## Steps
+
+## Verify
+
+## Risks
+
+## Out of scope
+\`\`\`
+
+Section semantics:
+- **Context** — 1–3 sentences linking the issue + source spec.
+- **Files** — bulleted paths + one-line role each.
+- **Steps** — atomic `- [ ]` checkboxes; each step is one edit + an inline verify command when possible.
+- **Verify** — project-level commands (test / lint / typecheck) run after all Steps.
+- **Risks** — uncertainty surfaced for the auditor.
+- **Out of scope** — negative oracle preventing implementing-agent drift.
+```
+
+**[IF Q11 = yes — auto-chain]** — in the skill's handoff step:
+
+```markdown
+Auto-chain to `<DOWNSTREAM_SKILL>`. Print `<DOWNSTREAM_SKILL> <args>` and continue immediately — do not ask the user for confirmation. The user's only validation point is the downstream skill's own `Validate? (y / edit / stop)` gate. On error paths, stop instead of chaining and report the reason.
+```
+
+**Codex equivalents** (in 2b output): same patterns, but:
+- Voice dispatch references repo-relative path `<PLUGIN>/shared/<contract>.md` (no `${CLAUDE_PLUGIN_ROOT}` env var in Codex contexts).
+- Artifact path also uses `${PROJECT_ROOT}/docs/<PLUGIN>/<ARTIFACT_TYPE>/` — same convention, runtime-agnostic.
+
 ### 2b. Codex — `<PLUGIN>/codex/skills/<SKILL>/SKILL.md`
 
 **Frontmatter** (Codex = no prefix in `name`):
@@ -248,6 +378,8 @@ scaffold-skill report
   Plugin:        <PLUGIN>
   Skill:         <PLUGIN>:<SKILL> (claudecode) | <SKILL> (codex)
   Voice:         ../../../persona.md (claudecode) | ../../persona.md (codex)
+  Model:         <haiku | default>
+  Effort:        <low | high | xhigh | default>
   Subagent:      <none | <agent-name> — run `/scaffold-agent` next>
   Hand-off:      <none | menu defined>
   Files written: <list>

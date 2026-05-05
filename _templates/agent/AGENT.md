@@ -1,11 +1,14 @@
 <!-- template-meta
 required_frontmatter: [name, description]
+optional_frontmatter: [model, effort, tools]
 required_sections: []
 variables: [agent, description]
 -->
 ---
 name: {{agent}}
 description: {{description}}
+# model: haiku   # haiku = fetch/parse/scout · omit = reasoning/audit
+# effort: low    # low = parse/summary · high/xhigh = deep reasoning · omit = default
 ---
 
 # {{agent}}

@@ -23,6 +23,11 @@ codex plugin install {{plugin}}@nuthouse
 | Skill | What it does |
 |---|---|
 
+## Agents
+
+| Agent | Used by | Role |
+|---|---|---|
+
 ## License
 
 MIT
