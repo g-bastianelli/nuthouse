@@ -1,6 +1,7 @@
 ---
 name: linear-devotee:create-milestone
 description: Use when adding a Linear Milestone to a Project, chained from create-project chain state or standalone with a selected project and phase hint. Drafts via milestone-drafter, clarifies, previews, creates on approval, updates chain state, and can hand off to create-issue.
+effort: high
 allowed-tools: Read, Glob, Grep
 ---
 

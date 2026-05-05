@@ -2,6 +2,7 @@
 name: project-drafter
 description: Read-only Linear scout for project drafting. Consumes a spec file path or vibe-mode Q&A bullets + project root, fetches workspace meta (teams, project statuses) via Linear MCP or CLI, drafts a Project-SDD brief plus a milestone decomposition proposal and a list of suggested initial issues. Marks any field that can't be filled as `_unclear_`. Used by `linear-devotee:create-project`. Never writes to Linear.
 model: haiku
+effort: low
 tools:
   - Read
   - Glob

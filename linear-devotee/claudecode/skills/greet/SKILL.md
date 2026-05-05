@@ -1,6 +1,7 @@
 ---
 name: linear-devotee:greet
 description: Use immediately at session start when a Linear issue identifier is detected from branch or first prompt. Delegates issue context to issue-context, optionally prepares branch/status, resolves source spec, writes greet context, then hands off to plan. Never writes implementation code.
+effort: high
 allowed-tools: Read, Glob, Grep
 ---
 

@@ -2,6 +2,7 @@
 name: issue-context
 description: Cheap read-only Linear scout. Fetches an issue + comments, current status metadata, referenced repo files, and returns a structured SDD brief for the user. Format-agnostic on input. Marks missing fields as `_unclear_` instead of hallucinating. Used by `linear-devotee:greet` and any future linear-devotee skill that needs context on a ticket.
 model: haiku
+effort: low
 tools:
   - Read
   - Glob

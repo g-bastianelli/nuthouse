@@ -1,6 +1,7 @@
 ---
 name: linear-devotee:create-issue
 description: Use when creating a Linear Issue with a strict SDD-formatted description, chained from create-milestone chain state or standalone with project, optional milestone, and issue hint. Drafts via issue-drafter, clarifies, previews, creates on approval, and updates chain state.
+effort: high
 allowed-tools: Read, Glob, Grep
 ---
 

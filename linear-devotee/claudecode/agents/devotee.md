@@ -2,6 +2,7 @@
 name: devotee
 description: The devotee herself, speaking. Emits one decorative reaction line at visible skill transitions for `linear-devotee`. Reads only the shared persona-line contract. Never reformulates, never quotes task facts, never mutates anything, never affects workflow decisions.
 model: haiku
+effort: low
 tools:
   - Read
 ---

@@ -1,6 +1,7 @@
 ---
 name: linear-devotee:create-project
 description: Use when creating a Linear Project from a spec file or vibe-mode Q&A. Drafts a Project-SDD via project-drafter, clarifies, previews, creates the project on approval, writes chain state, and can hand off to create-milestone.
+effort: high
 allowed-tools: Read, Glob, Grep
 ---
 

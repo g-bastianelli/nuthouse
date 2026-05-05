@@ -1,6 +1,7 @@
 ---
 name: linear-devotee:plan
 description: Use when planning implementation for a Linear issue after greet or from an issue id. Loads or rebuilds greet context, resolves source spec, drafts and audits a plan, flags drift, writes a validated plan artifact, then syncs accepted spec drift only after validation. Never writes implementation code.
+effort: high
 allowed-tools: Read, Glob, Grep
 ---
 
