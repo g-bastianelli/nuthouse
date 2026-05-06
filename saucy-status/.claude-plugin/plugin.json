@@ -4,6 +4,8 @@
   "author": {
     "name": "g-bastianelli"
   },
+  "skills": "./claudecode/skills/",
+  "agents": [],
   "hooks": {
     "SessionStart": [
       {
