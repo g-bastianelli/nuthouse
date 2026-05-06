@@ -3,6 +3,7 @@ name: linear-devotee:create-project
 description: Use when creating a Linear Project from a spec file or vibe-mode Q&A. Drafts a Project-SDD via project-drafter, clarifies, previews, creates the project on approval, writes chain state, and can hand off to create-milestone.
 effort: high
 allowed-tools: Read, Glob, Grep
+context_policy: session
 ---
 
 # linear-devotee:create-project
@@ -13,23 +14,29 @@ Rigid runbook. Match the user's language; keep technical identifiers unchanged.
 
 ## Workflow
 
+0. Session store (`context_policy: session`): if `$CLAUDE_SESSION_ID` is set and not invoked with `--fresh`, read `<PROJECT_ROOT>/.claude/nuthouse/sessions/${CLAUDE_SESSION_ID}.json`.
+   - If `acid-prophet.handoff_spec` is present and `acid-prophet._handoff_spec_path` equals `spec_path` (i.e. not stale), default to **file mode** with `handoff_spec.path` — skip asking the user. Announce: "using spec from session store: `<path>`".
+   - If the store is absent, corrupt, or handoff_spec is stale, proceed normally (ask user).
 1. Preconditions:
    - Verify Linear access with `ToolSearch` query `linear`; abort clearly if unavailable.
    - Verify git repo with `git rev-parse --is-inside-work-tree`.
    - Ensure `${CLAUDE_PLUGIN_ROOT}/data`.
 2. Input mode:
-   - File mode: argument is an existing `.md`; read it, summarize in one paragraph, confirm.
+   - File mode: argument is an existing `.md` (or auto-detected from session store in step 0); read it, summarize in one paragraph, confirm.
    - Vibe mode: ask one at a time: north star, why now, measurable outcomes, constraints, out of scope. Persist Q&A to `${CLAUDE_PLUGIN_ROOT}/data/vibe-${CLAUDE_SESSION_ID}.txt`.
 3. Linear workspace:
    - Fetch teams and existing project statuses.
    - If multiple teams, ask user to choose.
    - Pick initial project status by `status.type`: prefer `backlog`, fallback `planned`; never hardcode status names.
 4. Draft:
+   - If session store was read in step 0 and `relevant_files` is present, include it in the prompt.
    - Dispatch `linear-devotee:project-drafter` with:
      ```text
      SPEC_FILE: <abs path | _none_>
      VIBE_BULLETS: <abs path | _none_>
      PROJECT_ROOT: <git root>
+     RELEVANT_FILES:
+     - <abs path> (omit section when not available from session store)
      ```
    - Capture the returned Project-SDD, decomposition, and suggested issues.
 5. Clarify:

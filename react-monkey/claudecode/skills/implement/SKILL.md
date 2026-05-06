@@ -2,6 +2,7 @@
 name: react-monkey:implement
 description: Use when creating, refactoring, or implementing React components, hooks, or pages — including .tsx/.jsx files, component trees, data fetching hooks, and UI layouts
 effort: high
+context_policy: fresh
 ---
 
 # react-monkey:implement

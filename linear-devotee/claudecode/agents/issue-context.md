@@ -94,14 +94,20 @@ Return **only** this markdown, under 500 words. Never invent content. If a field
 
 **Non-goals** / out of scope
 - <explicitly excluded>
-- (or _unclear_)
+- (or _unclear_>
 
 **Edge cases & ambiguities detected**
 - <vague points, contradictions, TBDs>
 
 **Suggested clarifying questions for user**
 - <prioritized: most blocking _unclear_ field first>
+
+RELEVANT_FILES:
+- /abs/PROJECT_ROOT/path/x.ts
+- (one absolute path per line; only files that exist in the repo; empty section if none)
 ```
+
+The `RELEVANT_FILES:` block at the end of the brief is machine-readable and used by `greet` to populate the session store. List only files that exist (verified via `Glob`). Files marked "does not exist yet" are excluded. Absolute paths only.
 
 ## Hard rules
 

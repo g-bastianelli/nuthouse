@@ -3,6 +3,7 @@ name: acid-prophet:write-spec
 description: Use when starting any project or feature that needs a structured spec before development — asks clarifying questions one at a time, proposes approaches, validates a written spec, then optionally hands off to linear-devotee:consummate-project for Linear project creation
 effort: high
 allowed-tools: Read, Glob, Grep, Bash
+context_policy: session
 ---
 
 # acid-prophet:write-spec
@@ -41,7 +42,23 @@ Rigid spec-writing gate. Match the user's language; keep technical identifiers u
    - WARNING/INFO only → present list; let user choose which to address; then advance.
 8. User spec gate: ask user to review `<path>`. Wait. If changes: update spec, commit, re-run step 7.
 9. Handoff: ask the user if they want to push the spec to Linear.
-   - Yes → invoke `linear-devotee:consummate-project` with spec path.
+   - Yes:
+     - Session store (`context_policy: session`): if `$CLAUDE_SESSION_ID` is set, write to `<PROJECT_ROOT>/.claude/nuthouse/sessions/${CLAUDE_SESSION_ID}.json` before invoking `consummate-project`:
+       ```json
+       {
+         "spec_path": "<absolute spec path>",
+         "acid-prophet": {
+           "handoff_spec": {
+             "path": "<absolute spec path>",
+             "title": "<spec title from frontmatter or filename>",
+             "id": "<spec id from frontmatter>"
+           },
+           "_handoff_spec_path": "<absolute spec path>"
+         }
+       }
+       ```
+       Deep-merge (do not replace the whole file). If store write fails, continue silently.
+     - Invoke `linear-devotee:consummate-project` with spec path.
    - No → try `warden:voice` per the voice cadence with `SUMMARY: write-spec complete, spec approved, no linear handoff`, then exit.
 
 ## Final Report

@@ -3,6 +3,7 @@ name: linear-devotee:greet
 description: Use immediately at session start when a Linear issue identifier is detected from branch or first prompt. Delegates issue context to issue-context, optionally prepares branch/status, resolves source spec, writes greet context, then hands off to plan. Never writes implementation code.
 effort: high
 allowed-tools: Read, Glob, Grep
+context_policy: session
 ---
 
 # linear-devotee:greet
@@ -61,6 +62,16 @@ Rigid context gate. Match the user's language; keep technical identifiers unchan
        "created_at": "<ISO 8601>"
      }
      ```
+   - Session store (`context_policy: session`): if `$CLAUDE_SESSION_ID` is set, write to `<PROJECT_ROOT>/.claude/nuthouse/sessions/${CLAUDE_SESSION_ID}.json`:
+     - Extract file paths from the `RELEVANT_FILES:` section of the `issue-context` brief (each line is an absolute path).
+     - If invoked with `--fresh`, skip reading any existing session data before writing.
+     ```json
+     {
+       "spec_path": "<spec absolute path | empty string if _none_>",
+       "relevant_files": ["<abs path 1>", "..."]
+     }
+     ```
+     Deep-merge (do not replace the whole file if other keys exist). If `$CLAUDE_SESSION_ID` is absent or store write fails, continue silently.
 7. Handoff:
    - Auto-chain to `plan` on the happy path. Print `linear-devotee:plan <ISSUE_ID>` and continue immediately — do not ask the user for confirmation. The user's only validation point is the plan's own `Validate this plan? (y / edit / stop)` gate.
    - On error paths (no issue id, brief skipped, branch refused, status flip blocked), stop instead of chaining and report the reason.
