@@ -145,6 +145,18 @@ describe('merge', () => {
 
     assert.strictEqual(shas2.relevant_files, shas1.relevant_files);
   });
+
+  test('options.shasKeys extends sha tracking beyond SHA_TRACKED_KEYS', () => {
+    merge(SESSION_ID, projectRoot, { 'custom-plugin': { report: {} } }, { shasKeys: ['custom-plugin.report'] });
+    const s = read(SESSION_ID, projectRoot);
+    assert.ok('custom-plugin.report' in s._meta._shas);
+  });
+
+  test('options.shasKeys does not affect built-in SHA_TRACKED_KEYS', () => {
+    merge(SESSION_ID, projectRoot, { relevant_files: ['a.ts'] }, { shasKeys: ['custom-plugin.report'] });
+    const s = read(SESSION_ID, projectRoot);
+    assert.ok('relevant_files' in s._meta._shas);
+  });
 });
 
 // ---------------------------------------------------------------------------

@@ -60,15 +60,15 @@ function deepMerge(target, source) {
   return out;
 }
 
-// Collect dotted key paths from a patch that appear in SHA_TRACKED_KEYS.
-function shaTrackedInPatch(patch, prefix = '') {
+// Collect dotted key paths from a patch that appear in the given tracked-keys set.
+function shaTrackedInPatch(patch, trackedKeys, prefix = '') {
   const found = [];
   for (const [k, v] of Object.entries(patch)) {
     if (k === '_meta') continue;
     const full = prefix ? `${prefix}.${k}` : k;
-    if (SHA_TRACKED_KEYS.has(full)) found.push(full);
+    if (trackedKeys.has(full)) found.push(full);
     if (v !== null && typeof v === 'object' && !Array.isArray(v)) {
-      found.push(...shaTrackedInPatch(v, full));
+      found.push(...shaTrackedInPatch(v, trackedKeys, full));
     }
   }
   return found;
@@ -115,12 +115,21 @@ export function write(sessionId, projectRoot, data) {
 
 /**
  * Deep-merge patch into the existing session and write back.
- * Per-key sha tracking: keys in SHA_TRACKED_KEYS get their own _meta._shas entry
- * so that a later merge that does NOT include those keys preserves their original sha.
+ * Per-key sha tracking: keys in SHA_TRACKED_KEYS (plus any extra keys in
+ * options.shasKeys) get their own _meta._shas entry so that a later merge
+ * that does NOT include those keys preserves their original sha.
+ *
+ * @param {object} [options]
+ * @param {string[]} [options.shasKeys] - Additional dotted keys to sha-track beyond SHA_TRACKED_KEYS.
+ *
  * Returns the resulting session (or patch when sessionId is falsy).
  */
-export function merge(sessionId, projectRoot, patch) {
+export function merge(sessionId, projectRoot, patch, options = {}) {
   if (!sessionId) return patch;
+
+  const { shasKeys = [] } = options;
+  const trackedKeys =
+    shasKeys.length > 0 ? new Set([...SHA_TRACKED_KEYS, ...shasKeys]) : SHA_TRACKED_KEYS;
 
   const sha = getHeadSha(projectRoot);
   const now = new Date().toISOString();
@@ -131,7 +140,7 @@ export function merge(sessionId, projectRoot, patch) {
 
   const prevShas = existing._meta?._shas ?? {};
   const newShas = { ...prevShas };
-  for (const k of shaTrackedInPatch(patchData)) {
+  for (const k of shaTrackedInPatch(patchData, trackedKeys)) {
     newShas[k] = sha ?? '';
   }
 
