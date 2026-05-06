@@ -1,4 +1,5 @@
 node_modules/
 .claude/settings.local.json
+.claude/nuthouse/sessions/
 .agents/
 docs/superpowers/

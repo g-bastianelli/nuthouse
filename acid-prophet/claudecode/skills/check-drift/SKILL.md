@@ -3,6 +3,7 @@ name: acid-prophet:check-drift
 description: Use on a feature branch before or during PR creation — detects drift between the PR diff and the SDD Acceptance/Constraints of the linked project. Prefers the repo spec markdown as primary truth, falls back to Linear project context only when no spec markdown is found, generates a structured drift report, and optionally posts it as a PR comment.
 effort: high
 allowed-tools: Read, Glob, Grep, Bash
+context_policy: fresh
 ---
 
 # acid-prophet:check-drift

@@ -3,6 +3,7 @@ name: linear-devotee:plan
 description: Use when planning implementation for a Linear issue after greet or from an issue id. Loads or rebuilds greet context, resolves source spec, drafts and audits a plan, flags drift, writes a validated plan artifact, then syncs accepted spec drift only after validation. Never writes implementation code.
 effort: high
 allowed-tools: Read, Glob, Grep
+context_policy: session
 ---
 
 # linear-devotee:plan
@@ -59,6 +60,7 @@ Rigid planning gate. Match the user's language; keep technical identifiers uncha
    Capture the returned `PLAN_FILE: <path>`. Use this path in all subsequent steps.
    Do not display plan content in main context — the file is the artifact.
 5. Audit:
+   - Session store (`context_policy: session`): if `$CLAUDE_SESSION_ID` is set, read `<PROJECT_ROOT>/.claude/nuthouse/sessions/${CLAUDE_SESSION_ID}.json`. If `relevant_files` key is present (and `_meta._shas.relevant_files` equals HEAD sha when Bash is available; otherwise accept as-is), inject it into the plan-auditor prompt. Skip this lookup when invoked with `--fresh`.
    - Dispatch `linear-devotee:plan-auditor` with:
      ```
      PROJECT_ROOT: <git root>
@@ -69,6 +71,9 @@ Rigid planning gate. Match the user's language; keep technical identifiers uncha
 
      PROJECT_PLAN_CONTEXT:
      <context | _none_>
+
+     RELEVANT_FILES:
+     - <abs path> (omit section when not available from session store)
      ```
    - Expected output: `PLAN_REVIEW`, `SPEC_DRIFT_DETECTED`, `DRIFT_ITEMS`, `BLOCKERS`.
 6. Iterate:

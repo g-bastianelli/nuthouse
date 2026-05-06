@@ -23,19 +23,27 @@ ISSUE_CONTEXT_BRIEF:
 
 PROJECT_PLAN_CONTEXT:
 <known project-level plan or _none_>
+
+RELEVANT_FILES:
+- /abs/path/to/file.ts
+- /abs/path/to/other.ts
+(section is optional — omitted when not in session store)
 ```
+
+`RELEVANT_FILES` is a pre-resolved list from the session store (populated by `greet`). When provided, use it directly to verify that files cited in the plan exist — skip inferring file paths from the brief.
 
 ## Mission
 
 1. Read `PLAN_FILE` to load the implementation plan.
 2. Read `SPEC_FILE` when present.
-3. Compare the implementation plan against:
+3. If `RELEVANT_FILES` is provided, use the list directly. Otherwise, infer file paths from the `ISSUE_CONTEXT_BRIEF` and verify existence with `Glob`.
+4. Compare the implementation plan against:
    - the issue-context brief,
    - the Linear issue constraints visible in the brief,
    - the Acid Prophet spec when present,
    - project-level plan context when provided.
-4. Detect whether the plan changes product scope, architecture, constraints, non-goals, acceptance behavior, or observable user behavior compared with the spec.
-5. Detect blockers: contradictions, missing decisions, test strategy gaps for stated acceptance criteria, or plan steps that cannot be traced to either the issue or spec.
+5. Detect whether the plan changes product scope, architecture, constraints, non-goals, acceptance behavior, or observable user behavior compared with the spec.
+6. Detect blockers: contradictions, missing decisions, test strategy gaps for stated acceptance criteria, or plan steps that cannot be traced to either the issue or spec.
 
 ## Output
 

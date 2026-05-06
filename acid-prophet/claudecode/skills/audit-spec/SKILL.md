@@ -3,6 +3,7 @@ name: acid-prophet:audit-spec
 description: Use when auditing an existing acid-prophet spec for SDD compliance, codebase reality, narrative quality, and style. Takes a spec path, dispatches the `spec-auditor` subagent, renders a structured BLOCKER/WARNING/INFO report, and offers a hand-off menu (apply auto-fixes, open spec, hand to linear-devotee, stop).
 effort: high
 allowed-tools: Read, Glob, Grep, Bash
+context_policy: fresh
 ---
 
 # acid-prophet:audit-spec

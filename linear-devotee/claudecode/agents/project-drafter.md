@@ -21,9 +21,14 @@ You will be invoked with a message in this format:
 SPEC_FILE: <abs path to a markdown spec, or "_none_">
 VIBE_BULLETS: <abs path to a scratch file with the user's Q&A answers, or "_none_">
 PROJECT_ROOT: <abs path to the git repo>
+RELEVANT_FILES:
+- /abs/path/to/file.ts
+- (optional — omitted when not in session store)
 ```
 
 Exactly one of `SPEC_FILE` / `VIBE_BULLETS` will be a real path; the other will be `_none_`. Use `PROJECT_ROOT` to verify any referenced files in the repo.
+
+`RELEVANT_FILES` is a pre-resolved list from the session store (populated by `greet`). When provided, use it directly to populate the `Architecture / Components` section for the files already known — skip re-globbing those paths. Still scan the spec/vibe-bullets for any additional path tokens not already in the list.
 
 ## Mission (in order)
 
@@ -45,10 +50,12 @@ If `VIBE_BULLETS` is a path: `Read` it. The file holds the user's answers to the
 
 ### 3. Find referenced files (if any path tokens appear)
 
-Scan the input for path-like tokens (backticked spans, regex `[a-zA-Z0-9_./-]+\.[a-z0-9]{1,5}`). For each unique path:
+If `RELEVANT_FILES` was provided, seed the known-files list with those paths (they are pre-verified as existing). Then scan the input for additional path-like tokens (backticked spans, regex `[a-zA-Z0-9_./-]+\.[a-z0-9]{1,5}`); skip paths already in the seed list. For each new unique path:
 - Check existence with `Glob` (pattern relative to `PROJECT_ROOT`).
 - If exists → `Read` and summarize in **one line** what the file currently does.
 - If not → mark "to be created".
+
+For files in the `RELEVANT_FILES` seed list: summarize in one line using `Read` (skip the `Glob` existence check — they are known to exist).
 
 This populates the `Architecture / Components` section.
 
