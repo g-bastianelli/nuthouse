@@ -26,3 +26,12 @@ test('extractIssueId pulls identifier from prompt sentence', () => {
 test('extractIssueId returns first match when multiple present', () => {
   expect(extractIssueId('ENG-12 and ENG-34 both broken')).toBe('ENG-12');
 });
+
+test('extractIssueId ignores GitHub URLs', () => {
+  expect(extractIssueId('https://github.com/g-bastianelli/nuthouse/pull/22')).toBeNull();
+  expect(extractIssueId('https://github.com/g-bastianelli/nuthouse/tree/ENG-22-feature')).toBeNull();
+});
+
+test('extractIssueId still matches identifier alongside a GitHub URL', () => {
+  expect(extractIssueId('check https://github.com/org/repo/pull/5 and fix ENG-42')).toBe('ENG-42');
+});
