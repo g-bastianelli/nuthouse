@@ -1,0 +1,6 @@
+{
+  "name": "git-gremlin",
+  "description": "Git gremlin — delegates commit and PR creation to subagents, keeping diffs off your main context",
+  "author": { "name": "g-bastianelli" },
+  "skills": "./claudecode/skills/"
+}

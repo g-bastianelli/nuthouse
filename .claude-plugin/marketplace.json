@@ -39,6 +39,15 @@
         "path": "warden"
       },
       "category": "productivity"
+    },
+    {
+      "name": "git-gremlin",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/g-bastianelli/nuthouse",
+        "path": "git-gremlin"
+      },
+      "category": "productivity"
     }
   ]
 }
