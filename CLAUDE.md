@@ -60,6 +60,7 @@ Rules:
 ```bash
 bunx bun test <plugin>/                    # all plugin tests pass
 (cd .claude/hooks/tests && bunx bun test)  # persona-roulette tests pass
+bun run test:meta                          # frontmatter model/effort values valid
 bunx biome check .                          # lint clean
 node -e "JSON.parse(require('node:fs').readFileSync('.claude-plugin/marketplace.json', 'utf8'))"  # marketplace JSON valid
 grep -rn "writing-plans" <plugin>/   # no external workflow artifacts leak
