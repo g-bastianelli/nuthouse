@@ -1,6 +1,7 @@
 ---
 name: scaffold-plugin
 description: Use when creating a brand-new plugin in this `nuthouse` marketplace (saucy-status / react-monkey / linear-devotee pattern). Asks the user for plugin name (brainrot-check), description, target runtimes (claudecode / codex / both), whether the plugin needs hooks, persona tagline + emoji, and marketplace category. Generates the full folder skeleton: persona.md, plugin.json, README.md, optional hooks/ + data/. Updates root marketplace.json (git-subdir entry) and root README.md plugins table. Embeds all conventions from the legacy CLAUDE.md (naming rules, frontmatter shapes, hook contract, anti-patterns) so they are applied by construction.
+model: haiku
 ---
 
 # scaffold-plugin

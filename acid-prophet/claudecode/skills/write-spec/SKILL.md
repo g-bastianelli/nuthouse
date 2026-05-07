@@ -1,7 +1,8 @@
 ---
 name: acid-prophet:write-spec
 description: Use when starting any project or feature that needs a structured spec before development — asks clarifying questions one at a time, proposes approaches, validates a written spec, then optionally hands off to linear-devotee:consummate-project for Linear project creation
-effort: high
+model: opus
+effort: max
 allowed-tools: Read, Glob, Grep, Bash
 context_policy: session
 ---

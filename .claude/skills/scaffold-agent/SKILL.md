@@ -1,6 +1,7 @@
 ---
 name: scaffold-agent
 description: Use when adding a new dedicated subagent to an existing plugin in this `nuthouse` marketplace. Asks for parent plugin, agent name (descriptive role, no vague names like "agent" / "helper"), description, model (`haiku` for parsing/fetch+summary vs default for reasoning), explicit tools allowlist, input format spec, output format spec (SDD vs structured report vs custom). Generates `<plugin>/claudecode/agents/<name>.md` with the right frontmatter (name, description, model, tools list) and the standard Mission / Input / Output / Hard rules sections. Encodes the subagent and SDD conventions from the legacy CLAUDE.md.
+model: haiku
 ---
 
 # scaffold-agent

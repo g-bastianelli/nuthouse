@@ -1,7 +1,7 @@
 ---
 name: warden:voice
 description: Use when toggling nuthouse fun messages on or off globally — /warden:voice [on|off|status]. Controls the shared flag read by warden:voice agent before emitting any decorative persona line.
-effort: low
+model: haiku
 allowed-tools: Bash, Read
 ---
 

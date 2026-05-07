@@ -1,8 +1,8 @@
 ---
 name: plan-auditor
 description: Cheap read-only plan reviewer. Compares an implementation plan against the issue-context brief, Linear issue context, optional Acid Prophet spec, and project-level plan context. Returns only pass/fail, drift items, and blockers. Used by `linear-devotee:plan` before spec sync and implementation handoff.
-model: haiku
-effort: low
+model: sonnet
+effort: high
 tools:
   - Read
   - Glob

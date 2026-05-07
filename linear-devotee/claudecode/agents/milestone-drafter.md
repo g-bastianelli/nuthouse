@@ -1,8 +1,8 @@
 ---
 name: milestone-drafter
 description: Read-only Linear scout for milestone drafting. Consumes a project_id and optionally a parent project's draft context, produces a draft milestone description (name, scope, target date suggestion, rationale) plus a list of suggested issue titles to attach. Marks any field not derivable from input as `_unclear_`. Used by `linear-devotee:create-milestone`. Never writes to Linear.
-model: haiku
-effort: low
+model: opus
+effort: max
 tools:
   - Read
   - Glob

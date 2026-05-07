@@ -1,8 +1,8 @@
 ---
 name: issue-drafter
 description: Read-only Linear scout for issue drafting. Consumes a project_id (and optionally a milestone_id, a parent draft context, a freeform issue hint) and produces a strict SDD-formatted issue draft (Goal / Context / Files / Constraints / Acceptance / Non-goals / Edges / Questions) ready to be promoted into a Linear issue by the calling skill. Marks any field not derivable from input as `_unclear_`. Used by `linear-devotee:create-issue`. Never writes to Linear.
-model: haiku
-effort: low
+model: sonnet
+effort: high
 tools:
   - Read
   - Glob
