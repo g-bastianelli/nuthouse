@@ -1,6 +1,7 @@
 ---
 name: scaffold-skill
 description: Use when adding a new skill to an existing plugin in this `nuthouse` marketplace (saucy-status, react-monkey, linear-devotee, or any plugin with a `persona.md` at its root). Asks for parent plugin, skill name (action verb, no prefix), description, target runtimes (intersected with parent's runtimes), whether the skill dispatches a subagent, whether it ends with a hand-off menu. Generates SKILL.md with the right frontmatter — `name: <plugin>:<skill>` for Claude Code, `name: <skill>` for Codex — plus a `## Voice` section pointing to the parent's persona.md, and the standard Step 0 / Steps / Rules / Final report skeleton. Embeds all naming and structural conventions from the legacy CLAUDE.md.
+model: haiku
 ---
 
 # scaffold-skill
@@ -86,18 +87,27 @@ AskUserQuestion, single-select:
 ### Q7 — Model
 
 AskUserQuestion, single-select. Voice: *"quel modèle pour ce skill ?"*
-- `default` (Recommended — orchestration, raisonnement multi-step, gates d'approbation)
-- `haiku` (lecture légère / rapport simple — le skill ne prend pas de décisions complexes)
+- `inherit` (Recommended — orchestration normale, suit le modèle de session, omet `model:` du frontmatter)
+- `haiku` (toggle, dispatch trivial, parsing direct — pas de décisions complexes)
+- `sonnet` (audit / drafting structuré — raisonnement modéré, ratio coût/qualité)
+- `opus` (création SDD libre, spec stratégique, planning critique — top-tier reasoning, low-volume)
 
-[IF Q7 = haiku] Emit a voice warning: *"haiku sur un skill ? ok si c'est vraiment léger — pas de décisions, pas de mutations complexes. sinon remonte sur default."*
+[IF Q7 = haiku] Emit a voice warning: *"haiku sur un skill ? ok si c'est vraiment léger — pas de décisions, pas de mutations complexes. sinon remonte sur sonnet/inherit."*
+
+[IF Q7 = opus] Emit a voice warning: *"opus = cher. justifié pour création de spec / projet / décisions structurantes. sinon inherit suffit."*
 
 ### Q8 — Effort
 
 AskUserQuestion, single-select. Voice: *"quel budget de reasoning ?"*
 - `high` (Recommended for orchestration — multi-step, approval gates, mutations)
-- `low` (fetch simple, rapport direct, aucune décision)
-- `xhigh` (raisonnement profond, spec critique, plan d'architecture)
-- `default` (laisser le runtime décider)
+- `low` (fetch simple, rapport direct, aucune décision — ignoré silencieusement sur haiku)
+- `xhigh` (raisonnement profond, planning critique, plan d'architecture)
+- `max` (création SDD / décisions structurantes — risque d'overthink, low-volume only)
+- `inherit` (laisser le runtime décider — omet `effort:` du frontmatter)
+
+[IF Q8 = max] Emit a voice warning: *"max = budget de pensée illimité. la doc Claude prévient : peut overthink. teste avant de généraliser."*
+
+[IF Q7 = haiku AND Q8 ≠ inherit AND Q8 ≠ low] Emit: *"effort sur haiku = ignoré silencieusement. force `inherit` ou `low` pour rester clean."*
 
 ### Q9 — Project-level artifact?
 
@@ -158,8 +168,8 @@ conventions — do not omit them.
 ---
 name: <PLUGIN>:<SKILL>
 description: <DESCRIPTION>
-model: haiku    # [IF Q7 = haiku, else omit this line]
-effort: high    # [from Q8 — omit if Q8 = default]
+model: <Q7-value>    # [IF Q7 ∈ {haiku, sonnet, opus}, else omit this line]
+effort: <Q8-value>    # [IF Q8 ∈ {low, high, xhigh, max}, else omit this line]
 ---
 ```
 
@@ -341,8 +351,8 @@ scaffold-skill report
   Plugin:        <PLUGIN>
   Skill:         <PLUGIN>:<SKILL> (claudecode) | <SKILL> (codex)
   Voice:         ../../../persona.md (claudecode) | ../../persona.md (codex)
-  Model:         <haiku | default>
-  Effort:        <low | high | xhigh | default>
+  Model:         <haiku | sonnet | opus | inherit>
+  Effort:        <low | medium | high | xhigh | max | inherit>
   Subagent:      <none | <agent-name> — run `/scaffold-agent` next>
   Hand-off:      <none | menu defined>
   Files written: <list>

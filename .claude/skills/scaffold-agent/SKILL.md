@@ -1,6 +1,7 @@
 ---
 name: scaffold-agent
 description: Use when adding a new dedicated subagent to an existing plugin in this `nuthouse` marketplace. Asks for parent plugin, agent name (descriptive role, no vague names like "agent" / "helper"), description, model (`haiku` for parsing/fetch+summary vs default for reasoning), explicit tools allowlist, input format spec, output format spec (SDD vs structured report vs custom). Generates `<plugin>/claudecode/agents/<name>.md` with the right frontmatter (name, description, model, tools list) and the standard Mission / Input / Output / Hard rules sections. Encodes the subagent and SDD conventions from the legacy CLAUDE.md.
+model: haiku
 ---
 
 # scaffold-agent
@@ -65,19 +66,25 @@ obvious for whoever calls the agent.
 ### Q4 — Model
 
 AskUserQuestion, single-select:
-- `haiku` (Recommended for: mechanical parsing, MCP
-  fetch + summary, structured discovery — anything that doesn't need
-  deep reasoning)
-- `default` (no `model:` field — let the runtime pick. Use for: reasoning,
-  code-writing, decision-making)
+- `haiku` (Recommended for: mechanical parsing, MCP fetch + summary, structured discovery — anything that doesn't need deep reasoning)
+- `sonnet` (audit, plan review, spec validation — needs reasoning but not creative writing)
+- `opus` (drafts SDD content, makes structural decisions — top-tier creation, low volume)
+- `inherit` (no `model:` field — let the runtime pick — use sparingly)
+
+[IF Q4 = opus] Emit a voice warning: *"opus sur un agent ? cher. réservé aux drafters SDD / décisions structurantes. sinon sonnet suffit."*
 
 ### Q4b — Effort
 
 AskUserQuestion, single-select:
-- `low` (Recommended for haiku agents: fetch + parse + summary, no multi-step reasoning)
+- `low` (Recommended for haiku agents: fetch + parse + summary, no multi-step reasoning — ignoré silencieusement sur haiku quoi qu'on choisisse, autant mettre `low`)
 - `high` (deep audit, spec review, multi-constraint comparison)
 - `xhigh` (complex reasoning, large context navigation)
-- `default` (no `effort:` field — let the runtime decide)
+- `max` (top-tier drafting / structural decisions — risque d'overthink, low-volume only)
+- `inherit` (no `effort:` field — let the runtime decide)
+
+[IF Q4b = max] Emit a voice warning: *"max = budget de pensée illimité. la doc Claude prévient : peut overthink. réservé aux agents qui produisent du contenu structurant (project-drafter, milestone-drafter, …)."*
+
+[IF Q4 = haiku AND Q4b ≠ low AND Q4b ≠ inherit] Emit: *"effort sur haiku = ignoré silencieusement. force `low` ou `inherit` pour rester clean."*
 
 ### Q5 — Tools allowlist (explicit)
 
@@ -159,8 +166,8 @@ sections not present in the template.
 ---
 name: <AGENT>
 description: <DESCRIPTION>
-model: haiku    # or omit if Q4 = default
-effort: low     # or omit if Q4b = default
+model: <Q4-value>    # [IF Q4 ∈ {haiku, sonnet, opus}, else omit this line]
+effort: <Q4b-value>  # [IF Q4b ∈ {low, high, xhigh, max}, else omit this line]
 tools:
   - <Tool 1>
   - <Tool 2>
@@ -168,9 +175,9 @@ tools:
 ---
 ```
 
-[IF Q4 = default] Omit the `model:` line entirely (don't set it to a
+[IF Q4 = inherit] Omit the `model:` line entirely (don't set it to a
 placeholder). The runtime picks the default.
-[IF Q4b = default] Omit the `effort:` line entirely.
+[IF Q4b = inherit] Omit the `effort:` line entirely.
 
 ### Body
 
@@ -291,8 +298,8 @@ scaffold-agent report
   Plugin:        <PLUGIN>
   Agent:         <PLUGIN>:<AGENT>
   Description:   <DESCRIPTION>
-  Model:         <haiku | default>
-  Effort:        <low | high | xhigh | default>
+  Model:         <haiku | sonnet | opus | inherit>
+  Effort:        <low | medium | high | xhigh | max | inherit>
   Tools:         <comma-separated list>
   Input format:  <one-line summary>
   Output format: <SDD | structured report | custom>

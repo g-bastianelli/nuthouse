@@ -1,6 +1,7 @@
 ---
 name: audit
 description: Scan all skills, agents, personas, and banner prompts in this nuthouse repo against the _templates/ source of truth. Reports missing ## Workflow / ## Never, old-format ## Voice / ## Language artifacts, missing agent tools allowlist, persona-coded non-voice agent names, invalid frontmatter, and BANNER_PROMPT.md convention drift. Run after any convention change to catch drift.
+effort: high
 ---
 
 # audit
