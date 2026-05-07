@@ -99,6 +99,8 @@ Global guidance — applies everywhere, not just at scaffold time:
 
 Repo-level: `.claude/hooks/persona-roulette.mjs` picks a random `persona.md` at SessionStart for the current session's default voice (see "Persona Roulette" section above). Local scaffold skills live at `.claude/skills/{scaffold-plugin,scaffold-skill,scaffold-agent}/SKILL.md` with shared `mad-scientist` voice at `.claude/skills/persona.md`.
 
+Architecture Decision Records live in `_adr/`, numbered sequentially (`NNNN-kebab-case-title.md`). The first one (`_adr/0001-frontmatter-model-effort-tiering.md`) defines the cognitive-load tiering applied to every skill and agent's `model` / `effort` frontmatter. Read it before adding a new skill or agent so the tiering is consistent.
+
 ---
 
 ## Dev workflow recap
