@@ -28,7 +28,7 @@ Plugins, skills, and agents for Claude Code and Codex. Each plugin ships cross-r
 | [react-monkey](./react-monkey) | React implementation specialist — parallel exploration, strict component architecture | Claude Code + Codex |
 | [linear-devotee](./linear-devotee) | Détecte ton issue Linear, prépare un brief SDD, et crée Projects / Milestones / Issues en cascade. Voix devotee / carnal worship | Claude Code + Codex |
 | [acid-prophet](./acid-prophet) | Structured spec-writing — Q&A → spec → audit → optional Linear handoff. Includes the `scryer` audit agent that flags SDD violations, codebase contradictions, and ambiguity | Claude Code + Codex |
-| [warden](./warden) | Centralized voice agent for nuthouse plugins — emits decorative persona lines; global on/off toggle silences all fun messages | Claude Code |
+| [warden](./warden) | Centralized voice agent for nuthouse plugins — emits decorative persona lines; global on/off toggle silences all fun messages | Claude Code + Codex |
 | [git-gremlin](./git-gremlin) | Git gremlin — auto-triggers commit and PR helpers with explicit confirmation gates | Claude Code + Codex |
 
 ## Install
@@ -66,6 +66,7 @@ Codex runtime folders are present for:
 react-monkey
 linear-devotee
 acid-prophet
+warden
 git-gremlin
 ```
 
