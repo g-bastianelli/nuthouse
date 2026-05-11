@@ -1,0 +1,24 @@
+{
+  "name": "warden",
+  "version": "1.0.0",
+  "description": "Centralized voice control for nuthouse plugins in Codex: decorative persona-line dispatch plus a global on/off toggle.",
+  "author": {
+    "name": "g-bastianelli"
+  },
+  "repository": "https://github.com/g-bastianelli/nuthouse",
+  "skills": "./codex/skills/",
+  "interface": {
+    "displayName": "Warden",
+    "shortDescription": "Control nuthouse fun messages",
+    "longDescription": "Warden provides Codex with the nuthouse voice gate: a global on/off toggle for decorative persona lines and a strict JSON dispatcher mode that other plugins can call without making voice a workflow precondition.",
+    "developerName": "g-bastianelli",
+    "category": "Developer Tools",
+    "capabilities": ["Read", "Write"],
+    "websiteURL": "https://github.com/g-bastianelli/nuthouse",
+    "defaultPrompt": [
+      "Use Warden to check whether nuthouse fun messages are enabled.",
+      "Use Warden to silence nuthouse persona lines globally."
+    ],
+    "logo": "./assets/banner.png"
+  }
+}
