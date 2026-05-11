@@ -104,5 +104,5 @@ Agents (`commit-drafter`, `pr-drafter`) are not unit-tested — their logic is p
 - Automatic branch creation
 - PR review or review/comment management
 - Multi-remote support (GitLab, Bitbucket…) — GitHub + `gh` CLI only
-- SessionStart/UserPromptSubmit hooks — explicit invocation only, no automatic trigger
+- SessionStart/UserPromptSubmit hooks — automatic background hooks are out of scope; implicit skill invocation is driven by skill metadata
 - Replacing RTK for simple git commands

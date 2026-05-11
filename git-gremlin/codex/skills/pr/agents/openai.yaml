@@ -1,0 +1,8 @@
+interface:
+  display_name: "GitHub PR"
+  short_description: "Draft and create confirmed GitHub PRs"
+  icon_large: "../../../assets/banner.png"
+  default_prompt: "Use $git-gremlin:pr to open a GitHub PR for this branch."
+
+policy:
+  allow_implicit_invocation: true

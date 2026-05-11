@@ -1,0 +1,8 @@
+interface:
+  display_name: "Git Commit"
+  short_description: "Draft and run confirmed git commits"
+  icon_large: "../../../assets/banner.png"
+  default_prompt: "Use $git-gremlin:commit to commit my staged changes with a conventional commit message."
+
+policy:
+  allow_implicit_invocation: true
