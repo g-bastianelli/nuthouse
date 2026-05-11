@@ -1,0 +1,24 @@
+{
+  "name": "git-gremlin",
+  "version": "1.0.0",
+  "description": "Git commit and GitHub PR helper for Codex with stronger automatic skill triggers and explicit mutation gates.",
+  "author": {
+    "name": "g-bastianelli"
+  },
+  "repository": "https://github.com/g-bastianelli/nuthouse",
+  "skills": "./codex/skills/",
+  "interface": {
+    "displayName": "Git Gremlin",
+    "shortDescription": "Draft commits and PRs safely",
+    "longDescription": "Git Gremlin bundles Codex skills for recognizing commit and GitHub PR intent from natural prompts, drafting conventional commit messages and PR descriptions from git context, and executing git commit or gh pr create only after explicit confirmation.",
+    "developerName": "g-bastianelli",
+    "category": "Developer Tools",
+    "capabilities": ["Read", "Write"],
+    "websiteURL": "https://github.com/g-bastianelli/nuthouse",
+    "defaultPrompt": [
+      "Use Git Gremlin to commit my staged changes.",
+      "Use Git Gremlin to open a GitHub PR for this branch."
+    ],
+    "logo": "./assets/banner.png"
+  }
+}

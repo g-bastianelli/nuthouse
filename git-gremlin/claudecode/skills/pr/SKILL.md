@@ -1,6 +1,6 @@
 ---
 name: git-gremlin:pr
-description: Use when a branch is ready for review and you want to create a GitHub PR — delegates diff reading and description writing to a subagent, keeping the diff off the main context.
+description: Use automatically when the user asks to create, open, draft, or publish a GitHub PR, pull request, review request, "ouvre une PR", "fais la PR", "crée une pull request", or says the branch is ready for review. Delegates git log/diff reading and PR description writing to a subagent. Do not use for commits, plain git status, diff, log, push-only, rebase, or non-GitHub merge requests.
 effort: high
 ---
 

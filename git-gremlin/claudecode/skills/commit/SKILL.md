@@ -1,6 +1,6 @@
 ---
 name: git-gremlin:commit
-description: Use when staged changes are ready and you want to draft and execute a git commit — delegates diff reading and message writing to a subagent, keeping the diff off the main context.
+description: Use automatically when the user asks to commit changes, create a commit, write a commit message, commit staged changes, commit everything, run git commit, "fais le commit", "commit mes changements", or "crée un commit". Handles staged changes first and may offer to stage dirty changes only after confirmation. Do not use for plain git status, diff, log, push, rebase, or PR creation.
 effort: high
 ---
 
@@ -13,7 +13,11 @@ Rigid approval gate. Match the user's language; keep technical identifiers uncha
 ## Workflow
 
 1. Preconditions:
-   - Verify staged files exist: `git diff --staged --name-only`. Abort with clear message if empty.
+   - Verify this is a git repository.
+   - Verify staged files exist: `git diff --staged --name-only`.
+   - If no staged files exist, check dirty files with `git status --short`.
+   - If dirty files exist and the user explicitly asked to commit all/everything or stage changes, ask before running `git add -A`, then re-check staged files.
+   - If staged files are still empty, abort with a clear message asking the user to stage files or say they want all changes staged.
 2. Draft commit message:
    - Dispatch `git-gremlin:commit-drafter` with the staged diff as input.
    - Receive `{ message: string, files: string[] }`.
