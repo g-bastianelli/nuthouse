@@ -1,11 +1,12 @@
 {
   "name": "react-monkey",
+  "displayName": "React Monkey",
+  "version": "1.0.0",
   "description": "React implementation specialist with parallel codebase exploration. Enforces strict architectural rules: one component per file, folder mirrors JSX tree, IDs-only props, shared select hooks.",
   "author": {
     "name": "g-bastianelli"
   },
+  "repository": "https://github.com/g-bastianelli/nuthouse",
   "skills": "./skills/",
-  "agents": [
-    "./agents/explorer.md"
-  ]
+  "agents": ["./agents/explorer.md"]
 }

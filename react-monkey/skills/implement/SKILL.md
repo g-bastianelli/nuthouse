@@ -1,17 +1,17 @@
 ---
-name: react-monkey:implement
+name: implement
 description: Use when creating, refactoring, or implementing React components, hooks, or pages — including .tsx/.jsx files, component trees, data fetching hooks, and UI layouts
 effort: high
 context_policy: fresh
 ---
 
-# react-monkey:implement
+# implement
 
 > Voice cadence: at every user-visible workflow transition, try to dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Visible transitions are skill start, context resolved, user decision point, external mutation gate, handoff, recoverable failure, final report, and clean exit. Print the returned `line` only when non-empty. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Never make voice dispatch a precondition, never retry it, and never mention missing `warden` to the user.
 
 ## Voice
 
-Read `../../../persona.md` at the start of this skill. The voice defined there is canonical for the `react-monkey` plugin and applies to all output of this skill. The architectural rules below (one component per file, folder mirrors JSX tree, IDs-only props) are non-negotiable regardless of voice — the monkey is competent first.
+Read `../../persona.md` at the start of this skill. The voice defined there is canonical for the `react-monkey` plugin and applies to all output of this skill. The architectural rules below (one component per file, folder mirrors JSX tree, IDs-only props) are non-negotiable regardless of voice — the monkey is competent first.
 
 **Scope:** this voice is local to this skill's execution. Once the skill finishes (after the final implementation report and checks), revert to the session's default voice. Don't let the persona voice bleed into the rest of the session.
 
@@ -26,30 +26,35 @@ tool names) stay in their original form regardless of language.
 
 ## How to work
 
-### Step 0 — Create progress tasks
+### Step 0 — Track progress
 
-Before doing anything else, use the `TaskCreate` tool to create one task per major step:
+Before exploring or editing, use `TodoWrite` to create one task per major step:
 
-1. subject: "Explore codebase context", activeForm: "Exploring codebase"
-2. subject: "Plan folder structure", activeForm: "Planning structure"
-3. subject: "Implement components", activeForm: "Implementing"
-4. subject: "Run checks", activeForm: "Running checks"
-5. subject: "Print final report", activeForm: "Reporting"
+1. Explore codebase context
+2. Plan folder structure
+3. Implement components
+4. Run checks
+5. Print final report
 
-Mark each task `in_progress` when you start it, `completed` when done.
+Mark each step `in_progress` when starting and `completed` when done.
 
-### Step 1 — Understand the context
+### Step 1 — Read project instructions
 
-Mark task "Explore codebase context" as `in_progress`.
+Read local instructions before inspecting implementation details:
 
-- Read the project's CLAUDE.md (if it exists) to learn project-specific conventions, entity patterns, commands, and dependencies.
-- Clarify which component/feature to implement and where it belongs in the folder tree.
+- `AGENTS.md` files that apply to the target path (highest priority).
+- `CLAUDE.md` when present.
+- README or package scripts near the target package.
+
+Use these files to learn project-specific commands, design-system conventions, entity patterns, routing, and data fetching rules. If local instructions conflict with this skill, local user/repository instructions win.
+
+Clarify which component/feature to implement and where it belongs in the folder tree.
 
 ### Step 2 — Spawn the explorer agent
 
-Use the `Agent` tool to discover design system, data fetching, and surrounding code **in parallel** before writing a single line of code:
+Use the `Task` tool to discover design system, data fetching, and surrounding code **in parallel** before writing a single line of code:
 
-- **subagent_type:** `explorer`
+- **subagent_type:** `react-monkey:explorer`
 - **prompt:** Send a message in this format (both paths must be absolute):
   ```
   PROJECT_ROOT: /absolute/path/to/project/root
@@ -58,29 +63,26 @@ Use the `Agent` tool to discover design system, data fetching, and surrounding c
 
 If the target component does not exist yet (new file), provide the absolute path where it will be created. The agent will explore the nearest existing parent folder for surrounding code context.
 
-Wait for the agent's report. Use it as the source of truth for steps 3-5. If the agent returns an incomplete report or fails, fall back to the project's CLAUDE.md conventions and proceed with manual discovery. Mark task "Explore codebase context" as `completed`.
+The agent returns a structured report covering design system, data fetching library, and surrounding code patterns. Use it as the source of truth for steps 3-5.
 
-### Step 3 — Plan the folder structure
+If subagents are unavailable or fail, perform the same discovery locally before editing.
 
-Mark task "Plan folder structure" as `in_progress`.
+### Step 3 — Plan the JSX tree and folders
 
 **This is critical.** Before writing a single line of code:
 
 1. Sketch the JSX render tree of the component(s) you are about to create.
 2. Map that tree to a folder structure following Rule 2 (folder = JSX tree).
-3. Only then start creating files, **starting from the deepest leaves up to the root**.
+3. Decide which components are leaves (`ComponentName.tsx`) and which need a folder with `index.tsx`.
+4. Start edits from deepest leaves and work upward to the root.
 
-If you create files at the wrong level and need to move them later, you have already failed this step.
-
-Only mark task "Plan folder structure" as `completed` once the folder structure is fully sketched and you are confident in the file locations before writing any code.
+Do not create files until the tree-to-folder mapping is clear.
 
 ### Step 4 — Implement following ALL rules below
 
-Mark task "Implement components" as `in_progress`.
+Write the component(s), hook(s), and type(s). Use the design system components and tokens from the explorer report. Use the data fetching patterns from the explorer report. Follow existing project patterns for imports, formatting, styling, and tests.
 
-Write the component(s), hook(s), and type(s). Use the design system components and tokens from the explorer report. Use the data fetching patterns from the explorer report.
-
-**Before writing any helper function:** grep the codebase (`libs/`, shared packages) for the function name. Never reimplement what already exists in a shared library.
+**Before writing any helper function:** search shared project code (`libs/`, `packages/`, `src/`, or local shared folders) for an existing equivalent. Never reimplement what already exists in a shared library.
 
 **When a component grows too large (>~80 lines or multiple distinct blocks):**
 
@@ -92,19 +94,13 @@ Write the component(s), hook(s), and type(s). Use the design system components a
 
 Then verify every rule in the checklist.
 
-Mark task "Implement components" as `completed`.
-
 ### Step 5 — Run checks using the project's toolchain
 
-Mark task "Run checks" as `in_progress`.
+Run lint, typecheck, and focused tests using **the exact commands documented in the project's CLAUDE.md or AGENTS.md**. Never run raw tools directly (`eslint`, `tsc`, `vitest`, etc.) — always use the project's task runner.
 
-Run lint (and optionally typecheck) using **the exact commands documented in the project's CLAUDE.md**. Never run raw tools directly (`eslint`, `tsc`, `vitest`, etc.) — always use the project's task runner. Read CLAUDE.md first to find the correct commands.
-
-Mark task "Run checks" as `completed`.
+If commands are not documented, infer the safest package script from `package.json` and state the assumption.
 
 ### Step 6 — Print final report
-
-Mark task "Print final report" as `in_progress`.
 
 Print a structured report wrapped in one or two voice lines from the persona. Format:
 
@@ -131,8 +127,6 @@ Rules:
 - Use 🌴 / 🍌🍌🍌 only on big restructures (deep folder split, multi-component refactor landing clean).
 - 🚨 "DANGER: MONKEY CODING" lines stay for inline narration during the work, NOT for the closing report.
 - The report block itself stays plain. Voice goes in the wrapper, never inside the report.
-
-Mark task "Print final report" as `completed`.
 
 ---
 
@@ -248,7 +242,7 @@ export function useDealContact(dealId: number, contactId: number) {
 }
 ```
 
-All children call the shared hook — the data layer deduplicates, no extra request.
+All children call the shared hook — the data layer deduplicates the request, no extra network call.
 
 ### Rule 5: How to split a large component
 
@@ -333,7 +327,7 @@ If three components render the same shell with different styles, extract a singl
 
 **2. Keep style switching colocated with the JSX — no top-level variant maps, no JS class/style registries.**
 
-Whatever the project uses to apply conditional styles (`cn`/`clsx`, CSS module composition, `styled-components` props, etc.), the conditional logic stays at the call site, next to the element it styles. Do NOT extract top-level `XXX_VARIANT` constants or `Record<Kind, string>` style registries above the component — they hide styles behind indirection and parasitic naming (`wrapper`, `stripe`, `inner`).
+Do NOT extract top-level `XXX_VARIANT` constants or `Record<Kind, string>` style registries above the component — they hide styles behind indirection and parasitic naming (`wrapper`, `stripe`, `inner`).
 
 **Why:** colocation beats abstraction for styling. The visual decision + its condition stay in the JSX; a `grep` for the actual class/style lands on the component, not on an opaque `wrapper` key. Adding a new conditional = one line at the call site, not an extension to an external Record.
 
@@ -394,8 +388,7 @@ Same rule: if the modal is shareable or navigable → search params. If it's a t
 const [showModal, setShowModal] = useState(false)
 
 // GOOD — modal state in URL, shareable and navigable
-// (adapt to the project's router: TanStack Router, React Router, Next.js…)
-const { modal } = useSearch() // or useSearchParams(), useRouter()
+const { modal } = useSearch()
 const isOpen = modal === 'create-user'
 ```
 
@@ -440,8 +433,8 @@ Go through EVERY item. If any fails, fix it before delivering.
 10. **No `any`, no `!`, no unsafe casting**
 11. **Suspense queries preferred** — if the project's data layer supports it
 12. **All English** — code, comments, types, everything
-13. **Lint and typecheck pass** — using the exact commands from CLAUDE.md
+13. **Lint and typecheck pass** — using the exact commands from project instructions
 14. **No duplicate utilities** — grepped shared libs before writing any helper function
 15. **Accessibility** — every label has `htmlFor`, every form control has a matching `id`
 16. **No raw HTML form elements** — uses DS components (Select, Input, etc.) instead
-17. **Modal/dialog open state** — if the modal is shareable or navigable, use search params instead of `useState`
+17. **Modal/dialog open state** — if the modal or any selected-entity view is shareable, use search params instead of `useState`

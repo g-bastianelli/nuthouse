@@ -1,7 +1,7 @@
 {
   "name": "react-monkey",
   "version": "1.0.0",
-  "description": "React implementation specialist with parallel codebase exploration and strict component architecture rules.",
+  "description": "React implementation specialist with parallel codebase exploration. Enforces strict architectural rules: one component per file, folder mirrors JSX tree, IDs-only props, shared select hooks.",
   "author": {
     "name": "g-bastianelli"
   },
@@ -10,7 +10,7 @@
   "interface": {
     "displayName": "React Monkey",
     "shortDescription": "Build React with strict component rules",
-    "longDescription": "React Monkey bundles Codex skills for implementing React components, hooks, and pages with parallel codebase exploration, strict component boundaries, folder structures that mirror JSX trees, primitive props, colocated select hooks, and verification through the target project's toolchain.",
+    "longDescription": "React Monkey bundles skills for implementing React components, hooks, and pages with parallel codebase exploration, strict component boundaries, folder structures that mirror JSX trees, primitive props, colocated select hooks, and verification through the target project's toolchain.",
     "developerName": "g-bastianelli",
     "category": "Developer Tools",
     "capabilities": ["Read", "Write"],
