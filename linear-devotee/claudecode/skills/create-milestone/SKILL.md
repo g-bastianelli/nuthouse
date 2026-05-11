@@ -1,9 +1,9 @@
 ---
 name: linear-devotee:create-milestone
-description: Use when adding a Linear Milestone to a Project, chained from create-project chain state or standalone with a selected project and phase hint. Drafts via milestone-drafter, clarifies, previews, creates on approval, updates chain state, and can hand off to create-issue.
+description: Use to add a single Milestone to an existing Linear Project (standalone add-on) or to resume a partially-committed create-project cascade. Reads chain-state to detect resume mode and pick the next milestone whose `id` is still null. Drafts via milestone-drafter when needed, clarifies, previews, creates on approval, updates chain state.
 model: opus
 effort: max
-allowed-tools: Read, Glob, Grep
+allowed-tools: Read, Glob, Grep, Write
 ---
 
 # linear-devotee:create-milestone
@@ -19,13 +19,16 @@ Rigid runbook. Match the user's language; keep technical identifiers unchanged.
    - Verify git repo.
    - Ensure `${CLAUDE_PLUGIN_ROOT}/data`.
 2. Detect mode from `${CLAUDE_PLUGIN_ROOT}/data/chain-${CLAUDE_SESSION_ID}.json`:
-   - Chained when `project.id` exists.
-   - Standalone otherwise.
+   - **Resume**: chain-state exists with `phase: "partial_failure"`, `project.id != null`, and at least one `drafts.milestones[].id == null`.
+   - **Chained**: chain-state exists with `project.id != null` and `phase` is `committing` or absent legacy value (pre-resume schema).
+   - **Standalone**: no chain-state, or `phase: "committed" | "cancelled"`.
 3. Gather context:
-   - Chained: use project fields and next uncreated `drafts.milestones[]`; exit `nothing-to-do` if all created.
-   - Standalone: fetch active projects, ask user to pick, then ask for one-sentence milestone hint.
+   - **Resume**: project + team come from chain-state. Pick the first `drafts.milestones[]` entry with `id == null`; if none, exit `nothing-to-do`. The entry already has a `client_ref`, `name`, `scope`, and optional `target_date` drafted by `create-project`. Skip the drafter dispatch in step 4 — the draft is already in chain-state.
+   - **Chained (legacy)**: use project fields and next uncreated `drafts.milestones[]`; exit `nothing-to-do` if all created.
+   - **Standalone**: fetch active projects, ask user to pick, then ask for one-sentence milestone hint.
 4. Draft:
-   - Dispatch `linear-devotee:milestone-drafter` with:
+   - **Resume mode skips this step.** The chain-state entry IS the draft.
+   - Otherwise dispatch `linear-devotee:milestone-drafter` with:
      ```text
      PROJECT_ID: <id>
      PARENT_DRAFT: <chain path | _none_>
@@ -36,6 +39,7 @@ Rigid runbook. Match the user's language; keep technical identifiers unchanged.
 5. Clarify:
    - Ask one blocking question at a time for `_unclear_` or suggested questions.
    - Patch draft until clean or user ships as-is.
+   - Resume mode usually has no `_unclear_` left (the user validated at create-project's preview gate); skip if clean.
 6. Preview and approve:
    - Print full patched draft.
    - Ask `Create this milestone? (y / edit / cancel)`.
@@ -45,8 +49,8 @@ Rigid runbook. Match the user's language; keep technical identifiers unchanged.
    - `targetDate` only if suggested and confirmed.
    - On API error, surface verbatim and stop with `linear_error`.
 8. Update chain state:
-   - Parse suggested issues into `{ idx, title, blocked_by }`; drop invalid blocked indices with warning.
-   - Append:
+   - **Resume mode**: update the matched `drafts.milestones[]` entry **in place** (key on `client_ref`). Set `id`, `url`. Do **not** append a new entry. If all `drafts.milestones[]` now have an `id` and all `drafts.issues[]` are also done, set `phase: "committed"`; otherwise leave `phase: "partial_failure"` so the next resume call continues.
+   - **Chained / standalone (legacy)**: parse suggested issues into `{ idx, title, blocked_by }`; drop invalid blocked indices with warning. Append:
      ```json
      {
        "id": "<milestone.id>",
@@ -56,23 +60,23 @@ Rigid runbook. Match the user's language; keep technical identifiers unchanged.
        "suggested_issues": [{ "idx": 0, "title": "<title>", "blocked_by": [] }]
      }
      ```
-   - Preserve existing project/draft fields; set `current` and `current_milestone_id`.
-   - Backward compatibility: coerce flat suggested issue strings into structured entries.
+     Preserve existing project/draft fields; set `current` and `current_milestone_id`. Backward compatibility: coerce flat suggested issue strings into structured entries.
 9. Handoff:
-   - Offer `create-issue`.
-   - In chained mode with remaining drafted milestones, also offer next milestone.
+   - **Resume**: if any `drafts.issues[]` still have `id == null`, offer `create-issue` to continue the cascade. If everything is now created and `phase: "committed"`, rewrite `${CLAUDE_PLUGIN_DATA}/state-${CLAUDE_SESSION_ID}.json` (per `create-project` step 11) and announce auto-chain to `linear-devotee:greet <identifier-of-first-issue>` and continue immediately.
+   - **Chained / standalone**: offer `create-issue`. In chained mode with remaining drafted milestones, also offer next milestone.
    - Print final report.
 
 ## Final Report
 
 ```text
 linear-devotee:create-milestone report
-  Mode:               <chained | standalone>
+  Mode:               <resume | chained | standalone>
   Project:            <project.title> (<project.id>)
   Milestone:          <name> - <url> | (cancelled) | (linear_error)
   Suggested issues:   <N>
-  Chain progress:     <created>/<total> milestones
-  Hand-off:           create-issue | next-milestone | stop | cancelled | linear_error | nothing-to-do
+  Chain progress:     <created>/<total> milestones · <created>/<total> issues
+  Phase:              committing | partial_failure | committed | n/a
+  Hand-off:           greet <identifier> | create-issue | next-milestone | stop | cancelled | linear_error | nothing-to-do
 ```
 
 ## Never

@@ -12,9 +12,9 @@ Voice = decorative feral devotee. Normal workflow feedback stays factual; the pe
 |---|---|
 | `linear-devotee:greet` | Detects issue from branch or first prompt, delegates issue context to a cheap read-only scout, sets In Progress when allowed, resolves the Acid Prophet source spec when present, writes greet context, then hands off to `plan`. It never writes implementation code |
 | `linear-devotee:plan` | Builds and iterates an implementation plan from greet context or an issue id, delegates plan review, flags spec drift, writes a validated plan artifact, and syncs accepted spec drift only after validation |
-| `linear-devotee:create-project` | Creates a Linear Project from a spec file or vibe-mode Q&A. Drafts a Project-SDD via the `project-drafter` subagent, previews, mutates Linear on approval, writes a chain-state file, can hand off to `create-milestone` |
-| `linear-devotee:create-milestone` | Creates a Linear Milestone — chained from `create-project` (auto-loads project + drafted phases) or standalone (project picker + freeform hint). Drafts via the `milestone-drafter`, previews, mutates, can hand off to `create-issue` |
-| `linear-devotee:create-issue` | Creates a Linear Issue with a strict SDD-formatted description — chained from `create-milestone` (cascades through suggested issues) or standalone (project + optional milestone + hint). Drafts via the `issue-drafter`, previews, mutates |
+| `linear-devotee:create-project` | Full-cascade Linear Project creation from a spec file or vibe-mode Q&A. Drafts project + milestones + issues up front via `project-drafter`, writes an editable global preview, asks **one approval gate**, then batch-creates everything on Linear (issue SDD bodies generated at commit time via `issue-drafter`), and auto-chains to `greet` on the first created issue. On partial failure, hands recovery to `create-milestone` / `create-issue` via the chain-state file |
+| `linear-devotee:create-milestone` | Add a single Milestone to an existing Linear Project (standalone) or resume a partially-committed `create-project` cascade. Detects resume mode from chain-state and continues at the next milestone whose `id` is null |
+| `linear-devotee:create-issue` | Add a single Linear Issue with a strict SDD-formatted description (standalone) or resume a partially-committed cascade. Detects resume mode, picks the next issue whose dependencies are satisfied, and can auto-chain to `greet` when the cascade completes |
 
 ## Agents (read-only Linear scouts)
 
@@ -67,9 +67,24 @@ Codex does not expose the same hook model, so `linear-devotee:greet` is invoked 
 
 ## Cascade chain
 
-`create-project` → `create-milestone` → `create-issue` form a hand-off chain. Each skill is also invocable standalone. Chain state lives at `${CLAUDE_PLUGIN_ROOT}/data/chain-${CLAUDE_SESSION_ID}.json` and carries the project_id, drafted milestones, drafted issues, and created-vs-pending counters.
+The happy path is **one skill, one approval gate, end-to-end to the implementation plan**:
 
-The `milestone-drafter` can annotate suggested issues with `[blocked-by: <idx>, <idx>]` to encode hard ordering inside a milestone. `create-issue` then picks issues whose dependencies are already created first (topological cascade) and forwards the resolved Linear identifiers to `save_issue` as `blockedBy`, so the Linear UI shows the dependency chain natively — and an empty `blocked_by` list means the issue is a safe entry point.
+```
+create-project
+  → drafts project SDD + milestones + suggested issues in advance
+  → editable global preview at ${CLAUDE_PLUGIN_ROOT}/data/preview-<session>.md
+  → ONE gate: Create everything on Linear? (y / edit / cancel)
+  → batch commit: project → milestones (in order) → issues (topological on blocked-by)
+  → auto-chain: greet on first created issue → plan (the plan's Validate? gate is the user's only stop downstream)
+```
+
+The single approval gate is the contract: no per-resource `(y)` inside the batch commit phase. The user reviews the full preview file (which they can edit before approving) and either accepts the whole cascade or cancels it.
+
+**Chain state and recovery.** Chain state lives at `${CLAUDE_PLUGIN_ROOT}/data/chain-${CLAUDE_SESSION_ID}.json` and carries a `client_ref` (UUID v4) per project / milestone / issue draft, plus their resolved Linear `id` once created. The state is rewritten after every successful Linear mutation, so a crash mid-cascade leaves a recoverable record. On re-invocation, `create-milestone` and `create-issue` detect `phase: "partial_failure"`, pick the next entry whose `id` is still `null` (skipping anything already created — idempotency via `client_ref`), and continue the cascade. When the last pending entry is created, the resume path also auto-chains to `greet`. Linear has no transaction primitive, so partial failures are surfaced verbatim — the cascade never auto-rolls-back created entries.
+
+**Dependency ordering.** The `milestone-drafter` annotates suggested issues with `[blocked-by: <idx>, <idx>]` to encode hard ordering inside a milestone, and the cascade processes issues in topological order on those references. Linear's official `save_issue` may or may not accept a `blockedBy` field directly (the wrapper translates to `IssueRelation` server-side); the cascade tries the inline field first and falls back to a post-pass that creates the relation explicitly, queueing any rejected edge in `blocked_by_pending` for visibility.
+
+**Standalone modes.** `create-milestone` and `create-issue` remain invocable on their own to add a single resource to an existing Linear project — useful for ad-hoc additions that don't deserve a fresh cascade.
 
 ## Requirements
 
