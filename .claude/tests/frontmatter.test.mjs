@@ -15,12 +15,19 @@ function listTrackedFiles() {
 
 function findFrontmatterFiles() {
   const tracked = listTrackedFiles();
-  return tracked.filter((rel) => {
+  const untracked = execSync('git ls-files --others --exclude-standard', {
+    cwd: REPO_ROOT,
+    encoding: 'utf8',
+  })
+    .split('\n')
+    .filter(Boolean);
+  const all = [...new Set([...tracked, ...untracked])];
+  return all.filter((rel) => {
     if (rel.startsWith('_templates/')) return false;
     if (rel.startsWith('node_modules/')) return false;
-    if (rel.endsWith('/SKILL.md')) return true;
-    if (rel.includes('/agents/') && rel.endsWith('.md')) return true;
-    return false;
+    const match = rel.endsWith('/SKILL.md') || (rel.includes('/agents/') && rel.endsWith('.md'));
+    if (!match) return false;
+    return fs.existsSync(path.join(REPO_ROOT, rel));
   });
 }
 
