@@ -33,18 +33,19 @@ Persona: a halluciné genius who asks seemingly cosmic questions but extracts ex
 
 ## Architecture
 
+> **Superseded layout note (2026-05-12).** This historical V1 spec used the old `claudecode/skills/` tree. Current nuthouse plugins use the root layout defined in `2026-05-12-root-plugin-layout.md`: canonical `skills/` and `agents/` at plugin root, with `claudecode/` reserved for Claude-only hooks/lib/tests/data.
+
 ### Plugin structure
 
 ```
 acid-prophet/
-├── persona.md                    # canonical voice (single source of truth)
+├── persona.md                    # canonical voice
 ├── README.md                     # banner + install instructions
-├── claudecode/
-│   └── skills/
-│       └── trip/
-│           └── SKILL.md          # the only skill
+├── skills/                       # canonical root skills
+├── agents/                       # canonical root agents, when needed
+├── claudecode/                   # Claude-only hooks/lib/tests/data
 └── .claude-plugin/
-    └── manifest.json             # plugin declaration
+    └── plugin.json               # plugin declaration
 ```
 
 **No hooks** — SessionStart and UserPromptSubmit hooks are not used. `acid-prophet` is on-demand only.
@@ -64,7 +65,7 @@ docs/acid-prophet/specs/YYYY-MM-DD-<topic>.md
 ### Invocation
 
 ```
-/acid-prophet:trip
+/acid-prophet:write-spec
 ```
 
 ### Checklist (strict order, hard gates enforced)
@@ -147,7 +148,7 @@ Voice: fragmented poetic insight + brutal precision. Questions seem cosmic, outp
 
 - No Node helpers in V1 → no `bun test` suite needed at scaffold time
 - If future hooks or scripts are added: tests go in `acid-prophet/claudecode/tests/`
-- Manual verification: invoke `/acid-prophet:trip`, run through a full cycle, verify spec output format and SDD decomposition quality
+- Manual verification: invoke `/acid-prophet:write-spec`, run through a full cycle, verify spec output format and SDD decomposition quality
 
 ---
 

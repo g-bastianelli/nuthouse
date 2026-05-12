@@ -4,9 +4,7 @@
 
 <h1 align="center">nuthouse</h1>
 
-<p align="center">
-  Cross-platform AI agent plugin marketplace — Claude Code + Codex
-</p>
+<p align="center">Claude Code + Codex plugins with one shared root layout.</p>
 
 <p align="center">
   <a href="https://github.com/g-bastianelli/nuthouse/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/g-bastianelli/nuthouse?style=flat-square&color=fbbf24" /></a>
@@ -16,64 +14,61 @@
   <img alt="bun" src="https://img.shields.io/badge/bun-1.3-f472b6?style=flat-square&logo=bun" />
 </p>
 
----
-
-Plugins, skills, and agents for Claude Code and Codex. Each plugin ships cross-runtime — install once, works everywhere.
-
 ## Plugins
 
-| Plugin | What it does | Runtime |
-|--------|-------------|---------|
-| [saucy-status](./saucy-status) | Rotates suggestive messages in statusline + conversation while Claude thinks | Claude Code |
-| [react-monkey](./react-monkey) | React implementation specialist — parallel exploration, strict component architecture | Claude Code + Codex |
-| [linear-devotee](./linear-devotee) | Détecte ton issue Linear, prépare un brief SDD, et crée Projects / Milestones / Issues en cascade. Voix devotee / carnal worship | Claude Code + Codex |
-| [acid-prophet](./acid-prophet) | Structured spec-writing — Q&A → spec → audit → optional Linear handoff. Includes the `scryer` audit agent that flags SDD violations, codebase contradictions, and ambiguity | Claude Code + Codex |
-| [warden](./warden) | Centralized voice agent for nuthouse plugins — emits decorative persona lines; global on/off toggle silences all fun messages | Claude Code + Codex |
-| [git-gremlin](./git-gremlin) | Git gremlin — auto-triggers commit and PR helpers with explicit confirmation gates | Claude Code + Codex |
+| Plugin | Runtime | Purpose |
+|---|---|---|
+| [react-monkey](./react-monkey) | Claude Code + Codex | React implementation discipline with codebase exploration before edits |
+| [linear-devotee](./linear-devotee) | Claude Code + Codex | Linear issue intake, planning, and gated project/milestone/issue creation |
+| [acid-prophet](./acid-prophet) | Claude Code + Codex | Spec writing, spec audit, and PR/spec drift checks |
+| [warden](./warden) | Claude Code + Codex | Shared persona-line dispatcher and global voice toggle |
+| [git-gremlin](./git-gremlin) | Claude Code + Codex | Commit and PR drafting with explicit confirmation gates |
+| [saucy-status](./saucy-status) | Claude Code | Statusline and prompt-time fun messages |
 
 ## Install
 
-### Claude Code
+Claude Code:
 
-Add this marketplace, then install any plugin:
-
-```
+```text
 /plugin marketplace add g-bastianelli/nuthouse
+/plugin install <plugin>@nuthouse
 ```
 
-```
-/plugin install react-monkey
-/plugin install linear-devotee@nuthouse
-/plugin install saucy-status@saucy-status
-/plugin install acid-prophet@nuthouse
-/plugin install warden@nuthouse
-/plugin install git-gremlin@nuthouse
-```
+Codex CLI:
 
-Restart Claude Code after installing.
-
-### Codex CLI
-
-```
+```text
 codex plugin marketplace add g-bastianelli/nuthouse
 ```
 
-Then open the plugin browser (`/plugins`) and install from there.
+Then open `/plugins` and install the plugin you want.
 
-Codex root manifests and skills are present for:
+## Layout
 
+Cross-runtime plugins use one canonical root tree:
+
+```text
+<plugin>/
+  .claude-plugin/plugin.json      # skills: ./skills/, agents: ./agents/*.md
+  .codex-plugin/plugin.json       # skills: ./skills/
+  assets/
+  persona.md
+  shared/
+  skills/
+  agents/
+  lib/
+  tests/
+  claudecode/                     # Claude-only hooks/lib/tests/data
 ```
-react-monkey
-linear-devotee
-acid-prophet
-warden
-git-gremlin
-```
+
+Skills and agents live at the plugin root. Do not create duplicate runtime copies under `codex/` or `claudecode/skills/`.
 
 ## Development
 
 ```bash
 bun install
+bun test
+bun run test:meta
+bunx biome check .
 ```
 
-Pre-commit linting via [Biome](https://biomejs.dev/) runs automatically on `git commit`.
+See [the root layout spec](./docs/acid-prophet/specs/2026-05-12-root-plugin-layout.md) for the current structure contract.
