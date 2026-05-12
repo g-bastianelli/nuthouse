@@ -17,7 +17,7 @@ Rigid planning gate. Match the user's language; keep technical identifiers uncha
    - Ensure `${PROJECT_ROOT}/docs/linear-devotee/plan/`.
    - Detect issue id from argument, branch, or recent greet context; ask if absent.
 3. Load context:
-   - Prefer `linear-devotee/codex/data/greet-<ISSUE_ID>.json`.
+   - Prefer `linear-devotee/data/greet-<ISSUE_ID>.json`.
    - If missing, rebuild via read-only issue-context delegation with issue id, repo root, and `NEEDS_STATUS_METADATA: true`.
 4. Resolve source spec:
    - Use greet `spec_file` if it exists.

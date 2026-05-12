@@ -1,5 +1,5 @@
 interface:
   display_name: "Warden Voice"
   short_description: "Toggle or dispatch nuthouse persona lines"
-  icon_large: "../../../../assets/banner.png"
+  icon_large: "../../../assets/banner.png"
   default_prompt: "Use $warden:voice status to check whether nuthouse fun messages are enabled."

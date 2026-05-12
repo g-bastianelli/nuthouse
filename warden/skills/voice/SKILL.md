@@ -9,7 +9,7 @@ effort: low
 
 ## Voice
 
-Read `../../../persona.md` at the start of this skill. That persona is
+Read `../../persona.md` at the start of this skill. That persona is
 canonical for all user-facing reports from this skill.
 
 **Scope:** local to this skill's execution only. Once the final report is

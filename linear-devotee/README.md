@@ -117,13 +117,12 @@ Then open the plugin browser (`/plugins`) and install `linear-devotee`.
 linear-devotee/
 |-- .codex-plugin/
 |-- assets/
+|-- skills/
 |-- claudecode/
 |   |-- agents/
 |   |-- hooks/
 |   |-- skills/
 |   `-- tests/
-|-- codex/
-|   `-- skills/
 `-- shared/
 ```
 

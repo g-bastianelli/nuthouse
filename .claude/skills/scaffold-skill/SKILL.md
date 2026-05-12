@@ -50,7 +50,7 @@ Free-text. Voice: *"comment s'appelle l'organe ?"*
 - **No persona-coded names**: `trip`, `scry`, `prophecy`, `vision`, `revelation`. ❌ The skill name must be self-explanatory without knowing the plugin's persona vocabulary. Panic-correct: *"non non non, `trip` ne dit rien à quelqu'un qui voit le skill pour la première fois. quel **acte** ? `write-spec`, `audit`, `check-drift` — un verbe fonctionnel."*
 - **No plugin prefix in the name itself.** The user types `write-spec`, not `acid-prophet:write-spec`. The prefix is added at write-time for the Claude Code variant.
 - Kebab-case, lowercase.
-- Must not collide with an existing skill in the parent plugin (check `ls <plugin>/claudecode/skills/<skill>/` and `ls <plugin>/codex/skills/<skill>/`).
+- Must not collide with an existing skill in the parent plugin (check `ls <plugin>/claudecode/skills/<skill>/` and `ls <plugin>/skills/<skill>/`).
 
 ### Q3 — Description
 
@@ -63,10 +63,10 @@ to the skill.
 ### Q4 — Target runtimes
 
 Detect the parent plugin's available runtimes (presence of `claudecode/`
-and/or `codex/` folders). Then AskUserQuestion (single-select if parent
+and/or root `.codex-plugin/` manifest). Then AskUserQuestion (single-select if parent
 is single-runtime, otherwise offer the intersection):
 - `claudecode` — Claude Code only
-- `codex` — Codex only (only if parent has `codex/`)
+- `codex` — Codex only (only if parent has `.codex-plugin/`)
 - `both` — Both (only if parent has both)
 
 ### Q5 — Subagent dispatch?
@@ -323,7 +323,7 @@ Auto-chain to `<DOWNSTREAM_SKILL>`. Print `<DOWNSTREAM_SKILL> <args>` and contin
 - Voice dispatch references repo-relative path `<PLUGIN>/shared/<contract>.md` (no `${CLAUDE_PLUGIN_ROOT}` env var in Codex contexts).
 - Artifact path also uses `${PROJECT_ROOT}/docs/<PLUGIN>/<ARTIFACT_TYPE>/` — same convention, runtime-agnostic.
 
-### 2b. Codex — `<PLUGIN>/codex/skills/<SKILL>/SKILL.md`
+### 2b. Codex — `<PLUGIN>/skills/<SKILL>/SKILL.md`
 
 **Frontmatter** (Codex = no prefix in `name`):
 ```yaml
@@ -335,10 +335,10 @@ description: <DESCRIPTION>
 
 Body is identical to 2a, except the `## Voice` section uses the relative
 path `../../persona.md` (Codex skills are 2 levels deep:
-`<plugin>/codex/skills/<skill>/SKILL.md` → `<plugin>/persona.md`).
+`<plugin>/skills/<skill>/SKILL.md` → `<plugin>/persona.md`).
 
 > ⚠️ Wait — verify this. The convention is **read the actual existing
-> Codex SKILL.md** in `react-monkey/codex/skills/implement/SKILL.md`
+> Codex SKILL.md** in `react-monkey/skills/implement/SKILL.md`
 > before writing, and copy the exact relative path it uses for the voice
 > section. Don't trust this comment over the source.
 
@@ -380,7 +380,7 @@ End with a voice exit line.
 8. **Codex variant verification**: read an existing Codex SKILL.md
    before generating one — don't trust memory for the relative paths or
    header conventions.
-9. **No `superpowers:*` dependency** in the generated SKILL.md.
+9. **No external workflow/tool dependency** in the generated SKILL.md.
 
 ## Anti-patterns to detect and refuse
 

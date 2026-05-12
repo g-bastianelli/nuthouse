@@ -33,13 +33,14 @@ It should not encode app-specific conventions. Put domain rules, APIs, route pat
 
 ```text
 react-monkey/
-├── claudecode/
-│   ├── .claude-plugin/
-│   ├── agents/
-│   └── skills/
-└── codex/
-    ├── assets/
-    ├── .codex-plugin/
+├── .claude-plugin/
+├── .codex-plugin/
+├── assets/
+├── agents/
+├── skills/
+├── shared/
+└── claudecode/
+    ├── agents/
     └── skills/
 ```
 

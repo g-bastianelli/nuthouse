@@ -60,7 +60,7 @@ codex plugin marketplace add g-bastianelli/nuthouse
 
 Then open the plugin browser (`/plugins`) and install from there.
 
-Codex runtime folders are present for:
+Codex root manifests and skills are present for:
 
 ```
 react-monkey

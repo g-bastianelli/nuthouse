@@ -44,11 +44,39 @@ Rules:
 
 ---
 
+## Plugin Structure
+
+Nuthouse plugins follow the Superpowers-style root install model: the plugin directory is the install unit. Marketplace entries point to `<plugin>`, never to `<plugin>/claudecode` or `<plugin>/codex`.
+
+Canonical layout for cross-runtime plugins:
+
+```text
+<plugin>/
+  .claude-plugin/plugin.json      # Claude Code manifest; skills: ./claudecode/skills/
+  .codex-plugin/plugin.json       # Codex manifest; skills: ./skills/
+  README.md
+  persona.md
+  assets/
+  shared/                         # optional cross-runtime contracts
+  skills/                         # Codex skills
+  agents/                         # optional Codex agents/metadata
+  lib/                            # optional Codex/root helpers
+  tests/                          # optional Codex/root tests
+  claudecode/
+    skills/
+    agents/
+    hooks/
+    lib/
+    tests/
+```
+
+Root Codex skills read the plugin persona with `../../persona.md`. Claude Code skills under `claudecode/skills/<skill>/SKILL.md` read it with `../../../persona.md`. New scaffolding must not create `<plugin>/codex/`.
+
 ## Stack & tooling
 
 - **Runtime hooks/scripts**: Node.js, **ESM** (`import` / `export`). **`.mjs`** extension is mandatory for hooks and tests (zero ambiguity for Node, no `package.json` needed in the plugin, plugin is self-contained regardless of install context). `saucy-status` stays on CJS for historical reasons. Every new plugin ships ESM `.mjs`. Reference: `linear-devotee/claudecode/hooks/*.mjs`.
 - **Package manager**: `bun@1.3.x` (declared in root `package.json`).
-- **Tests**: `bun test` (built-in, no dep added). Tests live in `<plugin>/<runtime>/tests/`.
+- **Tests**: `bun test` (built-in, no dep added). Claude Code tests live in `<plugin>/claudecode/tests/`; Codex/root helper tests live in `<plugin>/tests/`.
 - **Lint/format**: `biome` (config in `biome.json`). Formatter off, linter on. Local rule: `noUnusedVariables` is on → use `catch {}` (not `catch (e)`) when the binding is unused. Biome will auto-organize imports — let it.
 - **Pre-commit**: `lefthook` runs `bunx biome check .`. **Never bypass** with `--no-verify`.
 - **No npm/bun deps added** in plugins. Stick to `node:fs`, `node:path`, `node:os`, `node:child_process`. If a plugin really needs a dep, raise it first.

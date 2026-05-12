@@ -16,7 +16,7 @@ Rigid context gate. Match the user's language; keep technical identifiers unchan
    - `tool_search` query `linear`; abort clearly if unavailable.
    - Verify git repo.
    - Detect issue id from argument or branch regex `[A-Z]+-[0-9]+`.
-   - Ensure `linear-devotee/codex/data/`.
+   - Ensure `linear-devotee/data/`.
    - Keep full issue context out of the main model when delegation is available.
 3. Delegate issue context:
    ```text
@@ -37,7 +37,7 @@ Rigid context gate. Match the user's language; keep technical identifiers unchan
    - Choose only unambiguous matches: `linear-project:` exact project id, exact issue id in body, then project slug/name in body or filename.
    - Ask if multiple; use `_none_` if none.
    - Never compare drift or patch specs here.
-7. Write `linear-devotee/codex/data/greet-<ISSUE_ID>.json` with issue id/title, brief markdown, spec file, branch, status, timestamp.
+7. Write `linear-devotee/data/greet-<ISSUE_ID>.json` with issue id/title, brief markdown, spec file, branch, status, timestamp.
 8. Handoff:
    - Auto-chain to `plan` on the happy path. Print `linear-devotee:plan <ISSUE_ID>` and continue immediately — do not ask the user for confirmation. The user's only validation point is the plan's own `Validate this plan? (y / edit / stop)` gate.
    - On error paths (no issue id, brief skipped, branch refused, status flip blocked), stop instead of chaining and report the reason.

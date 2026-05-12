@@ -323,7 +323,7 @@ End with a voice exit line.
 5. **No prefix** in the `name:` frontmatter. The runtime prepends.
 6. **Never overwrite** an existing agent file. Read first; if it
    exists, abort or ask.
-7. **No `superpowers:*`** dependency in the generated agent.
+7. **No external workflow/tool dependency** in the generated agent.
 
 ## Anti-patterns to detect and refuse
 
