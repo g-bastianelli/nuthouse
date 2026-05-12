@@ -82,7 +82,7 @@ Keep it under ~140 characters. English (marketplace consistency).
 AskUserQuestion, single-select, options:
 - `claudecode` — Claude Code only
 - `codex` — Codex CLI only
-- `both` — Cross-runtime (creates `claudecode/` + `codex/` folders, see `react-monkey/`)
+- `both` — Cross-runtime (creates root Codex files plus `claudecode/`, see `react-monkey/`)
 
 ### Q4 — Hooks
 
@@ -131,7 +131,7 @@ Generate the following files. **Use the Write tool** for each.
 **Template sources:** Before generating files, read the matching templates and use them as structure source of truth:
 - `persona.md` → `_templates/persona/persona.md`
 - `plugin.json` → `_templates/plugin/.claude-plugin/plugin.json`
-- `plugin.toml` → `_templates/plugin/codex/.codex-plugin/plugin.toml`
+- Codex `plugin.json` → `_templates/plugin/.codex-plugin/plugin.json`
 - `README.md` → `_templates/plugin/README.md`
 - `BANNER_PROMPT.md` → `_templates/plugin/BANNER_PROMPT.md`
 
@@ -156,29 +156,29 @@ For `claudecode` / `both`:
 <plugin>/assets/
 <plugin>/shared/                 # only if Q7 = yes OR Q8 = yes (cross-cutting contracts / artifact convention notes)
 <plugin>/claudecode/
-<plugin>/claudecode/skills/
-<plugin>/claudecode/agents/      # only if user later runs scaffold-agent
+<plugin>/skills/                # canonical skills shared by Claude Code and Codex
+<plugin>/agents/                # canonical agents, only if user later runs scaffold-agent
 <plugin>/claudecode/hooks/       # only if Q4 != none
 <plugin>/claudecode/data/        # only if Q4 != none
-<plugin>/claudecode/tests/
+<plugin>/claudecode/lib/         # only if Claude-specific helpers are needed
+<plugin>/claudecode/tests/       # only if Claude-specific tests are needed
 ```
 
 > ⚠️ **Plugin root convention.** `.claude-plugin/` MUST sit at the
-> plugin root (`<plugin>/.claude-plugin/`), not nested inside
-> `claudecode/`. The marketplace `git-subdir` `path` is `<NAME>` (the
-> plugin root), so `persona.md`, `README.md`, `assets/`, and the
-> `codex/` sibling all ship in the install cache. If `.claude-plugin/`
-> were under `claudecode/`, the plugin root would be
-> `<plugin>/claudecode/` and `persona.md` (which skills read via
-> `../../../persona.md`) would be outside the cache → broken at
-> install. See `linear-devotee/` and `react-monkey/` for the canonical
-> layout.
+> plugin root. The plugin root is the install unit,
+> like Superpowers: manifests, persona, assets, shared contracts, and
+> root skills and agents all live under `<plugin>/`. Marketplace paths always point
+> at `<NAME>`, never a runtime subfolder. Claude Code runtime-specific
+> files stay under `claudecode/`. Root skills read persona via
+> `../../persona.md`.
 
 For `codex` / `both`:
 ```
-<plugin>/codex/
-<plugin>/codex/.codex-plugin/    # mirrors react-monkey/codex/ pattern
-<plugin>/codex/skills/
+<plugin>/.codex-plugin/         # plugin.json lives at plugin root
+<plugin>/skills/                # canonical skills shared by runtimes
+<plugin>/agents/                # canonical agents when needed
+<plugin>/lib/                   # runtime-agnostic helpers when needed
+<plugin>/tests/                 # runtime-agnostic helper tests when needed
 ```
 
 Also drop a `.gitkeep` in `<plugin>/assets/` so the folder commits cleanly
@@ -263,8 +263,8 @@ TODO — c'est la voix de la créature, je ne peux pas la deviner pour toi."*
 ### 2c. `<plugin>/.claude-plugin/plugin.json`
 
 Plugin root = `<plugin>/`. The `skills` field MUST point to
-`./claudecode/skills/` (relative to the plugin root) — without it the
-loader's default discovery won't find skills nested under `claudecode/`.
+`./skills/` (relative to the plugin root). This mirrors Superpowers: one
+canonical root skill tree, shared by both runtimes where the plugin supports both.
 
 Minimal (no hooks):
 ```json
@@ -272,7 +272,7 @@ Minimal (no hooks):
   "name": "<NAME>",
   "description": "<DESCRIPTION>",
   "author": { "name": "g-bastianelli" },
-  "skills": "./claudecode/skills/"
+  "skills": "./skills/"
 }
 ```
 
@@ -286,7 +286,7 @@ from `linear-devotee/.claude-plugin/plugin.json`:
   "name": "<NAME>",
   "description": "<DESCRIPTION>",
   "author": { "name": "g-bastianelli" },
-  "skills": "./claudecode/skills/",
+  "skills": "./skills/",
   "hooks": {
     "SessionStart": [
       {
@@ -313,15 +313,15 @@ from `linear-devotee/.claude-plugin/plugin.json`:
 ```
 
 When `scaffold-agent` adds a dedicated agent later, it will append an
-`"agents": ["./claudecode/agents/<name>.md"]` array to this manifest.
+`"agents": ["./agents/<name>.md"]` array to this manifest.
 
 Only include the events the user selected.
 
-### 2d. `<plugin>/codex/.codex-plugin/plugin.toml` (if codex/both)
+### 2d. `<plugin>/.codex-plugin/plugin.json` (if codex/both)
 
-Read `react-monkey/codex/.codex-plugin/plugin.toml` (if present) for the
-exact shape. If you can't find a precedent, output a minimal TOML and
-flag it as `_unclear_` in the final report.
+Read `react-monkey/.codex-plugin/plugin.json` for the exact shape. The
+Codex manifest lives at the plugin root and uses `"skills": "./skills/"`.
+Do not create `<plugin>/codex/` or `<plugin>/claudecode/skills/` for new plugins.
 
 ### 2e. `<plugin>/README.md`
 
@@ -419,14 +419,14 @@ reorder existing entries). Use the `git-subdir` source pattern:
 
 The `path` is the **plugin root** (`<NAME>`), not a runtime subfolder.
 This is what ships in the install cache — including `persona.md`,
-`README.md`, `assets/`, and the `codex/` sibling. Do NOT write
-`<NAME>/claudecode` here: it would exclude `persona.md` from the cache
-and break every skill that reads `../../../persona.md`.
+`README.md`, `assets/`, `.codex-plugin/`, `skills/`, and `claudecode/`.
+Do NOT write `<NAME>/claudecode` or `<NAME>/codex` here: it would exclude
+root assets/persona and break skills.
 
 For codex-only plugins, the convention is still `path: "<NAME>"` — the
-plugin root contains `.codex-plugin/` directly (see `linear-devotee/`).
-For `both`, a single entry at the plugin root is sufficient since both
-runtimes ship together.
+plugin root contains `.codex-plugin/` and `skills/` directly. For `both`,
+a single entry at the plugin root is sufficient since both runtimes ship
+together.
 
 After writing, re-validate with `node -e "JSON.parse(require('node:fs').readFileSync('.claude-plugin/marketplace.json','utf8'))"` (Bash). If it fails, **panic-revert** by re-reading the original
 content from git (`git show HEAD:.claude-plugin/marketplace.json`) and
@@ -503,9 +503,10 @@ These are **non-negotiable** regardless of voice intensity:
    `<plugin>/persona.md` (this is the contract; `scaffold-skill`
    enforces it). Don't redeclare the voice in CLAUDE.md or anywhere
    else.
-10. **No `superpowers:*`** dependency leaks into the shipped plugin.
-    `superpowers:writing-plans` is fine as a dev tool but the plan stays
-    in `docs/superpowers/plans/` and is **deleted before delivery**.
+10. **No external workflow/tool dependency** leaks into the shipped plugin.
+    Temporary planning notes are fine during development but must stay local
+    to the branch and be deleted before delivery unless they are part of the
+    plugin contract.
 
 ## Anti-patterns to detect and refuse
 

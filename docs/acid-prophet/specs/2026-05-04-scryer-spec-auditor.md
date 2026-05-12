@@ -10,7 +10,7 @@ last-reviewed: 2026-05-04
 
 ## Problem & Why
 
-`acid-prophet:trip` produces specs in `docs/acid-prophet/specs/`. Today the
+`acid-prophet:write-spec` produces specs in `docs/acid-prophet/specs/`. Today the
 review (Step 6 of `trip`) happens inline in main context and only covers
 text-level checks: placeholders, internal consistency, scope, ambiguity.
 Three gaps:
@@ -31,21 +31,21 @@ three gaps without altering the existing `trip` contract.
 
 Add one subagent and one skill to `acid-prophet`:
 
-- **`scryer`** — subagent that owns all spec-review logic. Reads the spec,
+- **`spec-auditor`** — subagent that owns all spec-review logic. Reads the spec,
   runs SDD-strict + reality + narrative + style checks, returns a
   structured report (BLOCKER / WARNING / INFO + auto-fix candidates). Pure
   read; never mutates the spec.
-- **`acid-prophet:scry`** — standalone skill that takes a spec path,
-  dispatches `scryer` in `report-only` mode, renders the report in the
+- **`acid-prophet:audit-spec`** — standalone skill that takes a spec path,
+  dispatches `spec-auditor` in `report-only` mode, renders the report in the
   acid-prophet voice, and offers a hand-off menu (apply auto-fixes, open
-  spec, hand to `linear-devotee:consummate-project`, stop).
+  spec, hand to `linear-devotee:create-project`, stop).
 
-Modify `acid-prophet:trip`:
+Modify `acid-prophet:write-spec`:
 
 - **Step 4** — add a guideline: keep code minimal in specs (interfaces,
   signatures, schemas, short pseudo-code only). Concrete code examples
   belong in Linear issues, not specs.
-- **Step 6** — replace inline review with a `scryer` dispatch in
+- **Step 6** — replace inline review with a `spec-auditor` dispatch in
   `auto-fix-trivial` mode. `trip` applies the auto-fix candidates
   (frontmatter patches, empty-section fills with sensible defaults), then
   surfaces remaining BLOCKER/WARNING/INFO findings to the user before
@@ -78,14 +78,13 @@ Modify `acid-prophet:trip`:
 The subagent is the single owner of the review logic. Both `trip` Step 6
 and the `scry` skill dispatch the same subagent — only the `mode` argument
 differs. Helpers for applying auto-fix patches live in
-`acid-prophet/<runtime>/lib/` and are pure Node (testable).
+`acid-prophet/lib/` or `acid-prophet/claudecode/lib/` when runtime-specific and are pure Node (testable).
 
 ## Components / data flow
 
-### `scryer` subagent
+### `spec-auditor` subagent
 
-**File location:** `acid-prophet/claudecode/agents/scryer.md` and
-`acid-prophet/codex/agents/scryer.md`.
+**File location:** `acid-prophet/agents/spec-auditor.md`.
 
 **Tools allowlist:** `Read`, `Glob`, `Bash` (read-only invocations only:
 `git`, `ls`). No `Edit` or `Write`. The subagent never mutates the spec.
@@ -169,17 +168,16 @@ always present.
 
 ### `scry` skill
 
-**File location:** `acid-prophet/claudecode/skills/scry/SKILL.md` and
-`acid-prophet/codex/skills/scry/SKILL.md`.
+**File location:** `acid-prophet/skills/audit-spec/SKILL.md`.
 
-**Invocation:** `/acid-prophet:scry <spec-path>`
+**Invocation:** `/acid-prophet:audit-spec <spec-path>`
 
 **Steps:**
 1. **Step 0 — Preconditions.** Read `../../../persona.md`. Verify the
    `<spec-path>` argument is provided and the file exists. Verify the
    path lives under `docs/acid-prophet/specs/`; if not, warn in voice and
    continue.
-2. **Step 1 — Dispatch scryer.** Invoke `scryer` with `mode=report-only`,
+2. **Step 1 — Dispatch scryer.** Invoke `spec-auditor` with `mode=report-only`,
    `spec_path=<arg>`, `project_root=<git rev-parse --show-toplevel>`.
 3. **Step 2 — Render report.** Print the subagent's structured report
    inline, wrapped with one short voice line (in acid-prophet voice).
@@ -188,7 +186,7 @@ always present.
      `docs(acid-prophet): scryer auto-fixes`
    - `open` — print the spec path for the user to open in their editor
    - `linear` — only if `linear-project: _none_` and zero BLOCKER:
-     hand off to `linear-devotee:consummate-project` with `<spec-path>`
+     hand off to `linear-devotee:create-project` with `<spec-path>`
    - `stop` — clean exit, voice line `"prophecy complete. architecture
      locked. 🔮"`
 
@@ -196,7 +194,7 @@ always present.
 
 Replace current inline review with:
 
-1. Dispatch `scryer` with `mode=auto-fix-trivial`,
+1. Dispatch `spec-auditor` with `mode=auto-fix-trivial`,
    `spec_path=<spec written in Step 5>`, `project_root=<git root>`.
 2. Apply each entry in the report's `Auto-fix candidates` list to the
    spec via the helper `apply-frontmatter-patch.mjs` (and equivalent
@@ -229,7 +227,7 @@ colocate helpers with hooks; `acid-prophet` needs cross-skill sharing).
 
 ## Error handling
 
-**`scryer` subagent:**
+**`spec-auditor` subagent:**
 - `spec_path` not found → return single BLOCKER `[io] spec file not
   found: <path>`. No other checks attempted.
 - Frontmatter unparseable → BLOCKER `[frontmatter] file has no valid
@@ -262,7 +260,7 @@ colocate helpers with hooks; `acid-prophet` needs cross-skill sharing).
 - Pre-commit hook never bypassed.
 
 **Hard rules:**
-- `scryer` is read-only: never writes any file. Tools allowlist
+- `spec-auditor` is read-only: never writes any file. Tools allowlist
   excludes `Edit` and `Write`.
 - `scry` and `trip` Step 6 only ever modify files under
   `docs/acid-prophet/specs/` (the spec being audited).
@@ -272,7 +270,7 @@ colocate helpers with hooks; `acid-prophet` needs cross-skill sharing).
 
 ## Testing
 
-### `scryer` subagent — fixture-based integration tests
+### `spec-auditor` subagent — fixture-based integration tests
 
 Fixtures live in `acid-prophet/<runtime>/tests/fixtures/scryer/`:
 
@@ -332,19 +330,19 @@ push. Same gate as the rest of the marketplace.
 ## Non-goals
 
 - **Cross-spec duplication detection.** If two specs in
-  `docs/acid-prophet/specs/` describe the same feature, `scryer` does
+  `docs/acid-prophet/specs/` describe the same feature, `spec-auditor` does
   not flag it. Future work, possibly delegated to `oracle` on the
   `linear-devotee` side at project-creation time.
-- **Cross-reference with existing Linear issues.** `scryer` stays local
+- **Cross-reference with existing Linear issues.** `spec-auditor` stays local
   to the repo. It does not query Linear.
 - **Non-trivial auto-fix.** V1 only auto-applies frontmatter patches
   and empty-section default fills. Rewriting ambiguous sections,
   reformatting Acceptance criteria into EARS, or expanding Non-goals
   is left to the user.
 - **Pre-commit hook integration.** No automatic spec audit on `git
-  commit`. The user invokes `/acid-prophet:scry` deliberately, or
-  `trip` invokes the subagent at Step 6.
+  commit`. The user invokes `/acid-prophet:audit-spec` deliberately, or
+  `write-spec` invokes the subagent during its audit step.
 - **Numeric quality score.** No `"spec quality: 7/10"` output —
   not actionable.
-- **Linear issue generation from BLOCKERs.** `scryer` audits.
+- **Linear issue generation from BLOCKERs.** `spec-auditor` audits.
   `acolyte` (linear-devotee) creates issues. The two stay separate.

@@ -1,6 +1,6 @@
 ---
 name: scaffold-agent
-description: Use when adding a new dedicated subagent to an existing plugin in this `nuthouse` marketplace. Asks for parent plugin, agent name (descriptive role, no vague names like "agent" / "helper"), description, model (`haiku` for parsing/fetch+summary vs default for reasoning), explicit tools allowlist, input format spec, output format spec (SDD vs structured report vs custom). Generates `<plugin>/claudecode/agents/<name>.md` with the right frontmatter (name, description, model, tools list) and the standard Mission / Input / Output / Hard rules sections. Encodes the subagent and SDD conventions from the legacy CLAUDE.md.
+description: Use when adding a new dedicated subagent to an existing plugin in this `nuthouse` marketplace. Asks for parent plugin, agent name (descriptive role, no vague names like "agent" / "helper"), description, model (`haiku` for parsing/fetch+summary vs default for reasoning), explicit tools allowlist, input format spec, output format spec (SDD vs structured report vs custom). Generates `<plugin>/agents/<name>.md` with the right frontmatter (name, description, model, tools list) and the standard Mission / Input / Output / Hard rules sections. Encodes the subagent and SDD conventions from the legacy CLAUDE.md.
 model: haiku
 ---
 
@@ -28,12 +28,11 @@ declared `Q5 = "dedicated agent"`.
    `.claude-plugin/marketplace.json`. If not, abort.
 2. **Discover existing plugins.** Glob `<repo>/*/persona.md`. List the
    parent-plugin candidates.
-3. **Verify the target has a `claudecode/` folder.** Codex doesn't use
-   the same `agents/` convention — agents are claudecode-only here. If
-   the target plugin is codex-only, abort:
-   > "ce plugin est codex-only. les agents dédiés vivent dans
-   > `<plugin>/claudecode/agents/`. crée d'abord la branche claudecode
-   > si tu en veux un."
+3. **Verify the target has a plugin manifest.** A plugin can expose root
+   `agents/` to Claude Code through `.claude-plugin/plugin.json`. If the
+   target is truly Codex-only and has no `.claude-plugin/`, abort:
+   > "ce plugin est codex-only. ajoute d'abord une branche Claude Code si
+   > tu veux exposer des agents."
 
 ## Step 1 — Interview
 
@@ -150,7 +149,7 @@ If `<PLUGIN>/shared/<CONTRACT_NAME>.md` does not yet exist, remind the user in t
 
 ## Step 2 — Generation
 
-Write `<PLUGIN>/claudecode/agents/<AGENT>.md` (use the Write tool).
+Write `<PLUGIN>/agents/<AGENT>.md` (use the Write tool).
 
 **Template source:** Before generating the agent file, read `_templates/agent/AGENT.md`.
 This is the source of truth for agent file structure. Substitute:
@@ -303,7 +302,7 @@ scaffold-agent report
   Tools:         <comma-separated list>
   Input format:  <one-line summary>
   Output format: <SDD | structured report | custom>
-  File written:  <PLUGIN>/claudecode/agents/<AGENT>.md
+  File written:  <PLUGIN>/agents/<AGENT>.md
   Next step:     wire the agent into a skill via the `Agent` tool — `subagent_type: '<PLUGIN>:<AGENT>'`
 ```
 
@@ -323,7 +322,7 @@ End with a voice exit line.
 5. **No prefix** in the `name:` frontmatter. The runtime prepends.
 6. **Never overwrite** an existing agent file. Read first; if it
    exists, abort or ask.
-7. **No `superpowers:*`** dependency in the generated agent.
+7. **No external workflow/tool dependency** in the generated agent.
 
 ## Anti-patterns to detect and refuse
 

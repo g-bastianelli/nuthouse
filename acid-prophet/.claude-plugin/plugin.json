@@ -4,8 +4,8 @@
   "author": {
     "name": "g-bastianelli"
   },
-  "skills": "./claudecode/skills/",
+  "skills": "./skills/",
   "agents": [
-    "./claudecode/agents/spec-auditor.md"
+    "./agents/spec-auditor.md"
   ]
 }

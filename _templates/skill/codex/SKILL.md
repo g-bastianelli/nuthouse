@@ -40,7 +40,7 @@ tool names) stay in their original form regardless of language.
 
 ## Step 0 — Preconditions
 
-1. Verify cwd contains `.codex-plugin/plugin.toml`. If not, abort.
+1. Verify cwd contains `.codex-plugin/plugin.json`. If not, abort.
 
 ## Step 1 — [First step name]
 

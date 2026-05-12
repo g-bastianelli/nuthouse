@@ -6,7 +6,7 @@
     "name": "g-bastianelli"
   },
   "repository": "https://github.com/g-bastianelli/nuthouse",
-  "skills": "./codex/skills/",
+  "skills": "./skills/",
   "interface": {
     "displayName": "Git Gremlin",
     "shortDescription": "Draft commits and PRs safely",

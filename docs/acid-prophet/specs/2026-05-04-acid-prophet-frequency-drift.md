@@ -1,4 +1,4 @@
-# acid-prophet:frequency-drift — Spec
+# acid-prophet:check-drift — Spec
 
 **Date**: 2026-05-04
 **Plugin**: `acid-prophet`
@@ -19,15 +19,15 @@ What's missing: an agent that, when a PR is opened, automatically compares the d
 
 ## Solution
 
-A new skill `acid-prophet:frequency-drift`, invoked manually in Claude Code on a feature branch before or during PR creation:
+A new skill `acid-prophet:check-drift`, invoked manually in Claude Code on a feature branch before or during PR creation:
 
 ```
-/acid-prophet:frequency-drift
+/acid-prophet:check-drift
 ```
 
 Flow:
 1. Reads the spec file in the repo (resolves via `linear-project` frontmatter or branch name convention `feat/NUT-42-xxx`)
-2. Calls `linear-devotee:seer` to fetch the `Acceptance` criteria of SDD issues linked to the Linear project
+2. Calls `linear-devotee:issue-context` to fetch the `Acceptance` criteria of SDD issues linked to the Linear project
 3. Compares against `git diff main...HEAD`
 4. Generates a structured drift report — per issue, per `Acceptance` criterion
 5. Posts the report as a PR comment via `gh pr comment` (with user confirmation)
@@ -39,7 +39,7 @@ The developer reads the report and decides: fix the code, or manually update the
 ## Architecture
 
 ```
-acid-prophet:frequency-drift (skill)
+acid-prophet:check-drift (skill)
     ↓
 [1] Context resolution
     — branch name → linear-project ID (via spec file frontmatter OR feat/NUT-42-xxx convention)
@@ -48,7 +48,7 @@ acid-prophet:frequency-drift (skill)
 [2] Subagent: spec-reader
     — reads local spec .md (Goal, Acceptance, Constraints sections)
     ↓
-[3] Subagent: linear-devotee:seer (existing)
+[3] Subagent: linear-devotee:issue-context (existing)
     — fetches SDD issues linked to the Linear project
     — extracts Acceptance section from each issue
     ↓
@@ -67,7 +67,7 @@ No Linear mutation. No spec modification. The skill is **read-only + report** �
 
 ## Components / Data flow
 
-**Spec file frontmatter** (standardized format produced by `acid-prophet:trip`):
+**Spec file frontmatter** (standardized format produced by `acid-prophet:write-spec`):
 
 ```yaml
 ---
@@ -121,10 +121,10 @@ The project provides the "why", milestones the "what", issues the "how to verify
 | Situation | Behavior |
 |---|---|
 | No spec file + Linear project found | Retro-engineer from project (description + attachments) + milestones + SDD issues → virtual spec. Warning: "no spec file — reconstructed from Linear" |
-| No spec file + no Linear project | Stop: "no spec found — run `acid-prophet:trip` first" |
+| No spec file + no Linear project | Stop: "no spec found — run `acid-prophet:write-spec` first" |
 | Spec file AND Linear — both exist | Merge: spec file as structure, issue Acceptance + attachments as drift reference |
 | Linear project with no SDD issues | Warning + drift check against description + attachments only |
-| `linear-devotee:seer` project not found | Stop: "Linear project NUT-xxx not found — check the ID in spec frontmatter" |
+| `linear-devotee:issue-context` project not found | Stop: "Linear project NUT-xxx not found — check the ID in spec frontmatter" |
 | No Linear ID in frontmatter AND branch has no ID | Ask for Linear ID manually before continuing |
 | `gh pr comment` fails (no open PR) | Display report inline only, no fatal error |
 | Empty diff (`main...HEAD` identical) | Stop: "no diff detected — nothing to check" |
@@ -135,13 +135,13 @@ Principle: **fail loud, never silent**. If context is ambiguous, the skill asks 
 
 ## V1 Constraints
 
-**Hard dependency**: `linear-devotee:consummate-project` must patch the spec file frontmatter with `linear-project: NUT-xxx` immediately after Linear project creation. Without this, `acid-prophet:frequency-drift` cannot resolve context automatically and always falls back to branch name convention.
+**Hard dependency**: `linear-devotee:create-project` must patch the spec file frontmatter with `linear-project: NUT-xxx` immediately after Linear project creation. Without this, `acid-prophet:check-drift` cannot resolve context automatically and always falls back to branch name convention.
 
 This is an explicit V1 implementation requirement — all three pieces must ship together for the full flow to work:
 
-1. **`acid-prophet:trip`** updated to generate standardized frontmatter (`id`, `status`, `linear-project`, `verified-by`, `last-reviewed`) in every spec file it produces
-2. **`linear-devotee:consummate-project`** patching the spec file frontmatter with `linear-project: NUT-xxx` after project creation
-3. **`acid-prophet:frequency-drift`** new skill (this spec)
+1. **`acid-prophet:write-spec`** updated to generate standardized frontmatter (`id`, `status`, `linear-project`, `verified-by`, `last-reviewed`) in every spec file it produces
+2. **`linear-devotee:create-project`** patching the spec file frontmatter with `linear-project: NUT-xxx` after project creation
+3. **`acid-prophet:check-drift`** new skill (this spec)
 
 ---
 
@@ -161,7 +161,7 @@ Repo without spec file, well-formed Linear project (description + attachments + 
 - `gh pr comment` without open PR → verify report displays inline without crash
 
 **Scenario 4 — end-to-end integration**
-`acid-prophet:trip` → `linear-devotee:consummate-project` (patches frontmatter) → code → `acid-prophet:frequency-drift` → report on PR.
+`acid-prophet:write-spec` → `linear-devotee:create-project` (patches frontmatter) → code → `acid-prophet:check-drift` → report on PR.
 
 If Node helpers are added later (frontmatter parsing, diff normalization): tests go in `acid-prophet/claudecode/tests/`.
 

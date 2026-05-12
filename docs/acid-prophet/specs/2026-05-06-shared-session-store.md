@@ -26,12 +26,12 @@ The correct pattern for synchronous local pipelines (confirmed 2026: MindStudio,
 - `shared/context-schema.md` — declarative key schema
 
 **To modify:**
-- `linear-devotee/claudecode/agents/issue-context.md`
-- `linear-devotee/claudecode/skills/plan/SKILL.md`
-- `linear-devotee/claudecode/agents/plan-auditor.md`
-- `acid-prophet/claudecode/skills/write-spec/SKILL.md`
-- `linear-devotee/claudecode/skills/create-project/SKILL.md`
-- `linear-devotee/claudecode/agents/project-drafter.md`
+- `linear-devotee/agents/issue-context.md`
+- `linear-devotee/skills/plan/SKILL.md`
+- `linear-devotee/agents/plan-auditor.md`
+- `acid-prophet/skills/write-spec/SKILL.md`
+- `linear-devotee/skills/create-project/SKILL.md`
+- `linear-devotee/agents/project-drafter.md`
 - SKILL.md for `greet`, `plan`, `write-spec`, `audit-spec`, `check-drift`, `implement` (frontmatter `context_policy`)
 
 ## Constraints

@@ -44,11 +44,37 @@ Rules:
 
 ---
 
+## Plugin Structure
+
+Nuthouse plugins follow the Superpowers-style root install model: the plugin directory is the install unit. Marketplace entries point to `<plugin>`, never to `<plugin>/claudecode` or `<plugin>/codex`.
+
+Canonical layout for cross-runtime plugins:
+
+```text
+<plugin>/
+  .claude-plugin/plugin.json      # Claude Code manifest; skills: ./skills/
+  .codex-plugin/plugin.json       # Codex manifest; skills: ./skills/
+  README.md
+  persona.md
+  assets/
+  shared/                         # optional cross-runtime contracts
+  skills/                         # canonical skills shared by runtimes
+  agents/                         # canonical agents
+  lib/                            # optional Codex/root helpers
+  tests/                          # optional Codex/root tests
+  claudecode/
+    hooks/
+    lib/
+    tests/
+```
+
+Root skills read the plugin persona with `../../persona.md`. Skill frontmatter names are local (`name: write-spec`), not plugin-qualified; the runtime exposes them as `<plugin>:<skill>`. New scaffolding must not create duplicate runtime skill trees under `<plugin>/codex/` or `<plugin>/claudecode/skills/`.
+
 ## Stack & tooling
 
 - **Runtime hooks/scripts**: Node.js, **ESM** (`import` / `export`). **`.mjs`** extension is mandatory for hooks and tests (zero ambiguity for Node, no `package.json` needed in the plugin, plugin is self-contained regardless of install context). `saucy-status` stays on CJS for historical reasons. Every new plugin ships ESM `.mjs`. Reference: `linear-devotee/claudecode/hooks/*.mjs`.
 - **Package manager**: `bun@1.3.x` (declared in root `package.json`).
-- **Tests**: `bun test` (built-in, no dep added). Tests live in `<plugin>/<runtime>/tests/`.
+- **Tests**: `bun test` (built-in, no dep added). Claude Code tests live in `<plugin>/claudecode/tests/`; Codex/root helper tests live in `<plugin>/tests/`.
 - **Lint/format**: `biome` (config in `biome.json`). Formatter off, linter on. Local rule: `noUnusedVariables` is on → use `catch {}` (not `catch (e)`) when the binding is unused. Biome will auto-organize imports — let it.
 - **Pre-commit**: `lefthook` runs `bunx biome check .`. **Never bypass** with `--no-verify`.
 - **No npm/bun deps added** in plugins. Stick to `node:fs`, `node:path`, `node:os`, `node:child_process`. If a plugin really needs a dep, raise it first.
@@ -93,8 +119,8 @@ Global guidance — applies everywhere, not just at scaffold time:
 |---|---|---|---|---|---|
 | `saucy-status` | Saucy/gooning loading messages in statusline | SessionStart, UserPromptSubmit | — | — | `saucy-status/persona.md` |
 | `react-monkey` | React implementation specialist with parallel exploration | — | `implement` | `explorer` | `react-monkey/persona.md` |
-| `linear-devotee` | Linear issue detection at session start + cascading Project/Milestone/Issue creation, all SDD-formatted | SessionStart, UserPromptSubmit | `greet`, `consummate-project`, `bind-milestone`, `bare-issue` | `seer`, `oracle`, `chronicler`, `acolyte` | `linear-devotee/persona.md` |
-| `acid-prophet` | Structured spec-writing + audit + drift detection. Q&A → spec → `scryer` audit → optional handoff to `linear-devotee`. PR-time drift check via `frequency-drift` | — | `trip`, `frequency-drift`, `scry` | `scryer` | `acid-prophet/persona.md` |
+| `linear-devotee` | Linear issue detection at session start + cascading Project/Milestone/Issue creation, all SDD-formatted | SessionStart, UserPromptSubmit | `greet`, `plan`, `create-project`, `create-milestone`, `create-issue` | `issue-context`, `issue-drafter`, `milestone-drafter`, `plan-auditor`, `plan-writer`, `project-drafter` | `linear-devotee/persona.md` |
+| `acid-prophet` | Structured spec-writing + audit + drift detection. Q&A → spec → `spec-auditor` audit → optional handoff to `linear-devotee`. PR-time drift check via `check-drift` | — | `write-spec`, `check-drift`, `audit-spec` | `spec-auditor` | `acid-prophet/persona.md` |
 | `warden` | Centralized voice agent — emits decorative persona lines for any plugin via `warden:voice`; `/warden:voice [on\|off\|status]` toggles fun messages globally | — | `voice` | `voice` | `warden/persona.md` |
 
 Repo-level: `.claude/hooks/persona-roulette.mjs` picks a random `persona.md` at SessionStart for the current session's default voice (see "Persona Roulette" section above). Local scaffold skills live at `.claude/skills/{scaffold-plugin,scaffold-skill,scaffold-agent}/SKILL.md` with shared `mad-scientist` voice at `.claude/skills/persona.md`.

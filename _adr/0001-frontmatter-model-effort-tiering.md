@@ -2,7 +2,7 @@
 
 - **Status**: Accepted
 - **Date**: 2026-05-07
-- **Scope**: All skills (`<plugin>/<runtime>/skills/<skill>/SKILL.md` and `.claude/skills/*/SKILL.md`) and agents (`<plugin>/<runtime>/agents/*.md`) in this marketplace.
+- **Scope**: All root skills (`<plugin>/skills/<skill>/SKILL.md` and `.claude/skills/*/SKILL.md`) and root agents (`<plugin>/agents/*.md`) in this marketplace.
 
 ## Context
 
@@ -94,4 +94,4 @@ We tier every skill and agent by **cognitive load** and **invocation frequency**
 ## Notes
 
 - This ADR also establishes `_adr/` as the location for Architecture Decision Records in this repo, numbered sequentially (`NNNN-kebab-case-title.md`). Future decisions large enough to deserve their own record land here.
-- Codex variants (`<plugin>/codex/skills/*`) are not covered by this decision. `model` / `effort` are Claude Code concepts. If Codex adds equivalent fields later, a follow-up ADR will extend this one.
+- As of 2026-05-12, cross-runtime plugins use root `skills/` as the canonical source. `model` / `effort` remain Claude Code-facing concepts, but the fields may appear in root skills that are also exposed to Codex. Codex may ignore unsupported fields; do not fork runtime-specific skill copies for tiering.

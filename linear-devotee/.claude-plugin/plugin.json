@@ -4,14 +4,14 @@
   "author": {
     "name": "g-bastianelli"
   },
-  "skills": "./claudecode/skills/",
+  "skills": "./skills/",
   "agents": [
-    "./claudecode/agents/issue-context.md",
-    "./claudecode/agents/issue-drafter.md",
-    "./claudecode/agents/milestone-drafter.md",
-    "./claudecode/agents/plan-auditor.md",
-    "./claudecode/agents/project-drafter.md",
-    "./claudecode/agents/plan-writer.md"
+    "./agents/issue-context.md",
+    "./agents/issue-drafter.md",
+    "./agents/milestone-drafter.md",
+    "./agents/plan-auditor.md",
+    "./agents/project-drafter.md",
+    "./agents/plan-writer.md"
   ],
   "hooks": {
     "SessionStart": [

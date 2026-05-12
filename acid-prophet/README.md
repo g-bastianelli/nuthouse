@@ -2,64 +2,53 @@
 
 ![acid-prophet](./assets/banner.png)
 
-Structured spec-writing skill for Claude Code and Codex. Asks one question at a time, proposes approaches, validates a written spec, then optionally hands off to linear-devotee for Linear project creation.
+Spec-writing and spec-audit plugin for Claude Code and Codex.
 
-Tripping spec prophet. You bring the raw idea; it asks the sharp questions, writes the spec, and keeps Linear mutations behind an explicit approval gate.
+It turns rough ideas into reviewed specs, audits specs against SDD expectations and codebase reality, and checks PR drift before merge.
 
 ## Skills
 
-| Skill | What |
+| Skill | Purpose |
 |---|---|
-| `acid-prophet:trip` | Structured discovery flow that turns a new project or feature idea into a reviewed written spec |
-| `acid-prophet:frequency-drift` | On a feature branch, compares the diff against the linked Linear project's SDD Acceptance criteria and reports drift |
-| `acid-prophet:scry` | Audits an existing spec under `docs/acid-prophet/specs/` for SDD compliance, codebase reality, narrative quality, and style. Renders a structured BLOCKER/WARNING/INFO report and offers a hand-off menu (apply auto-fixes, open spec, hand to linear-devotee, stop) |
+| `acid-prophet:write-spec` | Guide project discovery, propose approaches, write a spec, audit it, and optionally hand off to Linear |
+| `acid-prophet:audit-spec` | Audit an existing spec for structure, ambiguity, missing evidence, and codebase contradictions |
+| `acid-prophet:check-drift` | Compare a branch diff against the linked spec or Linear project criteria |
 
-## Agents
+## Agent
 
-| Agent | What |
+| Agent | Purpose |
 |---|---|
-| `scryer` | Read-only spec auditor. Used by `acid-prophet:scry` (standalone) and `acid-prophet:trip` Step 6 (auto-fix mode). Returns a structured BLOCKER/WARNING/INFO report with auto-fix candidates. |
-
-## Runtime layout
-
-```text
-acid-prophet/
-|-- .codex-plugin/
-|-- assets/
-|-- claudecode/
-|   |-- agents/
-|   |-- lib/
-|   |-- skills/
-|   `-- tests/
-`-- codex/
-    |-- lib/
-    |-- skills/
-    `-- tests/
-```
+| `spec-auditor` | Read-only spec auditor that returns BLOCKER/WARNING/INFO findings and auto-fix candidates |
 
 ## Install
 
-### Claude Code
+Claude Code:
 
-```
+```text
 /plugin marketplace add g-bastianelli/nuthouse
 /plugin install acid-prophet@nuthouse
 ```
 
-Restart Claude Code after install.
+Codex CLI:
 
-### Codex CLI
-
-```
+```text
 codex plugin marketplace add g-bastianelli/nuthouse
 ```
 
-Then open the plugin browser (`/plugins`) and install `acid-prophet`.
+Then open `/plugins` and install `acid-prophet`.
 
-## Trigger
+## Layout
 
-Auto-invokes when a new project or feature needs a structured spec before development. Also triggered by `/acid-prophet:trip` in Claude Code or `$acid-prophet:trip` in Codex.
-
-## License
-
-MIT
+```text
+acid-prophet/
+  assets/
+  persona.md
+  shared/
+  skills/
+  agents/
+  lib/
+  tests/
+  claudecode/
+    lib/
+    tests/
+```

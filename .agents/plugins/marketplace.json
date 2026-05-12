@@ -8,7 +8,7 @@
       "name": "react-monkey",
       "source": {
         "source": "local",
-        "path": "./react-monkey/codex"
+        "path": "./react-monkey"
       },
       "policy": {
         "installation": "AVAILABLE",

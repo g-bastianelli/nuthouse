@@ -2,5 +2,5 @@
   "name": "{{plugin}}",
   "description": "{{description}}",
   "author": { "name": "{{author}}" },
-  "skills": "./claudecode/skills/"
+  "skills": "./skills/"
 }
