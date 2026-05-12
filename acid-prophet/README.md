@@ -10,15 +10,15 @@ Tripping spec prophet. You bring the raw idea; it asks the sharp questions, writ
 
 | Skill | What |
 |---|---|
-| `acid-prophet:trip` | Structured discovery flow that turns a new project or feature idea into a reviewed written spec |
-| `acid-prophet:frequency-drift` | On a feature branch, compares the diff against the linked Linear project's SDD Acceptance criteria and reports drift |
-| `acid-prophet:scry` | Audits an existing spec under `docs/acid-prophet/specs/` for SDD compliance, codebase reality, narrative quality, and style. Renders a structured BLOCKER/WARNING/INFO report and offers a hand-off menu (apply auto-fixes, open spec, hand to linear-devotee, stop) |
+| `acid-prophet:write-spec` | Structured discovery flow that turns a new project or feature idea into a reviewed written spec |
+| `acid-prophet:check-drift` | On a feature branch, compares the diff against the linked Linear project's SDD Acceptance criteria and reports drift |
+| `acid-prophet:audit-spec` | Audits an existing spec under `docs/acid-prophet/specs/` for SDD compliance, codebase reality, narrative quality, and style. Renders a structured BLOCKER/WARNING/INFO report and offers a hand-off menu (apply auto-fixes, open spec, hand to linear-devotee, stop) |
 
 ## Agents
 
 | Agent | What |
 |---|---|
-| `scryer` | Read-only spec auditor. Used by `acid-prophet:scry` (standalone) and `acid-prophet:trip` Step 6 (auto-fix mode). Returns a structured BLOCKER/WARNING/INFO report with auto-fix candidates. |
+| `spec-auditor` | Read-only spec auditor. Used by `acid-prophet:audit-spec` (standalone) and `acid-prophet:write-spec` Step 6 (auto-fix mode). Returns a structured BLOCKER/WARNING/INFO report with auto-fix candidates. |
 
 ## Runtime layout
 
@@ -26,15 +26,15 @@ Tripping spec prophet. You bring the raw idea; it asks the sharp questions, writ
 acid-prophet/
 |-- .codex-plugin/
 |-- assets/
+|-- lib/
+|-- skills/
+|-- tests/
 |-- claudecode/
 |   |-- agents/
 |   |-- lib/
 |   |-- skills/
 |   `-- tests/
-`-- codex/
-    |-- lib/
-    |-- skills/
-    `-- tests/
+`-- shared/
 ```
 
 ## Install
@@ -58,7 +58,7 @@ Then open the plugin browser (`/plugins`) and install `acid-prophet`.
 
 ## Trigger
 
-Auto-invokes when a new project or feature needs a structured spec before development. Also triggered by `/acid-prophet:trip` in Claude Code or `$acid-prophet:trip` in Codex.
+Auto-invokes when a new project or feature needs a structured spec before development. Also triggered by `/acid-prophet:write-spec` in Claude Code or `$acid-prophet:write-spec` in Codex.
 
 ## License
 

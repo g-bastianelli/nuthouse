@@ -7,7 +7,7 @@ description: Use when starting a project or feature in Codex that needs a struct
 
 ## Voice
 
-Read `../../../persona.md` at the start of this skill. The voice defined there is canonical for the `acid-prophet` plugin and applies to all output of this skill.
+Read `../../persona.md` at the start of this skill. The voice defined there is canonical for the `acid-prophet` plugin and applies to all output of this skill.
 
 **Scope:** local to this skill's execution. Once the final report is printed or the handoff is complete, revert to the session default voice.
 
@@ -83,7 +83,7 @@ Cover:
 - Testing approach.
 - Non-goals.
 
-Keep code minimal in specs. Interfaces, type signatures, JSON/DB schemas, and short pseudo-code (under 15 lines) belong here — they fix the contract. Concrete examples, full implementations, and test snippets live in Linear issues, not in the spec. The `scry` skill (and `scryer` audit) flag fenced blocks longer than 15 lines.
+Keep code minimal in specs. Interfaces, type signatures, JSON/DB schemas, and short pseudo-code (under 15 lines) belong here — they fix the contract. Concrete examples, full implementations, and test snippets live in Linear issues, not in the spec. The `audit-spec` skill (and `spec-auditor` audit) flag fenced blocks longer than 15 lines.
 
 ### Step 5 - Write the spec
 
@@ -115,9 +115,9 @@ Use the current date from the session context. Do not run `git push` or `git reb
 
 ### Step 6 - Scry audit (auto-fix-trivial)
 
-Codex has no subagent dispatch, so run the `scry` skill's audit pipeline inline against the spec just written. The pipeline runs the same checks as the Claude Code `scryer` subagent: SDD-strict (frontmatter + required sections + EARS), reality (CLAUDE.md / package.json / referenced files), narrative (placeholder / consistency / scope / ambiguity), and style (heavy code blocks). See `acid-prophet/codex/skills/scry/SKILL.md` for the full pipeline definition.
+Codex has no subagent dispatch, so run the `audit-spec` skill's audit pipeline inline against the spec just written. The pipeline runs the same checks as the Claude Code `scryer` subagent: SDD-strict (frontmatter + required sections + EARS), reality (CLAUDE.md / package.json / referenced files), narrative (placeholder / consistency / scope / ambiguity), and style (heavy code blocks). See `acid-prophet/skills/audit-spec/SKILL.md` for the full pipeline definition.
 
-Apply each Auto-fix candidate to the spec via `acid-prophet/codex/lib/apply-frontmatter-patch.mjs` (and equivalent helpers for empty-section fills). Do not commit unless the user explicitly asks for commits in this session — surface the patched state and let the user commit.
+Apply each Auto-fix candidate to the spec via `acid-prophet/lib/apply-frontmatter-patch.mjs` (and equivalent helpers for empty-section fills). Do not commit unless the user explicitly asks for commits in this session — surface the patched state and let the user commit.
 
 Then handle remaining findings:
 

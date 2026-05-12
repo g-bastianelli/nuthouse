@@ -7,7 +7,7 @@ description: Use when auditing an existing acid-prophet spec for SDD compliance,
 
 ## Voice
 
-Read `../../../persona.md` at the start of this skill. The voice
+Read `../../persona.md` at the start of this skill. The voice
 defined there is canonical for the `acid-prophet` plugin and applies to
 all output of this skill.
 
@@ -29,7 +29,7 @@ tool names) stay in their original form regardless of language.
 The user wants to audit a spec under `docs/acid-prophet/specs/` against
 SDD structure, codebase reality, narrative quality, and style. Typical
 invocation: `/scry <spec-path>`. The skill is also re-used internally
-by `trip` Step 6 in `auto-fix-trivial` mode.
+by `write-spec` Step 6 in `auto-fix-trivial` mode.
 
 ## Codex difference
 
@@ -45,7 +45,7 @@ hand-off menu. The audit is read-only by default.
 
 ## Step 0 — Preconditions
 
-- Read `../../../persona.md` for the canonical voice.
+- Read `../../persona.md` for the canonical voice.
 - Verify cwd is inside a git repository: `git rev-parse --show-toplevel`.
   Capture the absolute path as `PROJECT_ROOT`. If not in a repo:
   > "🔮 ce temple n'est pas consacré — pas de repo, pas de scrutation."
@@ -165,7 +165,7 @@ Disable `(l)` (do not list it) if either:
 - there are any `BLOCKER` findings.
 
 Branch on the user's choice. The patch logic uses
-`<PROJECT_ROOT>/acid-prophet/codex/lib/apply-frontmatter-patch.mjs`
+`<PROJECT_ROOT>/acid-prophet/lib/apply-frontmatter-patch.mjs`
 (Node helper, identical contract to the claudecode variant). On `(a)`,
 apply each Auto-fix candidate, then `git add` + `git commit -m
 "docs(acid-prophet): scryer auto-fixes"`. Never `--no-verify`.

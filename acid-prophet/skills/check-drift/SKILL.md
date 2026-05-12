@@ -7,7 +7,7 @@ description: Use on a feature branch before or during PR creation to detect drif
 
 ## Voice
 
-Read `../../../persona.md` at the start of this skill. The voice defined there is canonical for the `acid-prophet` plugin and applies to all output of this skill.
+Read `../../persona.md` at the start of this skill. The voice defined there is canonical for the `acid-prophet` plugin and applies to all output of this skill.
 
 **Scope:** local to this skill's execution. Once the final report is printed, revert to the session default voice.
 
