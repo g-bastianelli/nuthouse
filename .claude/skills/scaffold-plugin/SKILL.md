@@ -156,28 +156,29 @@ For `claudecode` / `both`:
 <plugin>/assets/
 <plugin>/shared/                 # only if Q7 = yes OR Q8 = yes (cross-cutting contracts / artifact convention notes)
 <plugin>/claudecode/
-<plugin>/claudecode/skills/
-<plugin>/claudecode/agents/      # only if user later runs scaffold-agent
+<plugin>/skills/                # canonical skills shared by Claude Code and Codex
+<plugin>/agents/                # canonical agents, only if user later runs scaffold-agent
 <plugin>/claudecode/hooks/       # only if Q4 != none
 <plugin>/claudecode/data/        # only if Q4 != none
-<plugin>/claudecode/tests/
+<plugin>/claudecode/lib/         # only if Claude-specific helpers are needed
+<plugin>/claudecode/tests/       # only if Claude-specific tests are needed
 ```
 
 > ⚠️ **Plugin root convention.** `.claude-plugin/` MUST sit at the
-> ⚠️ **Plugin root convention.** The plugin root is the install unit,
+> plugin root. The plugin root is the install unit,
 > like Superpowers: manifests, persona, assets, shared contracts, and
-> Codex skills all live under `<plugin>/`. Marketplace paths always point
+> root skills and agents all live under `<plugin>/`. Marketplace paths always point
 > at `<NAME>`, never a runtime subfolder. Claude Code runtime-specific
-> files stay under `claudecode/`. Root Codex skills read persona via
+> files stay under `claudecode/`. Root skills read persona via
 > `../../persona.md`.
 
 For `codex` / `both`:
 ```
 <plugin>/.codex-plugin/         # plugin.json lives at plugin root
-<plugin>/skills/                # Codex skills
-<plugin>/agents/                # only if Codex agents are needed
-<plugin>/lib/                   # only if helper modules are needed
-<plugin>/tests/                 # only if helper tests are needed
+<plugin>/skills/                # canonical skills shared by runtimes
+<plugin>/agents/                # canonical agents when needed
+<plugin>/lib/                   # runtime-agnostic helpers when needed
+<plugin>/tests/                 # runtime-agnostic helper tests when needed
 ```
 
 Also drop a `.gitkeep` in `<plugin>/assets/` so the folder commits cleanly
@@ -262,8 +263,8 @@ TODO — c'est la voix de la créature, je ne peux pas la deviner pour toi."*
 ### 2c. `<plugin>/.claude-plugin/plugin.json`
 
 Plugin root = `<plugin>/`. The `skills` field MUST point to
-`./claudecode/skills/` (relative to the plugin root) — without it the
-loader's default discovery won't find skills nested under `claudecode/`.
+`./skills/` (relative to the plugin root). This mirrors Superpowers: one
+canonical root skill tree, shared by both runtimes where the plugin supports both.
 
 Minimal (no hooks):
 ```json
@@ -271,7 +272,7 @@ Minimal (no hooks):
   "name": "<NAME>",
   "description": "<DESCRIPTION>",
   "author": { "name": "g-bastianelli" },
-  "skills": "./claudecode/skills/"
+  "skills": "./skills/"
 }
 ```
 
@@ -285,7 +286,7 @@ from `linear-devotee/.claude-plugin/plugin.json`:
   "name": "<NAME>",
   "description": "<DESCRIPTION>",
   "author": { "name": "g-bastianelli" },
-  "skills": "./claudecode/skills/",
+  "skills": "./skills/",
   "hooks": {
     "SessionStart": [
       {
@@ -312,7 +313,7 @@ from `linear-devotee/.claude-plugin/plugin.json`:
 ```
 
 When `scaffold-agent` adds a dedicated agent later, it will append an
-`"agents": ["./claudecode/agents/<name>.md"]` array to this manifest.
+`"agents": ["./agents/<name>.md"]` array to this manifest.
 
 Only include the events the user selected.
 
@@ -320,7 +321,7 @@ Only include the events the user selected.
 
 Read `react-monkey/.codex-plugin/plugin.json` for the exact shape. The
 Codex manifest lives at the plugin root and uses `"skills": "./skills/"`.
-Do not create `<plugin>/codex/` for new plugins.
+Do not create `<plugin>/codex/` or `<plugin>/claudecode/skills/` for new plugins.
 
 ### 2e. `<plugin>/README.md`
 

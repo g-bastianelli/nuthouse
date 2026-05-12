@@ -84,8 +84,8 @@ differs. Helpers for applying auto-fix patches live in
 
 ### `scryer` subagent
 
-**File location:** `acid-prophet/claudecode/agents/scryer.md` and
-`acid-prophet/codex/agents/scryer.md`.
+**File location:** `acid-prophet/agents/spec-auditor.md` and
+`acid-prophet/agents/spec-auditor.md`.
 
 **Tools allowlist:** `Read`, `Glob`, `Bash` (read-only invocations only:
 `git`, `ls`). No `Edit` or `Write`. The subagent never mutates the spec.
@@ -169,8 +169,8 @@ always present.
 
 ### `scry` skill
 
-**File location:** `acid-prophet/claudecode/skills/scry/SKILL.md` and
-`acid-prophet/codex/skills/scry/SKILL.md`.
+**File location:** `acid-prophet/skills/audit-spec/SKILL.md` and
+`acid-prophet/skills/audit-spec/SKILL.md`.
 
 **Invocation:** `/acid-prophet:scry <spec-path>`
 

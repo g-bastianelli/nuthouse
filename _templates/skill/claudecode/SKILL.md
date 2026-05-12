@@ -5,14 +5,14 @@ required_sections: ["## Workflow", "## Never"]
 variables: [plugin, skill, description]
 -->
 ---
-name: {{plugin}}:{{skill}}
+name: {{skill}}
 description: {{description}}
 # model: haiku            # haiku = lightweight read/report · omit = orchestration/reasoning
 # effort: high            # high = multi-step orchestration · low = cheap scout · omit = default
 # allowed-tools: Read, Glob, Grep, Bash   # explicit allowlist
 ---
 
-# {{plugin}}:{{skill}}
+# {{skill}}
 
 Rigid [gate type]. Match the user's language; keep technical identifiers unchanged.
 

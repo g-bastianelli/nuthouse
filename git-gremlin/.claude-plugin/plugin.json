@@ -1,7 +1,12 @@
 {
   "name": "git-gremlin",
   "description": "Git gremlin — auto-triggers commit and GitHub PR helpers, delegates diff-heavy drafting to subagents, and keeps external mutations behind confirmation gates",
-  "author": { "name": "g-bastianelli" },
-  "skills": "./claudecode/skills/",
-  "agents": ["./claudecode/agents/commit-drafter.md", "./claudecode/agents/pr-drafter.md"]
+  "author": {
+    "name": "g-bastianelli"
+  },
+  "skills": "./skills/",
+  "agents": [
+    "./agents/commit-drafter.md",
+    "./agents/pr-drafter.md"
+  ]
 }

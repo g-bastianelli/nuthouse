@@ -118,10 +118,10 @@ linear-devotee/
 |-- .codex-plugin/
 |-- assets/
 |-- skills/
+|-- agents/
 |-- claudecode/
-|   |-- agents/
 |   |-- hooks/
-|   |-- skills/
+|   |-- lib/
 |   `-- tests/
 `-- shared/
 ```

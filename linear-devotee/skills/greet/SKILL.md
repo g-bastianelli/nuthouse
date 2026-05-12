@@ -1,47 +1,81 @@
 ---
-name: linear-devotee:greet
-description: Use in Codex when a Linear issue identifier is supplied or detectable from the current branch. Delegates issue context, optionally prepares branch/status, resolves source spec, writes greet context, then hands off to plan. Never writes implementation code.
+name: greet
+description: Use immediately at session start when a Linear issue identifier is detected from branch or first prompt. Delegates issue context to issue-context, optionally prepares branch/status, resolves source spec, writes greet context, then hands off to plan. Never writes implementation code.
+model: haiku
+allowed-tools: Read, Glob, Grep
+context_policy: session
 ---
 
-# Linear Devotee Greet for Codex
+# linear-devotee:greet
 
 Rigid context gate. Match the user's language; keep technical identifiers unchanged.
 
-> At visible transitions, ask the cheapest available delegation path for one decorative line via `linear-devotee/shared/persona-line-contract.md` with `SUMMARY: <≤15 words, in the user's language>`; otherwise skip. Never block.
+> Voice cadence: at every user-visible workflow transition, try to dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Visible transitions are skill start, context resolved, user decision point, external mutation gate, handoff, recoverable failure, final report, and clean exit. Print the returned `line` only when non-empty. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Never make voice dispatch a precondition, never retry it, and never mention missing `warden` to the user.
 
 ## Workflow
 
-1. Track progress with `update_plan`.
-2. Preconditions:
-   - `tool_search` query `linear`; abort clearly if unavailable.
+1. Preconditions:
+   - Verify Linear access with `ToolSearch` query `linear`.
    - Verify git repo.
-   - Detect issue id from argument or branch regex `[A-Z]+-[0-9]+`.
-   - Ensure `linear-devotee/data/`.
-   - Keep full issue context out of the main model when delegation is available.
-3. Delegate issue context:
-   ```text
-   ISSUE_ID: <id>
-   PROJECT_ROOT: <repo root>
-   NEEDS_STATUS_METADATA: true
-   ```
-   The read-only scout returns the SDD issue-context brief, current status, started state id, referenced files, and ambiguities. If no scout is available, gather the same data locally with minimal context. Unknowns stay `_unclear_`.
-4. Branch preparation:
-   - On `main`, `master`, or `staging`, propose `<git-user>/<id-lowercase>-<kebab-title-trimmed-50char>`.
-   - Ask before branch creation; if dirty, ask stash or skip.
+   - Read `${CLAUDE_PLUGIN_DATA}/state-<session_id>.json`; extract `issue`, `current_branch`, `needs_branch`.
+   - Stop if `greeted: true` or no issue id.
+   - Do not fetch full issue context in main context.
+2. Delegate context:
+   - Dispatch `linear-devotee:issue-context` with:
+     ```text
+     ISSUE_ID: <id>
+     PROJECT_ROOT: <git root>
+     NEEDS_STATUS_METADATA: true
+     ```
+   - Present the returned SDD brief unchanged.
+   - If issue does not exist, mark `greeted: true`, report `Brief: skipped`, and stop.
+3. Branch preparation when `needs_branch: true`:
+   - Build `<git-user>/<id-lowercase>-<kebab-title-trimmed-50char>`.
+   - Ask before creating.
+   - If dirty, ask stash or abort branch creation.
+   - Optional `git pull --ff-only` only after asking.
+   - Create or checkout existing branch.
    - Never push, commit, or rebase.
-5. Optional In Progress:
-   - Use delegated status metadata.
-   - If not `started`, ask before setting `stateId` to the team's started workflow state.
-6. Resolve source spec:
-   - Search `docs/acid-prophet/specs/`.
-   - Choose only unambiguous matches: `linear-project:` exact project id, exact issue id in body, then project slug/name in body or filename.
-   - Ask if multiple; use `_none_` if none.
+4. In Progress status:
+   - Use `issue-context` status metadata.
+   - If status type is not `started`, update Linear with the returned started `stateId`.
+   - This flip is authorized by greet; no extra confirmation.
+5. Resolve Acid Prophet spec:
+   - Search `<PROJECT_ROOT>/docs/acid-prophet/specs/`.
+   - Choose only unambiguous matches, priority:
+     1. `linear-project:` equals issue project id.
+     2. Spec body contains exact issue id.
+     3. Body or filename matches project slug/name.
+   - Ask if multiple candidates; use `_none_` if none.
    - Never compare drift or patch specs here.
-7. Write `linear-devotee/data/greet-<ISSUE_ID>.json` with issue id/title, brief markdown, spec file, branch, status, timestamp.
-8. Handoff:
+6. Write context:
+   - Update state: `greeted: true`, `issue_context_brief`, `spec_file`.
+   - Write `${CLAUDE_PLUGIN_ROOT}/data/greet-<ISSUE_ID>.json`:
+     ```json
+     {
+       "issue_id": "<ID>",
+       "issue_title": "<title>",
+       "issue_context_brief": "<markdown>",
+       "spec_file": "<path | _none_>",
+       "branch": "<current branch>",
+       "status": "<status.name> (<status.type>)",
+       "created_at": "<ISO 8601>"
+     }
+     ```
+   - Session store (`context_policy: session`): if `$CLAUDE_SESSION_ID` is set, write to `<PROJECT_ROOT>/.claude/nuthouse/sessions/${CLAUDE_SESSION_ID}.json`:
+     - Extract file paths from the `RELEVANT_FILES:` section of the `issue-context` brief (each line is an absolute path).
+     - If invoked with `--fresh`, skip reading any existing session data before writing.
+     ```json
+     {
+       "spec_path": "<spec absolute path | empty string if _none_>",
+       "relevant_files": ["<abs path 1>", "..."]
+     }
+     ```
+     Deep-merge (do not replace the whole file if other keys exist). If `$CLAUDE_SESSION_ID` is absent or store write fails, continue silently.
+7. Handoff:
    - Auto-chain to `plan` on the happy path. Print `linear-devotee:plan <ISSUE_ID>` and continue immediately — do not ask the user for confirmation. The user's only validation point is the plan's own `Validate this plan? (y / edit / stop)` gate.
    - On error paths (no issue id, brief skipped, branch refused, status flip blocked), stop instead of chaining and report the reason.
-   - Do not draft a plan or offer implementation.
+   - Do not draft a plan or offer code.
 
 ## Final Report
 
@@ -50,16 +84,17 @@ linear-devotee:greet report
   Issue:           <id> - <title>
   Status:          <current> (was <prior if changed>)
   Branch:          <current branch> (created: <new-branch> if applicable)
-  Brief:           delivered | skipped (<reason>)
+  Brief:           delivered (issue-context) | skipped (reason)
   Spec:            <path | _none_>
-  Context:         <path>
+  Context:         ${CLAUDE_PLUGIN_ROOT}/data/greet-<ISSUE_ID>.json
   Hand-off:        plan | stop
 ```
 
 ## Never
 
-- Mutate Linear without confirmation, except no-op reads.
 - Write implementation code.
-- Draft plans; use `linear-devotee:plan`.
+- Draft or validate implementation plans; use `linear-devotee:plan`.
 - Patch Acid Prophet specs.
+- Re-greet a session.
+- Mutate Linear except the authorized In Progress flip.
 - Run `git push`, `git commit`, or `git rebase`.

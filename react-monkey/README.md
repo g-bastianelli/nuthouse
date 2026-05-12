@@ -40,8 +40,7 @@ react-monkey/
 ├── skills/
 ├── shared/
 └── claudecode/
-    ├── agents/
-    └── skills/
+    └── hooks/ / lib/ / tests/ when needed
 ```
 
 The Claude Code runtime keeps a named `explorer` agent.

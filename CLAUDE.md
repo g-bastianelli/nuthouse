@@ -52,25 +52,23 @@ Canonical layout for cross-runtime plugins:
 
 ```text
 <plugin>/
-  .claude-plugin/plugin.json      # Claude Code manifest; skills: ./claudecode/skills/
+  .claude-plugin/plugin.json      # Claude Code manifest; skills: ./skills/
   .codex-plugin/plugin.json       # Codex manifest; skills: ./skills/
   README.md
   persona.md
   assets/
   shared/                         # optional cross-runtime contracts
-  skills/                         # Codex skills
-  agents/                         # optional Codex agents/metadata
+  skills/                         # canonical skills shared by runtimes
+  agents/                         # canonical agents
   lib/                            # optional Codex/root helpers
   tests/                          # optional Codex/root tests
   claudecode/
-    skills/
-    agents/
     hooks/
     lib/
     tests/
 ```
 
-Root Codex skills read the plugin persona with `../../persona.md`. Claude Code skills under `claudecode/skills/<skill>/SKILL.md` read it with `../../../persona.md`. New scaffolding must not create `<plugin>/codex/`.
+Root skills read the plugin persona with `../../persona.md`. Skill frontmatter names are local (`name: write-spec`), not plugin-qualified; the runtime exposes them as `<plugin>:<skill>`. New scaffolding must not create duplicate runtime skill trees under `<plugin>/codex/` or `<plugin>/claudecode/skills/`.
 
 ## Stack & tooling
 

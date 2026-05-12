@@ -86,7 +86,7 @@ Keys whose freshness depends on git state are recorded independently in `_meta._
   "spec_path": "/abs/path/to/docs/acid-prophet/specs/2026-05-06-my-feature.md",
   "relevant_files": [
     "/abs/path/to/shared/session-store.mjs",
-    "/abs/path/to/linear-devotee/claudecode/skills/greet/SKILL.md"
+    "/abs/path/to/linear-devotee/skills/greet/SKILL.md"
   ],
   "linear-devotee": {
     "plan_path": "/abs/path/to/docs/linear-devotee/plan/ENG-247.md"

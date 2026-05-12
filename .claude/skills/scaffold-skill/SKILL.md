@@ -1,6 +1,6 @@
 ---
 name: scaffold-skill
-description: Use when adding a new skill to an existing plugin in this `nuthouse` marketplace (saucy-status, react-monkey, linear-devotee, or any plugin with a `persona.md` at its root). Asks for parent plugin, skill name (action verb, no prefix), description, target runtimes (intersected with parent's runtimes), whether the skill dispatches a subagent, whether it ends with a hand-off menu. Generates SKILL.md with the right frontmatter — `name: <plugin>:<skill>` for Claude Code, `name: <skill>` for Codex — plus a `## Voice` section pointing to the parent's persona.md, and the standard Step 0 / Steps / Rules / Final report skeleton. Embeds all naming and structural conventions from the legacy CLAUDE.md.
+description: Use when adding a new skill to an existing plugin in this `nuthouse` marketplace (saucy-status, react-monkey, linear-devotee, or any plugin with a `persona.md` at its root). Asks for parent plugin, skill name (action verb, no prefix), description, target runtimes (intersected with parent's runtimes), whether the skill dispatches a subagent, whether it ends with a hand-off menu. Generates one canonical root `skills/<skill>/SKILL.md` with unprefixed frontmatter `name: <skill>`, plus a `## Voice` section pointing to the parent's persona.md, and the standard workflow/final-report/rules skeleton. Embeds all naming and structural conventions from the legacy CLAUDE.md.
 model: haiku
 ---
 
@@ -48,9 +48,9 @@ Free-text. Voice: *"comment s'appelle l'organe ?"*
 - **Action verb or gerund that describes the function**: `implement`, `plan`, `write-spec`, `audit-spec`, `check-drift`, `create-issue`. ✅
 - **No generic role names**: `coder`, `helper`, `utils`, `tool`. ❌
 - **No persona-coded names**: `trip`, `scry`, `prophecy`, `vision`, `revelation`. ❌ The skill name must be self-explanatory without knowing the plugin's persona vocabulary. Panic-correct: *"non non non, `trip` ne dit rien à quelqu'un qui voit le skill pour la première fois. quel **acte** ? `write-spec`, `audit`, `check-drift` — un verbe fonctionnel."*
-- **No plugin prefix in the name itself.** The user types `write-spec`, not `acid-prophet:write-spec`. The prefix is added at write-time for the Claude Code variant.
+- **No plugin prefix in the name itself.** The user types `write-spec`, not `acid-prophet:write-spec`. The runtime exposes the installed skill as `<plugin>:<skill>`.
 - Kebab-case, lowercase.
-- Must not collide with an existing skill in the parent plugin (check `ls <plugin>/claudecode/skills/<skill>/` and `ls <plugin>/skills/<skill>/`).
+- Must not collide with an existing skill in the parent plugin (check `ls <plugin>/skills/<skill>/`).
 
 ### Q3 — Description
 
@@ -143,30 +143,29 @@ Otherwise AskUserQuestion, single-select. Voice: *"le plugin a-t-il un `shared/p
 
 ## Step 2 — Generation
 
-For each selected runtime, write the corresponding SKILL.md.
+Write one canonical root SKILL.md. Runtime selection controls which manifest exposes it; it does not create duplicate skill files.
 
-**Template source:** Before generating any SKILL.md, read the matching template:
-- Claude Code runtime → `_templates/skill/claudecode/SKILL.md`
-- Codex runtime → `_templates/skill/codex/SKILL.md`
+**Template source:** Before generating any SKILL.md, read the root skill template:
+- Root skill runtime → `_templates/skill/codex/SKILL.md`
 
 This is the source of truth for file structure. Substitute these variables from interview answers:
 - `{{plugin}}` → parent plugin name
 - `{{skill}}` → skill name (action verb)
 - `{{description}}` → one-line description from interview
 - `{{persona_path}}` → relative path from skill dir to plugin's persona.md
-  (e.g. `../../../persona.md` for `claudecode/skills/<skill>/SKILL.md`)
+  (`../../persona.md` for `<plugin>/skills/<skill>/SKILL.md`)
 
 Use the template as the structural baseline: substitute `{{variables}}` and fill
 `[bracketed]` creative sections with AI-generated content appropriate to the
 plugin's voice. The sections defined below extend the template with plugin-specific
 conventions — do not omit them.
 
-### 2a. Claude Code — `<PLUGIN>/claudecode/skills/<SKILL>/SKILL.md`
+### 2a. Root skill — `<PLUGIN>/skills/<SKILL>/SKILL.md`
 
-**Frontmatter** (Claude Code = full prefix in `name`):
+**Frontmatter** (root canonical skill = no prefix in `name`):
 ```yaml
 ---
-name: <PLUGIN>:<SKILL>
+name: <SKILL>
 description: <DESCRIPTION>
 model: <Q7-value>    # [IF Q7 ∈ {haiku, sonnet, opus}, else omit this line]
 effort: <Q8-value>    # [IF Q8 ∈ {low, high, xhigh, max}, else omit this line]
@@ -176,7 +175,7 @@ effort: <Q8-value>    # [IF Q8 ∈ {low, high, xhigh, max}, else omit this line]
 **Body skeleton** — generate:
 
 ```markdown
-# <PLUGIN>:<SKILL>
+# <SKILL>
 
 Rigid [gate type]. Match the user's language; keep technical identifiers unchanged.
 
@@ -230,7 +229,7 @@ created next via `/scaffold-agent` and the dispatch shape:
 ## Subagent dispatch (Step <N>)
 
 This skill dispatches the `<PLUGIN>:<AGENT-NAME>` subagent. Run
-`/scaffold-agent` to scaffold it.
+`/scaffold-agent` to scaffold it under `<PLUGIN>/agents/`.
 
 \`\`\`
 Agent({
@@ -243,7 +242,7 @@ Agent({
 
 [/ENDIF]
 
-### 2a-bis. Conditional snippets to inject (Claude Code)
+### 2a-bis. Conditional snippets to inject
 
 After substituting variables and filling `[bracketed]` sections in the generated SKILL.md, inject the following snippets **only when the corresponding interview answer enables them**. These snippets are kept here (not in the template file) so the template stays lean and unconditional.
 
@@ -319,28 +318,9 @@ Section semantics:
 Auto-chain to `<DOWNSTREAM_SKILL>`. Print `<DOWNSTREAM_SKILL> <args>` and continue immediately — do not ask the user for confirmation. The user's only validation point is the downstream skill's own `Validate? (y / edit / stop)` gate. On error paths, stop instead of chaining and report the reason.
 ```
 
-**Codex equivalents** (in 2b output): same patterns, but:
-- Voice dispatch references repo-relative path `<PLUGIN>/shared/<contract>.md` (no `${CLAUDE_PLUGIN_ROOT}` env var in Codex contexts).
-- Artifact path also uses `${PROJECT_ROOT}/docs/<PLUGIN>/<ARTIFACT_TYPE>/` — same convention, runtime-agnostic.
+Use `${CLAUDE_PLUGIN_ROOT}` for Claude Code-visible voice dispatch, as existing root nuthouse skills do. Artifact paths use `${PROJECT_ROOT}/docs/<PLUGIN>/<ARTIFACT_TYPE>/` — same convention for all runtimes.
 
-### 2b. Codex — `<PLUGIN>/skills/<SKILL>/SKILL.md`
-
-**Frontmatter** (Codex = no prefix in `name`):
-```yaml
----
-name: <SKILL>
-description: <DESCRIPTION>
----
-```
-
-Body is identical to 2a, except the `## Voice` section uses the relative
-path `../../persona.md` (Codex skills are 2 levels deep:
-`<plugin>/skills/<skill>/SKILL.md` → `<plugin>/persona.md`).
-
-> ⚠️ Wait — verify this. The convention is **read the actual existing
-> Codex SKILL.md** in `react-monkey/skills/implement/SKILL.md`
-> before writing, and copy the exact relative path it uses for the voice
-> section. Don't trust this comment over the source.
+Before writing, read an existing root skill such as `react-monkey/skills/implement/SKILL.md` and copy the relative persona path convention (`../../persona.md`).
 
 ## Step 3 — Final report
 
@@ -349,8 +329,8 @@ path `../../persona.md` (Codex skills are 2 levels deep:
 
 scaffold-skill report
   Plugin:        <PLUGIN>
-  Skill:         <PLUGIN>:<SKILL> (claudecode) | <SKILL> (codex)
-  Voice:         ../../../persona.md (claudecode) | ../../persona.md (codex)
+  Skill:         <PLUGIN>:<SKILL> exposed, `name: <SKILL>` in frontmatter
+  Voice:         ../../persona.md
   Model:         <haiku | sonnet | opus | inherit>
   Effort:        <low | medium | high | xhigh | max | inherit>
   Subagent:      <none | <agent-name> — run `/scaffold-agent` next>
@@ -364,11 +344,8 @@ End with a voice exit line.
 ## Hard rules
 
 1. **Never `git commit` / `git push` / `git rebase`.** User commits manually.
-2. **Always preserve the prefix rule**:
-   - Claude Code SKILL.md → `name: <plugin>:<skill>` (full prefix).
-   - Codex SKILL.md → `name: <skill>` (no prefix; runtime adds it).
-   - Confusing the two breaks discovery.
-3. **Skill body uses the compact format**: `## Workflow` (numbered bullets) + `## Final Report` + `## Never`. No `## Voice`, `## Language`, or `## Step N` sections. Voice is handled at runtime by the persona (injected via hook or persona.md read) — the skill does not redeclare it. If Q12 = yes, inject only the one-liner callout block above `## Workflow`.
+2. **Always preserve the root naming rule**: SKILL.md frontmatter uses `name: <skill>` with no plugin prefix. The runtime exposes it as `<plugin>:<skill>`.
+3. **Skill body uses the root nuthouse format**: `## Voice`, `## Language`, workflow steps, final report, and hard rules, matching existing root skills such as `react-monkey/skills/implement/SKILL.md`. If Q12 = yes, inject only the one-liner voice-dispatch callout above `## Voice`.
 4. **Never invent the persona.** The persona lives in `<plugin>/persona.md`. The skill does not declare or redeclare voice inline.
 5. **Generic agent name reject**: if Q5 = "dedicated agent" and the user
    wants to call it `agent` or `helper`, push back: *"non non non,
@@ -377,20 +354,19 @@ End with a voice exit line.
 6. **Voice agent name is the one exception**: the plugin's voice-line agent (the one that emits persona lines via `persona-line-contract.md`) MAY have a persona-coded name (`devotee`, `prophet`, etc.). All other dedicated subagents MUST have functional names only.
 7. **Never overwrite** an existing SKILL.md without explicit user
    confirmation. Read first; if it exists, abort or ask.
-8. **Codex variant verification**: read an existing Codex SKILL.md
+8. **Root skill verification**: read an existing root SKILL.md
    before generating one — don't trust memory for the relative paths or
    header conventions.
 9. **No external workflow/tool dependency** in the generated SKILL.md.
 
 ## Anti-patterns to detect and refuse
 
-- ❌ `name: implement` (no prefix) for Claude Code → must be
-  `<plugin>:implement`.
-- ❌ `name: <plugin>:implement` for Codex → must be `implement` (no prefix).
+- ❌ `name: <plugin>:implement` in any root skill → must be `implement` (no prefix).
+- ❌ Duplicate runtime variants under `claudecode/skills` or `codex/skills` → root `skills/` is canonical.
 - ❌ Skill name like `helper`, `tool`, `coder`. Push back.
 - ❌ Plugin/skill duplicate (e.g. `react-coder:react-coder`).
-- ❌ `## Voice` section in the skill body → use the one-liner callout or nothing.
-- ❌ `## Language` section in the skill body → "Match the user's language" goes in the intro line only.
+- ❌ Persona content copied into the skill body → read `../../persona.md` instead.
+- ❌ Runtime-specific skill file copies → one root SKILL.md only.
 - ❌ Persona/role name on a non-voice subagent (e.g. `oracle`, `seer`, `spirit`) → must be functional.
 
 ## Voice cheat sheet

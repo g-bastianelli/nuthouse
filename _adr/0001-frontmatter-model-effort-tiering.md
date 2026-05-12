@@ -94,4 +94,4 @@ We tier every skill and agent by **cognitive load** and **invocation frequency**
 ## Notes
 
 - This ADR also establishes `_adr/` as the location for Architecture Decision Records in this repo, numbered sequentially (`NNNN-kebab-case-title.md`). Future decisions large enough to deserve their own record land here.
-- Codex variants (`<plugin>/codex/skills/*`) are not covered by this decision. `model` / `effort` are Claude Code concepts. If Codex adds equivalent fields later, a follow-up ADR will extend this one.
+- Codex variants (`<plugin>/skills/*`) are not covered by this decision. `model` / `effort` are Claude Code concepts. If Codex adds equivalent fields later, a follow-up ADR will extend this one.

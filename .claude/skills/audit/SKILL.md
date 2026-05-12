@@ -67,11 +67,11 @@ Requirements extracted:
 # Plugins
 ls */persona.md 2>/dev/null | cut -d/ -f1
 
-# Skills (Claude Code)
-ls */claudecode/skills/*/SKILL.md 2>/dev/null
+# Skills
+ls */skills/*/SKILL.md 2>/dev/null
 
 # Agents
-ls */claudecode/agents/*.md 2>/dev/null
+ls */agents/*.md 2>/dev/null
 
 # Personas
 ls */persona.md 2>/dev/null
@@ -133,8 +133,8 @@ Output format:
 ## audit — nuthouse
 
 ### <plugin-name>
-  ✅ claudecode/skills/<skill>/SKILL.md
-  ❌ claudecode/skills/<skill>/SKILL.md — missing ## Language [CRITIQUE]
+  ✅ skills/<skill>/SKILL.md
+  ❌ skills/<skill>/SKILL.md — missing ## Language [CRITIQUE]
   ⚠️  persona.md — missing tagline in frontmatter [WARNING]
   ⚠️  assets/BANNER_PROMPT.md — absent [WARNING]
   ❌ assets/BANNER_PROMPT.md — missing persona-world setting rule [CRITIQUE]
@@ -142,7 +142,7 @@ Output format:
   ⚠️  banner.jpeg — stale banner image [WARNING]
 
 ### <plugin-name>
-  ✅ claudecode/agents/<agent>.md
+  ✅ agents/<agent>.md
   ✅ persona.md
   ✅ assets/BANNER_PROMPT.md
   ✅ assets/banner.png
