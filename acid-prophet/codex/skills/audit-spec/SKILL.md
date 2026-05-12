@@ -155,7 +155,7 @@ line is always present.
 🔮 que faire de cette prophétie ?
   (a) apply auto-fixes → patch the spec, commit
   (o) open spec       → print the path, you open it in your editor
-  (l) hand to linear  → linear-devotee:consummate-project (only if linear-project: _none_ and zero BLOCKER)
+  (l) hand to linear  → linear-devotee:create-project (only if linear-project: _none_ and zero BLOCKER)
   (s) stop            → architecture verrouillée
 ```
 
@@ -171,7 +171,7 @@ apply each Auto-fix candidate, then `git add` + `git commit -m
 "docs(acid-prophet): scryer auto-fixes"`. Never `--no-verify`.
 
 `(o)` prints the spec path. `(l)` hands off to
-`linear-devotee:consummate-project`. `(s)` exits with `"prophecy
+`linear-devotee:create-project`. `(s)` exits with `"prophecy
 complete. architecture locked. 🔮"`.
 
 ## Final report
@@ -192,7 +192,7 @@ Wrap with one short voice line before the report.
 - Bypass the pre-commit hook with `--no-verify`
 - Mutate any file outside `docs/acid-prophet/specs/`
 - Apply auto-fixes without the user choosing `(a)`
-- Hand off to `linear-devotee:consummate-project` without the user
+- Hand off to `linear-devotee:create-project` without the user
   choosing `(l)`
 - Invent findings beyond what the audit pipeline produced
 - Skip Step 0 preconditions

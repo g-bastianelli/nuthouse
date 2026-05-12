@@ -30,13 +30,13 @@ Rigid audit gate. Match the user's language; keep technical identifiers unchange
    ```
    (a) apply auto-fixes → patch spec, commit
    (o) open spec        → print path
-   (l) hand to linear   → linear-devotee:consummate-project (only if linear-project: _none_ and 0 BLOCKER)
+   (l) hand to linear   → linear-devotee:create-project (only if linear-project: _none_ and 0 BLOCKER)
    (s) stop
    ```
    Disable `(l)` if `linear-project` is not `_none_` or any BLOCKER finding exists.
    - `(a)`: apply each `autoFixes` entry via `apply-frontmatter-patch.mjs`. Commit: `git commit -m "docs(acid-prophet): spec-auditor auto-fixes"`. Never `--no-verify`. If no fixes: inform and return to menu.
    - `(o)`: print absolute spec path.
-   - `(l)`: invoke `linear-devotee:consummate-project` with spec path.
+   - `(l)`: invoke `linear-devotee:create-project` with spec path.
    - `(s)`: try `warden:voice` per the voice cadence with `SUMMARY: audit complete, user stopped`, then exit.
 
 ## Final Report
@@ -53,7 +53,7 @@ acid-prophet:audit-spec report
 
 - Mutate files outside `docs/acid-prophet/specs/`.
 - Apply auto-fixes without user choosing `(a)`.
-- Invoke `linear-devotee:consummate-project` without user choosing `(l)`.
+- Invoke `linear-devotee:create-project` without user choosing `(l)`.
 - Skip step 1 preconditions.
 - Run `git push`, `git rebase`, or `git commit --amend`.
 - Use `--no-verify`.

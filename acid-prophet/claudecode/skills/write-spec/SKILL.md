@@ -1,6 +1,6 @@
 ---
 name: acid-prophet:write-spec
-description: Use when starting any project or feature that needs a structured spec before development — asks clarifying questions one at a time, proposes approaches, validates a written spec, then optionally hands off to linear-devotee:consummate-project for Linear project creation
+description: Use when starting any project or feature that needs a structured spec before development — asks clarifying questions one at a time, proposes approaches, validates a written spec, then optionally hands off to linear-devotee:create-project for Linear project creation
 model: opus
 effort: max
 allowed-tools: Read, Glob, Grep, Bash
@@ -44,7 +44,7 @@ Rigid spec-writing gate. Match the user's language; keep technical identifiers u
 8. User spec gate: ask user to review `<path>`. Wait. If changes: update spec, commit, re-run step 7.
 9. Handoff: ask the user if they want to push the spec to Linear.
    - Yes:
-     - Session store (`context_policy: session`): if `$CLAUDE_SESSION_ID` is set, write to `<PROJECT_ROOT>/.claude/nuthouse/sessions/${CLAUDE_SESSION_ID}.json` before invoking `consummate-project`:
+     - Session store (`context_policy: session`): if `$CLAUDE_SESSION_ID` is set, write to `<PROJECT_ROOT>/.claude/nuthouse/sessions/${CLAUDE_SESSION_ID}.json` before invoking `create-project`:
        ```json
        {
          "spec_path": "<absolute spec path>",
@@ -59,7 +59,7 @@ Rigid spec-writing gate. Match the user's language; keep technical identifiers u
        }
        ```
        Deep-merge (do not replace the whole file). If store write fails, continue silently.
-     - Invoke `linear-devotee:consummate-project` with spec path.
+     - Invoke `linear-devotee:create-project` with spec path.
    - No → try `warden:voice` per the voice cadence with `SUMMARY: write-spec complete, spec approved, no linear handoff`, then exit.
 
 ## Final Report
@@ -68,12 +68,12 @@ Rigid spec-writing gate. Match the user's language; keep technical identifiers u
 acid-prophet:write-spec report
   Spec:     <path>
   Commits:  <n>
-  Handoff:  <linear-devotee:consummate-project invoked | stopped here>
+  Handoff:  <linear-devotee:create-project invoked | stopped here>
 ```
 
 ## Never
 
-- Invoke `linear-devotee:consummate-project` before spec is user-approved.
+- Invoke `linear-devotee:create-project` before spec is user-approved.
 - Ask multiple questions in the same message.
 - Move to the next step before the current one is done.
 - Run `git push` or `git rebase`.

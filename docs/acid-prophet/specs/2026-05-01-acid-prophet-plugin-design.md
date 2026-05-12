@@ -9,7 +9,7 @@
 
 ## Problem
 
-`linear-devotee:consummate-project` jumps straight into Linear mutations with minimal upfront structure. There's no enforced spec phase, no structured Q&A, no milestone planning before the first API call. The result: Linear projects created from vague ideas, large monolithic issues, hard-to-parallelize dev work.
+`linear-devotee:create-project` jumps straight into Linear mutations with minimal upfront structure. There's no enforced spec phase, no structured Q&A, no milestone planning before the first API call. The result: Linear projects created from vague ideas, large monolithic issues, hard-to-parallelize dev work.
 
 What's missing is a dedicated thinking phase — structured dialogue that extracts requirements, proposes approaches, and produces a validated spec before anything touches Linear.
 
@@ -78,7 +78,7 @@ docs/acid-prophet/specs/YYYY-MM-DD-<topic>.md
 5. **Écrire le spec** → `docs/acid-prophet/specs/YYYY-MM-DD-<topic>.md` + git commit
 6. **Auto-révision** — scan for placeholders, internal contradictions, scope creep, ambiguities — fix inline
 7. **Gate utilisateur spec** — ask user to review the written spec before proceeding
-8. **Handoff** — "on pousse dans Linear ?" → if yes: invoke `linear-devotee:consummate-project` passing the spec file path. If no: clean stop, spec remains in `docs/`.
+8. **Handoff** — "on pousse dans Linear ?" → if yes: invoke `linear-devotee:create-project` passing the spec file path. If no: clean stop, spec remains in `docs/`.
 
 **Hard gate:**
 - No Linear invocation before spec is approved by the user
@@ -89,7 +89,7 @@ docs/acid-prophet/specs/YYYY-MM-DD-<topic>.md
 
 **Spec sections:** Scaled to complexity. A simple feature: a few sentences per section. A platform rewrite: up to 200-300 words per section. Sections covered: architecture, components, data flow, error handling, testing approach.
 
-**Handoff to linear-devotee:** The spec file path is passed to `linear-devotee:consummate-project` in file mode. The oracle (linear-devotee's subagent) reads the spec and handles SDD decomposition, milestone planning, and issue creation. `acid-prophet` does not decompose issues, does not call Linear MCP tools — ever.
+**Handoff to linear-devotee:** The spec file path is passed to `linear-devotee:create-project` in file mode. The oracle (linear-devotee's subagent) reads the spec and handles SDD decomposition, milestone planning, and issue creation. `acid-prophet` does not decompose issues, does not call Linear MCP tools — ever.
 
 ---
 

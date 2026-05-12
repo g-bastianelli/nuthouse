@@ -1,6 +1,6 @@
 ---
 name: write-spec
-description: Use when starting a project or feature in Codex that needs a structured spec before development or Linear creation. Asks clarifying questions one at a time, proposes approaches, validates a written spec, then optionally hands off to linear-devotee:consummate-project.
+description: Use when starting a project or feature in Codex that needs a structured spec before development or Linear creation. Asks clarifying questions one at a time, proposes approaches, validates a written spec, then optionally hands off to linear-devotee:create-project.
 ---
 
 # Acid Prophet for Codex
@@ -23,7 +23,7 @@ The user wants to turn a raw project or feature idea into a reviewed spec before
 
 ## Hard gate
 
-Do not invoke or suggest `linear-devotee:consummate-project` until the written spec has been explicitly approved by the user.
+Do not invoke or suggest `linear-devotee:create-project` until the written spec has been explicitly approved by the user.
 
 ## Workflow
 
@@ -107,7 +107,7 @@ last-reviewed: YYYY-MM-DD
 
 - `id`: slugified topic name, e.g. `auth-refresh-flow`
 - `status`: always `draft` at creation time
-- `linear-project`: always `_none_` — patched by `linear-devotee:consummate-project` after project creation
+- `linear-project`: always `_none_` — patched by `linear-devotee:create-project` after project creation
 - `verified-by`: always `_none_` — to be filled when tests are written
 - `last-reviewed`: today's date in ISO format
 
@@ -142,7 +142,7 @@ Ask:
 the trip is over. the spec exists. push to Linear?
 ```
 
-- Yes: tell the user to invoke `linear-devotee:consummate-project <spec-path>` or invoke that skill if the runtime supports skill chaining.
+- Yes: tell the user to invoke `linear-devotee:create-project <spec-path>` or invoke that skill if the runtime supports skill chaining.
 - No: stop cleanly.
 
 ## Final report
@@ -153,7 +153,7 @@ Print one short voice line from `persona.md`, then:
 acid-prophet:write-spec report
   Spec:     <path to spec file>
   Commits:  skipped | <commit hash if explicitly requested>
-  Handoff:  linear-devotee:consummate-project suggested | stopped here
+  Handoff:  linear-devotee:create-project suggested | stopped here
 ```
 
 ## Things you never do

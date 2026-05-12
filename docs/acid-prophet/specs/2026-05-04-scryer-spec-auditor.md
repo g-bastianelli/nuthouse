@@ -38,7 +38,7 @@ Add one subagent and one skill to `acid-prophet`:
 - **`acid-prophet:scry`** — standalone skill that takes a spec path,
   dispatches `scryer` in `report-only` mode, renders the report in the
   acid-prophet voice, and offers a hand-off menu (apply auto-fixes, open
-  spec, hand to `linear-devotee:consummate-project`, stop).
+  spec, hand to `linear-devotee:create-project`, stop).
 
 Modify `acid-prophet:trip`:
 
@@ -188,7 +188,7 @@ always present.
      `docs(acid-prophet): scryer auto-fixes`
    - `open` — print the spec path for the user to open in their editor
    - `linear` — only if `linear-project: _none_` and zero BLOCKER:
-     hand off to `linear-devotee:consummate-project` with `<spec-path>`
+     hand off to `linear-devotee:create-project` with `<spec-path>`
    - `stop` — clean exit, voice line `"prophecy complete. architecture
      locked. 🔮"`
 

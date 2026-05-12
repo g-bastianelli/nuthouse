@@ -93,7 +93,7 @@ Global guidance — applies everywhere, not just at scaffold time:
 |---|---|---|---|---|---|
 | `saucy-status` | Saucy/gooning loading messages in statusline | SessionStart, UserPromptSubmit | — | — | `saucy-status/persona.md` |
 | `react-monkey` | React implementation specialist with parallel exploration | — | `implement` | `explorer` | `react-monkey/persona.md` |
-| `linear-devotee` | Linear issue detection at session start + cascading Project/Milestone/Issue creation, all SDD-formatted | SessionStart, UserPromptSubmit | `greet`, `consummate-project`, `bind-milestone`, `bare-issue` | `seer`, `oracle`, `chronicler`, `acolyte` | `linear-devotee/persona.md` |
+| `linear-devotee` | Linear issue detection at session start + cascading Project/Milestone/Issue creation, all SDD-formatted | SessionStart, UserPromptSubmit | `greet`, `plan`, `create-project`, `create-milestone`, `create-issue` | `issue-context`, `issue-drafter`, `milestone-drafter`, `plan-auditor`, `plan-writer`, `project-drafter` | `linear-devotee/persona.md` |
 | `acid-prophet` | Structured spec-writing + audit + drift detection. Q&A → spec → `scryer` audit → optional handoff to `linear-devotee`. PR-time drift check via `frequency-drift` | — | `trip`, `frequency-drift`, `scry` | `scryer` | `acid-prophet/persona.md` |
 | `warden` | Centralized voice agent — emits decorative persona lines for any plugin via `warden:voice`; `/warden:voice [on\|off\|status]` toggles fun messages globally | — | `voice` | `voice` | `warden/persona.md` |
 
