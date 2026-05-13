@@ -1,3 +1,16 @@
+<!-- template-meta
+required:
+  - README banner guidance for generated images
+  - mascot/persona must be visible
+  - match existing nuthouse banner style
+  - setting must come from persona world
+  - functional props are secondary
+  - user-centered personas keep the user offscreen or abstract
+  - 3:1 wide banner target
+  - no readable text unless exact English text is explicitly requested
+  - final asset path is assets/banner.png
+-->
+
 # git-gremlin banner prompt
 
 Use this prompt to generate `git-gremlin/assets/banner.png`.

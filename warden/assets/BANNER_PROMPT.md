@@ -23,6 +23,10 @@ Secondary props: the key ring should be comically oversized, with keys of
 different shapes and colors (each key implies a different plugin's voice).
 No readable labels. No logos. No text.
 
+If the persona is defined by a relationship to the user (keeper, guardian,
+gatekeeper), the user's presence is implied by the doors and voices — keep
+the user offscreen, implied, or abstract. No competing authority figure.
+
 Composition: warden centered, prominent. Hallway recedes into the background
 symmetrically. Leave breathing room on the sides for README title overlay.
 Thick black outlines, simple cel shading, expressive face, readable at

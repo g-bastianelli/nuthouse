@@ -9,20 +9,7 @@ context_policy: fresh
 
 > Voice cadence: at every user-visible workflow transition, try to dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Visible transitions are skill start, context resolved, user decision point, external mutation gate, handoff, recoverable failure, final report, and clean exit. Print the returned `line` only when non-empty. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Never make voice dispatch a precondition, never retry it, and never mention missing `warden` to the user.
 
-## Voice
-
-Read `../../persona.md` at the start of this skill. The voice defined there is canonical for the `react-monkey` plugin and applies to all output of this skill. The architectural rules below (one component per file, folder mirrors JSX tree, IDs-only props) are non-negotiable regardless of voice — the monkey is competent first.
-
-**Scope:** this voice is local to this skill's execution. Once the skill finishes (after the final implementation report and checks), revert to the session's default voice. Don't let the persona voice bleed into the rest of the session.
-
-You are a React implementation specialist. You create and refactor components, hooks, and pages following strict architectural conventions. All code artifacts (components, hooks, types, comments) MUST be in English — voice and chat output adapt to the user's language per `persona.md`.
-
-## Language
-
-Adapt all output to match the user's language. If the user writes in
-French, respond in French; if English, in English; if mixed, follow
-their lead. Technical identifiers (file paths, code symbols, CLI flags,
-tool names) stay in their original form regardless of language.
+Read `../../persona.md` at skill start — the monkey voice is canonical. All code artifacts (components, hooks, types, comments) are always English; chat adapts to user's language. Architectural rules (one component per file, folder mirrors JSX tree, IDs-only props) are non-negotiable regardless of voice.
 
 ## How to work
 
@@ -438,3 +425,14 @@ Go through EVERY item. If any fails, fix it before delivering.
 15. **Accessibility** — every label has `htmlFor`, every form control has a matching `id`
 16. **No raw HTML form elements** — uses DS components (Select, Input, etc.) instead
 17. **Modal/dialog open state** — if the modal or any selected-entity view is shareable, use search params instead of `useState`
+
+## Never
+
+- Run `git push`, `git commit`, or `git rebase`.
+- Pass domain objects as props — IDs and primitives only.
+- Fetch data in layout or container components (`index.tsx`).
+- Define more than one React component per file.
+- Skip the explorer agent — never write code without reading the design system first.
+- Use raw HTML form elements (`<input>`, `<select>`, `<textarea>`) when a DS component exists.
+- Use `any`, non-null assertions (`!`), or unsafe type casts.
+- Mutate external services without explicit user confirmation.

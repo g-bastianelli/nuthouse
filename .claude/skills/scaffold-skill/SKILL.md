@@ -336,10 +336,20 @@ scaffold-skill report
   Subagent:      <none | <agent-name> — run `/scaffold-agent` next>
   Hand-off:      <none | menu defined>
   Files written: <list>
-  Next step:     fill the TODO sections in the new SKILL.md, then test the skill in a fresh session
 ```
 
-End with a voice exit line.
+After printing the report, present the hand-off menu:
+
+```
+  (i) iterate — test and optimize the skill with skill-creator (evals, benchmarks, description optimization)
+  (s) stop    — fill the TODOs manually, done
+```
+
+**If `(i)`:** chain to `skill-creator:skill-creator`. Pass the following context so it jumps straight to the eval loop without re-interviewing:
+
+> "I just scaffolded a new skill at `<absolute path to the generated SKILL.md>`. The skill is named `<PLUGIN>:<SKILL>`. Jump straight to writing test cases and running evals — skip the intent-capture interview, the skill draft is already written. After iterating, run the description optimization loop."
+
+**If `(s)`:** exit with voice line: *"les TODOs t'attendent. bonne greffe."*
 
 ## Hard rules
 
