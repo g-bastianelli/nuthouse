@@ -8,15 +8,15 @@ It restores rotating thinking/status text with two modes: `saucy` and `gooning`.
 
 ## Commands
 
-| Command | Purpose |
-|---|---|
-| `/saucy install` | Configure the Claude Code statusline |
-| `/saucy uninstall` | Remove the statusline configuration |
-| `/saucy on` | Enable saucy mode |
-| `/saucy off` | Disable messages |
-| `/saucy gooning` | Enable gooning mode |
-| `/saucy status` | Show current mode |
-| `/saucy` | Toggle off/saucy |
+| Command            | Purpose                              |
+| ------------------ | ------------------------------------ |
+| `/saucy install`   | Configure the Claude Code statusline |
+| `/saucy uninstall` | Remove the statusline configuration  |
+| `/saucy on`        | Enable saucy mode                    |
+| `/saucy off`       | Disable messages                     |
+| `/saucy gooning`   | Enable gooning mode                  |
+| `/saucy status`    | Show current mode                    |
+| `/saucy`           | Toggle off/saucy                     |
 
 ## Install
 

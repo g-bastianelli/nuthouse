@@ -37,6 +37,7 @@ PROJECT_ROOT: <abs path to the git repo>
 **Provider selection.** See `${CLAUDE_PLUGIN_ROOT}/shared/provider-selection.md`.
 
 Fetch in parallel from Linear:
+
 - The project details for `<PROJECT_ID>`
 - All existing milestones for project `<PROJECT_ID>`
 - All existing issues for project `<PROJECT_ID>` — to inspect the project's existing scope and infer reasonable phase boundaries
@@ -54,6 +55,7 @@ If `MILESTONE_HINT` is set: treat as the user's freeform intent. Extract a candi
 ### 4. Detect ambiguities and gaps
 
 Flag:
+
 - Missing or vague milestone name (must follow the convention `Phase N: <name>` when the project is phased)
 - No clear scope (no list of issues this milestone delivers)
 - No suggested target date when the project has a `targetDate`
@@ -77,6 +79,7 @@ Return **only** the markdown shape below, under 500 words. Never invent content.
 ### Milestone draft
 
 **Name** : `Phase N: <name>` | _unclear_
+
 - Convention: prefix `Phase N:` only when the project is phased (≥ 2 milestones). Standalone single-milestone additions can drop the prefix.
 - Must not collide with an existing milestone name.
 
@@ -84,6 +87,7 @@ Return **only** the markdown shape below, under 500 words. Never invent content.
 <text> | _unclear_
 
 **Target date suggestion** : `YYYY-MM-DD` | `_unclear_` | `_none_`
+
 - Only suggest if the project has a `targetDate` and the milestone falls naturally on a sub-deadline.
 
 **Rationale** (1-2 lines: why this phase exists vs other phases)
@@ -96,11 +100,12 @@ Return **only** the markdown shape below, under 500 words. Never invent content.
 One-line titles. Each entry has an implicit 0-based `idx` matching its position in the list below. The calling skill can promote any of these via `linear-devotee:create-issue`. Cap at 8 — beyond that, recommend splitting into two milestones.
 
 To express a real ordering constraint between two issues in this milestone, append `[blocked-by: <idx>, <idx>]` after the title. `create-issue` will pick issues whose dependencies are already created first, then pass the resolved Linear identifiers to `save_issue` as `blockedBy`.
-
 ```
+
 - <issue title>
 - <issue title> [blocked-by: 0]
 - <issue title> [blocked-by: 0, 1]
+
 ```
 
 Use `[blocked-by: …]` only for hard sequencing (issue B literally cannot start before A lands). Omit when issues can run in parallel — over-linking fakes serialization. When unsure, leave it off.

@@ -2,16 +2,20 @@
   "name": "nuthouse",
   "version": "1.0.0",
   "private": true,
-  "packageManager": "bun@1.3.13",
   "scripts": {
     "prepare": "lefthook install",
     "build:runtime": "cp _shared/runtime/src/claude.mjs linear-devotee/claudecode/lib/runtime.mjs && cp _shared/runtime/src/claude.mjs saucy-status/lib/runtime.mjs",
     "check:runtime": "rc=0; for bundle in linear-devotee/claudecode/lib/runtime.mjs saucy-status/lib/runtime.mjs; do diff -q _shared/runtime/src/claude.mjs $bundle || rc=1; done; exit $rc",
+    "lint": "oxlint .",
+    "fmt": "oxfmt .",
+    "fmt:check": "oxfmt --check .",
     "test:runtime": "bun test _shared/runtime/tests/claude.test.mjs",
     "test:meta": "cd .claude/tests && bun test frontmatter.test.mjs"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.4.15",
-    "lefthook": "2.1.6"
-  }
+    "lefthook": "2.1.6",
+    "oxfmt": "^0.49.0",
+    "oxlint": "^1.64.0"
+  },
+  "packageManager": "bun@1.3.13"
 }

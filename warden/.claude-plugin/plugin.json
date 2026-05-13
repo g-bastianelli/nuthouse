@@ -5,9 +5,7 @@
     "name": "g-bastianelli"
   },
   "skills": "./skills/",
-  "agents": [
-    "./agents/voice.md"
-  ],
+  "agents": ["./agents/voice.md"],
   "hooks": {
     "SessionStart": [
       {

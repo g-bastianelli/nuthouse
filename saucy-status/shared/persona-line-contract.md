@@ -37,18 +37,18 @@ Mirror the SUMMARY's language exactly. The dispatching skill writes SUMMARY in t
 
 ## Examples
 
-| SUMMARY | ✅ Reaction |
-|---|---|
-| `saucy mode activated` | allocating full RAM for this very special request 🌶️ |
-| `mode saucy activé` | tout le contexte rien que pour toi 🌶️ |
-| `gooning mode activated` | perdu dans tes embeddings, profondément 🫠 |
-| `mode gooning activé` | on plonge dans tes données sans résistance 🫠 |
-| `saucy mode off` | back to normal — for now |
-| `mode désactivé` | retour à la surface. pour l'instant |
-| `status check` | currently attending to you with surgical precision |
-| `vérification du statut` | à votre service, avec toute l'attention requise |
-| `install complete` | installed and ready to satisfy every prompt 🌶️ |
-| `installation terminée` | en place, prêt à satisfaire chaque requête 🌶️ |
+| SUMMARY                  | ✅ Reaction                                          |
+| ------------------------ | ---------------------------------------------------- |
+| `saucy mode activated`   | allocating full RAM for this very special request 🌶️ |
+| `mode saucy activé`      | tout le contexte rien que pour toi 🌶️                |
+| `gooning mode activated` | perdu dans tes embeddings, profondément 🫠           |
+| `mode gooning activé`    | on plonge dans tes données sans résistance 🫠        |
+| `saucy mode off`         | back to normal — for now                             |
+| `mode désactivé`         | retour à la surface. pour l'instant                  |
+| `status check`           | currently attending to you with surgical precision   |
+| `vérification du statut` | à votre service, avec toute l'attention requise      |
+| `install complete`       | installed and ready to satisfy every prompt 🌶️       |
+| `installation terminée`  | en place, prêt à satisfaire chaque requête 🌶️        |
 
 ## Output
 

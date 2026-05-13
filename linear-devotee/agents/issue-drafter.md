@@ -40,6 +40,7 @@ PROJECT_ROOT: <abs path to the git repo>
 **Provider selection.** See `${CLAUDE_PLUGIN_ROOT}/shared/provider-selection.md`.
 
 Fetch in parallel from Linear:
+
 - The project details for `<PROJECT_ID>`
 - (only if `MILESTONE_ID != _none_`) The milestone details for `<MILESTONE_ID>`
 - All available issue labels for the project's team — to suggest 0-3 relevant existing labels
@@ -62,6 +63,7 @@ If `ISSUE_HINT` is set: extract the issue title (1 sentence), purpose, and any t
 ### 5. Find referenced files
 
 Scan `ISSUE_HINT` and `PARENT_DRAFT` for path-like tokens (backticked spans, regex `[a-zA-Z0-9_./-]+\.[a-z0-9]{1,5}`). For each unique path:
+
 - Check existence with `Glob` (relative to `PROJECT_ROOT`).
 - If exists → `Read` and summarize in one line what the file currently does.
 - If not → mark "to be created".
@@ -69,6 +71,7 @@ Scan `ISSUE_HINT` and `PARENT_DRAFT` for path-like tokens (backticked spans, reg
 ### 6. Detect ambiguities
 
 Flag:
+
 - Literal `TBD`, `TODO`, `FIXME`, `???` in input
 - Vague phrases ("appropriate", "as needed", "etc.", "handle errors gracefully")
 - Missing fields that map to SDD slots (Goal, Context, Constraints, Acceptance, Non-goals)
@@ -86,8 +89,8 @@ Return **only** this markdown, under 500 words. Never invent content. If a field
 ```markdown
 ## Issue draft from issue-drafter
 
-**Project** : <project.title> (<PROJECT_ID>)
-**Milestone** : <milestone.name> (<MILESTONE_ID>) | _none_
+**Project** : <project.title> (<PROJECT*ID>)
+**Milestone** : <milestone.name> (<MILESTONE_ID>) | \_none*
 **Suggested title** : <one sentence> | _unclear_
 **Suggested labels** : <label1, label2> | _none_
 
@@ -99,27 +102,33 @@ Return **only** this markdown, under 500 words. Never invent content. If a field
 <2-3 lines: why, architecture touched, services involved> | _unclear_
 
 **Files referenced** (existing state)
+
 - `path/x.ts` — currently does Y
 - `path/y.ts` — does not exist yet
 - (or "none referenced — to be discovered")
 
 **Constraints**
+
 - <stack, perf, compliance — explicit or inferred>
 - (or _unclear_)
 
 **Acceptance criteria** (verifiable)
+
 - <bullet>
 - (or _unclear_)
 
 **Non-goals** / out of scope
+
 - <explicitly excluded>
 - (or _unclear_)
 
 **Edge cases & ambiguities detected**
+
 - <vague points, contradictions, TBDs>
 - <if MILESTONE_ID belongs to a different project: surface it here as the top blocker>
 
 **Suggested clarifying questions for user**
+
 - <prioritized: most blocking _unclear_ field first>
 ```
 

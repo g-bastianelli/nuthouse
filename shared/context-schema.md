@@ -16,21 +16,21 @@ One JSON file per session: `<PROJECT_ROOT>/.claude/nuthouse/sessions/<SESSION_ID
 
 ## `_meta` (injected automatically)
 
-| Field | Type | Description |
-|---|---|---|
-| `session_id` | string | `$CLAUDE_SESSION_ID` — unique per conversation |
-| `git_sha` | string | HEAD sha when the store was last written |
-| `written_at` | string | ISO 8601 timestamp of last write |
-| `_shas` | object | Per-key sha map for sha-tracked keys (see below) |
+| Field        | Type   | Description                                      |
+| ------------ | ------ | ------------------------------------------------ |
+| `session_id` | string | `$CLAUDE_SESSION_ID` — unique per conversation   |
+| `git_sha`    | string | HEAD sha when the store was last written         |
+| `written_at` | string | ISO 8601 timestamp of last write                 |
+| `_shas`      | object | Per-key sha map for sha-tracked keys (see below) |
 
 ### `_meta._shas` — per-key sha tracking
 
 Keys whose freshness depends on git state are recorded independently in `_meta._shas`:
 
-| `_shas` entry | Tracked key | Why separate |
-|---|---|---|
-| `relevant_files` | `relevant_files` | Captured by greet; must not be invalidated by later writes (e.g. write-spec) that don't touch this key |
-| `react-monkey.explorer_report` | `react-monkey.explorer_report` | Same: captured by react-monkey:implement; later merges must not clobber the sha |
+| `_shas` entry                  | Tracked key                    | Why separate                                                                                           |
+| ------------------------------ | ------------------------------ | ------------------------------------------------------------------------------------------------------ |
+| `relevant_files`               | `relevant_files`               | Captured by greet; must not be invalidated by later writes (e.g. write-spec) that don't touch this key |
+| `react-monkey.explorer_report` | `react-monkey.explorer_report` | Same: captured by react-monkey:implement; later merges must not clobber the sha                        |
 
 `isStale(session, key, namespace, projectRoot)` always prefers `_meta._shas[fullKey]` over `_meta.git_sha` for these keys.
 
@@ -38,35 +38,35 @@ Keys whose freshness depends on git state are recorded independently in `_meta._
 
 ## Common keys (top-level)
 
-| Key | Type | Writer | Readers | Freshness policy |
-|---|---|---|---|---|
-| `spec_path` | string (abs path) | `greet`, `write-spec` | `plan`, `create-project`, `check-drift` | Stale if file does not exist (`test -f`) |
+| Key              | Type                 | Writer                             | Readers                                    | Freshness policy                                             |
+| ---------------- | -------------------- | ---------------------------------- | ------------------------------------------ | ------------------------------------------------------------ |
+| `spec_path`      | string (abs path)    | `greet`, `write-spec`              | `plan`, `create-project`, `check-drift`    | Stale if file does not exist (`test -f`)                     |
 | `relevant_files` | string[] (abs paths) | `greet` (via issue-context output) | `plan` → `plan-auditor`, `project-drafter` | Stale if `_meta._shas.relevant_files` ≠ `git rev-parse HEAD` |
 
 ---
 
 ## `linear-devotee` namespace
 
-| Key | Type | Writer | Readers | Freshness policy |
-|---|---|---|---|---|
-| `issue` | object | _(reserved — always re-fetch from Linear)_ | — | Always stale |
-| `plan_path` | string (abs path) | `plan` | `plan-auditor` | Stale if file does not exist |
+| Key         | Type              | Writer                                     | Readers        | Freshness policy             |
+| ----------- | ----------------- | ------------------------------------------ | -------------- | ---------------------------- |
+| `issue`     | object            | _(reserved — always re-fetch from Linear)_ | —              | Always stale                 |
+| `plan_path` | string (abs path) | `plan`                                     | `plan-auditor` | Stale if file does not exist |
 
 ---
 
 ## `acid-prophet` namespace
 
-| Key | Type | Writer | Readers | Freshness policy |
-|---|---|---|---|---|
-| `handoff_spec` | `{ path, title, id }` | `write-spec` (at step 9 handoff) | `create-project` (step 0) | Stale if `_handoff_spec_path` ≠ `spec_path` |
-| `_handoff_spec_path` | string (abs path) | `write-spec` | staleness check only | — |
+| Key                  | Type                  | Writer                           | Readers                   | Freshness policy                            |
+| -------------------- | --------------------- | -------------------------------- | ------------------------- | ------------------------------------------- |
+| `handoff_spec`       | `{ path, title, id }` | `write-spec` (at step 9 handoff) | `create-project` (step 0) | Stale if `_handoff_spec_path` ≠ `spec_path` |
+| `_handoff_spec_path` | string (abs path)     | `write-spec`                     | staleness check only      | —                                           |
 
 ---
 
 ## `react-monkey` namespace
 
-| Key | Type | Writer | Readers | Freshness policy |
-|---|---|---|---|---|
+| Key               | Type   | Writer                   | Readers    | Freshness policy                                                  |
+| ----------------- | ------ | ------------------------ | ---------- | ----------------------------------------------------------------- |
 | `explorer_report` | object | `react-monkey:implement` | _(future)_ | Stale if `_meta._shas['react-monkey.explorer_report']` ≠ HEAD sha |
 
 ---

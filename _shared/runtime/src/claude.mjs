@@ -3,8 +3,8 @@
 // lib/runtime.mjs. If you are reading this comment inside a plugin's
 // lib/, edit the source above instead — your changes here will be
 // overwritten on the next build.
-import fs from 'node:fs';
-import path from 'node:path';
+import fs from "node:fs";
+import path from "node:path";
 
 function requireValue(value, message) {
   if (!value) throw new Error(message);
@@ -16,20 +16,24 @@ function ensureParent(filePath) {
 }
 
 function isMissingFileError(error) {
-  return error?.code === 'ENOENT';
+  return error?.code === "ENOENT";
 }
 
 export function createClaudeRuntime(options = {}) {
   const env = options.env ?? process.env;
   const root = options.pluginRoot ?? env.CLAUDE_PLUGIN_ROOT ?? null;
-  const data = options.pluginData ?? env.CLAUDE_PLUGIN_DATA ?? (root ? path.join(root, 'data') : null);
+  const data =
+    options.pluginData ?? env.CLAUDE_PLUGIN_DATA ?? (root ? path.join(root, "data") : null);
 
   function pluginRoot() {
-    return requireValue(root, 'CLAUDE_PLUGIN_ROOT is not set');
+    return requireValue(root, "CLAUDE_PLUGIN_ROOT is not set");
   }
 
   function pluginData() {
-    return requireValue(data, 'CLAUDE_PLUGIN_DATA is not set and no plugin root fallback is available');
+    return requireValue(
+      data,
+      "CLAUDE_PLUGIN_DATA is not set and no plugin root fallback is available",
+    );
   }
 
   function rootPath(...segments) {
@@ -42,16 +46,16 @@ export function createClaudeRuntime(options = {}) {
 
   function readJson(filePath, fallback) {
     try {
-      return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      return JSON.parse(fs.readFileSync(filePath, "utf8"));
     } catch (error) {
       if (isMissingFileError(error) || error instanceof SyntaxError) return fallback;
       throw error;
     }
   }
 
-  function readText(filePath, fallback = '') {
+  function readText(filePath, fallback = "") {
     try {
-      return fs.readFileSync(filePath, 'utf8');
+      return fs.readFileSync(filePath, "utf8");
     } catch (error) {
       if (isMissingFileError(error)) return fallback;
       throw error;
@@ -62,7 +66,7 @@ export function createClaudeRuntime(options = {}) {
     ensureParent(filePath);
     const tmpPath = `${filePath}.${process.pid}.tmp`;
     try {
-      fs.writeFileSync(tmpPath, value, 'utf8');
+      fs.writeFileSync(tmpPath, value, "utf8");
       fs.renameSync(tmpPath, filePath);
     } catch (error) {
       try {
@@ -97,7 +101,7 @@ export function createClaudeRuntime(options = {}) {
     const prefix = `${kind}-`;
     const cutoff = Date.now() - maxAgeDays * 24 * 3600 * 1000;
     for (const name of entries) {
-      if (!name.startsWith(prefix) || !name.endsWith('.json')) continue;
+      if (!name.startsWith(prefix) || !name.endsWith(".json")) continue;
       const fullPath = dataPath(name);
       try {
         const stat = fs.statSync(fullPath);

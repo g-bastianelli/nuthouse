@@ -43,7 +43,7 @@ test -f _templates/plugin/BANNER_PROMPT.md && \
 echo "templates ok" || echo "ERROR: _templates/ missing or incomplete"
 ```
 
-If templates are missing, abort with: *"les formules manquent. `_templates/` est absent ou incomplet."*
+If templates are missing, abort with: _"les formules manquent. `_templates/` est absent ou incomplet."_
 
 ## Step 2 — Load template requirements
 
@@ -55,6 +55,7 @@ Read the `<!-- template-meta -->` block from each template:
 - `_templates/plugin/BANNER_PROMPT.md` → for all plugin banner prompts
 
 Requirements extracted:
+
 - **SKILL.md:** required_frontmatter `[name, description]`, required_sections `["## Workflow", "## Never"]`
 - **AGENT.md:** required_frontmatter `[name, description]`, required_sections `[]`
 - **persona.md:** required_frontmatter `[name, tagline]`, required_sections `["## Language", "## Hard rule"]`
@@ -89,6 +90,7 @@ ls */banner.jpeg */banner.jpg */assets/banner-old.* */assets/banner-love.* 2>/de
 For each file, check against the matching template's requirements.
 
 **SKILL.md checks (in order):**
+
 1. Frontmatter contains `name` field — ❌ CRITIQUE if missing
 2. Frontmatter contains `description` field — ❌ CRITIQUE if missing
 3. `## Workflow` section present — ❌ CRITIQUE if missing (new format)
@@ -97,18 +99,21 @@ For each file, check against the matching template's requirements.
 6. `## Language` section present WITHOUT `## Workflow` — ⚠️ WARNING: old format artifact, migrate to intro-line pattern
 
 **AGENT.md checks:**
+
 1. Frontmatter contains `name` field — ❌ CRITIQUE if missing
 2. Frontmatter contains `description` field — ❌ CRITIQUE if missing
 3. Frontmatter contains `tools:` block (non-empty list) — ❌ CRITIQUE if missing or empty (every agent must have an explicit allowlist)
 4. Agent `name` matches a persona/role word (`seer`, `oracle`, `acolyte`, `spirit`, `muse`, `ghost`, `herald`, etc.) AND the agent body does NOT reference `shared/persona-line-contract.md` — ⚠️ WARNING: persona-coded name on a non-voice agent; rename to a functional role
 
 **persona.md checks:**
+
 1. Frontmatter contains `name` field — ❌ CRITIQUE if missing
 2. Frontmatter contains `tagline` field — ⚠️ WARNING if missing
 3. `## Language` section present — ❌ CRITIQUE if missing
 4. `## Hard rule` section present — ❌ CRITIQUE if missing
 
 **BANNER_PROMPT.md checks (per plugin):**
+
 1. `<plugin>/assets/BANNER_PROMPT.md` exists — ⚠️ WARNING if missing
 2. Contains guidance that the mascot/persona is visible — ❌ CRITIQUE if missing
 3. Contains guidance to match the existing nuthouse banner style — ❌ CRITIQUE if missing
@@ -120,6 +125,7 @@ For each file, check against the matching template's requirements.
 9. Contains final-path guidance for `assets/banner.png` — ⚠️ WARNING if missing
 
 **Banner asset checks (per plugin):**
+
 1. If README references `./assets/banner.png`, `<plugin>/assets/banner.png` exists — ❌ CRITIQUE if missing
 2. If `<plugin>/assets/banner.png` exists, README references it — ⚠️ WARNING if missing
 3. No stale root banner image such as `<plugin>/banner.jpeg` or `<plugin>/banner.jpg` — ⚠️ WARNING if present
@@ -151,4 +157,4 @@ Output format:
 <N> critiques · <N> warnings · <N> ok
 ```
 
-If zero critiques and zero warnings: *"le labo est propre. toutes les créatures sont conformes. 🧪"*
+If zero critiques and zero warnings: _"le labo est propre. toutes les créatures sont conformes. 🧪"_

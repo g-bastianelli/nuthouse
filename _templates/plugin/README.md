@@ -21,12 +21,12 @@ codex plugin install {{plugin}}@nuthouse
 ## Skills
 
 | Skill | What it does |
-|---|---|
+| ----- | ------------ |
 
 ## Agents
 
 | Agent | Used by | Role |
-|---|---|---|
+| ----- | ------- | ---- |
 
 ## License
 

@@ -22,10 +22,12 @@ The correct pattern for synchronous local pipelines (confirmed 2026: MindStudio,
 ## Files
 
 **To create:**
+
 - `shared/session-store.mjs` — shared JS utility
 - `shared/context-schema.md` — declarative key schema
 
 **To modify:**
+
 - `linear-devotee/agents/issue-context.md`
 - `linear-devotee/skills/plan/SKILL.md`
 - `linear-devotee/agents/plan-auditor.md`
@@ -40,7 +42,7 @@ The correct pattern for synchronous local pipelines (confirmed 2026: MindStudio,
 - No npm/bun dependencies added — `node:fs`, `node:path`, `node:child_process` only
 - The store is never passed whole to a subagent — only relevant fields extracted and injected into the prompt
 - Existing hooks unchanged — they handle stable transversal context (persona, voice), not dynamic inter-skill data
-- Biome clean, lefthook never bypassed
+- oxlint and oxfmt clean, lefthook never bypassed
 
 ## Acceptance
 
@@ -53,7 +55,7 @@ The correct pattern for synchronous local pipelines (confirmed 2026: MindStudio,
 - [ ] `create-project` reads `handoff_spec` from the store in Step 0 if present
 - [ ] `--fresh` forces a full re-fetch on all concerned skills
 - [ ] `bunx bun test shared/` passes
-- [ ] `bunx biome check .` clean
+- [ ] `bun run lint` and `bun run fmt:check` clean
 
 ## File structure
 
@@ -85,14 +87,14 @@ Common fields at top level, plugin-specific fields namespaced. If a plugin hasn'
 
 ## Invalidation
 
-| Key | Namespace | Policy | Reason |
-|---|---|---|---|
-| `spec_path` | common | Stale if file gone (`test -f`) | Spec may be moved |
-| `relevant_files` | common | Stale if `git_sha` ≠ `HEAD` | Codebase may change |
-| `issue` | `linear-devotee` | Always re-fetch | Mutable external state (Linear) |
-| `plan_path` | `linear-devotee` | Stale if file gone | Same as spec_path |
-| `handoff_spec` | `acid-prophet` | Stale if `spec_path` changed | Derived from spec |
-| `explorer_report` | `react-monkey` | Stale if `git_sha` ≠ `HEAD` | Codebase exploration |
+| Key               | Namespace        | Policy                         | Reason                          |
+| ----------------- | ---------------- | ------------------------------ | ------------------------------- |
+| `spec_path`       | common           | Stale if file gone (`test -f`) | Spec may be moved               |
+| `relevant_files`  | common           | Stale if `git_sha` ≠ `HEAD`    | Codebase may change             |
+| `issue`           | `linear-devotee` | Always re-fetch                | Mutable external state (Linear) |
+| `plan_path`       | `linear-devotee` | Stale if file gone             | Same as spec_path               |
+| `handoff_spec`    | `acid-prophet`   | Stale if `spec_path` changed   | Derived from spec               |
+| `explorer_report` | `react-monkey`   | Stale if `git_sha` ≠ `HEAD`    | Codebase exploration            |
 
 ## Non-goals
 

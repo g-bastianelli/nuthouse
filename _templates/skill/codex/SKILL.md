@@ -4,11 +4,16 @@ optional_frontmatter: [model, effort]
 required_sections: ["## Voice", "## Language"]
 variables: [skill, description, persona_path]
 -->
+
 ---
+
 name: {{skill}}
 description: {{description}}
-# model: haiku   # haiku = lightweight read/report · omit = orchestration/reasoning
-# effort: high   # high = multi-step orchestration · low = cheap scout · omit = default
+
+# model: haiku # haiku = lightweight read/report · omit = orchestration/reasoning
+
+# effort: high # high = multi-step orchestration · low = cheap scout · omit = default
+
 ---
 
 # {{skill}}

@@ -33,11 +33,11 @@ Verify we're in the nuthouse repo:
 test -f .claude-plugin/marketplace.json && echo "ok" || echo "not nuthouse"
 ```
 
-If not nuthouse: abort with *"ce labo n'est pas le bon."*
+If not nuthouse: abort with _"ce labo n'est pas le bon."_
 
 ## Step 2 — Structural audit
 
-Tell the user: *"phase 1 — j'inspecte la structure. on vérifie les formules."*
+Tell the user: _"phase 1 — j'inspecte la structure. on vérifie les formules."_
 
 Dispatch `/audit` by invoking the `audit` skill directly. Let it run and print its report. Do not suppress its output.
 
@@ -49,7 +49,7 @@ des critiques ou warnings ? veux-tu corriger ça avant de tester la qualité ?
   (n) non — continue vers la phase qualité
 ```
 
-If `(y)`: exit. Print *"reviens quand le labo est propre. 🧪"*
+If `(y)`: exit. Print _"reviens quand le labo est propre. 🧪"_
 
 ## Step 3 — Discover plugin skills
 
@@ -87,7 +87,7 @@ Wait for the user's selection. Parse the response into a queue of `(plugin, skil
 
 For each skill in the queue, in order:
 
-1. Print: *"skill-creator sur `<plugin>:<skill>` — lancement."*
+1. Print: _"skill-creator sur `<plugin>:<skill>` — lancement."_
 2. Chain to `skill-creator:skill-creator` with this context:
 
    > "Audit this existing skill at `<absolute path to SKILL.md>`. The skill is named `<plugin>:<skill>`. Skip the intent-capture interview — the skill draft already exists. Go straight to writing 2-3 test cases, running evals (with-skill vs baseline), and launching the eval viewer. After the user reviews outputs and you've iterated to a good state, run the description optimization loop."
@@ -119,7 +119,7 @@ review-skills — terminé
   Skills pending:    <list if stopped early, else "none">
 ```
 
-Exit with voice line: *"les créatures ont été testées. bonne nuit au labo."*
+Exit with voice line: _"les créatures ont été testées. bonne nuit au labo."_
 
 ## Never
 

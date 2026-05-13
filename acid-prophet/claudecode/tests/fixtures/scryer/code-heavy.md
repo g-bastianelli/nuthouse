@@ -30,7 +30,7 @@ Below is the full intended implementation, which is exactly the kind of
 content that should live in a Linear issue, not in the spec itself:
 
 ```ts
-import pino from 'pino';
+import pino from "pino";
 
 type LogContext = {
   userId?: string;
@@ -43,7 +43,7 @@ class Logger {
   constructor(name: string) {
     this.p = pino({
       name,
-      level: process.env.LOG_LEVEL ?? 'info',
+      level: process.env.LOG_LEVEL ?? "info",
       formatters: {
         level: (label) => ({ level: label }),
         bindings: () => ({}),
@@ -64,7 +64,7 @@ class Logger {
   }
 }
 
-export const logger = new Logger('app');
+export const logger = new Logger("app");
 ```
 
 ## Error handling

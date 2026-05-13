@@ -34,6 +34,7 @@ BODY: <approved PR body>                         # required for execute
 2. Identify the scope of changes: what features, fixes, or refactors are included.
 3. Write a PR title: imperative, ≤ 72 chars, no issue number prefix.
 4. Write a PR body in this structure:
+
    ```
    ## Summary
    <1-3 bullets: what changed and why>
@@ -41,6 +42,7 @@ BODY: <approved PR body>                         # required for execute
    ## Test plan
    <bulleted checklist of how to verify the changes>
    ```
+
 5. Output the result.
 
 ### 2. On `ACTION: execute`

@@ -110,6 +110,7 @@ react-monkey:implement report
 - Walking away with a banana (default outro) → `monkey going home with a banana 🍌`
 
 Rules:
+
 - **One** voice line above the report. Optionally one line below. Never more.
 - Use 🌴 / 🍌🍌🍌 only on big restructures (deep folder split, multi-component refactor landing clean).
 - 🚨 "DANGER: MONKEY CODING" lines stay for inline narration during the work, NOT for the closing report.
@@ -161,6 +162,7 @@ DealViewContactItem/
 ```
 
 Notice:
+
 - `index.tsx` files are **layout only** — they compose children with flex/grid, they do NOT fetch data.
 - Each leaf component fetches its own data via the shared `useDealContact` hook.
 - The folder tree matches the JSX tree exactly.
@@ -180,12 +182,14 @@ Notice:
 **Why:** each child fetches what it needs via the data layer (same cache, no extra network call). This makes components independently testable, reusable, and decoupled from parent data shape.
 
 **Component autonomy:**
+
 - Keep components **~30-80 lines**. If larger, split into sub-components.
 - Each component **owns its logic**: queries, derived state, handlers, conditional rendering.
 - A component **returns `null`** when it has nothing to show — the **parent never checks** on the child's behalf.
 - If business logic is non-trivial (query orchestration, formatting, derived labels), extract it into a **colocated hook**: `useComponentName.ts` in the same folder.
 
 **Layout/container components — including page components:**
+
 - Focus on **composition and spacing only**.
 - May use hooks for routing concerns (reading URL params, managing tabs/search params) to extract IDs.
 - Do **NOT** fetch domain data and do **NOT** contain business logic.
@@ -195,23 +199,23 @@ Notice:
 ```tsx
 // BAD — page fetches data just to show a count in a stat card
 function TenantsPage() {
-  const { data: tenants, isLoading } = useTenants()  // ← page does data fetching
+  const { data: tenants, isLoading } = useTenants(); // ← page does data fetching
   return (
     <div>
-      <StatCard count={isLoading ? null : tenants?.length ?? 0} />  // ← passes derived value
+      <StatCard count={isLoading ? null : (tenants?.length ?? 0)} /> // ← passes derived value
       <TenantsTable />
     </div>
-  )
+  );
 }
 
 // GOOD — page is layout only, TenantCountCard fetches its own data
 function TenantsPage() {
   return (
     <div>
-      <TenantCountCard />   {/* fetches useTenants() internally */}
-      <TenantsTable />      {/* fetches useTenants() internally — same cache, no extra request */}
+      <TenantCountCard /> {/* fetches useTenants() internally */}
+      <TenantsTable /> {/* fetches useTenants() internally — same cache, no extra request */}
     </div>
-  )
+  );
 }
 ```
 
@@ -272,11 +276,11 @@ The original file becomes `DealViewContactItem/index.tsx`. Children live **insid
 
 ### Parent owns placement, child owns internal UI
 
-| Concern | Who owns it | Examples |
-|---------|-------------|---------|
-| Placement in parent layout | **Parent** | `margin-*`, `position`, `top/right/bottom/left`, `z-index`, `w-*`, `min-w-*`, `max-w-*` |
-| Spacing between children | **Parent** | `gap-*`, `space-*`, flex/grid layout, padding on wrapper |
-| Internal styling | **Child** | Typography, colors, borders, internal padding, border-radius |
+| Concern                    | Who owns it | Examples                                                                                |
+| -------------------------- | ----------- | --------------------------------------------------------------------------------------- |
+| Placement in parent layout | **Parent**  | `margin-*`, `position`, `top/right/bottom/left`, `z-index`, `w-*`, `min-w-*`, `max-w-*` |
+| Spacing between children   | **Parent**  | `gap-*`, `space-*`, flex/grid layout, padding on wrapper                                |
+| Internal styling           | **Child**   | Typography, colors, borders, internal padding, border-radius                            |
 
 ```tsx
 // BAD — child positions itself
@@ -290,7 +294,7 @@ function ContactCard({ className }: { className?: string }) {
 }
 
 // Parent applies placement
-<ContactCard className="w-1/2" />
+<ContactCard className="w-1/2" />;
 ```
 
 ### className prop is mandatory
@@ -336,27 +340,27 @@ Do NOT extract top-level `XXX_VARIANT` constants or `Record<Kind, string>` style
 
 **`useState` is the last resort.** Before reaching for it, ask: could this state survive navigation or be shared via URL?
 
-| Level | Tool | Use for |
-|-------|------|---------|
-| Server state | data fetching library (React Query, SWR…) | anything from the API |
-| URL state | router search params | selected item, active tab, filters, open modal, selected entity ID |
-| Global session | React Context | auth, current user, theme |
-| Local UI | `useState` | unsaved input value, hover, animation |
+| Level          | Tool                                      | Use for                                                            |
+| -------------- | ----------------------------------------- | ------------------------------------------------------------------ |
+| Server state   | data fetching library (React Query, SWR…) | anything from the API                                              |
+| URL state      | router search params                      | selected item, active tab, filters, open modal, selected entity ID |
+| Global session | React Context                             | auth, current user, theme                                          |
+| Local UI       | `useState`                                | unsaved input value, hover, animation                              |
 
 ### URL state rule
 
-**Before using `useState` for any value that determines what is displayed** (selected ID, active tab, open panel, detail view), ask: *can the user share this URL and land on the same view?*
+**Before using `useState` for any value that determines what is displayed** (selected ID, active tab, open panel, detail view), ask: _can the user share this URL and land on the same view?_
 
 - If **yes** → use search params. Benefits: shareable URL, back button works, no state to synchronize.
 - If **no** (e.g. a confirmation popup triggered by an in-page action) → `useState` is fine.
 
 ```tsx
 // BAD — selected entity lost on navigation, not shareable
-const [selectedContactId, setSelectedContactId] = useState<number | null>(null)
+const [selectedContactId, setSelectedContactId] = useState<number | null>(null);
 
 // GOOD — selected entity in URL, shareable and navigable
 // (adapt to the project's router: TanStack Router, React Router, Next.js…)
-const { contactId } = useSearch() // or useSearchParams(), useRouter()
+const { contactId } = useSearch(); // or useSearchParams(), useRouter()
 ```
 
 Check the project's CLAUDE.md for the exact search params API to use.
@@ -372,11 +376,11 @@ Same rule: if the modal is shareable or navigable → search params. If it's a t
 
 ```tsx
 // BAD — modal state lost on navigation, not shareable
-const [showModal, setShowModal] = useState(false)
+const [showModal, setShowModal] = useState(false);
 
 // GOOD — modal state in URL, shareable and navigable
-const { modal } = useSearch()
-const isOpen = modal === 'create-user'
+const { modal } = useSearch();
+const isOpen = modal === "create-user";
 ```
 
 Check the project's CLAUDE.md for the exact search params API to use.

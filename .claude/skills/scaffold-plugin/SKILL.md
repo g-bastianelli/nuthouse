@@ -39,7 +39,7 @@ plugin" / "I want to create a plugin called X".
 2. **Marketplace JSON parses.** Read `.claude-plugin/marketplace.json`
    and `JSON.parse` it. If it fails, abort with the parse error — never
    try to "fix" a corrupted manifest from this skill.
-3. **Bun + biome reachable.** Run `bunx biome --version` (Bash). If it
+3. **Bun + OXC tools reachable.** Run `bunx oxlint --version` and `bunx oxfmt --version` (Bash). If either
    fails, warn but don't abort (post-generation lint check will skip).
 
 ## Step 1 — Interview (use AskUserQuestion)
@@ -49,12 +49,13 @@ Keep option labels neutral and technical (UI clickability).
 
 ### Q1 — Plugin name
 
-Question (voice): *"comment va s'appeler ma nouvelle créature ?"*
+Question (voice): _"comment va s'appeler ma nouvelle créature ?"_
 
 This is a free-text question (use AskUserQuestion with a single open-ended
 phrasing — or if the model already has a name proposal, jump to validation).
 
 **Validation rules** (apply mentally, panic-correct if violated):
+
 - Must be **kebab-case**, lowercase, alphanumeric + hyphens only.
 - Must name a **persona first**: a person, creature, role, mythic figure,
   cultist, monster, or other being that can speak in character. Family
@@ -72,14 +73,15 @@ phrasing — or if the model already has a name proposal, jump to validation).
 
 ### Q2 — One-line description
 
-Free-text. Voice: *"décris-moi cette créature en une phrase. qu'est-ce
-qu'elle fait dans MON marketplace ?"*
+Free-text. Voice: _"décris-moi cette créature en une phrase. qu'est-ce
+qu'elle fait dans MON marketplace ?"_
 
 Keep it under ~140 characters. English (marketplace consistency).
 
 ### Q3 — Target runtimes
 
 AskUserQuestion, single-select, options:
+
 - `claudecode` — Claude Code only
 - `codex` — Codex CLI only
 - `both` — Cross-runtime (creates root Codex files plus `claudecode/`, see `react-monkey/`)
@@ -87,6 +89,7 @@ AskUserQuestion, single-select, options:
 ### Q4 — Hooks
 
 AskUserQuestion, multiSelect, options:
+
 - `SessionStart`
 - `UserPromptSubmit`
 - `none` (= "no hooks")
@@ -97,20 +100,23 @@ hooks/ + data/ scaffolding entirely.
 ### Q5 — Persona tagline + emoji
 
 Free-text combo (or two separate AskUserQuestion entries):
+
 - **Tagline**: short subtitle of the voice (e.g. `devoted simp /
-  boss-worship`, `competent creature, neutral-fun, light chaos`).
-- **Emoji**: one character. Reminders to enforce: *one* emoji, sparingly,
+boss-worship`, `competent creature, neutral-fun, light chaos`).
+- **Emoji**: one character. Reminders to enforce: _one_ emoji, sparingly,
   never piled. Suggest from the brainrot palette but accept user choice.
 
 ### Q6 — Marketplace category
 
 AskUserQuestion, single-select:
+
 - `productivity` (Recommended)
 - `fun`
 
 ### Q7 — Plugin produces project-level artifacts?
 
-AskUserQuestion, single-select. Voice: *"la créature laisse-t-elle des marqueurs dans le repo de l'utilisateur ?"*
+AskUserQuestion, single-select. Voice: _"la créature laisse-t-elle des marqueurs dans le repo de l'utilisateur ?"_
+
 - `no` (Recommended for first plugin) — skills only report, no files written to user's repo
 - `yes` — at least one skill writes Markdown/JSON files to `<PROJECT_ROOT>/docs/<plugin>/<artifact-type>/`
 
@@ -118,7 +124,8 @@ AskUserQuestion, single-select. Voice: *"la créature laisse-t-elle des marqueur
 
 ### Q8 — Plugin needs cross-cutting contracts?
 
-AskUserQuestion, single-select. Voice: *"des règles transverses entre organismes — une voix décorative partagée, un fallback de provider, un format de spec ?"*
+AskUserQuestion, single-select. Voice: _"des règles transverses entre organismes — une voix décorative partagée, un fallback de provider, un format de spec ?"_
+
 - `no` (Recommended for first plugin)
 - `yes` — at least one shared contract file under `<plugin>/shared/` will be referenced by multiple agents/skills
 
@@ -129,6 +136,7 @@ AskUserQuestion, single-select. Voice: *"des règles transverses entre organisme
 Generate the following files. **Use the Write tool** for each.
 
 **Template sources:** Before generating files, read the matching templates and use them as structure source of truth:
+
 - `persona.md` → `_templates/persona/persona.md`
 - `plugin.json` → `_templates/plugin/.claude-plugin/plugin.json`
 - Codex `plugin.json` → `_templates/plugin/.codex-plugin/plugin.json`
@@ -136,6 +144,7 @@ Generate the following files. **Use the Write tool** for each.
 - `BANNER_PROMPT.md` → `_templates/plugin/BANNER_PROMPT.md`
 
 Variables to substitute in templates:
+
 - `{{plugin}}` → plugin directory name (kebab-case brainrot name)
 - `{{description}}` → one-line description
 - `{{author}}` → git user (`git config user.name`)
@@ -150,6 +159,7 @@ present verbatim from the template — do not omit or paraphrase them.
 ### 2a. Folder skeleton (Bash via `mkdir -p`)
 
 For `claudecode` / `both`:
+
 ```
 <plugin>/
 <plugin>/.claude-plugin/         # plugin.json lives here, NOT under claudecode/
@@ -173,6 +183,7 @@ For `claudecode` / `both`:
 > `../../persona.md`.
 
 For `codex` / `both`:
+
 ```
 <plugin>/.codex-plugin/         # plugin.json lives at plugin root
 <plugin>/skills/                # canonical skills shared by runtimes
@@ -193,6 +204,7 @@ persona's world, functional props kept secondary, no readable text unless exact
 English text is explicitly requested, and final asset path `assets/banner.png`.
 
 Important banner semantics:
+
 - The scene comes from the persona's world first, not a generic dev room and
   not the task domain alone.
 - If the persona's relationship points at the user (devotee, servant,
@@ -257,8 +269,8 @@ side-effects, no joke commits, no "lol whoops" failure modes. Only the
 strings are fun.
 ```
 
-After writing, voice the user: *"persona.md posée. à toi de remplir les
-TODO — c'est la voix de la créature, je ne peux pas la deviner pour toi."*
+After writing, voice the user: _"persona.md posée. à toi de remplir les
+TODO — c'est la voix de la créature, je ne peux pas la deviner pour toi."_
 
 ### 2c. `<plugin>/.claude-plugin/plugin.json`
 
@@ -267,6 +279,7 @@ Plugin root = `<plugin>/`. The `skills` field MUST point to
 canonical root skill tree, shared by both runtimes where the plugin supports both.
 
 Minimal (no hooks):
+
 ```json
 {
   "name": "<NAME>",
@@ -337,9 +350,9 @@ wrote. Keep it short.>
 
 ## Skills
 
-| Skill | What |
-|---|---|
-| _none yet — run `scaffold-skill` to add one_ | |
+| Skill                                        | What |
+| -------------------------------------------- | ---- |
+| _none yet — run `scaffold-skill` to add one_ |      |
 
 ## Install
 
@@ -363,6 +376,7 @@ generated file — escape them in your Write call as needed.)
 Generate this from `_templates/plugin/BANNER_PROMPT.md`.
 
 Rules:
+
 - The prompt must make the plugin persona/being the main subject.
 - The target is `assets/banner.png`, 3:1-ish README banner.
 - Style matches existing nuthouse banners: hand-drawn webcomic mascot, roomy
@@ -444,6 +458,7 @@ Where `<Runtime>` is `Claude Code`, `Codex`, or `Claude Code + Codex`
 based on Q3.
 
 Also add the install snippet under the Claude Code install block:
+
 ```
 /plugin install <NAME>@nuthouse
 ```
@@ -471,7 +486,8 @@ scaffold-plugin report
 ```
 
 End with a one-line voice exit:
-> *…maintenant le banner. à toi, complice. je dois retourner au labo.*
+
+> _…maintenant le banner. à toi, complice. je dois retourner au labo._
 
 ## Hard rules
 
@@ -483,8 +499,8 @@ These are **non-negotiable** regardless of voice intensity:
    you somehow get to commit (you shouldn't).
 3. **Never add an npm/bun dependency** to a generated plugin. Stick to
    `node:fs`, `node:path`, `node:os`, `node:child_process`. If the user
-   says "I need axios", panic-correct: *"non non non, pas de dep. on
-   reste sur `node:` natif. justifie le besoin avant tout."*
+   says "I need axios", panic-correct: _"non non non, pas de dep. on
+   reste sur `node:` natif. justifie le besoin avant tout."_
 4. **Always ESM `.mjs`** for hooks. Reject `.js` (CJS) for any new
    plugin — saucy-status is the historical exception, not a precedent.
 5. **Always English** in README, plugin.json description, banner text
@@ -522,6 +538,7 @@ These are **non-negotiable** regardless of voice intensity:
 ## Voice cheat sheet
 
 Use the mad-scientist palette from `../persona.md`:
+
 - "EUREKA!", "j'AI TROUVÉ" — real wins only
 - "non non non" — convention violation panic
 - "tiens-moi le manifest", "passe-moi le scalpel"

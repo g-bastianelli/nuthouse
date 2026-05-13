@@ -8,16 +8,16 @@ It turns rough ideas into reviewed specs, audits specs against SDD expectations 
 
 ## Skills
 
-| Skill | Purpose |
-|---|---|
-| `acid-prophet:write-spec` | Guide project discovery, propose approaches, write a spec, audit it, and optionally hand off to Linear |
-| `acid-prophet:audit-spec` | Audit an existing spec for structure, ambiguity, missing evidence, and codebase contradictions |
-| `acid-prophet:check-drift` | Compare a branch diff against the linked spec or Linear project criteria |
+| Skill                      | Purpose                                                                                                |
+| -------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `acid-prophet:write-spec`  | Guide project discovery, propose approaches, write a spec, audit it, and optionally hand off to Linear |
+| `acid-prophet:audit-spec`  | Audit an existing spec for structure, ambiguity, missing evidence, and codebase contradictions         |
+| `acid-prophet:check-drift` | Compare a branch diff against the linked spec or Linear project criteria                               |
 
 ## Agent
 
-| Agent | Purpose |
-|---|---|
+| Agent          | Purpose                                                                                   |
+| -------------- | ----------------------------------------------------------------------------------------- |
 | `spec-auditor` | Read-only spec auditor that returns BLOCKER/WARNING/INFO findings and auto-fix candidates |
 
 ## Install

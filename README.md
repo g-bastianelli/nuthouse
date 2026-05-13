@@ -16,14 +16,14 @@
 
 ## Plugins
 
-| Plugin | Runtime | Purpose |
-|---|---|---|
-| [react-monkey](./react-monkey) | Claude Code + Codex | React implementation discipline with codebase exploration before edits |
+| Plugin                             | Runtime             | Purpose                                                                   |
+| ---------------------------------- | ------------------- | ------------------------------------------------------------------------- |
+| [react-monkey](./react-monkey)     | Claude Code + Codex | React implementation discipline with codebase exploration before edits    |
 | [linear-devotee](./linear-devotee) | Claude Code + Codex | Linear issue intake, planning, and gated project/milestone/issue creation |
-| [acid-prophet](./acid-prophet) | Claude Code + Codex | Spec writing, spec audit, and PR/spec drift checks |
-| [warden](./warden) | Claude Code + Codex | Shared persona-line dispatcher and global voice toggle |
-| [git-gremlin](./git-gremlin) | Claude Code + Codex | Commit and PR drafting with explicit confirmation gates |
-| [saucy-status](./saucy-status) | Claude Code | Statusline and prompt-time fun messages |
+| [acid-prophet](./acid-prophet)     | Claude Code + Codex | Spec writing, spec audit, and PR/spec drift checks                        |
+| [warden](./warden)                 | Claude Code + Codex | Shared persona-line dispatcher and global voice toggle                    |
+| [git-gremlin](./git-gremlin)       | Claude Code + Codex | Commit and PR drafting with explicit confirmation gates                   |
+| [saucy-status](./saucy-status)     | Claude Code         | Statusline and prompt-time fun messages                                   |
 
 ## Install
 
@@ -68,7 +68,8 @@ Skills and agents live at the plugin root. Do not create duplicate runtime copie
 bun install
 bun test
 bun run test:meta
-bunx biome check .
+bun run lint
+bun run fmt:check
 ```
 
 See [the root layout spec](./docs/acid-prophet/specs/2026-05-12-root-plugin-layout.md) for the current structure contract.

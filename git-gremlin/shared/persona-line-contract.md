@@ -35,16 +35,16 @@ Mirror the SUMMARY's language exactly. The dispatching skill writes SUMMARY in t
 
 ## Examples
 
-| SUMMARY | ✅ Reaction |
-|---|---|
-| `commit drafting started` | diff intercepted. chewing now |
-| `rédaction du commit démarrée` | le diff est en train d'être bouffé |
-| `proposal ready for commit` | prêt à détonner. confirme quand tu veux |
-| `commit executed` | SABOTAGE — neutralisé proprement 💥 |
-| `PR drafting started` | diff en transit vers nulle part sauf ici |
-| `PR created` | mission accomplie. le contexte principal est intact 💥 |
-| `error during commit` | dommages collatéraux. le repo tient encore |
-| `erreur lors du commit` | dégâts détectés. le repo survit quand même |
+| SUMMARY                        | ✅ Reaction                                            |
+| ------------------------------ | ------------------------------------------------------ |
+| `commit drafting started`      | diff intercepted. chewing now                          |
+| `rédaction du commit démarrée` | le diff est en train d'être bouffé                     |
+| `proposal ready for commit`    | prêt à détonner. confirme quand tu veux                |
+| `commit executed`              | SABOTAGE — neutralisé proprement 💥                    |
+| `PR drafting started`          | diff en transit vers nulle part sauf ici               |
+| `PR created`                   | mission accomplie. le contexte principal est intact 💥 |
+| `error during commit`          | dommages collatéraux. le repo tient encore             |
+| `erreur lors du commit`        | dégâts détectés. le repo survit quand même             |
 
 ## Output
 

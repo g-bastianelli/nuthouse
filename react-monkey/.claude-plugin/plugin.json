@@ -5,7 +5,5 @@
     "name": "g-bastianelli"
   },
   "skills": "./skills/",
-  "agents": [
-    "./agents/explorer.md"
-  ]
+  "agents": ["./agents/explorer.md"]
 }

@@ -63,6 +63,7 @@ Rigid runbook. Match the user's language; keep technical identifiers unchanged.
 7. Assign client refs and write the preview file:
    - Mint a stable `client_ref` (UUID v4) for the project, every drafted milestone, and every drafted issue. These refs are the only stable identifiers until Linear assigns real ids; they unlock idempotent recovery on partial failure.
    - Write `${CLAUDE_PLUGIN_ROOT}/data/preview-${CLAUDE_SESSION_ID}.md` containing the full editable preview:
+
      ```markdown
      # Cascade preview — <project name>
 
@@ -70,7 +71,8 @@ Rigid runbook. Match the user's language; keep technical identifiers unchanged.
 
      ## Milestones
 
-     ### Phase 1: <name>  <!-- client_ref: <uuid> -->
+     ### Phase 1: <name> <!-- client_ref: <uuid> -->
+
      - Scope: <one line>
      - Target date: <YYYY-MM-DD | none>
 
@@ -79,12 +81,15 @@ Rigid runbook. Match the user's language; keep technical identifiers unchanged.
      ## Issues
 
      ### <Phase 1: name>
+
      - <title>  <!-- client_ref: <uuid> -->
      - <title> [blocked-by: <client_ref>]  <!-- client_ref: <uuid> -->
 
      ### <Phase 2: name>
+
      - …
      ```
+
    - The HTML comments are load-bearing — they tie each preview entry to its `client_ref` so an edited file can be re-parsed without losing identity.
 
 8. Preview and approve:
@@ -111,10 +116,25 @@ Rigid runbook. Match the user's language; keep technical identifiers unchanged.
        "drafts": {
          "decomposition": "flat | phased",
          "milestones": [
-           { "client_ref": "<uuid>", "id": "<id or null>", "name": "<name>", "scope": "<one line>", "target_date": "<YYYY-MM-DD or null>", "url": "<url or null>" }
+           {
+             "client_ref": "<uuid>",
+             "id": "<id or null>",
+             "name": "<name>",
+             "scope": "<one line>",
+             "target_date": "<YYYY-MM-DD or null>",
+             "url": "<url or null>"
+           }
          ],
          "issues": [
-           { "client_ref": "<uuid>", "id": "<id or null>", "identifier": "<TEAM-N or null>", "title": "<title>", "milestone_client_ref": "<uuid>", "blocked_by_refs": ["<uuid>"], "url": "<url or null>" }
+           {
+             "client_ref": "<uuid>",
+             "id": "<id or null>",
+             "identifier": "<TEAM-N or null>",
+             "title": "<title>",
+             "milestone_client_ref": "<uuid>",
+             "blocked_by_refs": ["<uuid>"],
+             "url": "<url or null>"
+           }
          ]
        },
        "preview_file": "<abs path>",
