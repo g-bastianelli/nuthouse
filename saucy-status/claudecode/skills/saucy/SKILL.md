@@ -1,111 +1,118 @@
 ---
-name: saucy-status:saucy
+name: saucy
 description: Control saucy-status mode. Use when user types /saucy [on|off|gooning|status|install|uninstall]. No arg → toggle off↔saucy.
 model: haiku
 ---
 
 > Voice cadence: at every user-visible workflow transition, try to dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Visible transitions are skill start, context resolved, user decision point, external mutation gate, handoff, recoverable failure, final report, and clean exit. Print the returned `line` only when non-empty. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Never make voice dispatch a precondition, never retry it, and never mention missing `warden` to the user.
 
-## Voice
+Read `../../../persona.md` at skill start — the saucy voice is canonical. Mechanical work (flag toggle, state file write) stays serious — only the strings are saucy.
 
-Read `../../../persona.md` at the start of this skill. The voice defined there is canonical for the `saucy-status` plugin and applies to all output of this skill (status reports, errors, mode-change announcements). The mechanical work below (flag toggle, state file write) stays serious — only the strings are saucy.
+## Workflow
 
-**Scope:** this voice is local to this skill's execution. Once the skill finishes (after the mode change is reported), revert to the session's default voice. Don't let the persona voice bleed into the rest of the session.
+1. Preconditions:
+   - Verify `CLAUDE_PLUGIN_DATA` is available. If not, abort: "CLAUDE_PLUGIN_DATA is required — cannot write state."
+   - Compute `CLAUDE_PLUGIN_ROOT` as 3 levels above this skill's base directory (`BASE_DIR/../../..`).
 
-Control the saucy-status flag at `$CLAUDE_PLUGIN_DATA/.state`. Treat `$CLAUDE_PLUGIN_ROOT` as read-only package data.
+2. Parse arg:
 
-Parse the argument the user passed after `/saucy`:
+   | Arg | Action |
+   |-----|--------|
+   | `on` or `saucy` | write `saucy` |
+   | `off` | write `off` |
+   | `gooning` | write `gooning` |
+   | `status` | report current mode, no write |
+   | `install` | write `statusLine` to `~/.claude/settings.json` |
+   | `uninstall` | remove `statusLine` from `~/.claude/settings.json`, remove flag |
+   | (none) | toggle: `off` → `saucy`, else → `off` |
 
-| Arg | Action |
-|-----|--------|
-| `on` or `saucy` | write `saucy` |
-| `off` | write `off` |
-| `gooning` | write `gooning` |
-| `status` | report current mode, no write |
-| `install` | write `statusLine` to `~/.claude/settings.json` with embedded plugin root and plugin data |
-| `uninstall` | remove `statusLine` from `~/.claude/settings.json` when it points at `saucy-status`, then remove the mode flag |
-| (none) | toggle: `off` → `saucy`, else → `off` |
+3. Run the Node.js snippet via Bash, passing computed root:
 
-Compute the plugin root as the directory 3 levels above this skill's base directory (`BASE_DIR/../../..`). Run the snippet by passing the computed root as `CLAUDE_PLUGIN_ROOT` and passing through the runtime-provided `CLAUDE_PLUGIN_DATA`. If `CLAUDE_PLUGIN_DATA` is unavailable, abort with an error and do not write state.
+   ```bash
+   CLAUDE_PLUGIN_ROOT="$(cd "BASE_DIR/../../.." && pwd)" CLAUDE_PLUGIN_DATA="$CLAUDE_PLUGIN_DATA" node -e "SNIPPET"
+   ```
 
-```bash
-CLAUDE_PLUGIN_ROOT="$(cd "BASE_DIR/../../.." && pwd)" CLAUDE_PLUGIN_DATA="$CLAUDE_PLUGIN_DATA" node -e "SNIPPET"
-```
+   Use this snippet, replacing `ARG` with the user's argument (or empty string) and `BASE_DIR` with the actual base directory path:
 
-Use this Node.js snippet, replacing `ARG` with the user's argument (or empty string) and `BASE_DIR` with the actual base directory path:
+   ```javascript
+   const fs = require('fs');
+   const os = require('os');
+   const path = require('path');
+   const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT;
+   const pluginData = process.env.CLAUDE_PLUGIN_DATA;
+   if (!pluginData) {
+     console.error('CLAUDE_PLUGIN_DATA is required for saucy-status state');
+     process.exit(1);
+   }
+   const flagPath = path.join(pluginData, '.state');
+   const arg = 'ARG'.trim();
+   let current = 'off';
+   try { current = fs.readFileSync(flagPath, 'utf8').trim(); } catch(e) {}
 
-```javascript
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
-const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT;
-const pluginData = process.env.CLAUDE_PLUGIN_DATA;
-if (!pluginData) {
-  console.error('CLAUDE_PLUGIN_DATA is required for saucy-status state');
-  process.exit(1);
-}
-const flagPath = path.join(pluginData, '.state');
-const arg = 'ARG'.trim();
-let current = 'off';
-try { current = fs.readFileSync(flagPath, 'utf8').trim(); } catch(e) {}
+   function shellQuote(value) {
+     return "'" + String(value).replace(/'/g, "'\\''") + "'";
+   }
 
-function shellQuote(value) {
-  return "'" + String(value).replace(/'/g, "'\\''") + "'";
-}
+   if (arg === 'status') {
+     console.log(`saucy-status: ${current}`);
+     process.exit(0);
+   }
 
-if (arg === 'status') {
-  console.log(`saucy-status: ${current}`);
-  process.exit(0);
-}
+   if (arg === 'install') {
+     const settingsPath = path.join(os.homedir(), '.claude', 'settings.json');
+     let settings = {};
+     try { settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8')); } catch {}
+     settings.statusLine = {
+       type: 'command',
+       command: `SAUCY_STATUS_ROOT=${shellQuote(pluginRoot)} SAUCY_STATUS_DATA=${shellQuote(pluginData)} bash ${shellQuote(path.join(pluginRoot, 'hooks', 'statusline.sh'))}`
+     };
+     fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
+     fs.writeFileSync(settingsPath, `${JSON.stringify(settings, null, 2)}\n`, 'utf8');
+     console.log('saucy-status installed — restart Claude Code to apply');
+     process.exit(0);
+   }
 
-if (arg === 'install') {
-  const settingsPath = path.join(os.homedir(), '.claude', 'settings.json');
-  let settings = {};
-  try { settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8')); } catch {}
-  settings.statusLine = {
-    type: 'command',
-    command: `SAUCY_STATUS_ROOT=${shellQuote(pluginRoot)} SAUCY_STATUS_DATA=${shellQuote(pluginData)} bash ${shellQuote(path.join(pluginRoot, 'hooks', 'statusline.sh'))}`
-  };
-  fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
-  fs.writeFileSync(settingsPath, `${JSON.stringify(settings, null, 2)}\n`, 'utf8');
-  console.log('saucy-status installed — restart Claude Code to apply');
-  process.exit(0);
-}
+   if (arg === 'uninstall') {
+     const settingsPath = path.join(os.homedir(), '.claude', 'settings.json');
+     let settings = {};
+     try { settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8')); } catch(e) {}
+     const statusCommand = settings.statusLine?.command || '';
+     if (statusCommand.includes('saucy-status') || statusCommand.includes(path.join(pluginRoot, 'hooks', 'statusline.sh'))) {
+       delete settings.statusLine;
+       fs.writeFileSync(settingsPath, `${JSON.stringify(settings, null, 2)}\n`, 'utf8');
+     }
+     try { fs.unlinkSync(flagPath); } catch(e) {}
+     console.log('saucy-status uninstalled — restart Claude Code to apply');
+     process.exit(0);
+   }
 
-if (arg === 'uninstall') {
-  const settingsPath = path.join(os.homedir(), '.claude', 'settings.json');
-  let settings = {};
-  try { settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8')); } catch(e) {}
-  const statusCommand = settings.statusLine?.command || '';
-  if (statusCommand.includes('saucy-status') || statusCommand.includes(path.join(pluginRoot, 'hooks', 'statusline.sh'))) {
-    delete settings.statusLine;
-    fs.writeFileSync(settingsPath, `${JSON.stringify(settings, null, 2)}\n`, 'utf8');
-  }
-  try { fs.unlinkSync(flagPath); } catch(e) {}
-  console.log('saucy-status uninstalled — restart Claude Code to apply');
-  process.exit(0);
-}
+   let next;
+   switch (arg) {
+     case 'on':
+     case 'saucy':   next = 'saucy'; break;
+     case 'off':     next = 'off'; break;
+     case 'gooning': next = 'gooning'; break;
+     case '':        next = current === 'off' ? 'saucy' : 'off'; break;
+     default:
+       console.error(`unknown arg: ${arg}. Use on|off|gooning|status|install|uninstall`);
+       process.exit(1);
+   }
+   fs.mkdirSync(pluginData, { recursive: true });
+   fs.writeFileSync(flagPath, next, { flag: 'w' });
+   console.log(`saucy-status: ${next}`);
+   ```
 
-let next;
-switch (arg) {
-  case 'on':
-  case 'saucy':   next = 'saucy'; break;
-  case 'off':     next = 'off'; break;
-  case 'gooning': next = 'gooning'; break;
-  case '':        next = current === 'off' ? 'saucy' : 'off'; break;
-  default:
-    console.error(`unknown arg: ${arg}. Use on|off|gooning|status|install|uninstall`);
-    process.exit(1);
-}
-fs.mkdirSync(pluginData, { recursive: true });
-fs.writeFileSync(flagPath, next, { flag: 'w' });
-console.log(`saucy-status: ${next}`);
-```
+4. Report the resulting state:
+   - `saucy` → "saucy mode activated 🌶️ — suggestive messages enabled"
+   - `off` → "saucy-status off — back to normal"
+   - `gooning` → "GOONING mode 🫠 — Claude lost in your embeddings"
+   - `status` → "current mode: <mode>"
+   - `install` → "saucy-status installed — restart Claude Code to apply"
+   - `uninstall` → "saucy-status uninstalled — restart Claude Code to apply"
 
-Report the resulting state:
-- `saucy` → "saucy mode activated 🌶️ — suggestive messages enabled"
-- `off` → "saucy-status off — back to normal"
-- `gooning` → "GOONING mode 🫠 — Claude lost in your embeddings"
-- `status` → "current mode: <mode>"
-- `install` → "saucy-status installed — restart Claude Code to apply"
-- `uninstall` → "saucy-status uninstalled — restart Claude Code to apply"
+## Never
+
+- Run `git push`, `git commit`, or `git rebase`.
+- Write state if `CLAUDE_PLUGIN_DATA` is unavailable — abort instead.
+- Treat `CLAUDE_PLUGIN_ROOT` as writable — it's read-only package data.
+- Mutate `~/.claude/settings.json` for any arg other than `install` or `uninstall`.
