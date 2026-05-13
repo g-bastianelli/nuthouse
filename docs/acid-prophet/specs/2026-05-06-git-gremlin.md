@@ -12,7 +12,7 @@ A nuthouse plugin for delegating git commit and PR creation to subagents — kee
 
 ## Problem & Why
 
-Each meaningful git operation (well-crafted commit, described PR) requires reading the full diff — which floods the main context with raw tokens. Claude Code already has RTK to filter simple outputs, but no mechanism delegates the *diff reading + message writing* to an isolated subagent. Result: writing a good commit message or PR description is expensive in context, or you cut corners to save tokens.
+Each meaningful git operation (well-crafted commit, described PR) requires reading the full diff — which floods the main context with raw tokens. Claude Code already has RTK to filter simple outputs, but no mechanism delegates the _diff reading + message writing_ to an isolated subagent. Result: writing a good commit message or PR description is expensive in context, or you cut corners to save tokens.
 
 This plugin delegates these operations to subagents: the diff stays in their context, the main context only receives a short proposal to validate and the final URL.
 
@@ -57,6 +57,7 @@ Two agents: `commit-drafter`, `pr-drafter`. Allowed tools: `Bash` only (git + gh
 ## Components / Data flow
 
 **`git-gremlin:commit`** (SKILL.md)
+
 1. Verify staged files exist (`git diff --staged --name-only`). Error if empty.
 2. Dispatch `commit-drafter` → receives `{ message: string, files: string[] }`.
 3. Display proposal to user, wait for confirmation.
@@ -64,6 +65,7 @@ Two agents: `commit-drafter`, `pr-drafter`. Allowed tools: `Bash` only (git + gh
 5. Return: `Committed <hash> — <message>`.
 
 **`git-gremlin:pr`** (SKILL.md)
+
 1. Verify `gh` is available (`gh auth status`). Error if not authenticated.
 2. Infer base branch: `gh repo view --json defaultBranchRef` or fallback `main`.
 3. Dispatch `pr-drafter` → receives `{ title: string, body: string, base: string }`.
@@ -72,21 +74,23 @@ Two agents: `commit-drafter`, `pr-drafter`. Allowed tools: `Bash` only (git + gh
 6. Return: `PR created → <url>`.
 
 **`commit-drafter`** (agent, Bash only)
+
 - Input: raw staged diff. Output: conventional commit message + file list.
 
 **`pr-drafter`** (agent, Bash only)
+
 - Input: log + diff vs base. Output: title ≤ 72 chars + structured markdown body.
 
 ## Error handling
 
-| Situation | Behaviour |
-|---|---|
-| No staged files | `git-gremlin:commit` exits with clear message before dispatch |
-| `gh` absent or not authenticated | `git-gremlin:pr` exits with `gh auth login` instruction |
-| Empty diff vs base branch | `git-gremlin:pr` exits: "nothing to PR — no commits ahead of `<base>`" |
-| User rejects proposal | Skill offers to regenerate or cancel — no silent commit/PR |
+| Situation                            | Behaviour                                                                       |
+| ------------------------------------ | ------------------------------------------------------------------------------- |
+| No staged files                      | `git-gremlin:commit` exits with clear message before dispatch                   |
+| `gh` absent or not authenticated     | `git-gremlin:pr` exits with `gh auth login` instruction                         |
+| Empty diff vs base branch            | `git-gremlin:pr` exits: "nothing to PR — no commits ahead of `<base>`"          |
+| User rejects proposal                | Skill offers to regenerate or cancel — no silent commit/PR                      |
 | `git commit` fails (pre-commit hook) | `commit-drafter` surfaces stderr verbatim; skill displays error, does not retry |
-| `gh pr create` fails | `pr-drafter` surfaces stderr verbatim; skill displays error, does not retry |
+| `gh pr create` fails                 | `pr-drafter` surfaces stderr verbatim; skill displays error, does not retry     |
 
 Warden dispatches at visible transitions — left to scaffold.
 

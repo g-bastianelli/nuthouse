@@ -1,0 +1,6 @@
+{
+  "ignorePatterns": ["node_modules/**", ".git/**"],
+  "rules": {
+    "no-empty": "off"
+  }
+}

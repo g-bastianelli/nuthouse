@@ -16,15 +16,15 @@ Read `../../../persona.md` at skill start — the saucy voice is canonical. Mech
 
 2. Parse arg:
 
-   | Arg | Action |
-   |-----|--------|
-   | `on` or `saucy` | write `saucy` |
-   | `off` | write `off` |
-   | `gooning` | write `gooning` |
-   | `status` | report current mode, no write |
-   | `install` | write `statusLine` to `~/.claude/settings.json` |
-   | `uninstall` | remove `statusLine` from `~/.claude/settings.json`, remove flag |
-   | (none) | toggle: `off` → `saucy`, else → `off` |
+   | Arg             | Action                                                          |
+   | --------------- | --------------------------------------------------------------- |
+   | `on` or `saucy` | write `saucy`                                                   |
+   | `off`           | write `off`                                                     |
+   | `gooning`       | write `gooning`                                                 |
+   | `status`        | report current mode, no write                                   |
+   | `install`       | write `statusLine` to `~/.claude/settings.json`                 |
+   | `uninstall`     | remove `statusLine` from `~/.claude/settings.json`, remove flag |
+   | (none)          | toggle: `off` → `saucy`, else → `off`                           |
 
 3. Run the Node.js snippet via Bash, passing computed root:
 
@@ -35,70 +35,89 @@ Read `../../../persona.md` at skill start — the saucy voice is canonical. Mech
    Use this snippet, replacing `ARG` with the user's argument (or empty string) and `BASE_DIR` with the actual base directory path:
 
    ```javascript
-   const fs = require('fs');
-   const os = require('os');
-   const path = require('path');
+   const fs = require("fs");
+   const os = require("os");
+   const path = require("path");
    const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT;
    const pluginData = process.env.CLAUDE_PLUGIN_DATA;
    if (!pluginData) {
-     console.error('CLAUDE_PLUGIN_DATA is required for saucy-status state');
+     console.error("CLAUDE_PLUGIN_DATA is required for saucy-status state");
      process.exit(1);
    }
-   const flagPath = path.join(pluginData, '.state');
-   const arg = 'ARG'.trim();
-   let current = 'off';
-   try { current = fs.readFileSync(flagPath, 'utf8').trim(); } catch(e) {}
+   const flagPath = path.join(pluginData, ".state");
+   const arg = "ARG".trim();
+   let current = "off";
+   try {
+     current = fs.readFileSync(flagPath, "utf8").trim();
+   } catch (e) {}
 
    function shellQuote(value) {
      return "'" + String(value).replace(/'/g, "'\\''") + "'";
    }
 
-   if (arg === 'status') {
+   if (arg === "status") {
      console.log(`saucy-status: ${current}`);
      process.exit(0);
    }
 
-   if (arg === 'install') {
-     const settingsPath = path.join(os.homedir(), '.claude', 'settings.json');
+   if (arg === "install") {
+     const settingsPath = path.join(os.homedir(), ".claude", "settings.json");
      let settings = {};
-     try { settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8')); } catch {}
+     try {
+       settings = JSON.parse(fs.readFileSync(settingsPath, "utf8"));
+     } catch {}
      settings.statusLine = {
-       type: 'command',
-       command: `SAUCY_STATUS_ROOT=${shellQuote(pluginRoot)} SAUCY_STATUS_DATA=${shellQuote(pluginData)} bash ${shellQuote(path.join(pluginRoot, 'hooks', 'statusline.sh'))}`
+       type: "command",
+       command: `SAUCY_STATUS_ROOT=${shellQuote(pluginRoot)} SAUCY_STATUS_DATA=${shellQuote(pluginData)} bash ${shellQuote(path.join(pluginRoot, "hooks", "statusline.sh"))}`,
      };
      fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
-     fs.writeFileSync(settingsPath, `${JSON.stringify(settings, null, 2)}\n`, 'utf8');
-     console.log('saucy-status installed — restart Claude Code to apply');
+     fs.writeFileSync(settingsPath, `${JSON.stringify(settings, null, 2)}\n`, "utf8");
+     console.log("saucy-status installed — restart Claude Code to apply");
      process.exit(0);
    }
 
-   if (arg === 'uninstall') {
-     const settingsPath = path.join(os.homedir(), '.claude', 'settings.json');
+   if (arg === "uninstall") {
+     const settingsPath = path.join(os.homedir(), ".claude", "settings.json");
      let settings = {};
-     try { settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8')); } catch(e) {}
-     const statusCommand = settings.statusLine?.command || '';
-     if (statusCommand.includes('saucy-status') || statusCommand.includes(path.join(pluginRoot, 'hooks', 'statusline.sh'))) {
+     try {
+       settings = JSON.parse(fs.readFileSync(settingsPath, "utf8"));
+     } catch (e) {}
+     const statusCommand = settings.statusLine?.command || "";
+     if (
+       statusCommand.includes("saucy-status") ||
+       statusCommand.includes(path.join(pluginRoot, "hooks", "statusline.sh"))
+     ) {
        delete settings.statusLine;
-       fs.writeFileSync(settingsPath, `${JSON.stringify(settings, null, 2)}\n`, 'utf8');
+       fs.writeFileSync(settingsPath, `${JSON.stringify(settings, null, 2)}\n`, "utf8");
      }
-     try { fs.unlinkSync(flagPath); } catch(e) {}
-     console.log('saucy-status uninstalled — restart Claude Code to apply');
+     try {
+       fs.unlinkSync(flagPath);
+     } catch (e) {}
+     console.log("saucy-status uninstalled — restart Claude Code to apply");
      process.exit(0);
    }
 
    let next;
    switch (arg) {
-     case 'on':
-     case 'saucy':   next = 'saucy'; break;
-     case 'off':     next = 'off'; break;
-     case 'gooning': next = 'gooning'; break;
-     case '':        next = current === 'off' ? 'saucy' : 'off'; break;
+     case "on":
+     case "saucy":
+       next = "saucy";
+       break;
+     case "off":
+       next = "off";
+       break;
+     case "gooning":
+       next = "gooning";
+       break;
+     case "":
+       next = current === "off" ? "saucy" : "off";
+       break;
      default:
        console.error(`unknown arg: ${arg}. Use on|off|gooning|status|install|uninstall`);
        process.exit(1);
    }
    fs.mkdirSync(pluginData, { recursive: true });
-   fs.writeFileSync(flagPath, next, { flag: 'w' });
+   fs.writeFileSync(flagPath, next, { flag: "w" });
    console.log(`saucy-status: ${next}`);
    ```
 

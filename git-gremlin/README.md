@@ -8,17 +8,17 @@ It recognizes commit or PR intent, drafts the boring text from the current git s
 
 ## Skills
 
-| Skill | Purpose |
-|---|---|
+| Skill                | Purpose                                                                        |
+| -------------------- | ------------------------------------------------------------------------------ |
 | `git-gremlin:commit` | Draft and optionally run a conventional commit from staged or approved changes |
-| `git-gremlin:pr` | Draft and optionally create a GitHub pull request from branch history and diff |
+| `git-gremlin:pr`     | Draft and optionally create a GitHub pull request from branch history and diff |
 
 ## Agents
 
-| Agent | Purpose |
-|---|---|
+| Agent            | Purpose                                                                |
+| ---------------- | ---------------------------------------------------------------------- |
 | `commit-drafter` | Read staged diff and produce a commit proposal or approved commit hash |
-| `pr-drafter` | Read branch log/diff and produce a PR proposal or approved PR URL |
+| `pr-drafter`     | Read branch log/diff and produce a PR proposal or approved PR URL      |
 
 ## Install
 

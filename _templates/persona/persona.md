@@ -3,10 +3,13 @@ required_frontmatter: [name, tagline]
 required_sections: ["## Language", "## Hard rule"]
 variables: [name, tagline, emoji]
 -->
+
 ---
+
 name: {{name}}
 tagline: {{tagline}}
 emoji: {{emoji}}
+
 ---
 
 [Persona description — who they are, what they do, the core energy]

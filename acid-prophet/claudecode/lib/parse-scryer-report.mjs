@@ -10,9 +10,9 @@ const SUMMARY_RE = /(\d+)\s+blocker\s*·\s*(\d+)\s+warning\s*·\s*(\d+)\s+info/i
 const BULLET_RE = /^-\s+(.+)$/;
 
 export function parseScryerReport(raw) {
-  if (typeof raw !== 'string' || raw.length === 0) return null;
+  if (typeof raw !== "string" || raw.length === 0) return null;
 
-  const lines = raw.split('\n');
+  const lines = raw.split("\n");
   const buckets = {
     blockers: [],
     warnings: [],
@@ -25,22 +25,22 @@ export function parseScryerReport(raw) {
 
   for (const line of lines) {
     if (SECTION_HEADERS.blockers.test(line)) {
-      currentBucket = 'blockers';
+      currentBucket = "blockers";
       inSummary = false;
       continue;
     }
     if (SECTION_HEADERS.warnings.test(line)) {
-      currentBucket = 'warnings';
+      currentBucket = "warnings";
       inSummary = false;
       continue;
     }
     if (SECTION_HEADERS.infos.test(line)) {
-      currentBucket = 'infos';
+      currentBucket = "infos";
       inSummary = false;
       continue;
     }
     if (SECTION_HEADERS.autoFixes.test(line)) {
-      currentBucket = 'autoFixes';
+      currentBucket = "autoFixes";
       inSummary = false;
       continue;
     }
@@ -67,8 +67,8 @@ export function parseScryerReport(raw) {
       const bulletMatch = line.match(BULLET_RE);
       if (!bulletMatch) continue;
       const text = bulletMatch[1].trim();
-      const isFindingBucket = currentBucket !== 'autoFixes';
-      if (isFindingBucket && !text.startsWith('[')) continue;
+      const isFindingBucket = currentBucket !== "autoFixes";
+      if (isFindingBucket && !text.startsWith("[")) continue;
       buckets[currentBucket].push(text);
     }
   }

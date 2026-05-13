@@ -1,23 +1,29 @@
-import { execSync } from 'node:child_process';
-import fs from 'node:fs';
-import path from 'node:path';
+import { execSync } from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
 
 // Keys whose freshness depends on git HEAD sha — tracked separately in _meta._shas
 // so a later merge (e.g. write-spec writing handoff_spec) does not clobber the sha
 // that was recorded when these keys were first written (by greet / react-monkey:implement).
-const SHA_TRACKED_KEYS = new Set(['relevant_files', 'react-monkey.explorer_report']);
+const SHA_TRACKED_KEYS = new Set(["relevant_files", "react-monkey.explorer_report"]);
 
 export function storePath(sessionId, projectRoot) {
   // path.basename strips any accidental path separators in the session id.
-  return path.join(projectRoot, '.claude', 'nuthouse', 'sessions', `${path.basename(sessionId)}.json`);
+  return path.join(
+    projectRoot,
+    ".claude",
+    "nuthouse",
+    "sessions",
+    `${path.basename(sessionId)}.json`,
+  );
 }
 
 function getHeadSha(projectRoot) {
   try {
-    return execSync('git rev-parse HEAD', {
+    return execSync("git rev-parse HEAD", {
       cwd: projectRoot,
-      encoding: 'utf8',
-      stdio: ['pipe', 'pipe', 'pipe'],
+      encoding: "utf8",
+      stdio: ["pipe", "pipe", "pipe"],
     }).trim();
   } catch {
     return null;
@@ -32,7 +38,7 @@ function atomicWriteJson(filePath, value) {
   ensureParent(filePath);
   const tmp = `${filePath}.${process.pid}.tmp`;
   try {
-    fs.writeFileSync(tmp, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+    fs.writeFileSync(tmp, `${JSON.stringify(value, null, 2)}\n`, "utf8");
     fs.renameSync(tmp, filePath);
   } catch (err) {
     try {
@@ -47,9 +53,9 @@ function deepMerge(target, source) {
   for (const [k, v] of Object.entries(source)) {
     if (
       v !== null &&
-      typeof v === 'object' &&
+      typeof v === "object" &&
       !Array.isArray(v) &&
-      typeof out[k] === 'object' &&
+      typeof out[k] === "object" &&
       out[k] !== null
     ) {
       out[k] = deepMerge(out[k], v);
@@ -61,13 +67,13 @@ function deepMerge(target, source) {
 }
 
 // Collect dotted key paths from a patch that appear in the given tracked-keys set.
-function shaTrackedInPatch(patch, trackedKeys, prefix = '') {
+function shaTrackedInPatch(patch, trackedKeys, prefix = "") {
   const found = [];
   for (const [k, v] of Object.entries(patch)) {
-    if (k === '_meta') continue;
+    if (k === "_meta") continue;
     const full = prefix ? `${prefix}.${k}` : k;
     if (trackedKeys.has(full)) found.push(full);
-    if (v !== null && typeof v === 'object' && !Array.isArray(v)) {
+    if (v !== null && typeof v === "object" && !Array.isArray(v)) {
       found.push(...shaTrackedInPatch(v, trackedKeys, full));
     }
   }
@@ -81,9 +87,9 @@ function shaTrackedInPatch(patch, trackedKeys, prefix = '') {
 export function read(sessionId, projectRoot) {
   if (!sessionId) return null;
   try {
-    return JSON.parse(fs.readFileSync(storePath(sessionId, projectRoot), 'utf8'));
+    return JSON.parse(fs.readFileSync(storePath(sessionId, projectRoot), "utf8"));
   } catch (err) {
-    if (err?.code === 'ENOENT' || err instanceof SyntaxError) return null;
+    if (err?.code === "ENOENT" || err instanceof SyntaxError) return null;
     throw err;
   }
 }
@@ -106,7 +112,7 @@ export function write(sessionId, projectRoot, data) {
     _meta: {
       ...existingMeta,
       session_id: sessionId,
-      git_sha: sha ?? '',
+      git_sha: sha ?? "",
       written_at: new Date().toISOString(),
     },
   };
@@ -141,13 +147,13 @@ export function merge(sessionId, projectRoot, patch, options = {}) {
   const prevShas = existing._meta?._shas ?? {};
   const newShas = { ...prevShas };
   for (const k of shaTrackedInPatch(patchData, trackedKeys)) {
-    newShas[k] = sha ?? '';
+    newShas[k] = sha ?? "";
   }
 
   merged._meta = {
     ...existing._meta,
     session_id: sessionId,
-    git_sha: sha ?? '',
+    git_sha: sha ?? "",
     written_at: now,
     _shas: newShas,
   };
@@ -178,26 +184,26 @@ export function isStale(session, key, namespace, projectRoot) {
 
   if (!namespace) {
     switch (key) {
-      case 'spec_path':
+      case "spec_path":
         return fileGone(session.spec_path);
-      case 'relevant_files':
-        return shaChanged('relevant_files');
+      case "relevant_files":
+        return shaChanged("relevant_files");
       default:
         return false;
     }
   }
 
   switch (`${namespace}.${key}`) {
-    case 'linear-devotee.issue':
+    case "linear-devotee.issue":
       return true;
-    case 'linear-devotee.plan_path':
-      return fileGone(session['linear-devotee']?.plan_path);
-    case 'acid-prophet.handoff_spec': {
-      const storedPath = session['acid-prophet']?._handoff_spec_path;
+    case "linear-devotee.plan_path":
+      return fileGone(session["linear-devotee"]?.plan_path);
+    case "acid-prophet.handoff_spec": {
+      const storedPath = session["acid-prophet"]?._handoff_spec_path;
       return storedPath !== session.spec_path;
     }
-    case 'react-monkey.explorer_report':
-      return shaChanged('react-monkey.explorer_report');
+    case "react-monkey.explorer_report":
+      return shaChanged("react-monkey.explorer_report");
     default:
       return false;
   }

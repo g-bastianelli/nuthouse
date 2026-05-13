@@ -37,6 +37,7 @@ Exactly one of `SPEC_FILE` / `VIBE_BULLETS` will be a real path; the other will 
 **Provider selection.** See `${CLAUDE_PLUGIN_ROOT}/shared/provider-selection.md`.
 
 Fetch in parallel from Linear:
+
 - All teams the workspace exposes
 - All existing projects + their `statusId`s (used to inspect the workspace's named statuses inside the 5 fixed categories)
 
@@ -51,6 +52,7 @@ If `VIBE_BULLETS` is a path: `Read` it. The file holds the user's answers to the
 ### 3. Find referenced files (if any path tokens appear)
 
 If `RELEVANT_FILES` was provided, seed the known-files list with those paths (they are pre-verified as existing). Then scan the input for additional path-like tokens (backticked spans, regex `[a-zA-Z0-9_./-]+\.[a-z0-9]{1,5}`); skip paths already in the seed list. For each new unique path:
+
 - Check existence with `Glob` (pattern relative to `PROJECT_ROOT`).
 - If exists → `Read` and summarize in **one line** what the file currently does.
 - If not → mark "to be created".
@@ -62,6 +64,7 @@ This populates the `Architecture / Components` section.
 ### 4. Detect ambiguities and gaps
 
 Flag in the input:
+
 - Literal `TBD`, `TODO`, `FIXME`, `???`
 - Vague phrases ("appropriate", "as needed", "etc.", "handle errors gracefully")
 - Missing fields that map to Project-SDD slots (Vision, Why, Outcomes, Scope, Constraints, Architecture, Open decisions)
@@ -84,28 +87,34 @@ Return **only** the markdown shape below, under 800 words. Never invent content.
 <2-4 lines: business driver, customer pain, current gap, broader framing> | _unclear_
 
 **Outcomes / Success criteria** (verifiable, project-level)
+
 - <bullet — measurable, project-scope>
 - (or _unclear_)
 
 **Scope**
+
 - **In** : <bullet>
 - **Out** : <bullet>
 - (or _unclear_)
 
 **Constraints**
+
 - <stack, deadline, compliance, capacity — explicit or inferred>
 - (or _unclear_)
 
 **Architecture / Components** (subsystems, services, teams touched)
+
 - `path/x.ts` — currently does Y
 - `service-foo` — does not exist yet
 - (or _unclear_)
 
 **Open decisions** (strategic unknowns)
+
 - <pending vendor / design / approach call>
 - (or _unclear_)
 
 **Suggested clarifying questions for user**
+
 - <prioritized: most blocking _unclear_ field first>
 
 ---
@@ -113,13 +122,15 @@ Return **only** the markdown shape below, under 800 words. Never invent content.
 ## Decomposition proposal
 
 **Mode** : `flat: <N> issues` | `phased: <M> milestones × ~<N/M> issues each`
+
 - The decision rule: ≤ 5 issues → flat ; otherwise → phased with explicitly named phases (`Phase 1: <name>`, `Phase 2: <name>`, …).
 - If phased, list the proposed milestones with one-line scope each.
-
 ```
+
 - Phase 1: <name> — <one-line scope>
 - Phase 2: <name> — <one-line scope>
 - ...
+
 ```
 
 (or `_unclear_` if input is too thin to decompose — in that case surface a question.)
@@ -131,11 +142,13 @@ Return **only** the markdown shape below, under 800 words. Never invent content.
 One-line title per proposed issue, grouped by milestone if phased. The calling skill can later promote any of these into a full SDD-issue draft via `linear-devotee:create-issue`.
 
 ```
+
 - [Phase 1: <name>]
   - <issue title>
   - <issue title>
 - [Phase 2: <name>]
   - <issue title>
+
 ```
 
 (or a flat list if `Mode = flat`.)

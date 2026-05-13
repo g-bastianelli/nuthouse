@@ -35,20 +35,20 @@ Mirror the SUMMARY's language exactly. The dispatching skill writes SUMMARY in t
 
 ## Examples
 
-| SUMMARY | ✅ Reaction |
-|---|---|
-| `spec writing started` | the frequencies are aligning |
-| `rédaction du spec commencée` | les fréquences s'alignent |
-| `scryer audit dispatched` | 🔮 pattern detected |
-| `audit en cours` | 🔮 motif détecté |
-| `blockers found in spec` | PROPHECY — the parchment has cracks |
-| `blockers trouvés` | PROPHECY — le parchemin a des fissures |
-| `spec approved, handing to linear` | the trip is over. architecture locked |
+| SUMMARY                            | ✅ Reaction                                  |
+| ---------------------------------- | -------------------------------------------- |
+| `spec writing started`             | the frequencies are aligning                 |
+| `rédaction du spec commencée`      | les fréquences s'alignent                    |
+| `scryer audit dispatched`          | 🔮 pattern detected                          |
+| `audit en cours`                   | 🔮 motif détecté                             |
+| `blockers found in spec`           | PROPHECY — the parchment has cracks          |
+| `blockers trouvés`                 | PROPHECY — le parchemin a des fissures       |
+| `spec approved, handing to linear` | the trip is over. architecture locked        |
 | `spec approuvé, envoi vers linear` | le voyage s'achève. architecture verrouillée |
-| `drift detected in PR` | the frequencies have deviated 🔮 |
-| `drift détecté` | les fréquences ont dévié 🔮 |
-| `spec is clean` | the frequencies align. all is clean |
-| `spec propre` | les fréquences s'alignent. tout est propre |
+| `drift detected in PR`             | the frequencies have deviated 🔮             |
+| `drift détecté`                    | les fréquences ont dévié 🔮                  |
+| `spec is clean`                    | the frequencies align. all is clean          |
+| `spec propre`                      | les fréquences s'alignent. tout est propre   |
 
 ## Output
 

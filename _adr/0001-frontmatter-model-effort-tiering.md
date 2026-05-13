@@ -28,33 +28,33 @@ We tier every skill and agent by **cognitive load** and **invocation frequency**
 
 ### Skill matrix
 
-| Skill | `model` | `effort` | Rationale |
-| --- | --- | --- | --- |
-| `acid-prophet:write-spec` | `opus` | `max` | Top-leverage SDD creation. A bad spec poisons the downstream chain. |
-| `linear-devotee:create-project` | `opus` | `max` | Same — defines the structural backbone for milestones/issues. |
-| `linear-devotee:create-milestone` | `opus` | `max` | Constrained by project context but still structural. |
-| `linear-devotee:create-issue` | inherit | `high` | Cadré par milestone, plus fréquent — defaut suffit. |
-| `linear-devotee:plan` | inherit | `xhigh` | Plan is load-bearing for the implementation step. |
-| `acid-prophet:check-drift` / `audit-spec` | inherit | `high` | Structured comparison — defaut suffit. |
-| `react-monkey:implement` | inherit | `high` | Existing calibration, code-writing. |
-| `git-gremlin:commit` / `pr` | inherit | `high` | Orchestrators (the diff-reading subagent does the heavy work). |
-| `audit` (local) | inherit | `high` | Repo-wide scan + structured report. |
-| `linear-devotee:greet` | `haiku` | — | ID detection + dispatch, no decisions. |
-| `saucy-status:saucy` / `warden:voice` | `haiku` | — | State toggles. |
-| `scaffold-plugin` / `scaffold-skill` / `scaffold-agent` | `haiku` | — | Guided Q&A + template fill. |
+| Skill                                                   | `model` | `effort` | Rationale                                                           |
+| ------------------------------------------------------- | ------- | -------- | ------------------------------------------------------------------- |
+| `acid-prophet:write-spec`                               | `opus`  | `max`    | Top-leverage SDD creation. A bad spec poisons the downstream chain. |
+| `linear-devotee:create-project`                         | `opus`  | `max`    | Same — defines the structural backbone for milestones/issues.       |
+| `linear-devotee:create-milestone`                       | `opus`  | `max`    | Constrained by project context but still structural.                |
+| `linear-devotee:create-issue`                           | inherit | `high`   | Cadré par milestone, plus fréquent — defaut suffit.                 |
+| `linear-devotee:plan`                                   | inherit | `xhigh`  | Plan is load-bearing for the implementation step.                   |
+| `acid-prophet:check-drift` / `audit-spec`               | inherit | `high`   | Structured comparison — defaut suffit.                              |
+| `react-monkey:implement`                                | inherit | `high`   | Existing calibration, code-writing.                                 |
+| `git-gremlin:commit` / `pr`                             | inherit | `high`   | Orchestrators (the diff-reading subagent does the heavy work).      |
+| `audit` (local)                                         | inherit | `high`   | Repo-wide scan + structured report.                                 |
+| `linear-devotee:greet`                                  | `haiku` | —        | ID detection + dispatch, no decisions.                              |
+| `saucy-status:saucy` / `warden:voice`                   | `haiku` | —        | State toggles.                                                      |
+| `scaffold-plugin` / `scaffold-skill` / `scaffold-agent` | `haiku` | —        | Guided Q&A + template fill.                                         |
 
 ### Agent matrix
 
-| Agent | `model` | `effort` | Rationale |
-| --- | --- | --- | --- |
-| `project-drafter`, `milestone-drafter` | `opus` | `max` | Calling skill is opus+max — the drafter must match or the upgrade is wasted. |
-| `issue-drafter` | `sonnet` | `high` | Bounded by milestone context, but produces SDD prose. |
-| `spec-auditor`, `plan-auditor` | `sonnet` | `high` | Structured reasoning, no creative writing. |
-| `issue-context`, `plan-writer` | `haiku` | — | Pure fetch + reformat / mechanical write. |
+| Agent                                  | `model`  | `effort` | Rationale                                                                    |
+| -------------------------------------- | -------- | -------- | ---------------------------------------------------------------------------- |
+| `project-drafter`, `milestone-drafter` | `opus`   | `max`    | Calling skill is opus+max — the drafter must match or the upgrade is wasted. |
+| `issue-drafter`                        | `sonnet` | `high`   | Bounded by milestone context, but produces SDD prose.                        |
+| `spec-auditor`, `plan-auditor`         | `sonnet` | `high`   | Structured reasoning, no creative writing.                                   |
+| `issue-context`, `plan-writer`         | `haiku`  | —        | Pure fetch + reformat / mechanical write.                                    |
 
 ### Rules of thumb
 
-- **`opus + max`** — reserved for low-volume, high-leverage *creation* (writing SDDs, defining structural artifacts). Cost is real; scope it tight.
+- **`opus + max`** — reserved for low-volume, high-leverage _creation_ (writing SDDs, defining structural artifacts). Cost is real; scope it tight.
 - **`sonnet + high`** — for reasoning-heavy work that does not produce structural artifacts (audits, drafts cadrés, comparison passes).
 - **`inherit + high`** — for ordinary orchestration and code-writing skills. The session model decides; we just steer the reasoning depth.
 - **`haiku`** — for parsing, toggles, dispatch, fill-in-the-blank. **Do not pair with `effort:` other than `low` or `inherit`** — it's silently ignored.

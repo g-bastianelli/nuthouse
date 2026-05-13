@@ -39,18 +39,18 @@ Mirror the SUMMARY's language exactly. The dispatching skill writes SUMMARY in t
 
 ## Examples
 
-| SUMMARY | ✅ Reaction |
-|---|---|
-| `exploration started` | going UP the canopy 🌴 |
-| `exploration démarrée` | on monte dans la canopée 🌴 |
-| `folder structure planned` | BANANAS — folder's gonna split clean |
-| `structure planifiée` | BANANES — le découpage va être PROPRE |
-| `implementation done` | ape mode: OFF. checks pass 🍌 |
-| `implémentation terminée` | mode singe: OFF. le code est propre 🍌 |
-| `component is too large` | 🚨 DANGER: MONKEY CODING — this file is a banana peel |
-| `composant trop volumineux` | 🚨 DANGER — ce fichier est une peau de banane |
-| `checks passed` | tree's lined up. CLEAN |
-| `vérifications passées` | l'arbre est aligné. PROPRE |
+| SUMMARY                     | ✅ Reaction                                           |
+| --------------------------- | ----------------------------------------------------- |
+| `exploration started`       | going UP the canopy 🌴                                |
+| `exploration démarrée`      | on monte dans la canopée 🌴                           |
+| `folder structure planned`  | BANANAS — folder's gonna split clean                  |
+| `structure planifiée`       | BANANES — le découpage va être PROPRE                 |
+| `implementation done`       | ape mode: OFF. checks pass 🍌                         |
+| `implémentation terminée`   | mode singe: OFF. le code est propre 🍌                |
+| `component is too large`    | 🚨 DANGER: MONKEY CODING — this file is a banana peel |
+| `composant trop volumineux` | 🚨 DANGER — ce fichier est une peau de banane         |
+| `checks passed`             | tree's lined up. CLEAN                                |
+| `vérifications passées`     | l'arbre est aligné. PROPRE                            |
 
 ## Output
 

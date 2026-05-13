@@ -3,12 +3,12 @@ const FRONTMATTER_RE = /^---\n([\s\S]*?)\n---(\n[\s\S]*)?$/;
 export function applyFrontmatterPatch(content, patches) {
   const match = content.match(FRONTMATTER_RE);
   if (!match) {
-    throw new Error('frontmatter block not found or not terminated');
+    throw new Error("frontmatter block not found or not terminated");
   }
   if (patches.length === 0) return content;
 
-  const [, frontmatterBody, rest = ''] = match;
-  const lines = frontmatterBody.split('\n');
+  const [, frontmatterBody, rest = ""] = match;
+  const lines = frontmatterBody.split("\n");
   const patched = [...lines];
 
   for (const { key, value } of patches) {
@@ -21,5 +21,5 @@ export function applyFrontmatterPatch(content, patches) {
     }
   }
 
-  return `---\n${patched.join('\n')}\n---${rest}`;
+  return `---\n${patched.join("\n")}\n---${rest}`;
 }

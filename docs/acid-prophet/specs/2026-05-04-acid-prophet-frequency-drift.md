@@ -26,6 +26,7 @@ A new skill `acid-prophet:check-drift`, invoked manually in Claude Code on a fea
 ```
 
 Flow:
+
 1. Reads the spec file in the repo (resolves via `linear-project` frontmatter or branch name convention `feat/NUT-42-xxx`)
 2. Calls `linear-devotee:issue-context` to fetch the `Acceptance` criteria of SDD issues linked to the Linear project
 3. Compares against `git diff main...HEAD`
@@ -118,16 +119,16 @@ The project provides the "why", milestones the "what", issues the "how to verify
 
 ## Error handling
 
-| Situation | Behavior |
-|---|---|
-| No spec file + Linear project found | Retro-engineer from project (description + attachments) + milestones + SDD issues → virtual spec. Warning: "no spec file — reconstructed from Linear" |
-| No spec file + no Linear project | Stop: "no spec found — run `acid-prophet:write-spec` first" |
-| Spec file AND Linear — both exist | Merge: spec file as structure, issue Acceptance + attachments as drift reference |
-| Linear project with no SDD issues | Warning + drift check against description + attachments only |
-| `linear-devotee:issue-context` project not found | Stop: "Linear project NUT-xxx not found — check the ID in spec frontmatter" |
-| No Linear ID in frontmatter AND branch has no ID | Ask for Linear ID manually before continuing |
-| `gh pr comment` fails (no open PR) | Display report inline only, no fatal error |
-| Empty diff (`main...HEAD` identical) | Stop: "no diff detected — nothing to check" |
+| Situation                                        | Behavior                                                                                                                                              |
+| ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| No spec file + Linear project found              | Retro-engineer from project (description + attachments) + milestones + SDD issues → virtual spec. Warning: "no spec file — reconstructed from Linear" |
+| No spec file + no Linear project                 | Stop: "no spec found — run `acid-prophet:write-spec` first"                                                                                           |
+| Spec file AND Linear — both exist                | Merge: spec file as structure, issue Acceptance + attachments as drift reference                                                                      |
+| Linear project with no SDD issues                | Warning + drift check against description + attachments only                                                                                          |
+| `linear-devotee:issue-context` project not found | Stop: "Linear project NUT-xxx not found — check the ID in spec frontmatter"                                                                           |
+| No Linear ID in frontmatter AND branch has no ID | Ask for Linear ID manually before continuing                                                                                                          |
+| `gh pr comment` fails (no open PR)               | Display report inline only, no fatal error                                                                                                            |
+| Empty diff (`main...HEAD` identical)             | Stop: "no diff detected — nothing to check"                                                                                                           |
 
 Principle: **fail loud, never silent**. If context is ambiguous, the skill asks rather than continuing with assumptions.
 
@@ -156,6 +157,7 @@ Repo with spec file + Linear project + SDD issues + real diff → verify the dri
 Repo without spec file, well-formed Linear project (description + attachments + SDD issues) → verify the reconstructed virtual spec is coherent and drift check works against it.
 
 **Scenario 3 — fallbacks**
+
 - Branch without Linear ID + no frontmatter → verify skill asks for ID manually
 - Empty diff → verify clean stop
 - `gh pr comment` without open PR → verify report displays inline without crash

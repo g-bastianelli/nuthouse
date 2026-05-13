@@ -8,14 +8,14 @@ It reads local project instructions, explores the surrounding React codebase, pl
 
 ## Skill
 
-| Skill | Purpose |
-|---|---|
+| Skill                    | Purpose                                               |
+| ------------------------ | ----------------------------------------------------- |
 | `react-monkey:implement` | Create or refactor React components, hooks, and pages |
 
 ## Agent
 
-| Agent | Purpose |
-|---|---|
+| Agent      | Purpose                                                                            |
+| ---------- | ---------------------------------------------------------------------------------- |
 | `explorer` | Read-only codebase discovery for design system, data fetching, and nearby patterns |
 
 ## Rules

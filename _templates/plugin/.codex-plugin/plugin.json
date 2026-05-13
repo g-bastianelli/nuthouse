@@ -12,14 +12,9 @@
     "shortDescription": "{{description}}",
     "developerName": "{{author}}",
     "category": "{{category}}",
-    "capabilities": [
-      "Read",
-      "Write"
-    ],
+    "capabilities": ["Read", "Write"],
     "websiteURL": "https://github.com/g-bastianelli/nuthouse",
-    "defaultPrompt": [
-      "Use {{name}} for its primary workflow."
-    ],
+    "defaultPrompt": ["Use {{name}} for its primary workflow."],
     "logo": "./assets/banner.png"
   }
 }

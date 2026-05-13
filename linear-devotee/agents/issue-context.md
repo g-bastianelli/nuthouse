@@ -32,6 +32,7 @@ Use `ISSUE_ID` for all Linear lookups. Use `PROJECT_ROOT` to verify which refere
 **Provider selection.** See `${CLAUDE_PLUGIN_ROOT}/shared/provider-selection.md`.
 
 Fetch in parallel from Linear:
+
 - The issue details for `<ISSUE_ID>`
 - All comments for issue `<ISSUE_ID>`
 - Team workflow states when `NEEDS_STATUS_METADATA: true`, only enough to find the state with `type === 'started'`
@@ -45,11 +46,13 @@ The issue description can be in any format — STAR (`## Situation` / `## Task` 
 ### 3. Find referenced files
 
 Scan the description and comments for path-like tokens:
+
 - Backticked spans (priority): `` `path/to/file.ts` ``
 - Heuristic regex: `[a-zA-Z0-9_./-]+\.[a-z0-9]{1,5}` (file paths with extensions)
 - Bulleted lines starting with `- ` containing one of the above
 
 For each unique path:
+
 - Check existence with `Glob` (pattern = path relative to `PROJECT_ROOT`).
 - If exists → `Read` the file, summarize in **one line** what it currently does (function/class/component name, or a 5-word purpose).
 - If not → mark "to be created".
@@ -57,6 +60,7 @@ For each unique path:
 ### 4. Detect ambiguities
 
 Flag any of these in the issue text:
+
 - Literal `TBD`, `TODO`, `FIXME`, `???`
 - Vague phrases without specifics: "appropriate", "as needed", "etc.", "and so on", "handle errors gracefully"
 - Internal contradictions (e.g., Action says "remove the field" but Result says "users see the field")
@@ -80,29 +84,36 @@ Return **only** this markdown, under 500 words. Never invent content. If a field
 <2-3 lines: why, architecture touched, services involved> | _unclear_
 
 **Files referenced** (existing state)
+
 - `path/x.ts` — currently does Y
 - `path/y.ts` — does not exist yet
 - (or "none referenced — to be discovered")
 
 **Constraints**
+
 - <stack, legacy constraints, perf, compliance — explicit or inferred>
 - (or _unclear_)
 
 **Acceptance criteria** (verifiable)
+
 - <bullet 1>
 - (or _unclear_)
 
 **Non-goals** / out of scope
+
 - <explicitly excluded>
 - (or _unclear_>
 
 **Edge cases & ambiguities detected**
+
 - <vague points, contradictions, TBDs>
 
 **Suggested clarifying questions for user**
+
 - <prioritized: most blocking _unclear_ field first>
 
 RELEVANT_FILES:
+
 - /abs/PROJECT_ROOT/path/x.ts
 - (one absolute path per line; only files that exist in the repo; empty section if none)
 ```

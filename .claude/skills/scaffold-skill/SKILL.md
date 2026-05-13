@@ -30,32 +30,33 @@ called X".
    > `nuthouse`."
 2. **Discover existing plugins.** Glob `<repo>/*/persona.md` (Bash:
    `ls */persona.md 2>/dev/null`). The list of folders is the candidate
-   parent-plugin set. If empty, abort with: *"aucun plugin n'existe
-   encore. fais d'abord `scaffold-plugin`."*
+   parent-plugin set. If empty, abort with: _"aucun plugin n'existe
+   encore. fais d'abord `scaffold-plugin`."_
 
 ## Step 1 — Interview
 
 ### Q1 — Parent plugin
 
 AskUserQuestion, single-select. Options = the plugins discovered at
-Step 0. Voice: *"dans quelle créature on greffe ce nouvel organe ?"*
+Step 0. Voice: _"dans quelle créature on greffe ce nouvel organe ?"_
 
 ### Q2 — Skill name (no prefix)
 
-Free-text. Voice: *"comment s'appelle l'organe ?"*
+Free-text. Voice: _"comment s'appelle l'organe ?"_
 
 **Validation rules**:
+
 - **Action verb or gerund that describes the function**: `implement`, `plan`, `write-spec`, `audit-spec`, `check-drift`, `create-issue`. ✅
 - **No generic role names**: `coder`, `helper`, `utils`, `tool`. ❌
-- **No persona-coded names**: `trip`, `scry`, `prophecy`, `vision`, `revelation`. ❌ The skill name must be self-explanatory without knowing the plugin's persona vocabulary. Panic-correct: *"non non non, `trip` ne dit rien à quelqu'un qui voit le skill pour la première fois. quel **acte** ? `write-spec`, `audit`, `check-drift` — un verbe fonctionnel."*
+- **No persona-coded names**: `trip`, `scry`, `prophecy`, `vision`, `revelation`. ❌ The skill name must be self-explanatory without knowing the plugin's persona vocabulary. Panic-correct: _"non non non, `trip` ne dit rien à quelqu'un qui voit le skill pour la première fois. quel **acte** ? `write-spec`, `audit`, `check-drift` — un verbe fonctionnel."_
 - **No plugin prefix in the name itself.** The user types `write-spec`, not `acid-prophet:write-spec`. The runtime exposes the installed skill as `<plugin>:<skill>`.
 - Kebab-case, lowercase.
 - Must not collide with an existing skill in the parent plugin (check `ls <plugin>/skills/<skill>/`).
 
 ### Q3 — Description
 
-Free-text. Voice: *"décris cet organe en une phrase. quand est-ce qu'il
-s'active ?"*
+Free-text. Voice: _"décris cet organe en une phrase. quand est-ce qu'il
+s'active ?"_
 
 **Format reminder**: start with `Use when …` — that's how Claude routes
 to the skill.
@@ -65,6 +66,7 @@ to the skill.
 Detect the parent plugin's available runtimes (presence of `claudecode/`
 and/or root `.codex-plugin/` manifest). Then AskUserQuestion (single-select if parent
 is single-runtime, otherwise offer the intersection):
+
 - `claudecode` — Claude Code only
 - `codex` — Codex only (only if parent has `.codex-plugin/`)
 - `both` — Both (only if parent has both)
@@ -72,6 +74,7 @@ is single-runtime, otherwise offer the intersection):
 ### Q5 — Subagent dispatch?
 
 AskUserQuestion, single-select:
+
 - `no` (Recommended for first skill)
 - `yes — dedicated agent`: the skill calls `Agent(subagent_type: '<plugin>:<agent>')`. We seed a placeholder reference in the SKILL.md and remind the user to run `/scaffold-agent` afterwards.
 - `yes — generic general-purpose agent`: one-shot dispatch with prompt embedded inline (only for very contextual cases — anti-pattern flagged in CLAUDE.md when it's reused).
@@ -79,6 +82,7 @@ AskUserQuestion, single-select:
 ### Q6 — Hand-off menu at the end?
 
 AskUserQuestion, single-select:
+
 - `no` — skill exits after final report (Recommended)
 - `yes` — present a menu like `linear-devotee:greet` does (`(p)`, `(q)`,
   `(c)`, `(s)`). If yes, ask follow-up: comma-separated `letter:label`
@@ -86,56 +90,62 @@ AskUserQuestion, single-select:
 
 ### Q7 — Model
 
-AskUserQuestion, single-select. Voice: *"quel modèle pour ce skill ?"*
+AskUserQuestion, single-select. Voice: _"quel modèle pour ce skill ?"_
+
 - `inherit` (Recommended — orchestration normale, suit le modèle de session, omet `model:` du frontmatter)
 - `haiku` (toggle, dispatch trivial, parsing direct — pas de décisions complexes)
 - `sonnet` (audit / drafting structuré — raisonnement modéré, ratio coût/qualité)
 - `opus` (création SDD libre, spec stratégique, planning critique — top-tier reasoning, low-volume)
 
-[IF Q7 = haiku] Emit a voice warning: *"haiku sur un skill ? ok si c'est vraiment léger — pas de décisions, pas de mutations complexes. sinon remonte sur sonnet/inherit."*
+[IF Q7 = haiku] Emit a voice warning: _"haiku sur un skill ? ok si c'est vraiment léger — pas de décisions, pas de mutations complexes. sinon remonte sur sonnet/inherit."_
 
-[IF Q7 = opus] Emit a voice warning: *"opus = cher. justifié pour création de spec / projet / décisions structurantes. sinon inherit suffit."*
+[IF Q7 = opus] Emit a voice warning: _"opus = cher. justifié pour création de spec / projet / décisions structurantes. sinon inherit suffit."_
 
 ### Q8 — Effort
 
-AskUserQuestion, single-select. Voice: *"quel budget de reasoning ?"*
+AskUserQuestion, single-select. Voice: _"quel budget de reasoning ?"_
+
 - `high` (Recommended for orchestration — multi-step, approval gates, mutations)
 - `low` (fetch simple, rapport direct, aucune décision — ignoré silencieusement sur haiku)
 - `xhigh` (raisonnement profond, planning critique, plan d'architecture)
 - `max` (création SDD / décisions structurantes — risque d'overthink, low-volume only)
 - `inherit` (laisser le runtime décider — omet `effort:` du frontmatter)
 
-[IF Q8 = max] Emit a voice warning: *"max = budget de pensée illimité. la doc Claude prévient : peut overthink. teste avant de généraliser."*
+[IF Q8 = max] Emit a voice warning: _"max = budget de pensée illimité. la doc Claude prévient : peut overthink. teste avant de généraliser."_
 
-[IF Q7 = haiku AND Q8 ≠ inherit AND Q8 ≠ low] Emit: *"effort sur haiku = ignoré silencieusement. force `inherit` ou `low` pour rester clean."*
+[IF Q7 = haiku AND Q8 ≠ inherit AND Q8 ≠ low] Emit: _"effort sur haiku = ignoré silencieusement. force `inherit` ou `low` pour rester clean."_
 
 ### Q9 — Project-level artifact?
 
-AskUserQuestion, single-select. Voice: *"l'organe écrit-il quelque chose dans le repo de l'utilisateur ?"*
+AskUserQuestion, single-select. Voice: _"l'organe écrit-il quelque chose dans le repo de l'utilisateur ?"_
+
 - `no` (Recommended for skills that only report) — skip Q10
 - `yes — single-file artifact` — skill writes one Markdown/JSON file per invocation
 
-[IF Q9 = yes] Follow-up free-text: *"slug du dossier — kebab-case, ex. `plan`, `spec`, `brief`, `doc` :"* → save as `ARTIFACT_TYPE`. The artifact will live at `${PROJECT_ROOT}/docs/<PLUGIN>/<ARTIFACT_TYPE>/<identifier>.md`. Plugin install storage (`${CLAUDE_PLUGIN_ROOT}/data/`) is for ephemeral state only, NEVER for user-facing artifacts.
+[IF Q9 = yes] Follow-up free-text: _"slug du dossier — kebab-case, ex. `plan`, `spec`, `brief`, `doc` :"_ → save as `ARTIFACT_TYPE`. The artifact will live at `${PROJECT_ROOT}/docs/<PLUGIN>/<ARTIFACT_TYPE>/<identifier>.md`. Plugin install storage (`${CLAUDE_PLUGIN_ROOT}/data/`) is for ephemeral state only, NEVER for user-facing artifacts.
 
 ### Q10 — AI-agent plan format inside the artifact?
 
-[Only ask if Q9 = yes] AskUserQuestion, single-select. Voice: *"l'artifact est un plan d'implémentation pour un agent IA qui va l'exécuter ?"*
+[Only ask if Q9 = yes] AskUserQuestion, single-select. Voice: _"l'artifact est un plan d'implémentation pour un agent IA qui va l'exécuter ?"_
+
 - `no` (Recommended) — free-form artifact shape
 - `yes` — embed the research-backed 6-section template (Context / Files / Steps `- [ ]` / Verify / Risks / Out of scope) inside the artifact body
 
 ### Q11 — Auto-chain to a downstream skill?
 
-AskUserQuestion, single-select. Voice: *"l'organe transmet directement à un autre, sans demander confirmation ?"*
+AskUserQuestion, single-select. Voice: _"l'organe transmet directement à un autre, sans demander confirmation ?"_
+
 - `no` (Recommended)
 - `yes — print invocation, continue immediately`: only valid if the downstream skill has its own validation gate (e.g. `Validate this plan? (y / edit / stop)`). The user gates only there.
 
-[IF Q11 = yes] Follow-up free-text: *"nom du skill aval (ex. `<PLUGIN>:plan`) :"* → save as `DOWNSTREAM_SKILL`.
+[IF Q11 = yes] Follow-up free-text: _"nom du skill aval (ex. `<PLUGIN>:plan`) :"_ → save as `DOWNSTREAM_SKILL`.
 
 ### Q12 — Plugin uses warden:voice for decorative persona lines?
 
 Auto-detect first: check whether `<PLUGIN>/shared/persona-line-contract.md` exists. If it does, the plugin is warden-voice-ready — propose `yes` automatically.
 
-Otherwise AskUserQuestion, single-select. Voice: *"le plugin a-t-il un `shared/persona-line-contract.md` pour les lignes décoratives ?"*
+Otherwise AskUserQuestion, single-select. Voice: _"le plugin a-t-il un `shared/persona-line-contract.md` pour les lignes décoratives ?"_
+
 - `no` (Recommended for first skills) — skill stays neutral, no persona dispatch
 - `yes` — the skill dispatches `warden:voice` at visible transitions using the plugin's persona-line contract
 
@@ -146,9 +156,11 @@ Otherwise AskUserQuestion, single-select. Voice: *"le plugin a-t-il un `shared/p
 Write one canonical root SKILL.md. Runtime selection controls which manifest exposes it; it does not create duplicate skill files.
 
 **Template source:** Before generating any SKILL.md, read the root skill template:
+
 - Root skill runtime → `_templates/skill/codex/SKILL.md`
 
 This is the source of truth for file structure. Substitute these variables from interview answers:
+
 - `{{plugin}}` → parent plugin name
 - `{{skill}}` → skill name (action verb)
 - `{{description}}` → one-line description from interview
@@ -163,12 +175,13 @@ conventions — do not omit them.
 ### 2a. Root skill — `<PLUGIN>/skills/<SKILL>/SKILL.md`
 
 **Frontmatter** (root canonical skill = no prefix in `name`):
+
 ```yaml
 ---
 name: <SKILL>
 description: <DESCRIPTION>
-model: <Q7-value>    # [IF Q7 ∈ {haiku, sonnet, opus}, else omit this line]
-effort: <Q8-value>    # [IF Q8 ∈ {low, high, xhigh, max}, else omit this line]
+model: <Q7-value> # [IF Q7 ∈ {haiku, sonnet, opus}, else omit this line]
+effort: <Q8-value> # [IF Q8 ∈ {low, high, xhigh, max}, else omit this line]
 ---
 ```
 
@@ -180,8 +193,9 @@ effort: <Q8-value>    # [IF Q8 ∈ {low, high, xhigh, max}, else omit this line]
 Rigid [gate type]. Match the user's language; keep technical identifiers unchanged.
 
 [IF Q12 = yes — warden voice]
+
 > At visible transitions, dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Print the returned `line` before normal output. Skip on failure.
-[/ENDIF]
+> [/ENDIF]
 
 ## Workflow
 
@@ -191,16 +205,16 @@ Rigid [gate type]. Match the user's language; keep technical identifiers unchang
    - <TODO: ordered actions. Use Bash / Read / MCP tools as needed. Keep bullets tight.>
 3. <Step name>:
    - <TODO>
-N. <Final action — handoff, report, or stop>:
+     N. <Final action — handoff, report, or stop>:
    - <TODO>
 
 [IF hand-off menu]
 Present numbered options after the final action:
 \`\`\`
 <voice intro line>
-  (<L1>) <label 1> → <what happens>
-  (<L2>) <label 2> → <what happens>
-  (s) stop → <exit message>
+(<L1>) <label 1> → <what happens>
+(<L2>) <label 2> → <what happens>
+(s) stop → <exit message>
 \`\`\`
 Branch on response. Exit skill when chosen branch finishes.
 [/ENDIF]
@@ -209,8 +223,8 @@ Branch on response. Exit skill when chosen branch finishes.
 
 \`\`\`text
 <PLUGIN>:<SKILL> report
-  <Field>:        <value>
-  <Field>:        <value>
+<Field>: <value>
+<Field>: <value>
 \`\`\`
 
 ## Never
@@ -233,9 +247,9 @@ This skill dispatches the `<PLUGIN>:<AGENT-NAME>` subagent. Run
 
 \`\`\`
 Agent({
-  subagent_type: '<PLUGIN>:<AGENT-NAME>',
-  description: '<short>',
-  prompt: '<structured input — see the agent’s ## Input section>',
+subagent_type: '<PLUGIN>:<AGENT-NAME>',
+description: '<short>',
+prompt: '<structured input — see the agent’s ## Input section>',
 })
 \`\`\`
 ```
@@ -268,7 +282,7 @@ Write the artifact at `${PROJECT_ROOT}/docs/<PLUGIN>/<ARTIFACT_TYPE>/<identifier
 And in the `## Final report` section, ensure the report carries the absolute path on its own line:
 
 ```markdown
-  <ARTIFACT_TYPE> artifact:   ${PROJECT_ROOT}/docs/<PLUGIN>/<ARTIFACT_TYPE>/<identifier>.md
+<ARTIFACT_TYPE> artifact: ${PROJECT_ROOT}/docs/<PLUGIN>/<ARTIFACT_TYPE>/<identifier>.md
 ```
 
 (Cmd-clickable in modern terminals — no Markdown link syntax needed.)
@@ -278,14 +292,15 @@ And in the `## Final report` section, ensure the report carries the absolute pat
 ```markdown
 The artifact body uses the AI-agent-optimized 6-section template:
 
-\`\`\`markdown
----
+## \`\`\`markdown
+
 issue: <id>
 spec: <spec-path | _none_>
 status: draft
 plan-version: 1
 validated-at: _none_
 spec-synced-at: _none_
+
 ---
 
 # Plan — <title> (<id>)
@@ -301,9 +316,11 @@ spec-synced-at: _none_
 ## Risks
 
 ## Out of scope
+
 \`\`\`
 
 Section semantics:
+
 - **Context** — 1–3 sentences linking the issue + source spec.
 - **Files** — bulleted paths + one-line role each.
 - **Steps** — atomic `- [ ]` checkboxes; each step is one edit + an inline verify command when possible.
@@ -349,7 +366,7 @@ After printing the report, present the hand-off menu:
 
 > "I just scaffolded a new skill at `<absolute path to the generated SKILL.md>`. The skill is named `<PLUGIN>:<SKILL>`. Jump straight to writing test cases and running evals — skip the intent-capture interview, the skill draft is already written. After iterating, run the description optimization loop."
 
-**If `(s)`:** exit with voice line: *"les TODOs t'attendent. bonne greffe."*
+**If `(s)`:** exit with voice line: _"les TODOs t'attendent. bonne greffe."_
 
 ## Hard rules
 
@@ -358,9 +375,9 @@ After printing the report, present the hand-off menu:
 3. **Skill body uses the root nuthouse format**: `## Voice`, `## Language`, workflow steps, final report, and hard rules, matching existing root skills such as `react-monkey/skills/implement/SKILL.md`. If Q12 = yes, inject only the one-liner voice-dispatch callout above `## Voice`.
 4. **Never invent the persona.** The persona lives in `<plugin>/persona.md`. The skill does not declare or redeclare voice inline.
 5. **Generic agent name reject**: if Q5 = "dedicated agent" and the user
-   wants to call it `agent` or `helper`, push back: *"non non non,
+   wants to call it `agent` or `helper`, push back: _"non non non,
    l'agent a un **rôle** précis. nomme-le par sa fonction —
-   `scout`, `validator`, `parser` — pas un nom vide."*
+   `scout`, `validator`, `parser` — pas un nom vide."_
 6. **Voice agent name is the one exception**: the plugin's voice-line agent (the one that emits persona lines via `persona-line-contract.md`) MAY have a persona-coded name (`devotee`, `prophet`, etc.). All other dedicated subagents MUST have functional names only.
 7. **Never overwrite** an existing SKILL.md without explicit user
    confirmation. Read first; if it exists, abort or ask.
@@ -382,6 +399,7 @@ After printing the report, present the hand-off menu:
 ## Voice cheat sheet
 
 From `../persona.md` (mad-scientist):
+
 - "non non non" — when the user proposes a generic name
 - "tiens-moi le frontmatter, on l'incise" — start of generation
 - "l'organe est greffé. il bat. 🧪" — successful final report

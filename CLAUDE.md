@@ -18,7 +18,7 @@ This marketplace is unapologetically **brainrot-coded**. **Brainrot forever.** E
 New plugins follow this energy:
 
 - **Plugin name** = a persona first: a person, creature, role, mythic figure, cultist, monster, or other being that can speak in character. `react-monkey` is a chaotic creature, `linear-devotee` is a feral worshipper, `acid-prophet` is a tripping spec oracle. `saucy-status` is a historical exception. New names must not be abstract effects, modes, or vibes (`acid-vision`, `task-flow`, `idea-engine`) unless the noun clearly points to a character. **Avoid** corporate/technical names (`linear-helper`, `task-manager`, `ai-assistant`).
-- **Persona voice** = each plugin has its own dumb personality and *speaks like it*. Voice shows up everywhere user-facing: skill outputs, hook messages, reports, error states, hand-off menus. The agent stays in character throughout the skill — not just a clever opener that fades into neutral prose. **The canonical voice of each plugin lives in `<plugin>/persona.md`** (frontmatter `name`/`tagline`/`emoji` + body prose). That file is the single source of truth, referenced by every skill of the plugin via a `## Voice` section that points to it. **This CLAUDE.md does not define voices** — it only references them. Read the persona file to know how a plugin sounds.
+- **Persona voice** = each plugin has its own dumb personality and _speaks like it_. Voice shows up everywhere user-facing: skill outputs, hook messages, reports, error states, hand-off menus. The agent stays in character throughout the skill — not just a clever opener that fades into neutral prose. **The canonical voice of each plugin lives in `<plugin>/persona.md`** (frontmatter `name`/`tagline`/`emoji` + body prose). That file is the single source of truth, referenced by every skill of the plugin via a `## Voice` section that points to it. **This CLAUDE.md does not define voices** — it only references them. Read the persona file to know how a plugin sounds.
   - `saucy-status` → see `saucy-status/persona.md`
   - `react-monkey` → see `react-monkey/persona.md`
   - `linear-devotee` → see `linear-devotee/persona.md`
@@ -26,7 +26,7 @@ New plugins follow this energy:
   - Future plugins → invent the persona at brainstorm time, **write it down in `<plugin>/persona.md`**, and apply it consistently across the plugin's skills. Do not redeclare the voice in this CLAUDE.md.
 - **Reports follow the voice**. The structure stays plain, the surrounding 1-2 lines are brainrot. Same skill, same voice end-to-end.
 - **Voice cadence matters**. Claude Code skills with `shared/persona-line-contract.md` should try `warden:voice` at every user-visible workflow transition: skill start, context resolved, user decision point, external mutation gate, handoff, recoverable failure, final report, and clean exit. Do not call it for internal shell commands, hidden subagent steps, or inside serious artifacts. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Missing `warden` is never a precondition failure and should never be mentioned to the user during the workflow.
-- **Hard rule**: actions stay serious, voice stays brainrot. No fantasy side-effects, no joke commits, no "lol whoops" failure modes. Only the *strings* are fun.
+- **Hard rule**: actions stay serious, voice stays brainrot. No fantasy side-effects, no joke commits, no "lol whoops" failure modes. Only the _strings_ are fun.
 - **Use emojis sparingly**. 🥺 / 👑 / 😔 / 🔥 land. Anything more is over-emoji and feels AI-slop.
 
 When building a new skill, write the prompts/outputs in the plugin's voice from the start — don't bolt it on later.
@@ -36,8 +36,9 @@ When building a new skill, write the prompts/outputs in the plugin's voice from 
 When you open Claude Code in this repo, a `SessionStart` hook (`.claude/hooks/persona-roulette.mjs`, declared in `.claude/settings.json`) randomly picks one of the `<plugin>/persona.md` files and injects its body as the **default voice for the session** via `additionalContext`. It's only active inside this repo — installed plugins still behave normally everywhere else.
 
 Rules:
+
 - The roulette **never modifies** any skill, agent, or plugin file. It only injects a session-level default voice.
-- Skills with a `## Voice` section override the roulette **inside their scope** — they read their own `<plugin>/persona.md` and apply that voice. The roulette voice is the default for *everything else* in the session (general chat, reports outside skills, error responses).
+- Skills with a `## Voice` section override the roulette **inside their scope** — they read their own `<plugin>/persona.md` and apply that voice. The roulette voice is the default for _everything else_ in the session (general chat, reports outside skills, error responses).
 - Disable for one session: `SKILL_ISSUE_PERSONA=off claude`.
 - Add a new persona to the pool: drop a `persona.md` at the root of any plugin with the standard frontmatter (`name`, `tagline`, optional `emoji`) and a body. The hook auto-discovers via `<repoRoot>/*/persona.md` glob. (The local scaffold skills' shared persona at `.claude/skills/persona.md` is **not** in the pool — it's scoped to those skills only.)
 - Tests: `cd .claude/hooks/tests && bunx bun test` (the `.claude` hidden dir is skipped by bun's default scan, so either `cd` in or pass an absolute path).
@@ -75,8 +76,8 @@ Root skills read the plugin persona with `../../persona.md`. Skill frontmatter n
 - **Runtime hooks/scripts**: Node.js, **ESM** (`import` / `export`). **`.mjs`** extension is mandatory for hooks and tests (zero ambiguity for Node, no `package.json` needed in the plugin, plugin is self-contained regardless of install context). `saucy-status` stays on CJS for historical reasons. Every new plugin ships ESM `.mjs`. Reference: `linear-devotee/claudecode/hooks/*.mjs`.
 - **Package manager**: `bun@1.3.x` (declared in root `package.json`).
 - **Tests**: `bun test` (built-in, no dep added). Claude Code tests live in `<plugin>/claudecode/tests/`; Codex/root helper tests live in `<plugin>/tests/`.
-- **Lint/format**: `biome` (config in `biome.json`). Formatter off, linter on. Local rule: `noUnusedVariables` is on → use `catch {}` (not `catch (e)`) when the binding is unused. Biome will auto-organize imports — let it.
-- **Pre-commit**: `lefthook` runs `bunx biome check .`. **Never bypass** with `--no-verify`.
+- **Lint/format**: `oxlint` (config in `.oxlintrc.json`) and `oxfmt` (config in `.oxfmtrc.json`). Local rule: empty blocks are allowed when intentional; use `catch {}` (not `catch (e)`) when the binding is unused.
+- **Pre-commit**: `lefthook` runs `bun run lint` and `bun run fmt:check`. **Never bypass** with `--no-verify`.
 - **No npm/bun deps added** in plugins. Stick to `node:fs`, `node:path`, `node:os`, `node:child_process`. If a plugin really needs a dep, raise it first.
 
 ---
@@ -87,7 +88,8 @@ Root skills read the plugin persona with `../../persona.md`. Skill frontmatter n
 bunx bun test <plugin>/                    # all plugin tests pass
 (cd .claude/hooks/tests && bunx bun test)  # persona-roulette tests pass
 bun run test:meta                          # frontmatter model/effort values valid
-bunx biome check .                          # lint clean
+bun run lint                                # lint clean
+bun run fmt:check                           # format clean
 node -e "JSON.parse(require('node:fs').readFileSync('.claude-plugin/marketplace.json', 'utf8'))"  # marketplace JSON valid
 grep -rn "writing-plans" <plugin>/   # no external workflow artifacts leak
 ```
@@ -115,13 +117,13 @@ Global guidance — applies everywhere, not just at scaffold time:
 
 ## Existing plugins — quick recap
 
-| Plugin | What | Hooks | Skills | Agents | Persona |
-|---|---|---|---|---|---|
-| `saucy-status` | Saucy/gooning loading messages in statusline | SessionStart, UserPromptSubmit | — | — | `saucy-status/persona.md` |
-| `react-monkey` | React implementation specialist with parallel exploration | — | `implement` | `explorer` | `react-monkey/persona.md` |
-| `linear-devotee` | Linear issue detection at session start + cascading Project/Milestone/Issue creation, all SDD-formatted | SessionStart, UserPromptSubmit | `greet`, `plan`, `create-project`, `create-milestone`, `create-issue` | `issue-context`, `issue-drafter`, `milestone-drafter`, `plan-auditor`, `plan-writer`, `project-drafter` | `linear-devotee/persona.md` |
-| `acid-prophet` | Structured spec-writing + audit + drift detection. Q&A → spec → `spec-auditor` audit → optional handoff to `linear-devotee`. PR-time drift check via `check-drift` | — | `write-spec`, `check-drift`, `audit-spec` | `spec-auditor` | `acid-prophet/persona.md` |
-| `warden` | Centralized voice agent — emits decorative persona lines for any plugin via `warden:voice`; `/warden:voice [on\|off\|status]` toggles fun messages globally | — | `voice` | `voice` | `warden/persona.md` |
+| Plugin           | What                                                                                                                                                               | Hooks                          | Skills                                                                | Agents                                                                                                  | Persona                     |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------ | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | --------------------------- |
+| `saucy-status`   | Saucy/gooning loading messages in statusline                                                                                                                       | SessionStart, UserPromptSubmit | —                                                                     | —                                                                                                       | `saucy-status/persona.md`   |
+| `react-monkey`   | React implementation specialist with parallel exploration                                                                                                          | —                              | `implement`                                                           | `explorer`                                                                                              | `react-monkey/persona.md`   |
+| `linear-devotee` | Linear issue detection at session start + cascading Project/Milestone/Issue creation, all SDD-formatted                                                            | SessionStart, UserPromptSubmit | `greet`, `plan`, `create-project`, `create-milestone`, `create-issue` | `issue-context`, `issue-drafter`, `milestone-drafter`, `plan-auditor`, `plan-writer`, `project-drafter` | `linear-devotee/persona.md` |
+| `acid-prophet`   | Structured spec-writing + audit + drift detection. Q&A → spec → `spec-auditor` audit → optional handoff to `linear-devotee`. PR-time drift check via `check-drift` | —                              | `write-spec`, `check-drift`, `audit-spec`                             | `spec-auditor`                                                                                          | `acid-prophet/persona.md`   |
+| `warden`         | Centralized voice agent — emits decorative persona lines for any plugin via `warden:voice`; `/warden:voice [on\|off\|status]` toggles fun messages globally        | —                              | `voice`                                                               | `voice`                                                                                                 | `warden/persona.md`         |
 
 Repo-level: `.claude/hooks/persona-roulette.mjs` picks a random `persona.md` at SessionStart for the current session's default voice (see "Persona Roulette" section above). Local scaffold skills live at `.claude/skills/{scaffold-plugin,scaffold-skill,scaffold-agent}/SKILL.md` with shared `mad-scientist` voice at `.claude/skills/persona.md`.
 

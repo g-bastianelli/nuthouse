@@ -39,6 +39,7 @@ Rigid planning gate. Match the user's language; keep technical identifiers uncha
    - **Out of scope** — negative oracle preventing implementing-agent drift.
 
    Input format:
+
    ```
    PROJECT_ROOT: <git root>
    ISSUE_ID: <id>
@@ -59,10 +60,12 @@ Rigid planning gate. Match the user's language; keep technical identifiers uncha
 
    Capture the returned `PLAN_FILE: <path>`. Use this path in all subsequent steps.
    Do not display plan content in main context — the file is the artifact.
+
 5. Audit:
    - Session store (`context_policy: session`): if `$CLAUDE_SESSION_ID` is set, read `<PROJECT_ROOT>/.claude/nuthouse/sessions/${CLAUDE_SESSION_ID}.json`. If `relevant_files` key is present (and `_meta._shas.relevant_files` equals HEAD sha when Bash is available; otherwise accept as-is), inject it into the plan-auditor prompt. Skip this lookup when invoked with `--fresh`.
    - **Staleness caveat**: this skill lacks Bash, so the sha of `relevant_files` cannot be verified against HEAD. If the codebase changed significantly since `greet` ran (e.g. several commits), invoke with `--fresh` to force a full re-fetch and ignore the cached list.
    - Dispatch `linear-devotee:plan-auditor` with:
+
      ```
      PROJECT_ROOT: <git root>
      SPEC_FILE: <path | _none_>
@@ -76,7 +79,9 @@ Rigid planning gate. Match the user's language; keep technical identifiers uncha
      RELEVANT_FILES:
      - <abs path> (omit section when not available from session store)
      ```
+
    - Expected output: `PLAN_REVIEW`, `SPEC_DRIFT_DETECTED`, `DRIFT_ITEMS`, `BLOCKERS`.
+
 6. Iterate:
    - If review needs changes, re-dispatch `plan-writer` with revised sections and re-audit. Never display plan content inline.
    - Ask one user-decision blocker at a time.

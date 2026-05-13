@@ -2,7 +2,7 @@
 id: root-plugin-layout
 status: accepted
 linear-project: _none_
-verified-by: bun test; bun run test:meta; bunx biome check .
+verified-by: bun test; bun run test:meta; bun run lint; bun run fmt:check
 last-reviewed: 2026-05-12
 ---
 
@@ -48,14 +48,14 @@ Required manifest rules:
 
 Root files are runtime-neutral unless their directory says otherwise.
 
-| Path | Contract |
-|---|---|
-| `skills/<skill>/SKILL.md` | Canonical skill body shared by runtimes |
-| `agents/<agent>.md` | Canonical agent body exposed by Claude Code manifests |
-| `shared/` | Cross-runtime contracts and notes |
-| `lib/`, `tests/` | Runtime-neutral helpers and tests |
-| `claudecode/hooks/` | Claude Code hook scripts only |
-| `claudecode/lib/`, `claudecode/tests/`, `claudecode/data/` | Claude-only runtime support |
+| Path                                                       | Contract                                              |
+| ---------------------------------------------------------- | ----------------------------------------------------- |
+| `skills/<skill>/SKILL.md`                                  | Canonical skill body shared by runtimes               |
+| `agents/<agent>.md`                                        | Canonical agent body exposed by Claude Code manifests |
+| `shared/`                                                  | Cross-runtime contracts and notes                     |
+| `lib/`, `tests/`                                           | Runtime-neutral helpers and tests                     |
+| `claudecode/hooks/`                                        | Claude Code hook scripts only                         |
+| `claudecode/lib/`, `claudecode/tests/`, `claudecode/data/` | Claude-only runtime support                           |
 
 Skill frontmatter uses local names only:
 
@@ -91,7 +91,8 @@ Required checks before commit:
 ```bash
 bun test
 bun run test:meta
-bunx biome check .
+bun run lint
+bun run fmt:check
 node -e "JSON.parse(require('node:fs').readFileSync('.claude-plugin/marketplace.json', 'utf8'))"
 ```
 

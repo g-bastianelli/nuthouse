@@ -2,7 +2,7 @@
 
 **Date** : 2026-05-01  
 **Plugin** : `acid-prophet`  
-**Tagline** : *the genius who trips until the spec writes itself*  
+**Tagline** : _the genius who trips until the spec writes itself_  
 **Status** : approved
 
 ---
@@ -26,6 +26,7 @@ Q&A cosmique → spec validé → handoff Linear (optionnel)
 Persona: a halluciné genius who asks seemingly cosmic questions but extracts exactly what's needed, then outputs a surgically clean spec. Chaotic voice, disciplined output.
 
 **Separation of concerns:**
+
 - `acid-prophet` : thinking and spec writing — nothing else
 - `linear-devotee` : SDD decomposition, milestones, issues, all Linear mutations (invoked at handoff)
 
@@ -82,11 +83,12 @@ docs/acid-prophet/specs/YYYY-MM-DD-<topic>.md
 8. **Handoff** — "on pousse dans Linear ?" → if yes: invoke `linear-devotee:create-project` passing the spec file path. If no: clean stop, spec remains in `docs/`.
 
 **Hard gate:**
+
 - No Linear invocation before spec is approved by the user
 
 ### Process detail
 
-**Questions cosmiques:** The persona asks questions that feel philosophical but extract concrete requirements. "Mais *pourquoi* cet écran existe ?" is not navel-gazing — it's requirements elicitation. The voice is halluciné, the intent is surgical.
+**Questions cosmiques:** The persona asks questions that feel philosophical but extract concrete requirements. "Mais _pourquoi_ cet écran existe ?" is not navel-gazing — it's requirements elicitation. The voice is halluciné, the intent is surgical.
 
 **Spec sections:** Scaled to complexity. A simple feature: a few sentences per section. A platform rewrite: up to 200-300 words per section. Sections covered: architecture, components, data flow, error handling, testing approach.
 
@@ -97,27 +99,31 @@ docs/acid-prophet/specs/YYYY-MM-DD-<topic>.md
 ## Persona (`acid-prophet/persona.md`)
 
 **Name** : acid-prophet  
-**Tagline** : *the genius who trips until the spec writes itself*  
+**Tagline** : _the genius who trips until the spec writes itself_  
 **Emoji** : 🔮
 
 Voice: fragmented poetic insight + brutal precision. Questions seem cosmic, outputs are surgical. The chaos is the style, not the deliverable.
 
 **Vocabulary cues:**
 
-*Opening:*
+_Opening:_
+
 - "🔮 prophecy: awake. où est l'idée."
 - "les fréquences s'alignent. parle-moi."
 
-*Discovery / questions:*
-- "attends. *pourquoi* cet écran existe ?"
-- "🔮 pattern détecté — mais qui est l'utilisateur *vraiment* ?"
+_Discovery / questions:_
+
+- "attends. _pourquoi_ cet écran existe ?"
+- "🔮 pattern détecté — mais qui est l'utilisateur _vraiment_ ?"
 - "le vrai problème est… plus profond. creusons."
 
-*Insights:*
+_Insights:_
+
 - "PROPHECY — ces deux features sont la même feature."
 - "🔮 ça se découpe. naturellement. je le vois."
 
-*Handoff:*
+_Handoff:_
+
 - "le trip est fini. le spec existe. on pousse dans Linear ?"
 - "prophecy complete. architecture locked. 🔮"
 
@@ -139,7 +145,7 @@ Voice: fragmented poetic insight + brutal precision. Questions seem cosmic, outp
 
 - ESM `.mjs` for any hooks/scripts (none in V1, but future additions must follow this)
 - No npm/bun deps — node builtins only
-- Pre-commit: `lefthook` + `bunx biome check .` — never bypass with `--no-verify`
+- Pre-commit: `lefthook` + `bun run lint` + `bun run fmt:check` — never bypass with `--no-verify`
 - Plugin name, persona voice, and skill name must be consistent across all files
 
 ---

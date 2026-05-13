@@ -90,6 +90,7 @@ differs. Helpers for applying auto-fix patches live in
 `git`, `ls`). No `Edit` or `Write`. The subagent never mutates the spec.
 
 **Input** (passed as Agent prompt context):
+
 - `spec_path` — absolute path to the spec under review
 - `project_root` — absolute path to the project root, used for reality
   checks
@@ -98,6 +99,7 @@ differs. Helpers for applying auto-fix patches live in
   are eligible for automatic application.
 
 **Pipeline:**
+
 1. Read the spec file at `spec_path`.
 2. **SDD-strict checks**:
    - Frontmatter present and parseable as YAML
@@ -131,7 +133,7 @@ differs. Helpers for applying auto-fix patches live in
 5. **Style checks**:
    - Heavy code blocks: any fenced code block longer than 15 lines is
      flagged INFO `[style] consider moving heavy examples to Linear
-     issues`. Threshold is intentional: short snippets stay; full
+issues`. Threshold is intentional: short snippets stay; full
      examples leave.
 6. **Classify** each finding as BLOCKER, WARNING, or INFO:
    - **BLOCKER** — frontmatter invalid, required section missing,
@@ -173,6 +175,7 @@ always present.
 **Invocation:** `/acid-prophet:audit-spec <spec-path>`
 
 **Steps:**
+
 1. **Step 0 — Preconditions.** Read `../../../persona.md`. Verify the
    `<spec-path>` argument is provided and the file exists. Verify the
    path lives under `docs/acid-prophet/specs/`; if not, warn in voice and
@@ -188,7 +191,7 @@ always present.
    - `linear` — only if `linear-project: _none_` and zero BLOCKER:
      hand off to `linear-devotee:create-project` with `<spec-path>`
    - `stop` — clean exit, voice line `"prophecy complete. architecture
-     locked. 🔮"`
+locked. 🔮"`
 
 ### `trip` Step 6 modifications
 
@@ -228,10 +231,11 @@ colocate helpers with hooks; `acid-prophet` needs cross-skill sharing).
 ## Error handling
 
 **`spec-auditor` subagent:**
+
 - `spec_path` not found → return single BLOCKER `[io] spec file not
-  found: <path>`. No other checks attempted.
+found: <path>`. No other checks attempted.
 - Frontmatter unparseable → BLOCKER `[frontmatter] file has no valid
-  frontmatter block`. Continue all other checks.
+frontmatter block`. Continue all other checks.
 - `CLAUDE.md` absent → silently skip convention check; emit INFO
   `[reality-check] no CLAUDE.md found, conventions check skipped`.
 - `package.json` absent → silently skip stack check; emit INFO
@@ -240,9 +244,10 @@ colocate helpers with hooks; `acid-prophet` needs cross-skill sharing).
   new code intentionally referenced.
 - No `Acceptance` section → silently skip EARS check (no INFO emitted).
 - Internal failure → return single BLOCKER `[scryer] internal failure:
-  <message>`. Exit cleanly. Never throw silently.
+<message>`. Exit cleanly. Never throw silently.
 
 **`scry` skill:**
+
 - Missing `<spec-path>` argument → ask the user. Do not dispatch.
 - Spec path outside `docs/acid-prophet/specs/` → warn in voice
   (`"🔮 ce spec ne vient pas de mon temple — je le scrute quand même"`)
@@ -254,12 +259,14 @@ colocate helpers with hooks; `acid-prophet` needs cross-skill sharing).
   the patch, signal the user, leave the report intact. Do not retry.
 
 **`trip` Step 6:**
+
 - Auto-fix succeeds but `git commit` fails (lint hook, dirty tree) → do
   not retry, do not amend, do not `--no-verify`. Surface the failure to
   the user with voice line and wait for resolution.
 - Pre-commit hook never bypassed.
 
 **Hard rules:**
+
 - `spec-auditor` is read-only: never writes any file. Tools allowlist
   excludes `Edit` and `Write`.
 - `scry` and `trip` Step 6 only ever modify files under
@@ -300,8 +307,9 @@ categories.
 
 `scry-flow.test.mjs` invokes the skill with a fixture spec, mocks the
 subagent dispatch (returning a canned report), and asserts:
+
 - Hand-off menu is rendered with the four expected options.
-- Auto-fix candidates are *presented*, never applied without explicit
+- Auto-fix candidates are _presented_, never applied without explicit
   user `apply` choice.
 
 ### `trip` Step 6 — integration test
@@ -309,6 +317,7 @@ subagent dispatch (returning a canned report), and asserts:
 `trip-step6.test.mjs` runs the modified Step 6 against a fixture spec
 that contains trivial auto-fix candidates. Mocks the subagent dispatch
 to return a known report. Asserts:
+
 - The patch is applied to the spec file.
 - A new commit is created with the expected message.
 - BLOCKER findings (if any) are surfaced to the user (mocked
@@ -324,7 +333,7 @@ to return a known report. Asserts:
 
 ### CI
 
-`bunx bun test acid-prophet/` and `bunx biome check .` must pass before
+`bunx bun test acid-prophet/`, `bun run lint`, and `bun run fmt:check` must pass before
 push. Same gate as the rest of the marketplace.
 
 ## Non-goals
@@ -340,7 +349,7 @@ push. Same gate as the rest of the marketplace.
   reformatting Acceptance criteria into EARS, or expanding Non-goals
   is left to the user.
 - **Pre-commit hook integration.** No automatic spec audit on `git
-  commit`. The user invokes `/acid-prophet:audit-spec` deliberately, or
+commit`. The user invokes `/acid-prophet:audit-spec` deliberately, or
   `write-spec` invokes the subagent during its audit step.
 - **Numeric quality score.** No `"spec quality: 7/10"` output —
   not actionable.

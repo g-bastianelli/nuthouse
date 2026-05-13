@@ -1,15 +1,15 @@
 #!/usr/bin/env node
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 export function parseFrontmatter(content) {
-  const lines = content.split('\n');
-  if (lines[0]?.trim() !== '---') return null;
+  const lines = content.split("\n");
+  if (lines[0]?.trim() !== "---") return null;
 
   let endIdx = -1;
   for (let i = 1; i < lines.length; i++) {
-    if (lines[i].trim() === '---') {
+    if (lines[i].trim() === "---") {
       endIdx = i;
       break;
     }
@@ -20,8 +20,8 @@ export function parseFrontmatter(content) {
   for (let i = 1; i < endIdx; i++) {
     const line = lines[i];
     const stripped = line.trim();
-    if (!stripped || stripped.startsWith('#')) continue;
-    const colon = stripped.indexOf(':');
+    if (!stripped || stripped.startsWith("#")) continue;
+    const colon = stripped.indexOf(":");
     if (colon === -1) continue;
     const key = stripped.slice(0, colon).trim();
     let value = stripped.slice(colon + 1).trim();
@@ -34,7 +34,10 @@ export function parseFrontmatter(content) {
     fm[key] = value;
   }
 
-  const body = lines.slice(endIdx + 1).join('\n').trim();
+  const body = lines
+    .slice(endIdx + 1)
+    .join("\n")
+    .trim();
   if (!fm.name || !body) return null;
 
   return { ...fm, body };
@@ -51,12 +54,12 @@ export function findPersonas(repoRoot, { stderr = process.stderr } = {}) {
   const personas = [];
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
-    if (entry.name.startsWith('.')) continue;
+    if (entry.name.startsWith(".")) continue;
 
-    const personaPath = path.join(repoRoot, entry.name, 'persona.md');
+    const personaPath = path.join(repoRoot, entry.name, "persona.md");
     let content;
     try {
-      content = fs.readFileSync(personaPath, 'utf8');
+      content = fs.readFileSync(personaPath, "utf8");
     } catch {
       continue;
     }
@@ -80,14 +83,14 @@ export function pickPersona(personas, rng = Math.random) {
 }
 
 export function buildAdditionalContext(persona) {
-  const tagline = persona.tagline ? ` (${persona.tagline})` : '';
+  const tagline = persona.tagline ? ` (${persona.tagline})` : "";
   return [
     `<EXTREMELY-IMPORTANT>persona-roulette: today's vibe is **${persona.name}**${tagline}. For this session, your default voice is:`,
-    '',
+    "",
     persona.body,
-    '',
+    "",
     "Apply this voice as the DEFAULT for all replies in this session. Skills that define their own voice (## Voice section pointing to a <plugin>/persona.md) override this voice ONLY WITHIN their execution scope — once a skill finishes (after its final report, or when control returns to the user via a hand-off menu), revert to this default voice for all subsequent interactions. Don't let a skill's voice bleed into the rest of the session.</EXTREMELY-IMPORTANT>",
-  ].join('\n');
+  ].join("\n");
 }
 
 export function main({
@@ -97,11 +100,11 @@ export function main({
   stdout = process.stdout,
   stderr = process.stderr,
 } = {}) {
-  if (env.SKILL_ISSUE_PERSONA === 'off') return;
+  if (env.SKILL_ISSUE_PERSONA === "off") return;
 
   if (!repoRoot) {
     const here = path.dirname(fileURLToPath(import.meta.url));
-    repoRoot = path.resolve(here, '..', '..');
+    repoRoot = path.resolve(here, "..", "..");
   }
 
   const personas = findPersonas(repoRoot, { stderr });
@@ -114,7 +117,7 @@ export function main({
   stdout.write(
     JSON.stringify({
       hookSpecificOutput: {
-        hookEventName: 'SessionStart',
+        hookEventName: "SessionStart",
         additionalContext,
       },
     }),

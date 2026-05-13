@@ -8,14 +8,14 @@ It centralizes decorative persona lines and gives the user one global on/off swi
 
 ## Skill
 
-| Skill | Purpose |
-|---|---|
+| Skill          | Purpose                                                                                       |
+| -------------- | --------------------------------------------------------------------------------------------- |
 | `warden:voice` | Toggle fun messages on/off/status, or dispatch one strict JSON persona line for Codex callers |
 
 ## Agent
 
-| Agent | Purpose |
-|---|---|
+| Agent   | Purpose                                                                                     |
+| ------- | ------------------------------------------------------------------------------------------- |
 | `voice` | Claude Code dispatcher that reads a caller persona contract and returns one decorative line |
 
 ## Contract
