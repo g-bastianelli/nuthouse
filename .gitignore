@@ -1,5 +1,9 @@
 node_modules/
 .claude/settings.local.json
 .claude/nuthouse/sessions/
-.agents/
+# Codex-style .agents dirs in working copies; track marketplace manifest only
+.agents/**
+!.agents/plugins/
+.agents/plugins/**
+!.agents/plugins/marketplace.json
 docs/superpowers/

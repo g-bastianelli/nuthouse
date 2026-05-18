@@ -7,50 +7,67 @@
     {
       "name": "react-monkey",
       "source": {
-        "source": "local",
+        "source": "git-subdir",
+        "url": "https://github.com/g-bastianelli/nuthouse",
         "path": "./react-monkey"
       },
       "policy": {
         "installation": "AVAILABLE",
         "authentication": "ON_INSTALL"
       },
-      "category": "Developer Tools"
+      "category": "Productivity"
     },
     {
       "name": "linear-devotee",
       "source": {
-        "source": "local",
+        "source": "git-subdir",
+        "url": "https://github.com/g-bastianelli/nuthouse",
         "path": "./linear-devotee"
       },
       "policy": {
         "installation": "AVAILABLE",
         "authentication": "ON_INSTALL"
       },
-      "category": "Developer Tools"
+      "category": "Productivity"
     },
     {
       "name": "acid-prophet",
       "source": {
-        "source": "local",
+        "source": "git-subdir",
+        "url": "https://github.com/g-bastianelli/nuthouse",
         "path": "./acid-prophet"
       },
       "policy": {
         "installation": "AVAILABLE",
         "authentication": "ON_INSTALL"
       },
-      "category": "Developer Tools"
+      "category": "Productivity"
     },
     {
       "name": "warden",
       "source": {
-        "source": "local",
+        "source": "git-subdir",
+        "url": "https://github.com/g-bastianelli/nuthouse",
         "path": "./warden"
       },
       "policy": {
         "installation": "AVAILABLE",
         "authentication": "ON_INSTALL"
       },
-      "category": "Developer Tools"
+      "category": "Productivity"
+    },
+    {
+      "name": "git-gremlin",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/g-bastianelli/nuthouse",
+        "path": "./git-gremlin"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
     }
   ]
 }
