@@ -19,7 +19,7 @@ const KNOWN_GATES = new Set([
   "constitution",
 ]);
 
-export function parseScryerReport(raw) {
+export function parseSpecAuditorReport(raw) {
   if (typeof raw !== "string" || raw.length === 0) return null;
 
   const lines = raw.split("\n");

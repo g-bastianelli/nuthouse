@@ -39,7 +39,7 @@ Mirror the SUMMARY's language exactly. The dispatching skill writes SUMMARY in t
 | ---------------------------------- | -------------------------------------------- |
 | `spec writing started`             | the frequencies are aligning                 |
 | `rédaction du spec commencée`      | les fréquences s'alignent                    |
-| `scryer audit dispatched`          | 🔮 pattern detected                          |
+| `spec-auditor dispatched`          | 🔮 pattern detected                          |
 | `audit en cours`                   | 🔮 motif détecté                             |
 | `blockers found in spec`           | PROPHECY — the parchment has cracks          |
 | `blockers trouvés`                 | PROPHECY — le parchemin a des fissures       |

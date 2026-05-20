@@ -32,14 +32,14 @@ Rigid spec-writing gate. Match the user's language; keep technical identifiers u
    - Create `docs/acid-prophet/specs/` if missing. Save to `docs/acid-prophet/specs/YYYY-MM-DD-<topic>.md`.
    - Frontmatter required: `id: <slug>`, `status: draft`, `linear-project: _none_`, `verified-by: _none_`, `last-reviewed: <today ISO>`.
    - Commit: `git add <path> && git commit -m "docs(acid-prophet): add spec for <topic>"`. Skip commit if not in a git repo; warn user.
-7. Scryer audit:
+7. Spec-auditor pass:
    - Dispatch `acid-prophet:spec-auditor`:
      ```
      SPEC_PATH: <absolute path>
      PROJECT_ROOT: <git root>
      MODE: auto-fix-trivial
      ```
-   - Parse result with `<PROJECT_ROOT>/acid-prophet/claudecode/lib/parse-scryer-report.mjs`. If null: try `warden:voice` per the voice cadence with `SUMMARY: spec-auditor output malformed`, then continue without auto-fixes.
+   - Parse result with `<PROJECT_ROOT>/acid-prophet/claudecode/lib/parse-spec-auditor-report.mjs`. If null: try `warden:voice` per the voice cadence with `SUMMARY: spec-auditor output malformed`, then continue without auto-fixes.
    - Apply each auto-fix candidate via `apply-frontmatter-patch.mjs`. If patches applied, commit: `git commit -m "docs(acid-prophet): spec-auditor auto-fixes"`. Never use `--no-verify`.
    - **`handoffEligible === false`** → surface every failing gate and BLOCKER to the user verbatim; loop (edit spec → re-run spec-auditor → repeat) until `handoffEligible` becomes `true`. This subsumes the older "BLOCKER list must be empty" condition — gates can fail without BLOCKERs, and both must be clean before advancing.
    - WARNING/INFO only → present list; let user choose which to address; then advance.

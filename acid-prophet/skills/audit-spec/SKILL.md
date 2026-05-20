@@ -24,7 +24,7 @@ Rigid audit gate. Match the user's language; keep technical identifiers unchange
    ```
    Capture full output as `RAW_REPORT`.
 3. Render report:
-   - Parse with `<PROJECT_ROOT>/acid-prophet/claudecode/lib/parse-scryer-report.mjs`. If null: try `warden:voice` per the voice cadence with `SUMMARY: spec-auditor output malformed`, print `RAW_REPORT` verbatim, skip to `(s)` branch.
+   - Parse with `<PROJECT_ROOT>/acid-prophet/claudecode/lib/parse-spec-auditor-report.mjs`. If null: try `warden:voice` per the voice cadence with `SUMMARY: spec-auditor output malformed`, print `RAW_REPORT` verbatim, skip to `(s)` branch.
    - Try `warden:voice` per the voice cadence with `SUMMARY: <N> findings in spec` (or `spec is clean` if zero). Then print `RAW_REPORT` exactly as emitted.
 4. Hand-off menu:
    ```

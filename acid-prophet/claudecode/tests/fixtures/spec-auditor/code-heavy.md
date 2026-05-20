@@ -9,7 +9,7 @@ last-reviewed: 2026-05-04
 # Code-heavy spec
 
 This spec contains a fenced code block longer than 15 lines, which the
-scryer should flag with a `[style]` info.
+spec-auditor should flag with a `[style]` info.
 
 ## Problem & Why
 
