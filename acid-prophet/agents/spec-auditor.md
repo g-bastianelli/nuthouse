@@ -53,6 +53,7 @@ MODE: report-only | auto-fix-trivial
 
 ### 4. Narrative checks
 
+- **Unresolved clarification markers** — scan for literal `[NEEDS CLARIFICATION:` (case-sensitive). Each occurrence: WARNING `[clarification:<line>] unresolved marker in <section>: "<full marker text>"`. These block the spec from leaving draft — the caller is expected to surface them to the user and stay in the audit loop until zero remain.
 - **Placeholders** — scan for literal `TBD`, `TODO`, `_unclear_`, `xxx`, `???`. Each occurrence: INFO `[placeholder:<line>] <token> in <section>` plus an Auto-fix candidate if the token can be defaulted (e.g. frontmatter `_unclear_` → propose a value).
 - **Internal consistency** — scan for sections that contradict each other (e.g. V1 scope lists feature X while Non-goals also lists X; Architecture references a component absent from Components). Each contradiction: WARNING `[consistency:<sections>] <description>`.
 - **Scope** — heuristic: if the spec describes more than one architecturally independent subsystem (multiple unrelated top-level concerns in Solution + Architecture), emit WARNING `[scope] consider decomposing into separate specs`.
@@ -61,6 +62,16 @@ MODE: report-only | auto-fix-trivial
 ### 5. Style checks
 
 - **Heavy code blocks** — count fenced code blocks (```) in the body. Any block longer than 15 lines: INFO `[style:<section>] heavy code block (<N> lines) — consider moving to Linear issues`.
+
+### 5b. Phase -1 Gates
+
+Run these gates in order. Each gate emits one entry in the `## Gates` output section with `pass | fail | n/a`. Every `fail` ALSO emits a BLOCKER finding `[gate:<gate-name>] <reason>` — gates are hard handoff blockers.
+
+- **simplicity** — count architecturally independent subsystems described in `Solution` + `Architecture`. If > 2, `fail`: spec proposes >2 independent subsystems, consider decomposing. If 1–2, `pass`. If neither section parseable, `n/a`.
+- **anti-abstraction** — scan `Architecture` and `Components` for newly introduced wrappers/facades/factories/adapters. For each one, the spec must name **at least 2 distinct consumers** (callers, components, integration points). If any abstraction has fewer than 2 named consumers, `fail` with the offending abstraction name. If none introduced, `pass`. Heuristic — keyword scan for `wrapper`, `facade`, `factory`, `adapter`, `proxy`, `manager` followed by enumeration of consumers.
+- **acceptance-defined** — spec must contain a section starting with `Acceptance` with at least one EARS-conformant bullet (matches `WHEN ...` or `IF ...`). If absent or zero conformant bullets, `fail`. Otherwise `pass`.
+- **clarifications-resolved** — number of unresolved `[NEEDS CLARIFICATION:` markers anywhere in the body. Zero → `pass`. ≥1 → `fail` with the count.
+- **constitution** — `Read PROJECT_ROOT/docs/acid-prophet/constitution.md`. If absent, `n/a`. If present, parse `## Articles` (one article per H3 heading) and for each article evaluate whether the spec satisfies the article's stated requirement. Treat each article as an additional gate: `pass` if the spec demonstrates compliance or the article is irrelevant, `fail` if the spec contradicts the article. Emit one BLOCKER per failing article `[gate:constitution:<article-slug>] <reason>`.
 
 ### 6. Classify and emit
 
@@ -83,6 +94,14 @@ Return exactly this structure:
 ```
 # scryer report — <SPEC_PATH>
 
+## Gates
+- simplicity: <pass | fail | n/a>
+- anti-abstraction: <pass | fail | n/a>
+- acceptance-defined: <pass | fail | n/a>
+- clarifications-resolved: <pass | fail | n/a>
+- constitution: <pass | fail | n/a>
+- handoff-eligible: <yes | no>
+
 ## BLOCKER (<n>)
 - [<category>:<location>] <description>
 
@@ -99,7 +118,9 @@ Return exactly this structure:
 <n> blocker · <n> warning · <n> info
 ```
 
-- `<category>` is one of: `io`, `frontmatter`, `section`, `ears`, `stack`, `reality-check`, `reality-check:files`, `placeholder`, `consistency`, `scope`, `ambiguity`, `style`, `scryer`.
+The `handoff-eligible` line is `yes` only when every gate is `pass` or `n/a` AND zero BLOCKER findings remain. Any single gate `fail` or any BLOCKER ⇒ `no`. Callers must respect this signal.
+
+- `<category>` is one of: `io`, `frontmatter`, `section`, `ears`, `stack`, `reality-check`, `reality-check:files`, `clarification`, `placeholder`, `consistency`, `scope`, `ambiguity`, `style`, `gate`, `scryer`.
 - `<location>` is the most specific anchor available: a frontmatter key, a section name, a line number, or a quoted excerpt.
 - The Auto-fix section may be empty (`(no auto-fixes proposed)`) but the heading is always present.
 

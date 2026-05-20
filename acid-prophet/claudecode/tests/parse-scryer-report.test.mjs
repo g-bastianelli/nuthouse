@@ -136,3 +136,103 @@ test("round-trips: parse a report and verify all bullets land in the right bucke
   const expected = out.summary.blocker + out.summary.warning + out.summary.info;
   expect(total).toEqual(expected);
 });
+
+const reportWithGates = `# scryer report — /abs/spec.md
+
+## Gates
+- simplicity: pass
+- anti-abstraction: fail
+- acceptance-defined: pass
+- clarifications-resolved: pass
+- constitution: n/a
+- handoff-eligible: no
+
+## BLOCKER (1)
+- [gate:anti-abstraction] PaymentWrapper has 1 named consumer, needs ≥2
+
+## WARNING (0)
+
+## INFO (0)
+
+## Auto-fix candidates
+
+## Summary
+1 blocker · 0 warning · 0 info
+`;
+
+const reportAllPass = `# scryer report — /abs/spec.md
+
+## Gates
+- simplicity: pass
+- anti-abstraction: pass
+- acceptance-defined: pass
+- clarifications-resolved: pass
+- constitution: n/a
+- handoff-eligible: yes
+
+## BLOCKER (0)
+
+## WARNING (0)
+
+## INFO (0)
+
+## Auto-fix candidates
+
+## Summary
+0 blocker · 0 warning · 0 info
+`;
+
+test("parses Gates section with mixed pass/fail/na", () => {
+  const out = parseScryerReport(reportWithGates);
+  expect(out).not.toBeNull();
+  expect(out.gates).toEqual({
+    simplicity: "pass",
+    "anti-abstraction": "fail",
+    "acceptance-defined": "pass",
+    "clarifications-resolved": "pass",
+    constitution: "n/a",
+  });
+  expect(out.handoffEligible).toBe(false);
+});
+
+test("parses all-pass Gates with handoff-eligible yes", () => {
+  const out = parseScryerReport(reportAllPass);
+  expect(out.gates.simplicity).toBe("pass");
+  expect(out.handoffEligible).toBe(true);
+});
+
+test("backward-compat: legacy report (no Gates section) still parses; gates is null and handoff derived from blockers", () => {
+  const out = parseScryerReport(cleanReport);
+  expect(out.gates).toBeNull();
+  expect(out.handoffEligible).toBe(true);
+
+  const outFull = parseScryerReport(fullReport);
+  expect(outFull.gates).toBeNull();
+  expect(outFull.handoffEligible).toBe(false);
+});
+
+test("derives handoff-eligible from gates when handoff-eligible line is missing", () => {
+  const missingHandoff = `# scryer report — /abs/spec.md
+
+## Gates
+- simplicity: pass
+- anti-abstraction: pass
+- acceptance-defined: fail
+- clarifications-resolved: pass
+- constitution: n/a
+
+## BLOCKER (0)
+
+## WARNING (0)
+
+## INFO (0)
+
+## Auto-fix candidates
+
+## Summary
+0 blocker · 0 warning · 0 info
+`;
+  const out = parseScryerReport(missingHandoff);
+  expect(out.gates["acceptance-defined"]).toBe("fail");
+  expect(out.handoffEligible).toBe(false);
+});

@@ -30,10 +30,10 @@ Rigid audit gate. Match the user's language; keep technical identifiers unchange
    ```
    (a) apply auto-fixes → patch spec, commit
    (o) open spec        → print path
-   (l) hand to linear   → linear-devotee:create-project (only if linear-project: _none_ and 0 BLOCKER)
+   (l) hand to linear   → linear-devotee:create-project (only if linear-project: _none_ AND handoffEligible)
    (s) stop
    ```
-   Disable `(l)` if `linear-project` is not `_none_` or any BLOCKER finding exists.
+   Disable `(l)` if any of the following hold: `linear-project` frontmatter is not `_none_`, or the parsed report's `handoffEligible` is `false` (any gate failed or any BLOCKER remains). When `(l)` is disabled, print the disabling reason in plain text under the menu — quote the first failing gate or BLOCKER from the report.
    - `(a)`: apply each `autoFixes` entry via `apply-frontmatter-patch.mjs`. Commit: `git commit -m "docs(acid-prophet): spec-auditor auto-fixes"`. Never `--no-verify`. If no fixes: inform and return to menu.
    - `(o)`: print absolute spec path.
    - `(l)`: invoke `linear-devotee:create-project` with spec path.
@@ -44,6 +44,8 @@ Rigid audit gate. Match the user's language; keep technical identifiers unchange
 ```text
 acid-prophet:audit-spec report
   Spec:        <path>
+  Gates:       <N pass · N fail · N n/a | _legacy_>
+  Handoff:     <eligible | blocked: <reason>>
   Findings:    <N blocker · N warning · N info>
   Auto-fixes:  <N proposed | N applied | none>
   Branch:      <a | o | l | s | malformed>

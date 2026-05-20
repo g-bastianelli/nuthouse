@@ -22,10 +22,12 @@ Rigid spec-writing gate. Match the user's language; keep technical identifiers u
 3. Clarifying questions (one per message):
    - **Scope check first**: if the request describes multiple independent subsystems, flag and propose decomposition. Each sub-project gets its own trip.
    - Extract: who uses this and why, what problem it uniquely solves, where it fits, constraints (stack, timeline), definition of done.
+   - **Uncertainty rule**: when a section needs a value the user hasn't provided and you cannot infer it from `CLAUDE.md`, `package.json`, or the codebase — **never invent**. Emit a literal marker `[NEEDS CLARIFICATION: <one-line question>]` inline at that position. The spec is finishable with markers; the auditor will flag each one and the user will resolve them before the spec leaves draft.
 4. Propose 2–3 approaches with trade-offs. Lead with your recommendation. One message for the full option set.
 5. Present spec sections one at a time; wait for user approval before the next. Revise on rejection.
    - Sections: Problem & Why, Solution, Architecture, Components / data flow, Error handling, Testing approach, Non-goals.
    - **Keep code minimal**: interfaces, type signatures, short pseudo-code (≤ 15 lines) only. Concrete examples and full implementations belong in Linear issues, not specs.
+   - Re-state the uncertainty rule on every section: emit `[NEEDS CLARIFICATION: ...]` rather than guess. A draft spec is allowed to ship with markers; the next steps will surface them.
 6. Write spec:
    - Create `docs/acid-prophet/specs/` if missing. Save to `docs/acid-prophet/specs/YYYY-MM-DD-<topic>.md`.
    - Frontmatter required: `id: <slug>`, `status: draft`, `linear-project: _none_`, `verified-by: _none_`, `last-reviewed: <today ISO>`.
@@ -39,7 +41,7 @@ Rigid spec-writing gate. Match the user's language; keep technical identifiers u
      ```
    - Parse result with `<PROJECT_ROOT>/acid-prophet/claudecode/lib/parse-scryer-report.mjs`. If null: try `warden:voice` per the voice cadence with `SUMMARY: spec-auditor output malformed`, then continue without auto-fixes.
    - Apply each auto-fix candidate via `apply-frontmatter-patch.mjs`. If patches applied, commit: `git commit -m "docs(acid-prophet): spec-auditor auto-fixes"`. Never use `--no-verify`.
-   - **BLOCKER findings remain** → surface to user verbatim; loop (edit spec → re-run spec-auditor → repeat) until BLOCKER list is empty.
+   - **`handoffEligible === false`** → surface every failing gate and BLOCKER to the user verbatim; loop (edit spec → re-run spec-auditor → repeat) until `handoffEligible` becomes `true`. This subsumes the older "BLOCKER list must be empty" condition — gates can fail without BLOCKERs, and both must be clean before advancing.
    - WARNING/INFO only → present list; let user choose which to address; then advance.
 8. User spec gate: ask user to review `<path>`. Wait. If changes: update spec, commit, re-run step 7.
 9. Handoff: ask the user if they want to push the spec to Linear.
@@ -74,6 +76,7 @@ acid-prophet:write-spec report
 ## Never
 
 - Invoke `linear-devotee:create-project` before spec is user-approved.
+- Invent a value when uncertain — emit `[NEEDS CLARIFICATION: ...]` instead.
 - Ask multiple questions in the same message.
 - Move to the next step before the current one is done.
 - Run `git push` or `git rebase`.

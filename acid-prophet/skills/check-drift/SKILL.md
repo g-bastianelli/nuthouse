@@ -26,6 +26,7 @@ Rigid drift-detection gate. Match the user's language; keep technical identifier
 3. Fetch reference:
    - **Spec file**: read `SPEC_FILE`; extract Goal/Problem, Solution, Acceptance, Constraints, Non-goals/Edges. Fetch only project name from Linear if needed (`mcp__claude_ai_Linear__get_project`).
    - **Linear fallback** (no spec found): try `warden:voice` per the voice cadence with `SUMMARY: no spec file, falling back to Linear`. Then dispatch a general-purpose Agent to fetch project details, attachments, milestones, and all issue descriptions (Goal, Acceptance, Constraints sections). Capture as `REFERENCE_CONTEXT`.
+   - **Unresolved clarification markers**: when reference is the spec file, grep it for `[NEEDS CLARIFICATION:` occurrences. Capture each line + quoted marker text as `OPEN_MARKERS`. These represent spec debt — any DRIFT classification touching a region with an open marker MUST be re-classified `AMBIGUOUS` (the spec itself never said anything definitive).
 4. Get diff: `git diff main...HEAD`. If empty, try `warden:voice` per the voice cadence with `SUMMARY: empty diff, nothing to check`; print final report with `Drift: none (empty diff)`; exit.
 5. Drift analysis: dispatch a general-purpose Agent with `REFERENCE_CONTEXT`, `DIFF`, and `REFERENCE_SOURCE`. For each Acceptance criterion or normative Constraint, classify as CLEAN / DRIFT / AMBIGUOUS / UNRELATED. Format per finding: `source <path|id> — "<criterion>" → <classification + explanation>`. End with `<N> drift · <N> ambiguous · <N> clean · <N> unrelated`. Capture as `DRIFT_REPORT`.
 6. Report:
@@ -43,6 +44,7 @@ acid-prophet:check-drift report
   Project:     <name> (<PROJECT_ID>)
   Source:      spec file <SPEC_FILE> | linear (fallback)
   Spec file:   <SPEC_FILE | _none_>
+  Open markers: <N unresolved [NEEDS CLARIFICATION] | _none_>
   Drift:       <N confirmed · N ambiguous · N clean · N unrelated>
   PR comment:  <posted | skipped | gh unavailable | no drift>
 ```
