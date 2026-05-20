@@ -1,6 +1,6 @@
 {
   "name": "acid-prophet",
-  "description": "Structured spec-writing skill. Asks one question at a time, proposes approaches, validates a written spec, then optionally hands off to linear-devotee for Linear project creation.",
+  "description": "Spec-driven development pipeline. Constitution → spec → audit with Phase -1 gates → implementation plan with typed contracts → acceptance checklist → PR drift check. Asks one question at a time, emits [NEEDS CLARIFICATION] markers when uncertain, blocks Linear handoff until every gate passes.",
   "author": {
     "name": "g-bastianelli"
   },

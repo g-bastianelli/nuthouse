@@ -1,7 +1,7 @@
 {
   "name": "acid-prophet",
   "version": "1.0.0",
-  "description": "Structured spec-writing for Codex: idea discovery, approach selection, reviewed specs, and optional Linear handoff.",
+  "description": "Spec-driven development for Codex: constitution → spec → audit with Phase -1 gates → implementation plan with typed contracts → acceptance checklist → drift check. Optional Linear handoff.",
   "author": {
     "name": "g-bastianelli"
   },
@@ -10,7 +10,7 @@
   "interface": {
     "displayName": "Acid Prophet",
     "shortDescription": "Turn raw ideas into reviewed specs",
-    "longDescription": "Acid Prophet bundles Codex skills for structured product discovery: one-question-at-a-time clarification, approach tradeoff analysis, section-by-section spec validation, written markdown specs, self-review, and an optional handoff to Linear Devotee for Linear project creation.",
+    "longDescription": "Acid Prophet is a spec-driven development pipeline for Codex. Ratify project articles into a constitution. Turn ideas into specs through one-question-at-a-time clarification with explicit [NEEDS CLARIFICATION] markers when uncertain. Audit specs against SDD structure, codebase reality, and Phase -1 gates (simplicity, anti-abstraction, acceptance-defined, clarifications-resolved, constitution). Expand ratified specs into plans with typed contracts and quickstart scenarios. Derive acceptance checklists for QA. Detect drift between branch diffs and the linked spec. Hand off to Linear Devotee for Linear project creation when handoffEligible.",
     "developerName": "g-bastianelli",
     "category": "Developer Tools",
     "capabilities": ["Read", "Write"],
