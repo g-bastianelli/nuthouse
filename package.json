@@ -10,7 +10,8 @@
     "fmt": "oxfmt .",
     "fmt:check": "oxfmt --check .",
     "test:runtime": "bun test _shared/runtime/tests/claude.test.mjs",
-    "test:meta": "cd .claude/tests && bun test frontmatter.test.mjs"
+    "test:meta": "cd .claude/tests && bun test frontmatter.test.mjs",
+    "bump:shas": "node scripts/bump-marketplace-shas.mjs"
   },
   "devDependencies": {
     "lefthook": "2.1.6",
