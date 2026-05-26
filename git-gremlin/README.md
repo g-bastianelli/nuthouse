@@ -4,13 +4,13 @@
 
 Commit and PR helper for Claude Code and Codex.
 
-It recognizes commit or PR intent, drafts the boring text from the current git state, and performs mutations only after explicit confirmation.
+It recognizes commit or PR intent, drafts the boring text from the current git state, commits from explicit commit intent, and keeps PR creation behind a confirmation gate.
 
 ## Skills
 
 | Skill                | Purpose                                                                        |
 | -------------------- | ------------------------------------------------------------------------------ |
-| `git-gremlin:commit` | Draft and optionally run a conventional commit from staged or approved changes |
+| `git-gremlin:commit` | Run a conventional commit from staged or explicitly approved changes           |
 | `git-gremlin:pr`     | Draft and optionally create a GitHub pull request from branch history and diff |
 
 ## Agents

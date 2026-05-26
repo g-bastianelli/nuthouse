@@ -1,12 +1,12 @@
 ---
 name: commit
-description: Use automatically when the user asks to commit changes, create a commit, write a commit message, commit staged changes, commit everything, run git commit, "fais le commit", "commit mes changements", or "crée un commit". Handles staged changes first and may offer to stage dirty changes only after confirmation. Do not use for plain git status, diff, log, push, rebase, or PR creation.
+description: Use automatically when the user asks to commit changes, create a commit, write a commit message, commit staged changes, commit everything, run git commit, "fais le commit", "commit mes changements", or "crée un commit". Handles staged changes first and stages dirty changes only when the user explicitly asks to commit all/everything or stage changes. Do not use for plain git status, diff, log, push, rebase, or PR creation.
 effort: high
 ---
 
 # git-gremlin:commit
 
-Rigid approval gate. Match the user's language; keep technical identifiers unchanged.
+Commit intent is the approval gate. Match the user's language; keep technical identifiers unchanged.
 
 > Voice cadence: at every user-visible workflow transition, try to dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Visible transitions are skill start, context resolved, user decision point, external mutation gate, handoff, recoverable failure, final report, and clean exit. Print the returned `line` only when non-empty. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Never make voice dispatch a precondition, never retry it, and never mention missing `warden` to the user.
 
@@ -16,16 +16,16 @@ Rigid approval gate. Match the user's language; keep technical identifiers uncha
    - Verify this is a git repository.
    - Verify staged files exist: `git diff --staged --name-only`.
    - If no staged files exist, check dirty files with `git status --short`.
-   - If dirty files exist and the user explicitly asked to commit all/everything or stage changes, ask before running `git add -A`, then re-check staged files.
+   - If dirty files exist and the user explicitly asked to commit all/everything or stage changes, run `git add -A`, then re-check staged files.
    - If staged files are still empty, abort with a clear message asking the user to stage files or say they want all changes staged.
 2. Draft commit message:
    - Dispatch `git-gremlin:commit-drafter` with the staged diff as input.
    - Receive `{ message: string, files: string[] }`.
-   - Display the proposed message to the user. Wait for confirmation.
+   - If the user asked only to draft, suggest, write, or review a commit message, display the proposed message and stop.
+   - Otherwise, treat the user's commit request as explicit approval for this staged commit and continue immediately.
 3. Execute commit:
-   - On confirmation: re-dispatch `git-gremlin:commit-drafter` with `action: execute`.
+   - Re-dispatch `git-gremlin:commit-drafter` with `action: execute`.
    - Receive `{ hash: string }`.
-   - On rejection: offer to regenerate or cancel. Never commit silently.
 4. Report:
    - Return result.
 
@@ -41,7 +41,8 @@ git-gremlin:commit report
 ## Never
 
 - Run `git push`, `git commit` directly from the skill (only via commit-drafter).
-- Commit without explicit user confirmation.
+- Commit when the user only asked for a draft/message suggestion/review.
+- Stage dirty files unless the user explicitly asked to commit all/everything or stage changes.
 - Skip the staged files check.
 - Retry silently after a pre-commit hook failure — surface stderr verbatim and stop.
 

@@ -20,10 +20,10 @@ This plugin delegates these operations to subagents: the diff stays in their con
 
 A nuthouse plugin (`git-gremlin`) with two skills:
 
-- **`git-gremlin:commit`** — delegates to a subagent that reads `git diff --staged`, proposes a conventional commit message, waits for confirmation, executes `git commit`.
+- **`git-gremlin:commit`** — delegates to a subagent that reads `git diff --staged`, proposes a conventional commit message, treats explicit commit intent as approval, executes `git commit`.
 - **`git-gremlin:pr`** — delegates to a subagent that reads `git log <base>...HEAD` + `git diff <base>...HEAD`, proposes title + PR description, waits for confirmation, executes `gh pr create`.
 
-In both cases: the diff never transits through the main context. Flow: `invoke skill → subagent proposes → user confirms → subagent executes → skill returns compact result`.
+In both cases: the diff never transits through the main context. Commit flow: `invoke skill with commit intent → subagent proposes → subagent executes → skill returns compact result`. PR flow still requires a confirmation gate before `gh pr create`.
 
 Runtime prerequisites: `git` + authenticated `gh` CLI. No npm dependencies.
 
@@ -35,7 +35,6 @@ user → git-gremlin:commit (SKILL.md)
                     reads: git diff --staged
                     proposes: commit message (conventional commits)
                     ← returns proposal to skill
-             └─ user confirms
              └─ Agent(subagent_type: git-gremlin:commit-drafter, continuation)
                     executes: git commit -m "..."
                     ← returns: commit hash
@@ -60,7 +59,7 @@ Two agents: `commit-drafter`, `pr-drafter`. Allowed tools: `Bash` only (git + gh
 
 1. Verify staged files exist (`git diff --staged --name-only`). Error if empty.
 2. Dispatch `commit-drafter` → receives `{ message: string, files: string[] }`.
-3. Display proposal to user, wait for confirmation.
+3. Treat the user's commit request as explicit approval, unless they asked only for a draft/message suggestion.
 4. Re-dispatch `commit-drafter` with `action: execute` → receives `{ hash: string }`.
 5. Return: `Committed <hash> — <message>`.
 

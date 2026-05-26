@@ -22,7 +22,7 @@
 | [linear-devotee](./linear-devotee) | Claude Code + Codex | Linear issue intake, planning, and gated project/milestone/issue creation |
 | [acid-prophet](./acid-prophet)     | Claude Code + Codex | Spec writing, spec audit, and PR/spec drift checks                        |
 | [warden](./warden)                 | Claude Code + Codex | Shared persona-line dispatcher and global voice toggle                    |
-| [git-gremlin](./git-gremlin)       | Claude Code + Codex | Commit and PR drafting with explicit confirmation gates                   |
+| [git-gremlin](./git-gremlin)       | Claude Code + Codex | Commit and PR drafting with scoped mutation gates                         |
 | [saucy-status](./saucy-status)     | Claude Code         | Statusline and prompt-time fun messages                                   |
 
 ## Install
