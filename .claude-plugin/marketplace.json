@@ -1,9 +1,16 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "nuthouse",
-  "owner": { "name": "g-bastianelli", "url": "https://github.com/g-bastianelli" },
+  "owner": {
+    "name": "g-bastianelli",
+    "url": "https://github.com/g-bastianelli"
+  },
   "plugins": [
-    { "name": "saucy-status", "source": "./saucy-status", "category": "fun" },
+    {
+      "name": "saucy-status",
+      "source": "./saucy-status",
+      "category": "fun"
+    },
     {
       "name": "react-monkey",
       "source": {
@@ -50,7 +57,7 @@
         "source": "git-subdir",
         "url": "https://github.com/g-bastianelli/nuthouse",
         "path": "git-gremlin",
-        "sha": "579eb207596d4ccc3896b4b5ce17fa8438f58cb7"
+        "sha": "adc76ec598fe9c2469b6aac582cc4cca891a185b"
       },
       "category": "productivity"
     }
