@@ -1,6 +1,6 @@
 ---
 name: create-issue
-description: Use to create a single Linear Issue with a strict SDD-formatted description (standalone add-on) or to resume a partially-committed create-project cascade. Reads chain-state to detect resume mode and pick the next issue whose `id` is still null, dispatches issue-drafter, previews, creates on approval, updates chain state, can auto-chain to greet when the cascade completes.
+description: Use to create a single Linear Issue with a strict SDD-formatted description (standalone add-on) or to resume a partially-committed create-project cascade. Reads chain-state to detect resume mode and pick the next issue whose `id` is still null, dispatches issue-drafter, previews, creates on approval, updates chain state, and recommends the next issue to work on.
 effort: high
 allowed-tools: Read, Glob, Grep, Write
 ---
@@ -62,9 +62,9 @@ Rigid runbook. Match the user's language; keep technical identifiers unchanged.
      }
      ```
 9. Handoff:
-   - **Resume**: if more `drafts.issues[].id == null` remain, announce next iteration (the same skill is invoked again). If `phase: "committed"`: rewrite `${CLAUDE_PLUGIN_DATA}/state-${CLAUDE_SESSION_ID}.json` (per `create-project` step 11) and announce auto-chain to `linear-devotee:greet <identifier-of-first-created-issue>` and continue immediately.
-   - **Chained (legacy)**: offer next issue if remaining; otherwise final report.
-   - **Standalone**: final report.
+   - **Resume**: if more `drafts.issues[].id == null` remain, announce the next uncreated unblocked issue and tell the user to run this same skill again to continue creating the cascade. If `phase: "committed"`, pick the first startable issue (`drafts.issues[]` filtered by `id != null`, sorted by topological commit order, preferring entries with no `blocked_by_refs`; if every issue is blocked, pick the first issue whose blockers all have created Linear identifiers and clearly label that dependency assumption). Print `Recommended next issue: <identifier> - <title> - <url>` and `Start with: linear-devotee:greet <identifier>`. Do **not** write greet state, invoke `linear-devotee:greet`, invoke `linear-devotee:plan`, or continue automatically.
+   - **Chained (legacy)**: offer next issue if remaining; otherwise recommend the first created issue if available.
+   - **Standalone**: recommend the created issue as the issue to work on next.
 
 ## Final Report
 
@@ -76,7 +76,8 @@ linear-devotee:create-issue report
   Issue:         <identifier> - <title> - <url> | (cancelled) | (linear_error) | (cross_project_violation)
   Labels:        <comma-separated names | none>
   Cascade:       <created>/<total> issues · phase: committing | partial_failure | committed | n/a
-  Hand-off:      greet <identifier> | next-issue | stop | cancelled | linear_error | cross_project_violation | dependency_cycle | nothing-to-do | standalone-done
+  Recommended next: <identifier> - <title> - <url | _none_>
+  Hand-off:      user-starts-greet <identifier> | next-issue | stop | cancelled | linear_error | cross_project_violation | dependency_cycle | nothing-to-do | standalone-done
 ```
 
 ## Never

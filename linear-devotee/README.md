@@ -4,7 +4,7 @@
 
 Linear workflow plugin for Claude Code and Codex.
 
-It turns Linear issues and specs into SDD-shaped context, validated implementation plans, and gated Linear project/milestone/issue creation.
+It turns Linear issues and specs into SDD-shaped context, validated implementation plans, next-work recommendations, and gated Linear project/milestone/issue creation.
 
 ## Skills
 
@@ -12,6 +12,7 @@ It turns Linear issues and specs into SDD-shaped context, validated implementati
 | --------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
 | `linear-devotee:greet`            | Detect a Linear issue, load context, optionally prepare branch/status, then hand off to planning                      |
 | `linear-devotee:plan`             | Write and validate an implementation plan, detect spec drift, and sync accepted drift after approval                  |
+| `linear-devotee:next-issue`       | Recommend the next startable issue in the same Linear project after an issue is finished                              |
 | `linear-devotee:create-project`   | Draft a Linear project cascade from a spec, preview it, then create project/milestones/issues after one approval gate |
 | `linear-devotee:create-milestone` | Add or resume the next milestone in a project cascade                                                                 |
 | `linear-devotee:create-issue`     | Add or resume the next SDD-formatted issue in a project cascade                                                       |

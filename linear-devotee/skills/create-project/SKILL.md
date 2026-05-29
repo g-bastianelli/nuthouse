@@ -1,6 +1,6 @@
 ---
 name: create-project
-description: Use when creating a Linear Project end-to-end from a spec file or vibe-mode Q&A. Drafts project + milestones + issues in advance, presents one editable preview, asks a single approval gate, then batch-creates everything on Linear and auto-chains to greet on the first issue. Falls back to per-skill resume via create-milestone / create-issue on partial failure.
+description: Use when creating a Linear Project end-to-end from a spec file or vibe-mode Q&A. Drafts project + milestones + issues in advance, presents one editable preview, asks a single approval gate, then batch-creates everything on Linear and recommends the first issue to start. Falls back to per-skill resume via create-milestone / create-issue on partial failure.
 model: opus
 effort: max
 allowed-tools: Read, Glob, Grep, Bash, Write
@@ -15,7 +15,7 @@ Rigid runbook. Match the user's language; keep technical identifiers unchanged.
 
 ## Mode
 
-**Full-cascade mode by default.** This skill drafts the project, its milestones, and its issues up front, presents one global preview, asks **a single approval gate**, then batch-creates everything on Linear in topological order. On success it auto-chains to `linear-devotee:greet` on the first created issue.
+**Full-cascade mode by default.** This skill drafts the project, its milestones, and its issues up front, presents one global preview, asks **a single approval gate**, then batch-creates everything on Linear in topological order. On success it recommends the first unblocked created issue to start, but does not invoke `linear-devotee:greet` automatically.
 
 `linear-devotee:create-milestone` and `linear-devotee:create-issue` remain invocable standalone (add-on use cases) and double as **resume tools** when this skill's batch commit fails partway — they detect the chain-state file and pick up at the first `id: null` entry.
 
@@ -170,8 +170,8 @@ Rigid runbook. Match the user's language; keep technical identifiers unchanged.
     - `last-reviewed: <today ISO date>`
     - Warn, do not abort, if frontmatter patch fails.
 
-11. Auto-chain to plan via greet:
-    - On `phase: "committed"` and at least one created issue: pick the first issue (`drafts.issues[]` filtered by `id != null`, sorted by topological commit order). Reset the greet state so the freshly-created issue is picked up cleanly: write `${CLAUDE_PLUGIN_DATA}/state-${CLAUDE_SESSION_ID}.json` (or `${CLAUDE_PLUGIN_ROOT}/data/state-${CLAUDE_SESSION_ID}.json` if `CLAUDE_PLUGIN_DATA` is unset) with `{ greeted: false, awaiting_prompt: false, issue: "<identifier>", source: "create-project", current_branch: "<git branch>", needs_branch: true, in_repo: true }`. Then print `linear-devotee:greet <identifier>` and continue immediately — do not ask the user. The user's only validation point downstream is the plan's own `Validate this plan? (y / edit / stop)` gate.
+11. Recommend first issue:
+    - On `phase: "committed"` and at least one created issue: pick the first startable issue (`drafts.issues[]` filtered by `id != null`, sorted by topological commit order, preferring entries with no `blocked_by_refs`; if every issue is blocked, pick the first issue whose blockers all have created Linear identifiers and clearly label that dependency assumption). Print `Recommended next issue: <identifier> - <title> - <url>` and `Start with: linear-devotee:greet <identifier>`. Do **not** write greet state, invoke `linear-devotee:greet`, invoke `linear-devotee:plan`, or continue automatically.
     - On `phase: "partial_failure"`: stop with a structured resume report (see Final Report). Do **not** chain.
     - On `phase: "cancelled"` or `already-committed`: stop.
 
@@ -189,7 +189,8 @@ linear-devotee:create-project report
   Last error:        <verbatim Linear error | _none_>
   Preview file:      <abs path>
   Chain state:       ${CLAUDE_PLUGIN_ROOT}/data/chain-<session>.json
-  Hand-off:          greet <identifier> | resume via create-milestone / create-issue | stop | cancelled | linear_error
+  Recommended next:  <identifier> - <title> - <url | _none_>
+  Hand-off:          user-starts-greet <identifier> | resume via create-milestone / create-issue | stop | cancelled | linear_error
 ```
 
 ## Never
@@ -201,4 +202,4 @@ linear-devotee:create-project report
 - Auto-rollback created entries on partial failure — Linear has no transaction; leave them and let the user decide.
 - Run `git push`, `git commit`, or `git rebase`.
 - Write outside plugin `data/`, except the confirmed spec frontmatter patch.
-- Invoke another skill programmatically beyond the documented `greet` auto-chain on `committed`.
+- Invoke another skill programmatically after the cascade commits.
