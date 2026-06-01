@@ -50,6 +50,8 @@ Rules:
 
 Nuthouse plugins follow the Superpowers-style root install model: the plugin directory is the install unit. Marketplace entries point to `<plugin>`, never to `<plugin>/claudecode` or `<plugin>/codex`.
 
+> **Two marketplace registries.** `.claude-plugin/marketplace.json` is read by **Claude Code**; `.agents/plugins/marketplace.json` is read by **Codex**. Every `codex`/`both` plugin MUST be registered in **both** — a plugin absent from the Codex registry is invisible to `codex plugin list` even with a valid `.codex-plugin/plugin.json`. The Codex format differs: `path` has a leading `./`, entries carry a `policy` block, there is **no `sha`** field, and `category` is TitleCase. Codex also serves from a cached Git snapshot — after a plugin lands on the remote, `codex plugin marketplace upgrade` + session restart are required to see it. `/scaffold-plugin` step 3a-bis writes both registries by construction.
+
 Canonical layout for cross-runtime plugins:
 
 ```text
@@ -91,7 +93,8 @@ bunx bun test <plugin>/                    # all plugin tests pass
 bun run test:meta                          # frontmatter model/effort values valid
 bun run lint                                # lint clean
 bun run fmt:check                           # format clean
-node -e "JSON.parse(require('node:fs').readFileSync('.claude-plugin/marketplace.json', 'utf8'))"  # marketplace JSON valid
+node -e "JSON.parse(require('node:fs').readFileSync('.claude-plugin/marketplace.json', 'utf8'))"  # Claude Code marketplace JSON valid
+node -e "JSON.parse(require('node:fs').readFileSync('.agents/plugins/marketplace.json', 'utf8'))"  # Codex marketplace JSON valid (codex/both plugins MUST be registered here too — else invisible to Codex)
 bun run bump:shas                          # marketplace.json sha pins up-to-date vs origin/main (see _adr/0002-marketplace-sha-pinning.md)
 grep -rn "writing-plans" <plugin>/   # no external workflow artifacts leak
 ```
