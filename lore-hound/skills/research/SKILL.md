@@ -36,8 +36,10 @@ begins.
 ## Step 0 — Preconditions
 
 1. Verify cwd contains `.claude-plugin/marketplace.json` (inside the repo).
-2. Verify `WebSearch` and `WebFetch` tools are available. If either tool is unavailable, abort
-   with: _"les outils de chasse ne sont pas là. charge WebSearch et WebFetch avant de relancer."_
+2. Verify the runtime can search and fetch the web. On Claude Code that's the `WebSearch` +
+   `WebFetch` tools; on Codex it's the native web search tool (enabled by default — pass
+   `--search` for live fetches). If no web search/fetch capability is available, abort with:
+   _"les outils de chasse ne sont pas là. active la recherche web avant de relancer."_
 3. Parallelism is achieved by issuing multiple tool calls in a single message (concurrent
    `WebSearch` calls, then concurrent `Agent` dispatches) — no special orchestration tool is
    required.

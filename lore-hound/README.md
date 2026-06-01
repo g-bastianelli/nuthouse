@@ -31,6 +31,14 @@ data, no hallucinations, no unsourced claims — only what the teeth can hold.
 /plugin install lore-hound@nuthouse
 ```
 
+### Codex CLI
+
+```
+codex plugin install lore-hound@nuthouse
+```
+
+Codex's native web search is enabled by default; pass `--search` for live fetches.
+
 ## License
 
 MIT
