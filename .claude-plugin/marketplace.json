@@ -60,6 +60,16 @@
         "sha": "adc76ec598fe9c2469b6aac582cc4cca891a185b"
       },
       "category": "productivity"
+    },
+    {
+      "name": "lore-hound",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/g-bastianelli/nuthouse",
+        "path": "lore-hound",
+        "sha": "2c15dd180b3d9c4ada3dbe907fb77bd01393de18"
+      },
+      "category": "productivity"
     }
   ]
 }
