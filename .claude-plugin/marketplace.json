@@ -70,6 +70,16 @@
         "sha": "60ca989acd1337d9b469a8ee24212d42f5c4435b"
       },
       "category": "productivity"
+    },
+    {
+      "name": "stack-golem",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/g-bastianelli/nuthouse",
+        "path": "stack-golem",
+        "sha": "10aa1306239461537e4dff57fafc277e6ae55b4e"
+      },
+      "category": "productivity"
     }
   ]
 }

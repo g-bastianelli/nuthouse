@@ -56,6 +56,8 @@ linear-devotee/
   shared/
   skills/
   agents/
+  hooks/
+    hooks.json
   claudecode/
     hooks/
     lib/

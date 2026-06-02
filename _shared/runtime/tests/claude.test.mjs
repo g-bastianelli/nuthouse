@@ -31,6 +31,20 @@ test("resolves plugin root and data from Claude env vars", () => {
   expect(runtime.rootPath("persona.md")).toBe(path.join(tmpRoot, "persona.md"));
 });
 
+test("resolves plugin root and data from Codex env vars", () => {
+  const runtime = createClaudeRuntime({
+    env: {
+      PLUGIN_ROOT: tmpRoot,
+      PLUGIN_DATA: tmpData,
+    },
+  });
+
+  expect(runtime.pluginRoot()).toBe(tmpRoot);
+  expect(runtime.pluginData()).toBe(tmpData);
+  expect(runtime.dataPath("state-sess.json")).toBe(path.join(tmpData, "state-sess.json"));
+  expect(runtime.rootPath("persona.md")).toBe(path.join(tmpRoot, "persona.md"));
+});
+
 test("falls back to plugin root data directory when plugin data env is absent", () => {
   const runtime = createClaudeRuntime({
     env: {

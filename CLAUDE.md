@@ -76,7 +76,7 @@ Root skills read the plugin persona with `../../persona.md`. Skill frontmatter n
 
 ## Stack & tooling
 
-- **Runtime hooks/scripts**: Node.js, **ESM** (`import` / `export`). **`.mjs`** extension is mandatory for hooks and tests (zero ambiguity for Node, no `package.json` needed in the plugin, plugin is self-contained regardless of install context). `saucy-status` stays on CJS for historical reasons. Every new plugin ships ESM `.mjs`. Reference: `linear-devotee/claudecode/hooks/*.mjs`.
+- **Runtime hooks/scripts**: Node.js, **ESM** (`import` / `export`). **`.mjs`** extension is mandatory for hooks and tests (zero ambiguity for Node, no `package.json` needed in the plugin, plugin is self-contained regardless of install context). `saucy-status` stays on CJS for historical reasons. Every new plugin ships ESM `.mjs`. Reference: `linear-devotee/claudecode/hooks/*.mjs`; Codex discovers plugin hooks through `<plugin>/hooks/hooks.json`, which may point at shared runtime scripts.
 - **Package manager**: `bun@1.3.x` (declared in root `package.json`).
 - **Tests**: `bun test` (built-in, no dep added). Claude Code tests live in `<plugin>/claudecode/tests/`; Codex/root helper tests live in `<plugin>/tests/`.
 - **Lint/format**: `oxlint` (config in `.oxlintrc.json`) and `oxfmt` (config in `.oxfmtrc.json`). Local rule: empty blocks are allowed when intentional; use `catch {}` (not `catch (e)`) when the binding is unused.

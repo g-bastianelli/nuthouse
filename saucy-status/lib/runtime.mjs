@@ -21,9 +21,12 @@ function isMissingFileError(error) {
 
 export function createClaudeRuntime(options = {}) {
   const env = options.env ?? process.env;
-  const root = options.pluginRoot ?? env.CLAUDE_PLUGIN_ROOT ?? null;
+  const root = options.pluginRoot ?? env.CLAUDE_PLUGIN_ROOT ?? env.PLUGIN_ROOT ?? null;
   const data =
-    options.pluginData ?? env.CLAUDE_PLUGIN_DATA ?? (root ? path.join(root, "data") : null);
+    options.pluginData ??
+    env.CLAUDE_PLUGIN_DATA ??
+    env.PLUGIN_DATA ??
+    (root ? path.join(root, "data") : null);
 
   function pluginRoot() {
     return requireValue(root, "CLAUDE_PLUGIN_ROOT is not set");

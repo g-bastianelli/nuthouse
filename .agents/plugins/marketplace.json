@@ -81,6 +81,19 @@
         "authentication": "ON_INSTALL"
       },
       "category": "Productivity"
+    },
+    {
+      "name": "stack-golem",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/g-bastianelli/nuthouse",
+        "path": "./stack-golem"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
     }
   ]
 }
