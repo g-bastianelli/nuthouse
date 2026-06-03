@@ -1,0 +1,24 @@
+{
+  "name": "lore-hound",
+  "version": "1.0.0",
+  "description": "Source-hunting research harness: fan-out web search → fetch+summarize → adversarial verification → cited synthesis. Zero parametric knowledge — answers only from verified sources.",
+  "author": {
+    "name": "g-bastianelli"
+  },
+  "repository": "https://github.com/g-bastianelli/nuthouse",
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Lore Hound",
+    "shortDescription": "Deep web research, grounded only in verified sources",
+    "longDescription": "Lore Hound is a source-first research harness: it fans out web searches, fetches and cites sources, adversarially verifies each claim against recent reliable sources, and synthesizes a cited report. Zero parametric knowledge — it answers only from fetched and verified sources, marking gaps as [NEEDS SOURCE] instead of inventing.",
+    "developerName": "g-bastianelli",
+    "category": "Developer Tools",
+    "capabilities": ["Read"],
+    "websiteURL": "https://github.com/g-bastianelli/nuthouse",
+    "defaultPrompt": [
+      "Use Lore Hound to research this question with cited, verified web sources.",
+      "Use Lore Hound to fact-check this claim against recent reliable sources."
+    ],
+    "logo": "./assets/banner.png"
+  }
+}

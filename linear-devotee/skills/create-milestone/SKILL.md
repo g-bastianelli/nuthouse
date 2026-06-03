@@ -62,7 +62,7 @@ Rigid runbook. Match the user's language; keep technical identifiers unchanged.
      ```
      Preserve existing project/draft fields; set `current` and `current_milestone_id`. Backward compatibility: coerce flat suggested issue strings into structured entries.
 9. Handoff:
-   - **Resume**: if any `drafts.issues[]` still have `id == null`, offer `create-issue` to continue the cascade. If everything is now created and `phase: "committed"`, rewrite `${CLAUDE_PLUGIN_DATA}/state-${CLAUDE_SESSION_ID}.json` (per `create-project` step 11) and announce auto-chain to `linear-devotee:greet <identifier-of-first-issue>` and continue immediately.
+   - **Resume**: if any `drafts.issues[]` still have `id == null`, offer `create-issue` to continue the cascade. If everything is now created and `phase: "committed"`, pick the first startable issue (`drafts.issues[]` filtered by `id != null`, sorted by topological commit order, preferring entries with no `blocked_by_refs`; if every issue is blocked, pick the first issue whose blockers all have created Linear identifiers and clearly label that dependency assumption). Print `Recommended next issue: <identifier> - <title> - <url>` and `Start with: linear-devotee:greet <identifier>`. Do **not** write greet state, invoke `linear-devotee:greet`, invoke `linear-devotee:plan`, or continue automatically.
    - **Chained / standalone**: offer `create-issue`. In chained mode with remaining drafted milestones, also offer next milestone.
    - Print final report.
 
@@ -76,7 +76,8 @@ linear-devotee:create-milestone report
   Suggested issues:   <N>
   Chain progress:     <created>/<total> milestones · <created>/<total> issues
   Phase:              committing | partial_failure | committed | n/a
-  Hand-off:           greet <identifier> | create-issue | next-milestone | stop | cancelled | linear_error | nothing-to-do
+  Recommended next:   <identifier> - <title> - <url | _none_>
+  Hand-off:           user-starts-greet <identifier> | create-issue | next-milestone | stop | cancelled | linear_error | nothing-to-do
 ```
 
 ## Never

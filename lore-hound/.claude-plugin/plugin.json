@@ -1,0 +1,7 @@
+{
+  "name": "lore-hound",
+  "description": "Source-hunting research harness: fan-out web search → fetch+summarize → adversarial verification → cited synthesis. Zero parametric knowledge — answers only from verified sources.",
+  "author": { "name": "g-bastianelli" },
+  "skills": "./skills/",
+  "agents": ["./agents/source-fetcher.md", "./agents/claim-verifier.md"]
+}

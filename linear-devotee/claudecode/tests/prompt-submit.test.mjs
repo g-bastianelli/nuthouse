@@ -65,6 +65,31 @@ test("exits silently without writing root data when CLAUDE_PLUGIN_DATA is missin
   expectRootDataUnused();
 });
 
+test("uses Codex PLUGIN_DATA compatibility env when Claude env is absent", () => {
+  writeStateFile("sess-codex", {
+    greeted: false,
+    awaiting_prompt: true,
+    issue: null,
+    source: null,
+    current_branch: "main",
+    needs_branch: true,
+  });
+  const res = runHook(
+    { session_id: "sess-codex", prompt: "fix ENG-42 logging issue" },
+    { PLUGIN_ROOT: tmpRoot, PLUGIN_DATA: tmpData },
+    { deleteEnv: ["CLAUDE_PLUGIN_ROOT", "CLAUDE_PLUGIN_DATA"] },
+  );
+  expect(res.status).toBe(0);
+  const out = JSON.parse(res.stdout);
+  expect(out.hookSpecificOutput.hookEventName).toBe("UserPromptSubmit");
+  expect(out.hookSpecificOutput.additionalContext).toContain("ENG-42");
+  const state = JSON.parse(fs.readFileSync(path.join(tmpData, "state-sess-codex.json"), "utf8"));
+  expect(state.issue).toBe("ENG-42");
+  expect(state.source).toBe("prompt");
+  expect(state.awaiting_prompt).toBe(false);
+  expectRootDataUnused();
+});
+
 test("detects identifier in first prompt and outputs additionalContext", () => {
   writeStateFile("sess-2", {
     greeted: false,

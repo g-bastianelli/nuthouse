@@ -446,6 +446,45 @@ After writing, re-validate with `node -e "JSON.parse(require('node:fs').readFile
 content from git (`git show HEAD:.claude-plugin/marketplace.json`) and
 abort with the error — never leave a corrupted manifest.
 
+### 3a-bis. `.agents/plugins/marketplace.json` (ONLY if Q3 = codex OR both)
+
+> ⚠️ **Two registries, not one.** `.claude-plugin/marketplace.json` is read by
+> **Claude Code**; `.agents/plugins/marketplace.json` is read by **Codex**. A plugin
+> missing from the Codex registry is **invisible to Codex** even if its
+> `.codex-plugin/plugin.json` exists. For `codex`/`both` plugins you MUST update
+> **both** registries — skipping this is the #1 reason a cross-runtime plugin never
+> shows up under `codex plugin list`.
+
+Read `.agents/plugins/marketplace.json`, parse JSON, **append** an entry to its
+`plugins` array (don't reorder existing entries). The Codex format differs from the
+Claude one — note `path` carries a leading `./`, there is a `policy` block, **no `sha`
+field**, and `category` is TitleCase:
+
+```json
+{
+  "name": "<NAME>",
+  "source": {
+    "source": "git-subdir",
+    "url": "https://github.com/g-bastianelli/nuthouse",
+    "path": "./<NAME>"
+  },
+  "policy": {
+    "installation": "AVAILABLE",
+    "authentication": "ON_INSTALL"
+  },
+  "category": "<Productivity | Fun>"
+}
+```
+
+After writing, re-validate with `node -e "JSON.parse(require('node:fs').readFileSync('.agents/plugins/marketplace.json','utf8'))"` (Bash). On failure, **panic-revert** via `git show HEAD:.agents/plugins/marketplace.json` and abort.
+
+Skip this step entirely for `claudecode`-only plugins (they never reach Codex).
+
+**Note for the user (surface in the final report):** Codex serves plugins from a cached
+Git _snapshot_. After this plugin lands on the remote, refreshing requires
+`codex plugin marketplace upgrade`, then `codex plugin add <NAME>@nuthouse`. An already-open
+Codex session must be **restarted** to see the new plugin (no hot-reload).
+
 ### 3b. Root `README.md`
 
 Read the file. Find the `## Plugins` table and **append** a row:

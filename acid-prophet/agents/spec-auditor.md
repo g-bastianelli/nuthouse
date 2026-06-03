@@ -41,7 +41,7 @@ MODE: report-only | auto-fix-trivial
 
 ### 2. SDD-strict checks
 
-- **Frontmatter** — verify the spec begins with a YAML frontmatter block (`---` ... `---`). Parse it. Required keys, all present and non-empty: `id`, `status`, `linear-project`, `verified-by`, `last-reviewed`. If the block is missing or unparseable: BLOCKER `[frontmatter] file has no valid frontmatter block`. Continue all subsequent checks regardless. Per-key gaps emit BLOCKER `[frontmatter:<key>] missing` and an Auto-fix candidate.
+- **Frontmatter** — verify the spec begins with a YAML frontmatter block (`---` ... `---`). Parse it. Required keys, all present and non-empty: `id`, `status`, `linear-project`, `verified-by`, `last-reviewed`. The sentinel value `_none_` is valid and non-empty for `linear-project` and `verified-by` during draft / pre-handoff specs; do not emit a BLOCKER for those values and do not let them affect `handoff-eligible`. If the block is missing or unparseable: BLOCKER `[frontmatter] file has no valid frontmatter block`. Continue all subsequent checks regardless. Per-key gaps emit BLOCKER `[frontmatter:<key>] missing` and an Auto-fix candidate.
 - **Required sections** — match by heading prefix, case-insensitive. Required: `Problem`, `Solution`, `Architecture`, `Components`, `Error handling`, `Testing`, `Non-goals`. Variants like `Components / data flow` or `Testing approach` match. Each missing section: BLOCKER `[section:<name>] missing`.
 - **EARS syntax** — only if a section starting with `Acceptance` is present. Each bullet under it must match `WHEN <trigger>, THE SYSTEM SHALL <behavior>` or `IF <condition>, THE SYSTEM SHALL <behavior>` (case-insensitive). Each non-conforming bullet: WARNING `[ears:<line>] non-EARS phrasing`.
 

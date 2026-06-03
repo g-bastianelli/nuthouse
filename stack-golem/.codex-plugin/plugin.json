@@ -1,0 +1,23 @@
+{
+  "name": "stack-golem",
+  "version": "1.0.0",
+  "description": "Personal notom-stack ops & debug toolbox — Scaleway resource control, platform observability (logs/metrics/health on staging+prod), local dev debugging, and Insomnia collection sync. Investigate-first, CLI-driven, never punts to the console.",
+  "author": {
+    "name": "g-bastianelli"
+  },
+  "repository": "https://github.com/g-bastianelli/nuthouse",
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "stack-golem",
+    "shortDescription": "Personal notom-stack ops & debug toolbox — Scaleway resource control, platform observability (logs/metrics/health on staging+prod), local dev debugging, and Insomnia collection sync. Investigate-first, CLI-driven, never punts to the console.",
+    "longDescription": "Personal notom-stack ops and debug toolbox for the notom platform: Scaleway resource control, staging and production observability, local development debugging, and Insomnia collection sync. It is built for investigate-first workflows that use CLI and repository context instead of punting to consoles or manual dashboards.",
+    "developerName": "g-bastianelli",
+    "category": "Productivity",
+    "capabilities": ["Read", "Write"],
+    "websiteURL": "https://github.com/g-bastianelli/nuthouse",
+    "defaultPrompt": [
+      "Use stack-golem for operations, observability, and local dev debugging on the notom platform."
+    ],
+    "logo": "./assets/banner.png"
+  }
+}

@@ -24,6 +24,8 @@
 | [warden](./warden)                 | Claude Code + Codex | Shared persona-line dispatcher and global voice toggle                    |
 | [git-gremlin](./git-gremlin)       | Claude Code + Codex | Commit and PR drafting with scoped mutation gates                         |
 | [saucy-status](./saucy-status)     | Claude Code         | Statusline and prompt-time fun messages                                   |
+| [lore-hound](./lore-hound)         | Claude Code + Codex | Source-hunting research harness: fan-out search → fetch → verify → cite   |
+| [stack-golem](./stack-golem)       | Claude Code + Codex | Notom-stack ops & debug — Scaleway, observability, local dev, Insomnia    |
 
 ## Install
 

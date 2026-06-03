@@ -3,7 +3,7 @@ import fs from "node:fs";
 import { createClaudeRuntime } from "../lib/runtime.mjs";
 import { extractIssueId } from "./state.mjs";
 
-if (!process.env.CLAUDE_PLUGIN_DATA) process.exit(0);
+if (!process.env.CLAUDE_PLUGIN_DATA && !process.env.PLUGIN_DATA) process.exit(0);
 
 const runtime = createClaudeRuntime();
 const statePath = (sessionId) => runtime.sessionStatePath("state", sessionId);

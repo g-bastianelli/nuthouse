@@ -76,6 +76,28 @@ test("exits silently without writing root data when CLAUDE_PLUGIN_DATA is missin
   expectRootDataUnused();
 });
 
+test("uses Codex PLUGIN_DATA compatibility env when Claude env is absent", () => {
+  stubGit(`
+    case "$1" in
+      rev-parse) exit 0 ;;
+      branch) echo "g-bastianelli/eng-247-foo" ;;
+    esac
+  `);
+  const res = runHook(
+    { session_id: "sess-codex" },
+    { PLUGIN_ROOT: tmpRoot, PLUGIN_DATA: tmpData },
+    { deleteEnv: ["CLAUDE_PLUGIN_ROOT", "CLAUDE_PLUGIN_DATA"] },
+  );
+  expect(res.status).toBe(0);
+  const out = JSON.parse(res.stdout);
+  expect(out.hookSpecificOutput.hookEventName).toBe("SessionStart");
+  expect(out.hookSpecificOutput.additionalContext).toContain("ENG-247");
+  const state = JSON.parse(fs.readFileSync(path.join(tmpData, "state-sess-codex.json"), "utf8"));
+  expect(state.issue).toBe("ENG-247");
+  expect(state.source).toBe("branch");
+  expectRootDataUnused();
+});
+
 test("detects identifier from feature branch and outputs additionalContext", () => {
   stubGit(`
     case "$1" in

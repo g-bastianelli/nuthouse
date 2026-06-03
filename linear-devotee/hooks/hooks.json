@@ -1,0 +1,27 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT:-$CLAUDE_PLUGIN_ROOT}/claudecode/hooks/session-start.mjs\"",
+            "statusMessage": "Checking Linear issue context"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT:-$CLAUDE_PLUGIN_ROOT}/claudecode/hooks/prompt-submit.mjs\"",
+            "statusMessage": "Checking Linear issue context"
+          }
+        ]
+      }
+    ]
+  }
+}

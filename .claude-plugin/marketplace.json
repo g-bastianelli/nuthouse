@@ -27,7 +27,7 @@
         "source": "git-subdir",
         "url": "https://github.com/g-bastianelli/nuthouse",
         "path": "linear-devotee",
-        "sha": "579eb207596d4ccc3896b4b5ce17fa8438f58cb7"
+        "sha": "8b59f301b81e60d70ca8185fd2ab9a184972c71f"
       },
       "category": "productivity"
     },
@@ -37,7 +37,7 @@
         "source": "git-subdir",
         "url": "https://github.com/g-bastianelli/nuthouse",
         "path": "acid-prophet",
-        "sha": "7431fa822b49f55b260ec4e6767ef4465c53c7d9"
+        "sha": "06d24400f41bc2a86b4cb00a1ce833d5f613ead3"
       },
       "category": "productivity"
     },
@@ -58,6 +58,26 @@
         "url": "https://github.com/g-bastianelli/nuthouse",
         "path": "git-gremlin",
         "sha": "adc76ec598fe9c2469b6aac582cc4cca891a185b"
+      },
+      "category": "productivity"
+    },
+    {
+      "name": "lore-hound",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/g-bastianelli/nuthouse",
+        "path": "lore-hound",
+        "sha": "60ca989acd1337d9b469a8ee24212d42f5c4435b"
+      },
+      "category": "productivity"
+    },
+    {
+      "name": "stack-golem",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/g-bastianelli/nuthouse",
+        "path": "stack-golem",
+        "sha": "8b59f301b81e60d70ca8185fd2ab9a184972c71f"
       },
       "category": "productivity"
     }

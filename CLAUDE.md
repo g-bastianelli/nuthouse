@@ -1,6 +1,6 @@
 # nuthouse
 
-Personal Claude Code (sometimes Codex) plugin marketplace. Four plugins right now: `saucy-status`, `react-monkey`, `linear-devotee`, `acid-prophet`.
+Personal Claude Code (sometimes Codex) plugin marketplace. Seven plugins right now: `saucy-status`, `react-monkey`, `linear-devotee`, `acid-prophet`, `warden`, `git-gremlin`, `lore-hound`.
 
 > **Pour créer un nouveau plugin / skill / agent**, invoque les skills locaux :
 > `/scaffold-plugin`, `/scaffold-skill`, `/scaffold-agent`. Ils embarquent
@@ -23,6 +23,7 @@ New plugins follow this energy:
   - `react-monkey` → see `react-monkey/persona.md`
   - `linear-devotee` → see `linear-devotee/persona.md`
   - `acid-prophet` → see `acid-prophet/persona.md`
+  - `lore-hound` → see `lore-hound/persona.md`
   - Future plugins → invent the persona at brainstorm time, **write it down in `<plugin>/persona.md`**, and apply it consistently across the plugin's skills. Do not redeclare the voice in this CLAUDE.md.
 - **Reports follow the voice**. The structure stays plain, the surrounding 1-2 lines are brainrot. Same skill, same voice end-to-end.
 - **Voice cadence matters**. Claude Code skills with `shared/persona-line-contract.md` should try `warden:voice` at every user-visible workflow transition: skill start, context resolved, user decision point, external mutation gate, handoff, recoverable failure, final report, and clean exit. Do not call it for internal shell commands, hidden subagent steps, or inside serious artifacts. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Missing `warden` is never a precondition failure and should never be mentioned to the user during the workflow.
@@ -49,6 +50,8 @@ Rules:
 
 Nuthouse plugins follow the Superpowers-style root install model: the plugin directory is the install unit. Marketplace entries point to `<plugin>`, never to `<plugin>/claudecode` or `<plugin>/codex`.
 
+> **Two marketplace registries.** `.claude-plugin/marketplace.json` is read by **Claude Code**; `.agents/plugins/marketplace.json` is read by **Codex**. Every `codex`/`both` plugin MUST be registered in **both** — a plugin absent from the Codex registry is invisible to `codex plugin list` even with a valid `.codex-plugin/plugin.json`. The Codex format differs: `path` has a leading `./`, entries carry a `policy` block, there is **no `sha`** field, and `category` is TitleCase. Codex also serves from a cached Git snapshot — after a plugin lands on the remote, `codex plugin marketplace upgrade` + session restart are required to see it. `/scaffold-plugin` step 3a-bis writes both registries by construction.
+
 Canonical layout for cross-runtime plugins:
 
 ```text
@@ -73,7 +76,7 @@ Root skills read the plugin persona with `../../persona.md`. Skill frontmatter n
 
 ## Stack & tooling
 
-- **Runtime hooks/scripts**: Node.js, **ESM** (`import` / `export`). **`.mjs`** extension is mandatory for hooks and tests (zero ambiguity for Node, no `package.json` needed in the plugin, plugin is self-contained regardless of install context). `saucy-status` stays on CJS for historical reasons. Every new plugin ships ESM `.mjs`. Reference: `linear-devotee/claudecode/hooks/*.mjs`.
+- **Runtime hooks/scripts**: Node.js, **ESM** (`import` / `export`). **`.mjs`** extension is mandatory for hooks and tests (zero ambiguity for Node, no `package.json` needed in the plugin, plugin is self-contained regardless of install context). `saucy-status` stays on CJS for historical reasons. Every new plugin ships ESM `.mjs`. Reference: `linear-devotee/claudecode/hooks/*.mjs`; Codex discovers plugin hooks through `<plugin>/hooks/hooks.json`, which may point at shared runtime scripts.
 - **Package manager**: `bun@1.3.x` (declared in root `package.json`).
 - **Tests**: `bun test` (built-in, no dep added). Claude Code tests live in `<plugin>/claudecode/tests/`; Codex/root helper tests live in `<plugin>/tests/`.
 - **Lint/format**: `oxlint` (config in `.oxlintrc.json`) and `oxfmt` (config in `.oxfmtrc.json`). Local rule: empty blocks are allowed when intentional; use `catch {}` (not `catch (e)`) when the binding is unused.
@@ -90,7 +93,8 @@ bunx bun test <plugin>/                    # all plugin tests pass
 bun run test:meta                          # frontmatter model/effort values valid
 bun run lint                                # lint clean
 bun run fmt:check                           # format clean
-node -e "JSON.parse(require('node:fs').readFileSync('.claude-plugin/marketplace.json', 'utf8'))"  # marketplace JSON valid
+node -e "JSON.parse(require('node:fs').readFileSync('.claude-plugin/marketplace.json', 'utf8'))"  # Claude Code marketplace JSON valid
+node -e "JSON.parse(require('node:fs').readFileSync('.agents/plugins/marketplace.json', 'utf8'))"  # Codex marketplace JSON valid (codex/both plugins MUST be registered here too — else invisible to Codex)
 bun run bump:shas                          # marketplace.json sha pins up-to-date vs origin/main (see _adr/0002-marketplace-sha-pinning.md)
 grep -rn "writing-plans" <plugin>/   # no external workflow artifacts leak
 ```
@@ -125,6 +129,8 @@ Global guidance — applies everywhere, not just at scaffold time:
 | `linear-devotee` | Linear issue detection at session start + cascading Project/Milestone/Issue creation, all SDD-formatted                                                                                                                                                                                                                                                                                                                                                             | SessionStart, UserPromptSubmit | `greet`, `plan`, `create-project`, `create-milestone`, `create-issue`                            | `issue-context`, `issue-drafter`, `milestone-drafter`, `plan-auditor`, `plan-writer`, `project-drafter` | `linear-devotee/persona.md` |
 | `acid-prophet`   | Spec-driven development pipeline. Q&A → spec → `spec-auditor` audit with Phase -1 gates → optional `write-plan` (plan.md + contracts/ + quickstart.md) → handoff to `linear-devotee` or `react-monkey`. Project-specific articles via `write-constitution` become extra gates. PR-time drift via `check-drift`; per-spec acceptance checklist via `write-checklist`. `[NEEDS CLARIFICATION:...]` markers force the prophet to flag uncertainty instead of inventing | —                              | `write-constitution`, `write-spec`, `audit-spec`, `write-plan`, `write-checklist`, `check-drift` | `spec-auditor`                                                                                          | `acid-prophet/persona.md`   |
 | `warden`         | Centralized voice agent — emits decorative persona lines for any plugin via `warden:voice`; `/warden:voice [on\|off\|status]` toggles fun messages globally                                                                                                                                                                                                                                                                                                         | —                              | `voice`                                                                                          | `voice`                                                                                                 | `warden/persona.md`         |
+| `git-gremlin`    | Commit + PR drafting with scoped mutation gates. Reads staged diff / git log via subagents, proposes conventional commit messages and PR descriptions, executes only on approval                                                                                                                                                                                                                                                                                    | —                              | `commit`, `pr`                                                                                   | `commit-drafter`, `pr-drafter`                                                                          | `git-gremlin/persona.md`    |
+| `lore-hound`     | Source-hunting research harness: fan-out web search → fetch + summarize → adversarial verification → cited synthesis. Zero parametric knowledge — answers only from verified sources.                                                                                                                                                                                                                                                                               | —                              | `research`                                                                                       | `source-fetcher`, `claim-verifier`                                                                      | `lore-hound/persona.md`     |
 
 Repo-level: `.claude/hooks/persona-roulette.mjs` picks a random `persona.md` at SessionStart for the current session's default voice (see "Persona Roulette" section above). Local scaffold skills live at `.claude/skills/{scaffold-plugin,scaffold-skill,scaffold-agent}/SKILL.md` with shared `mad-scientist` voice at `.claude/skills/persona.md`.
 
