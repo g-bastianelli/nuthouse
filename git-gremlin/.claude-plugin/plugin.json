@@ -5,5 +5,18 @@
     "name": "g-bastianelli"
   },
   "skills": "./skills/",
-  "agents": ["./agents/commit-drafter.md", "./agents/pr-drafter.md"]
+  "agents": ["./agents/commit-drafter.md", "./agents/pr-drafter.md"],
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/claudecode/hooks/intercept-branch.mjs\""
+          }
+        ]
+      }
+    ]
+  }
 }
