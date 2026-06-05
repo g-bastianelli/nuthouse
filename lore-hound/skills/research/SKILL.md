@@ -1,6 +1,6 @@
 ---
 name: research
-description: Use when the user wants deep, fact-checked research from multiple web sources. Fan-out web search → fetch + summarize → adversarial verification → cited synthesis. Zero parametric knowledge — answers only from verified sources.
+description: Use automatically when the user wants a researched, fact-checked, or cited answer from the web — "fais une recherche", "creuse le sujet", "vérifie cette info", "trouve-moi des sources sur", "research X", "fact-check X", "find sources on X", "dig into X", or any question whose answer needs several cross-checked web sources. Prefer this over a bare WebSearch whenever the answer should be sourced rather than answered from memory. Fan-out web search → fetch + summarize → adversarial verification → cited synthesis. Zero parametric knowledge — answers only from verified sources.
 model: sonnet
 effort: high
 ---
@@ -28,10 +28,12 @@ language.
 
 ## When you're invoked
 
-Use when the user wants deep, fact-checked research from multiple web sources. The
-lore-hound digs for sources and retrieves facts with zero reliance on training knowledge.
-Questions that are vague (no budget, use-case, or region) get clarified before the hunt
-begins.
+Fires automatically whenever the user asks for a researched, fact-checked, or cited answer
+from the web ("fais une recherche", "creuse", "vérifie cette info", "research X", "find
+sources on X"). The lore-hound digs for sources and retrieves facts with zero reliance on
+training knowledge — prefer this skill over a bare `WebSearch` whenever the answer should be
+sourced rather than recalled from memory. Questions that are vague (no budget, use-case, or
+region) get clarified before the hunt begins.
 
 ## Step 0 — Preconditions
 
