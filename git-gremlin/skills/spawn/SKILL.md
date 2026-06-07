@@ -18,15 +18,16 @@ One workspace per branch. This skill never creates a branch in place — it spin
    - Verify this is a git repository (`git rev-parse --is-inside-work-tree`).
 2. Resolve the workspace inputs (do not invent — ask the user for anything genuinely unknown):
    - **branch**: the new branch name. Take it from the user's request or from the blocked command the hook intercepted. If absent, ask.
+   - **name**: the workspace name (required by `superset workspaces create`). Default it to the **branch** name; surface it and let the user override.
    - **base-branch**: default to the current branch (`git branch --show-current`). Surface it; let the user override.
    - **project**: match the current repo to a Superset project from `superset projects list --json` (by repo path / name). If exactly one matches, use its id; if ambiguous or none, ask the user to pick.
-   - **agent**: `claude` or `codex`. Default to the runtime the user is currently in. Confirm.
+   - **agent**: a preset id from `superset agents list --local` (`claude`, `codex`, `cursor-agent`, …). Default to the runtime the user is currently in (`claude` or `codex`). Confirm.
    - **prompt**: a concise summary of the task the new agent should continue. Derive it from the conversation; confirm with the user before spawning.
 3. Mutation gate (user decision point):
    - Show the exact command that will run and ask for explicit confirmation. Do not proceed without it.
      ```
      superset workspaces create --local \
-       --project <project-id> --branch <branch> --base-branch <base-branch> \
+       --project <project-id> --name "<name>" --branch <branch> --base-branch <base-branch> \
        --agent <agent> --prompt "<prompt>"
      ```
 4. Execute on approval:
@@ -39,6 +40,7 @@ One workspace per branch. This skill never creates a branch in place — it spin
 
 ```text
 git-gremlin:spawn report
+  Name:        <name>
   Branch:      <branch>
   Base:        <base-branch>
   Workspace:   <workspace id>
