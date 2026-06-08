@@ -1,6 +1,6 @@
 ---
 name: write-plan
-description: Use after a spec has been ratified and before any code is written — turns an approved spec into a concrete implementation plan with file-level architecture decisions, typed API/data contracts, and a quickstart validation scenario. Produces docs/acid-prophet/plans/<slug>/{plan.md, contracts/*.md, quickstart.md} and is consumed downstream by react-monkey:implement or linear-devotee:create-issue.
+description: Use after a spec has been ratified and before any code is written — turns an approved spec into a concrete implementation plan with file-level architecture decisions, typed API/data contracts, and a quickstart validation scenario. Produces docs/acid-prophet/plans/<slug>/{plan.md, contracts/*.md, quickstart.md} and is consumed downstream by subroutine:implement or linear-devotee:create-issue.
 model: opus
 effort: xhigh
 allowed-tools: Read, Glob, Grep, Bash
@@ -25,7 +25,7 @@ Adapt all output to match the user's language. Technical identifiers (file paths
 
 ## When you're invoked
 
-The user has an approved spec under `docs/acid-prophet/specs/` and wants to lock the architecture, contracts, and validation scenario before implementation begins. Typically called between `write-spec` and `react-monkey:implement` / `linear-devotee:create-project`. If invoked on an un-approved spec (`status != ratified | approved | implementing`), warn and require explicit user confirmation.
+The user has an approved spec under `docs/acid-prophet/specs/` and wants to lock the architecture, contracts, and validation scenario before implementation begins. Typically called between `write-spec` and `subroutine:implement` / `linear-devotee:create-project`. If invoked on an un-approved spec (`status != ratified | approved | implementing`), warn and require explicit user confirmation.
 
 ## Workflow
 
@@ -139,8 +139,8 @@ The user has an approved spec under `docs/acid-prophet/specs/` and wants to lock
       ```
     - Commit: `git add docs/acid-prophet/plans/<slug>/ && git commit -m "docs(acid-prophet): plan for <slug>"`. Never use `--no-verify`.
 11. Handoff:
-    - Ask: `next step? (i) hand to react-monkey:implement | (l) hand to linear-devotee:create-project for issue breakdown | (s) stop`.
-    - `(i)`: invoke `react-monkey:implement` with the plan directory path.
+    - Ask: `next step? (i) hand to subroutine:implement | (l) hand to linear-devotee:create-project for issue breakdown | (s) stop`.
+    - `(i)`: invoke `subroutine:implement` with the plan directory path.
     - `(l)`: invoke `linear-devotee:create-project` with spec + plan paths.
     - `(s)`: exit.
 
@@ -154,7 +154,7 @@ acid-prophet:write-plan report
   Steps:        <N atomic>
   Open markers: <N unresolved [NEEDS CLARIFICATION] | none>
   Commits:      <N>
-  Handoff:      <react-monkey:implement | linear-devotee:create-project | stopped>
+  Handoff:      <subroutine:implement | linear-devotee:create-project | stopped>
 ```
 
 ## Never

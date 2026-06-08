@@ -12,12 +12,12 @@
       "category": "fun"
     },
     {
-      "name": "react-monkey",
+      "name": "subroutine",
       "source": {
         "source": "git-subdir",
         "url": "https://github.com/g-bastianelli/nuthouse",
-        "path": "react-monkey",
-        "sha": "579eb207596d4ccc3896b4b5ce17fa8438f58cb7"
+        "path": "subroutine",
+        "sha": "38869f6a914d30da61b2e5516e658cfc0c1b75cd"
       },
       "category": "productivity"
     },

@@ -1,6 +1,6 @@
 ---
 name: scaffold-skill
-description: Use when adding a new skill to an existing plugin in this `nuthouse` marketplace (saucy-status, react-monkey, linear-devotee, or any plugin with a `persona.md` at its root). Asks for parent plugin, skill name (action verb, no prefix), description, target runtimes (intersected with parent's runtimes), whether the skill dispatches a subagent, whether it ends with a hand-off menu. Generates one canonical root `skills/<skill>/SKILL.md` with unprefixed frontmatter `name: <skill>`, plus a `## Voice` section pointing to the parent's persona.md, and the standard workflow/final-report/rules skeleton. Embeds all naming and structural conventions from the legacy CLAUDE.md.
+description: Use when adding a new skill to an existing plugin in this `nuthouse` marketplace (saucy-status, subroutine, linear-devotee, or any plugin with a `persona.md` at its root). Asks for parent plugin, skill name (action verb, no prefix), description, target runtimes (intersected with parent's runtimes), whether the skill dispatches a subagent, whether it ends with a hand-off menu. Generates one canonical root `skills/<skill>/SKILL.md` with unprefixed frontmatter `name: <skill>`, plus a `## Voice` section pointing to the parent's persona.md, and the standard workflow/final-report/rules skeleton. Embeds all naming and structural conventions from the legacy CLAUDE.md.
 model: haiku
 ---
 
@@ -19,7 +19,7 @@ This skill is **rigid** — execute the steps in order.
 ## When you're invoked
 
 The user wants to add a new skill to an existing plugin. Either via
-`/scaffold-skill` directly, or via "let's add a skill to react-monkey
+`/scaffold-skill` directly, or via "let's add a skill to subroutine
 called X".
 
 ## Step 0 — Preconditions
@@ -337,7 +337,7 @@ Auto-chain to `<DOWNSTREAM_SKILL>`. Print `<DOWNSTREAM_SKILL> <args>` and contin
 
 Use `${CLAUDE_PLUGIN_ROOT}` for Claude Code-visible voice dispatch, as existing root nuthouse skills do. Artifact paths use `${PROJECT_ROOT}/docs/<PLUGIN>/<ARTIFACT_TYPE>/` — same convention for all runtimes.
 
-Before writing, read an existing root skill such as `react-monkey/skills/implement/SKILL.md` and copy the relative persona path convention (`../../persona.md`).
+Before writing, read an existing root skill such as `subroutine/skills/implement/SKILL.md` and copy the relative persona path convention (`../../persona.md`).
 
 ## Step 3 — Final report
 
@@ -372,7 +372,7 @@ After printing the report, present the hand-off menu:
 
 1. **Never `git commit` / `git push` / `git rebase`.** User commits manually.
 2. **Always preserve the root naming rule**: SKILL.md frontmatter uses `name: <skill>` with no plugin prefix. The runtime exposes it as `<plugin>:<skill>`.
-3. **Skill body uses the root nuthouse format**: `## Voice`, `## Language`, workflow steps, final report, and hard rules, matching existing root skills such as `react-monkey/skills/implement/SKILL.md`. If Q12 = yes, inject only the one-liner voice-dispatch callout above `## Voice`.
+3. **Skill body uses the root nuthouse format**: `## Voice`, `## Language`, workflow steps, final report, and hard rules, matching existing root skills such as `subroutine/skills/implement/SKILL.md`. If Q12 = yes, inject only the one-liner voice-dispatch callout above `## Voice`.
 4. **Never invent the persona.** The persona lives in `<plugin>/persona.md`. The skill does not declare or redeclare voice inline.
 5. **Generic agent name reject**: if Q5 = "dedicated agent" and the user
    wants to call it `agent` or `helper`, push back: _"non non non,

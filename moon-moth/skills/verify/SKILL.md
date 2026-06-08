@@ -6,6 +6,8 @@ effort: high
 
 # verify
 
+> At visible transitions, try to dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Print the returned `line` only when non-empty. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Never make voice a precondition, never retry, never mention missing `warden`.
+
 ## Voice
 
 Read `../../persona.md` at the start of this skill. The moon-moth voice is
@@ -66,12 +68,12 @@ each marked real/uncertain.
 If any check fails or the auditor flags a real blocker:
 
 1. Report the failing evidence plainly.
-2. Either fix it here (small, obvious) or hand back to `moon-moth:implement` with
+2. Either fix it here (small, obvious) or hand back to `subroutine:implement` with
    the captured failure.
 3. Re-run only the affected task that failed (`moon run <project>:<task>`) until
    green. Do not declare a clean flight while a wing is torn.
 
-## Step 4 — Final report
+## Step 4 — Final report + hand-off
 
 ```text
 moon-moth:verify report
@@ -85,6 +87,18 @@ moon-moth:verify report
 
 A `clean flight 🌙` line is allowed **only** when every affected check passed on
 real output and the auditor found no real blocker.
+
+On a clean flight, present the hand-off menu:
+
+```
+<voice intro line — moon-moth>
+(c) commit → git-gremlin:commit
+(p) pr     → git-gremlin:pr
+(s) stop   → wings checked, fly off
+```
+
+On a torn wing, hand back to `subroutine:implement` with the captured failure
+instead.
 
 ## Subagent dispatch
 

@@ -18,7 +18,7 @@
 
 | Plugin                             | Runtime             | Purpose                                                                       |
 | ---------------------------------- | ------------------- | ----------------------------------------------------------------------------- |
-| [react-monkey](./react-monkey)     | Claude Code + Codex | React implementation discipline with codebase exploration before edits        |
+| [subroutine](./subroutine)         | Claude Code + Codex | Type-safe implementation discipline (React + Hono) bound to a shared contract |
 | [linear-devotee](./linear-devotee) | Claude Code + Codex | Linear issue intake, planning, and gated project/milestone/issue creation     |
 | [acid-prophet](./acid-prophet)     | Claude Code + Codex | Spec writing, spec audit, and PR/spec drift checks                            |
 | [warden](./warden)                 | Claude Code + Codex | Shared persona-line dispatcher and global voice toggle                        |

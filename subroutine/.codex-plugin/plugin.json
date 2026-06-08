@@ -1,0 +1,25 @@
+{
+  "name": "subroutine",
+  "version": "1.0.0",
+  "description": "Implementation discipline for TypeScript monorepos — one stack-aware `implement` skill (React + Hono) bound to a shared contract of type-safety, Result/unwrap, validation, and code-organisation rules. Defers to the repo's own AGENTS.md. Cross-runtime (Claude Code + Codex).",
+  "author": {
+    "name": "g-bastianelli"
+  },
+  "repository": "https://github.com/g-bastianelli/nuthouse",
+  "skills": "./skills/",
+  "agents": ["./agents/explorer.md"],
+  "interface": {
+    "displayName": "Subroutine",
+    "shortDescription": "Type-safe implementation discipline for React + Hono, bound to a shared contract",
+    "longDescription": "Subroutine implements your will with strict, shared discipline: type-safety (no any/as/!, ts-pattern exhaustive), the Result/ok/err pattern with boundary unwrapping, Zod validation, and named-export code organisation — applied to both React (front) and Hono (back). It explores before editing, follows the repo's own AGENTS.md over its built-in contract, and verifies via the project toolchain.",
+    "developerName": "g-bastianelli",
+    "category": "Productivity",
+    "capabilities": ["Read", "Write"],
+    "websiteURL": "https://github.com/g-bastianelli/nuthouse",
+    "defaultPrompt": [
+      "Use Subroutine to implement this React component with strict type-safe discipline.",
+      "Use Subroutine to add this Hono procedure following the Result/unwrap pattern."
+    ],
+    "logo": "./assets/banner.png"
+  }
+}

@@ -6,6 +6,8 @@ effort: high
 
 # scope
 
+> At visible transitions, try to dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Print the returned `line` only when non-empty. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Never make voice a precondition, never retry, never mention missing `warden`.
+
 ## Voice
 
 Read `../../persona.md` at the start of this skill. The moon-moth voice is
@@ -94,7 +96,7 @@ Then present the hand-off menu:
 
 ```
 <voice intro line — moon-moth>
-(i) implement → hand to moon-moth:implement, bounded to the affected set
+(i) implement → hand to subroutine:implement, bounded to the affected set (React or Hono)
 (v) verify    → hand to moon-moth:verify, run affected :typecheck/:lint/:test
 (s) stop      → leave the map, fly off
 ```

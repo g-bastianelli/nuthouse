@@ -1,6 +1,6 @@
 ---
 name: scaffold-plugin
-description: Use when creating a brand-new plugin in this `nuthouse` marketplace (saucy-status / react-monkey / linear-devotee pattern). Asks the user for plugin name (brainrot-check), description, target runtimes (claudecode / codex / both), whether the plugin needs hooks, persona tagline + emoji, and marketplace category. Generates the full folder skeleton: persona.md, plugin.json, README.md, optional hooks/ + data/. Updates root marketplace.json (git-subdir entry) and root README.md plugins table. Embeds all conventions from the legacy CLAUDE.md (naming rules, frontmatter shapes, hook contract, anti-patterns) so they are applied by construction.
+description: Use when creating a brand-new plugin in this `nuthouse` marketplace (saucy-status / subroutine / linear-devotee pattern). Asks the user for plugin name (brainrot-check), description, target runtimes (claudecode / codex / both), whether the plugin needs hooks, persona tagline + emoji, and marketplace category. Generates the full folder skeleton: persona.md, plugin.json, README.md, optional hooks/ + data/. Updates root marketplace.json (git-subdir entry) and root README.md plugins table. Embeds all conventions from the legacy CLAUDE.md (naming rules, frontmatter shapes, hook contract, anti-patterns) so they are applied by construction.
 model: haiku
 ---
 
@@ -59,7 +59,7 @@ phrasing — or if the model already has a name proposal, jump to validation).
 - Must be **kebab-case**, lowercase, alphanumeric + hyphens only.
 - Must name a **persona first**: a person, creature, role, mythic figure,
   cultist, monster, or other being that can speak in character. Family
-  resemblance with `react-monkey`, `linear-devotee`, `acid-prophet`.
+  resemblance with `subroutine`, `linear-devotee`, `acid-prophet`.
   `saucy-status` is a historical exception, not a naming precedent.
   Reject abstract effects, modes, or vibes like `acid-vision`,
   `task-flow`, `idea-engine` unless the noun clearly points to a character.
@@ -84,7 +84,7 @@ AskUserQuestion, single-select, options:
 
 - `claudecode` — Claude Code only
 - `codex` — Codex CLI only
-- `both` — Cross-runtime (creates root Codex files plus `claudecode/`, see `react-monkey/`)
+- `both` — Cross-runtime (creates root Codex files plus `claudecode/`, see `subroutine/`)
 
 ### Q4 — Hooks
 
@@ -240,7 +240,7 @@ Mood swings? Keep it 3–5 lines, concrete.>
 - "<phrase 2>"
 - "<phrase 3>"
 - (5–10 cues total, copy the shape from `linear-devotee/persona.md` or
-  `react-monkey/persona.md`)
+  `subroutine/persona.md`)
 
 ## Emojis (sparingly, never piled)
 
@@ -332,7 +332,7 @@ Only include the events the user selected.
 
 ### 2d. `<plugin>/.codex-plugin/plugin.json` (if codex/both)
 
-Read `react-monkey/.codex-plugin/plugin.json` for the exact shape. The
+Read `subroutine/.codex-plugin/plugin.json` for the exact shape. The
 Codex manifest lives at the plugin root and uses `"skills": "./skills/"`.
 Do not create `<plugin>/codex/` or `<plugin>/claudecode/skills/` for new plugins.
 

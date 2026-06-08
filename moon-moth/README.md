@@ -12,20 +12,19 @@ Slow is wrong, blind is wrong. It goes where the change glows, and nowhere else.
 
 ## Skills
 
-| Skill       | What it does                                                                                              |
-| ----------- | --------------------------------------------------------------------------------------------------------- |
-| `scope`     | Builds a context map of the **affected** projects from `moon query` (changed-files + affected graph)      |
-| `implement` | TDD-first implementation across the affected packages (backend/libs/configs), scoped to the touched graph |
-| `verify`    | Runs affected `:typecheck` / `:lint` / `:test`, evidence over assertion, loops back on a torn wing        |
-| `init`      | Wires a moon monorepo for moon-aware agents: path-scoped rules, verify hook, plan-default, moon allowlist |
+| Skill    | What it does                                                                                              |
+| -------- | --------------------------------------------------------------------------------------------------------- |
+| `scope`  | Builds a context map of the **affected** projects from `moon query` (changed-files + affected graph)      |
+| `verify` | Runs affected `:typecheck` / `:lint` / `:test`, evidence over assertion, loops back on a torn wing        |
+| `init`   | Wires a moon monorepo for moon-aware agents: path-scoped rules, verify hook, plan-default, moon allowlist |
 
 ## Agents
 
-| Agent            | Used by              | Role                                                                      |
-| ---------------- | -------------------- | ------------------------------------------------------------------------- |
-| `affected-scout` | `scope`              | Runs `moon query` and returns the scoped affected-projects map (Haiku)    |
-| `verify-runner`  | `verify`             | Executes affected moon tasks and reports structured pass/fail per project |
-| `change-auditor` | `implement`/`verify` | Adversarially reviews the diff against the affected scope before handoff  |
+| Agent            | Used by  | Role                                                                      |
+| ---------------- | -------- | ------------------------------------------------------------------------- |
+| `affected-scout` | `scope`  | Runs `moon query` and returns the scoped affected-projects map (Haiku)    |
+| `verify-runner`  | `verify` | Executes affected moon tasks and reports structured pass/fail per project |
+| `change-auditor` | `verify` | Adversarially reviews the diff against the affected scope before handoff  |
 
 ## Install
 

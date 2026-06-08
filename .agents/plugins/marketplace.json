@@ -5,11 +5,11 @@
   },
   "plugins": [
     {
-      "name": "react-monkey",
+      "name": "subroutine",
       "source": {
         "source": "git-subdir",
         "url": "https://github.com/g-bastianelli/nuthouse",
-        "path": "./react-monkey"
+        "path": "./subroutine"
       },
       "policy": {
         "installation": "AVAILABLE",
