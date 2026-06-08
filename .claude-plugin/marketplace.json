@@ -80,6 +80,16 @@
         "sha": "8b59f301b81e60d70ca8185fd2ab9a184972c71f"
       },
       "category": "productivity"
+    },
+    {
+      "name": "moon-moth",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/g-bastianelli/nuthouse",
+        "path": "moon-moth",
+        "sha": "38869f6a914d30da61b2e5516e658cfc0c1b75cd"
+      },
+      "category": "productivity"
     }
   ]
 }
