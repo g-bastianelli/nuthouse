@@ -91,7 +91,7 @@ Rigid planning gate. Match the user's language; keep technical identifiers uncha
 7. After validation:
    - Set plan `status: validated`, update `validated-at`, increment `plan-version` if revised.
    - If drift exists and spec exists, preview compact patch summary and ask `sync accepted drift into the Acid Prophet spec? (y / skip)`.
-   - On `y`, patch spec once, update `last-reviewed`, set `spec-synced-at`, and run `acid-prophet:scry` if available.
+   - On `y`, patch spec once, update `last-reviewed`, set `spec-synced-at`, and run `acid-prophet:audit-spec` if available.
    - On `skip`, leave `spec-synced-at: _none_` and report the waiver/blocker clearly.
 8. Handoff:
    - Never start implementation.

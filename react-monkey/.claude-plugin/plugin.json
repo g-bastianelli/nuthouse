@@ -1,9 +1,0 @@
-{
-  "name": "react-monkey",
-  "description": "React implementation specialist with parallel codebase exploration. Enforces strict architectural rules: one component per file, folder mirrors JSX tree, IDs-only props, shared select hooks.",
-  "author": {
-    "name": "g-bastianelli"
-  },
-  "skills": "./skills/",
-  "agents": ["./agents/explorer.md"]
-}

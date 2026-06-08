@@ -48,7 +48,7 @@ It turns rough ideas into reviewed specs, ratifies project-specific articles int
                                           │
                           ┌───────────────┴───────────────┐
                           ▼                               ▼
-                  react-monkey:implement       linear-devotee:create-project
+                  subroutine:implement       linear-devotee:create-project
                           │
                           ▼  (after PR is opened)
                      check-drift

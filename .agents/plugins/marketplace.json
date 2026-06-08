@@ -5,11 +5,11 @@
   },
   "plugins": [
     {
-      "name": "react-monkey",
+      "name": "subroutine",
       "source": {
         "source": "git-subdir",
         "url": "https://github.com/g-bastianelli/nuthouse",
-        "path": "./react-monkey"
+        "path": "./subroutine"
       },
       "policy": {
         "installation": "AVAILABLE",
@@ -88,6 +88,19 @@
         "source": "git-subdir",
         "url": "https://github.com/g-bastianelli/nuthouse",
         "path": "./stack-golem"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "moon-moth",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/g-bastianelli/nuthouse",
+        "path": "./moon-moth"
       },
       "policy": {
         "installation": "AVAILABLE",

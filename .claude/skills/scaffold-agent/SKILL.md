@@ -50,7 +50,7 @@ Free-text. Voice: _"comment l'organisme s'appelle-t-il ?"_
 - **Descriptive role or task name**: `explorer`, `issue-context`, `spec-auditor`, `code-reviewer`, `plan-writer`, `project-drafter`. ✅
 - **No vague or persona-only names**: `agent`, `helper`, `worker`, `bot`, `seer`, `oracle`, `acolyte`, `scryer`, `spirit`. ❌ Panic-correct: _"non non non, `seer` ne dit rien. quel **rôle** précis ? `issue-context`, `spec-auditor`, `project-drafter` — qu'est-ce qu'il **fait** ?"_
 - **No new voice agents**: decorative persona lines are now handled by `warden:voice` (centralized). New plugins do NOT create their own voice agent — they call `warden:voice` with `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`. All agents MUST have functional names.
-- **Never the same as the plugin** (e.g. `react-monkey:react-monkey`). ❌
+- **Never the same as the plugin** (e.g. `subroutine:subroutine`). ❌
 - Kebab-case, lowercase.
 - **No prefix in the `name:` frontmatter** — the runtime prepends `<plugin>:`. The user types `spec-auditor`, the file says `name: spec-auditor`, the exposed ID is `acid-prophet:spec-auditor`.
 - Must not collide with an existing agent file in the parent plugin.

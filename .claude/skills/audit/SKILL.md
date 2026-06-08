@@ -28,7 +28,7 @@ Audits every plugin's SKILL.md, AGENT.md, persona.md, README banner reference,
 source of truth.
 No auto-fix — reports deviations, the human decides what to do.
 
-`react-monkey` is the existing visual reference banner. Audit it like every
+`linear-devotee` is the existing visual reference banner. Audit it like every
 other plugin; its image is the style target, not a rules exception.
 
 ## Step 1 — Preconditions

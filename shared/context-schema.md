@@ -27,10 +27,10 @@ One JSON file per session: `<PROJECT_ROOT>/.claude/nuthouse/sessions/<SESSION_ID
 
 Keys whose freshness depends on git state are recorded independently in `_meta._shas`:
 
-| `_shas` entry                  | Tracked key                    | Why separate                                                                                           |
-| ------------------------------ | ------------------------------ | ------------------------------------------------------------------------------------------------------ |
-| `relevant_files`               | `relevant_files`               | Captured by greet; must not be invalidated by later writes (e.g. write-spec) that don't touch this key |
-| `react-monkey.explorer_report` | `react-monkey.explorer_report` | Same: captured by react-monkey:implement; later merges must not clobber the sha                        |
+| `_shas` entry                | Tracked key                  | Why separate                                                                                           |
+| ---------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `relevant_files`             | `relevant_files`             | Captured by greet; must not be invalidated by later writes (e.g. write-spec) that don't touch this key |
+| `subroutine.explorer_report` | `subroutine.explorer_report` | Same: captured by subroutine:implement; later merges must not clobber the sha                          |
 
 `isStale(session, key, namespace, projectRoot)` always prefers `_meta._shas[fullKey]` over `_meta.git_sha` for these keys.
 
@@ -63,11 +63,11 @@ Keys whose freshness depends on git state are recorded independently in `_meta._
 
 ---
 
-## `react-monkey` namespace
+## `subroutine` namespace
 
-| Key               | Type   | Writer                   | Readers    | Freshness policy                                                  |
-| ----------------- | ------ | ------------------------ | ---------- | ----------------------------------------------------------------- |
-| `explorer_report` | object | `react-monkey:implement` | _(future)_ | Stale if `_meta._shas['react-monkey.explorer_report']` ≠ HEAD sha |
+| Key               | Type   | Writer                 | Readers    | Freshness policy                                                |
+| ----------------- | ------ | ---------------------- | ---------- | --------------------------------------------------------------- |
+| `explorer_report` | object | `subroutine:implement` | _(future)_ | Stale if `_meta._shas['subroutine.explorer_report']` ≠ HEAD sha |
 
 ---
 
@@ -99,7 +99,7 @@ Keys whose freshness depends on git state are recorded independently in `_meta._
     },
     "_handoff_spec_path": "/abs/path/to/docs/acid-prophet/specs/2026-05-06-my-feature.md"
   },
-  "react-monkey": {
+  "subroutine": {
     "explorer_report": {}
   }
 }
