@@ -27,6 +27,22 @@ This skill is **rigid** — execute steps in order.
 Adapt chat output to the user's language. Code and technical identifiers stay
 English / original form.
 
+## Input (optional)
+
+This skill runs standalone or chained from `linear-devotee:plan`, which may pass
+a validated plan artifact:
+
+```
+PLAN_FILE: <abs path to docs/linear-devotee/plan/*.md>
+```
+
+When `PLAN_FILE` is present, read it first and treat its **Files**, **Steps**,
+**Verify**, and **Out of scope** sections as the authoritative plan — do not
+re-plan from scratch in Step 3. Still run Step 2 exploration to ground the edits
+in real code, but scope it to the plan's Files and honour its Out-of-scope
+boundary. If the file path is missing or unreadable, fall back to the normal
+explore-then-plan flow and say so.
+
 ## The contract you're bound to
 
 This skill applies a shared discipline that lives in
@@ -69,6 +85,10 @@ React, or contract/errors/service/unwrap siblings for Hono. If subagents are
 unavailable, do the same discovery inline before editing.
 
 ## Step 3 — Plan
+
+If a `PLAN_FILE` was provided (see `## Input`), adopt its **Steps** / **Files**
+as the plan, reconcile them against what Step 2 found, and skip blind planning —
+flag any mismatch between the plan and the real code before editing. Otherwise:
 
 - **React**: sketch the JSX render tree, map it to the folder structure
   (`react-rules.md` Rule 2), decide leaves vs folders, plan edits deepest-first.

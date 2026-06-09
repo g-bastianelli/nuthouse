@@ -94,8 +94,26 @@ Rigid planning gate. Match the user's language; keep technical identifiers uncha
    - On `y`, patch spec once, update `last-reviewed`, set `spec-synced-at`, and run `acid-prophet:audit-spec` if available.
    - On `skip`, leave `spec-synced-at: _none_` and report the waiver/blocker clearly.
 8. Handoff:
-   - Never start implementation.
-   - End with implementation-ready, blocked, or stopped status.
+   - Never start implementation yourself.
+   - On `implementation_ready`, present a hand-off menu (try a `warden:voice` line first):
+
+     ```
+     <voice line — linear-devotee>
+     (i) implement → subroutine:implement (recommended)
+     (c) commit    → git-gremlin:commit
+     (s) stop
+     ```
+
+   - On `(i)`, if `subroutine:implement` is available in this session, invoke it and pass the validated plan path as input:
+
+     ```
+     PLAN_FILE: <PLAN_FILE from step 4>
+     ```
+
+     so the implementing agent inherits the plan's Files / Steps / Verify instead of re-planning blind. Do not pre-write any code yourself.
+
+   - **Fallback when `subroutine:implement` is not installed**: do not silently drop the hand-off. Implement directly against `<PLAN_FILE>`, following its Files / Steps / Verify in order as the authoritative plan, and run its Verify commands before reporting. State plainly that subroutine was unavailable and the plan was executed inline.
+   - On `blocked` or `stopped` status, skip the menu and report the reason — never offer implement while blockers remain.
 
 ## Final Report
 
