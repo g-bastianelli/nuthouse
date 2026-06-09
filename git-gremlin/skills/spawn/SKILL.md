@@ -33,8 +33,10 @@ One workspace per branch. This skill never creates a branch in place — it spin
 4. Execute on approval:
    - Run the confirmed `superset workspaces create …` command.
    - Capture the new workspace id from the output (`--json` for a stable parse if needed).
-5. Report and stop:
-   - Report the spawned workspace + how to open it (`superset workspaces open <id>`). The current agent's work on this task ends here — the spawned agent owns the branch.
+5. Open in the desktop app:
+   - Run `superset workspaces open <workspace id>` so the new workspace surfaces in the Superset desktop app right away. Without this the workspace exists but the user has to open it by hand. If `open` errors (e.g. the desktop app is not running), report the failure and the manual command — do not retry.
+6. Report and stop:
+   - Report the spawned workspace and confirm it was opened (or surface the manual `superset workspaces open <id>` if step 5 failed). The current agent's work on this task ends here — the spawned agent owns the branch.
 
 ## Final Report
 
@@ -45,7 +47,7 @@ git-gremlin:spawn report
   Base:        <base-branch>
   Workspace:   <workspace id>
   Agent:       <claude|codex> spawned with the task prompt
-  Open:        superset workspaces open <workspace id>
+  Opened:      desktop app (or: superset workspaces open <workspace id> — run manually)
 ```
 
 ## Never
