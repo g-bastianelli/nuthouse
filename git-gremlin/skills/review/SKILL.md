@@ -6,7 +6,7 @@ effort: high
 
 # git-gremlin:review
 
-Rigid review harness. Match the user's language; keep technical identifiers unchanged.
+Context-first review orchestrator. Match the user's language; keep technical identifiers unchanged.
 
 > Voice cadence: at every user-visible workflow transition, try to dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Visible transitions are skill start, context resolved, recoverable failure, final report, and clean exit. Print the returned `line` only when non-empty. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Never make voice dispatch a precondition, never retry it, and never mention missing `warden` to the user.
 
@@ -22,7 +22,9 @@ is printed, revert to the session default voice immediately.
 Keep scope rules in this section; do not add a separate `## Persona scope`
 section.
 
-This skill is **rigid** — execute steps in order.
+This skill is **rigid** — execute steps in order. Its job is to compile the
+right context, delegate review work to the strongest available backend, and
+render only substantiated findings.
 
 ## Language
 
@@ -48,6 +50,7 @@ This skill reviews and reports. It does not implement fixes unless the user expl
    - Verify this is a git repository.
    - Verify `node` is available.
    - Resolve `PLUGIN_ROOT`. Prefer `${CLAUDE_PLUGIN_ROOT}` when set; otherwise infer it from the installed skill path or current repo layout.
+   - Read `<PLUGIN_ROOT>/shared/review-passes.md`; it defines the portable pass contract.
    - Run the context compiler:
      ```bash
      node <PLUGIN_ROOT>/scripts/review-context.mjs
@@ -59,19 +62,20 @@ This skill reviews and reports. It does not implement fixes unless the user expl
    - If an instruction source is marked `large`, read only the relevant section(s) by searching for touched paths, frameworks, or review keywords first.
    - If PR context is available through `gh`, read `gh pr view --json title,body,baseRefName,headRefName,reviewDecision` and include it as intent context.
    - If Linear/spec identifiers appear in the PR body, branch name, or user request, load the available local spec/issue context before judging drift.
-3. Inspect the diff:
-   - Use the manifest's `Diff command` as the primary diff.
-   - Read surrounding source files when the diff alone is insufficient to prove or dismiss a finding.
-   - Review every changed human-written source file unless the user scoped the review narrower.
+3. Build the review packet:
+   - Include the context manifest, manifest `Diff command`, applied rules, PR/spec context, and explicit user scope.
+   - Do not paste the full diff into the packet when the delegated backend can run the diff command itself.
+   - Include warnings from the manifest, especially dirty worktree and untracked-file notes.
+4. Choose backend:
+   - **Native review backend (optional):** If the current runtime exposes a callable native code-review backend inside this turn (for example a bundled review skill/command that can be invoked with extra context), delegate the review packet to it and request severity-ranked findings using this skill's Finding Contract. Do not stop and ask the user to run a slash command manually.
+   - **Portable multi-pass backend (default):** Otherwise run the passes from `shared/review-passes.md`. When subagents are available and permitted by the runtime, dispatch read-only passes in parallel: `correctness-reviewer`, `convention-reviewer`, `tests-reviewer`, and `risk-reviewer` only when the touched surface or user scope makes security/privacy/performance/accessibility relevant. If subagents are unavailable, run the same passes inline in separate sections.
+   - **Small diff fast path:** For tiny, low-risk diffs (one or two human-written files, no risky surface, no explicit deep-review request), one inline pass may cover correctness + conventions + tests. Still use the same Finding Contract.
+5. Aggregate candidates:
+   - Merge duplicate candidates by root cause and keep the clearest evidence.
+   - Verify each candidate against local diff/source/rule evidence before promoting it to a final finding.
+   - Discard `uncertain` candidates unless you independently substantiate them.
    - For generated files, vendored code, lockfiles, large snapshots, and fixture blobs, scan for blast radius and state if they were not line-reviewed.
-4. Run review passes in this order:
-   - Correctness, runtime behavior, edge cases, concurrency, data loss, migrations, and backward compatibility.
-   - Local instruction and convention violations from `AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md`, `.github/instructions/**`, `.cursor/rules/**`, `.codex/**`, `.agents/**`, and equivalent repo rules.
-   - Architecture boundaries, dependency direction, ownership, and module shape.
-   - Tests: missing coverage, tests that cannot fail, wrong assertion level, fixture drift.
-   - Documentation, release notes, generated artifacts, and API/client collections when the change affects user-facing behavior.
-   - Security, privacy, accessibility, and performance only where touched or plausibly impacted.
-5. Validate findings:
+6. Validate findings:
    - Do not emit a finding unless it has local evidence and a concrete impact.
    - Each finding must include severity, title, `File`, `Evidence`, `Impact`, and `Fix`.
    - Use `Files:` instead of `File:` only for cross-file findings where one line number would be misleading.
@@ -81,10 +85,10 @@ This skill reviews and reports. It does not implement fixes unless the user expl
      ```
      Fix format failures before final output.
    - If no concrete issues are found, say `No blocking findings` and list residual risk.
-6. Report:
+7. Report:
    - Findings first, ordered by severity.
    - Keep summary secondary and short.
-   - Include the context manifest summary: review target, diff command, instruction sources loaded, and sources missing/truncated.
+   - Include the context manifest summary: review target, diff command, backend used, instruction sources loaded, and sources missing/truncated.
 
 ## Finding Contract
 
@@ -112,6 +116,7 @@ Severity meanings:
 git-gremlin:review report
   Target:       <branch | staged | worktree | explicit range>
   Diff:         <git diff command used>
+  Backend:      <native review | portable multi-pass | inline fast path>
   Rules loaded: <n applied instruction sources>
   Findings:     <n blockers/high/medium/low/nit/info or "none">
   Residual risk:<tests not run / PR unavailable / generated files scanned only / none>
@@ -123,6 +128,8 @@ git-gremlin:review report
 - Never create or update a PR.
 - Never mutate external services without explicit user confirmation.
 - Never implement fixes during the review unless the user explicitly asks for a fix pass.
+- Never require a runtime-specific reviewer to exist; fall back to the portable multi-pass flow.
+- Never ask the user to manually run `/review` or `/code-review` as a substitute for this skill.
 - Never invent rules that were not loaded or evident in local code.
 - Never block on personal preference; mark optional polish as `NIT`.
 - Never hide uncertainty: report missing PR context, missing base branch, unreadable rules, or skipped generated files.
