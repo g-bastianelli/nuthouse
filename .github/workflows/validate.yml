@@ -2,6 +2,8 @@ name: Validate
 
 on:
   pull_request:
+  push:
+    branches: [main]
 
 jobs:
   validate:
@@ -9,8 +11,29 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: oven-sh/setup-bun@v2
+        with:
+          # Pinned to the packageManager field in package.json
+          bun-version: 1.3.13
       - run: bun install
       - name: Lint check
         run: bun run lint
       - name: Format check
         run: bun run fmt:check
+      - name: Frontmatter meta tests
+        run: bun run test:meta
+      - name: Plugin tests
+        # Covers every non-hidden test file: <plugin>/tests/,
+        # <plugin>/claudecode/tests/, _shared/, shared/.
+        run: bunx bun test .
+      - name: Persona-roulette hook tests
+        # bun's default scan skips hidden dirs, so .claude/hooks/tests
+        # needs its own invocation.
+        run: cd .claude/hooks/tests && bunx bun test
+      - name: Marketplace registries parse (Claude Code + Codex)
+        run: |
+          node -e "JSON.parse(require('node:fs').readFileSync('.claude-plugin/marketplace.json', 'utf8'))"
+          node -e "JSON.parse(require('node:fs').readFileSync('.agents/plugins/marketplace.json', 'utf8'))"
+      # NOTE: `bun run bump:shas` freshness is intentionally NOT gated in CI.
+      # The sha pins depend on origin/main state at merge time, so a CI check
+      # would flake on every squash-merge. Run it locally after merging to
+      # main (see _adr/0002-marketplace-sha-pinning.md).

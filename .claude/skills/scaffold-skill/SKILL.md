@@ -151,6 +151,18 @@ Otherwise AskUserQuestion, single-select. Voice: _"le plugin a-t-il un `shared/p
 
 [IF Q12 = yes] The skill itself stays voice-neutral; it only dispatches `warden:voice` at visible transitions. The PERSONA_CONTRACT_PATH always points to `${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`. The skill never carries persona content beyond this dispatch. If `warden` is not installed, the dispatch fails silently — this is expected behavior.
 
+### Q13 — Execution context
+
+AskUserQuestion, single-select. Voice: _"où l'organe s'exécute-t-il ?"_
+
+- `inline` (Recommended — default; the skill runs in the main conversation, no extra frontmatter)
+- `fork` — the skill runs in a forked subagent (`context: fork`). Good for noisy research/report skills whose intermediate output should not pollute the main context. Follow-up free-text (optional): _"agent à utiliser pour le fork (ex. `Explore`) — vide pour le défaut :"_ → save as `FORK_AGENT`. Writes `agent: <FORK_AGENT>` only if provided.
+- `knowledge` — background knowledge skill (`user-invocable: false`). Claude loads it as context; users can't invoke it. No workflow gates, no hand-off menu — if Q5/Q6/Q11 were answered `yes`, push back and re-ask.
+
+### Q14 — Arguments
+
+Free-text. Voice: _"l'organe avale-t-il des arguments ?"_ If the skill takes arguments (`$ARGUMENTS`, `$1`, …), **`argument-hint` is REQUIRED** — ask for the hint string (e.g. `[issue-id]`, `[path] [mode]`) → save as `ARGUMENT_HINT`. If the skill takes no arguments, skip and omit the key.
+
 ## Step 2 — Generation
 
 Write one canonical root SKILL.md. Runtime selection controls which manifest exposes it; it does not create duplicate skill files.
@@ -182,6 +194,10 @@ name: <SKILL>
 description: <DESCRIPTION>
 model: <Q7-value> # [IF Q7 ∈ {haiku, sonnet, opus}, else omit this line]
 effort: <Q8-value> # [IF Q8 ∈ {low, high, xhigh, max}, else omit this line]
+argument-hint: <ARGUMENT_HINT> # [IF Q14 gave a hint — REQUIRED when the skill takes arguments, else omit]
+context: fork # [IF Q13 = fork, else omit]
+agent: <FORK_AGENT> # [IF Q13 = fork AND FORK_AGENT provided, else omit]
+user-invocable: false # [IF Q13 = knowledge, else omit]
 ---
 ```
 
@@ -350,6 +366,8 @@ scaffold-skill report
   Voice:         ../../persona.md
   Model:         <haiku | sonnet | opus | inherit>
   Effort:        <low | medium | high | xhigh | max | inherit>
+  Execution:     <inline | fork (agent: <FORK_AGENT> | default) | knowledge (user-invocable: false)>
+  Arguments:     <none | argument-hint: <ARGUMENT_HINT>>
   Subagent:      <none | <agent-name> — run `/scaffold-agent` next>
   Hand-off:      <none | menu defined>
   Files written: <list>

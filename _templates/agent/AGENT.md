@@ -1,6 +1,6 @@
 <!-- template-meta
 required_frontmatter: [name, description]
-optional_frontmatter: [model, effort, tools]
+optional_frontmatter: [model, effort, tools, skills, memory, maxTurns, color, disallowedTools]
 required_sections: []
 variables: [agent, description]
 -->
@@ -13,6 +13,16 @@ description: {{description}}
 # model: haiku # haiku = fetch/parse/scout · omit = reasoning/audit
 
 # effort: low # low = parse/summary · high/xhigh = deep reasoning · omit = default
+
+# skills: [plugin:skill] # preload full skill content into the agent context at startup (not just descriptions)
+
+# memory: project # persistent memory across conversations — scope: user | project | local
+
+# maxTurns: 15 # cap agentic turns before the subagent stops
+
+# color: cyan # UI identification — red/blue/green/yellow/purple/orange/pink/cyan
+
+# disallowedTools: [Write, Edit] # remove tools from the inherited or specified list
 
 ---
 

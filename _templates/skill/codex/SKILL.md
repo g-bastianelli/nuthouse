@@ -1,6 +1,6 @@
 <!-- template-meta
 required_frontmatter: [name, description]
-optional_frontmatter: [model, effort]
+optional_frontmatter: [model, effort, argument-hint]
 required_sections: ["## Voice", "## Language"]
 variables: [skill, description, persona_path]
 -->
