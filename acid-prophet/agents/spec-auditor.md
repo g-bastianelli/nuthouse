@@ -3,6 +3,8 @@ name: spec-auditor
 description: Read-only spec auditor for `acid-prophet` specs. Validates frontmatter and SDD section structure, runs reality checks against the project's CLAUDE.md / package.json / referenced files, scans for narrative ambiguity and style issues. Returns a structured BLOCKER/WARNING/INFO report with auto-fix candidates. Used by `acid-prophet:audit-spec` (standalone) and `acid-prophet:write-spec` step 7 (auto-fix mode).
 model: sonnet
 effort: high
+maxTurns: 20
+color: green
 tools:
   - Read
   - Glob

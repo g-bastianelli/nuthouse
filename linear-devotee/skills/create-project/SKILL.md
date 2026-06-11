@@ -1,10 +1,10 @@
 ---
 name: create-project
 description: Use when creating a Linear Project end-to-end from a spec file or vibe-mode Q&A. Drafts project + milestones + issues in advance, presents one editable preview, asks a single approval gate, then batch-creates everything on Linear and recommends the first issue to start. Falls back to per-skill resume via create-milestone / create-issue on partial failure.
+argument-hint: [spec-file] [--fresh]
 model: opus
 effort: max
 allowed-tools: Read, Glob, Grep, Bash, Write
-context_policy: session
 ---
 
 # linear-devotee:create-project
@@ -12,6 +12,7 @@ context_policy: session
 Rigid runbook. Match the user's language; keep technical identifiers unchanged.
 
 > Voice cadence: at every user-visible workflow transition, try to dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Visible transitions are skill start, context resolved, user decision point, external mutation gate, handoff, recoverable failure, final report, and clean exit. Print the returned `line` only when non-empty. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Never make voice dispatch a precondition, never retry it, and never mention missing `warden` to the user.
+> Voice flag: !`cat "$HOME/.claude/nuthouse/voice.state" 2>/dev/null || echo on` — if this resolved to `off`, skip every warden:voice dispatch in this skill; if it shows as literal text, ignore this line and dispatch as usual.
 
 ## Mode
 
@@ -21,11 +22,11 @@ Rigid runbook. Match the user's language; keep technical identifiers unchanged.
 
 ## Workflow
 
-0. Session store (`context_policy: session`): if `$CLAUDE_SESSION_ID` is set and not invoked with `--fresh`, read `<PROJECT_ROOT>/.claude/nuthouse/sessions/${CLAUDE_SESSION_ID}.json`.
+0. Session store: if `$CLAUDE_SESSION_ID` is set and `$ARGUMENTS` does not contain `--fresh`, read `<PROJECT_ROOT>/.claude/nuthouse/sessions/${CLAUDE_SESSION_ID}.json`.
    - If `acid-prophet.handoff_spec` is present and `acid-prophet._handoff_spec_path` equals `spec_path` (i.e. not stale), default to **file mode** with `handoff_spec.path` — skip asking the user. Announce: "using spec from session store: `<path>`".
    - If the store is absent, corrupt, or `handoff_spec` is stale, proceed normally (ask user).
 
-1. Resume detection: read `${CLAUDE_PLUGIN_ROOT}/data/chain-${CLAUDE_SESSION_ID}.json` if present.
+1. Resume detection: read `${CLAUDE_PLUGIN_DATA}/chain-${CLAUDE_SESSION_ID}.json` if present.
    - If `phase: "partial_failure"` and `project.id` exists: announce "resuming partial cascade" with the counts of created vs pending entries, then skip to **step 9 (batch commit)** with the remaining entries. Do **not** redraft.
    - If `phase: "committed"`: warn the user that the cascade already completed for this session and exit `already-committed`. Suggest `--fresh` to start a new cascade.
    - Otherwise: continue from step 2.
@@ -33,11 +34,11 @@ Rigid runbook. Match the user's language; keep technical identifiers unchanged.
 2. Preconditions:
    - Verify Linear access with `ToolSearch` query `linear`; abort clearly if unavailable.
    - Verify git repo with `git rev-parse --is-inside-work-tree`.
-   - Ensure `${CLAUDE_PLUGIN_ROOT}/data` exists.
+   - Ensure `${CLAUDE_PLUGIN_DATA}` exists.
 
 3. Input mode:
-   - **File mode**: argument is an existing `.md` (or auto-detected from session store in step 0); read it, summarize in one paragraph, confirm.
-   - **Vibe mode**: ask one at a time — north star, why now, measurable outcomes, constraints, out of scope. Persist Q&A to `${CLAUDE_PLUGIN_ROOT}/data/vibe-${CLAUDE_SESSION_ID}.txt`.
+   - **File mode**: `$ARGUMENTS` contains a path to an existing `.md` (or one was auto-detected from the session store in step 0); read it, summarize in one paragraph, confirm.
+   - **Vibe mode**: ask one at a time — north star, why now, measurable outcomes, constraints, out of scope. Persist Q&A to `${CLAUDE_PLUGIN_DATA}/vibe-${CLAUDE_SESSION_ID}.txt`.
 
 4. Linear workspace:
    - Fetch teams and existing project statuses.
@@ -62,7 +63,7 @@ Rigid runbook. Match the user's language; keep technical identifiers unchanged.
 
 7. Assign client refs and write the preview file:
    - Mint a stable `client_ref` (UUID v4) for the project, every drafted milestone, and every drafted issue. These refs are the only stable identifiers until Linear assigns real ids; they unlock idempotent recovery on partial failure.
-   - Write `${CLAUDE_PLUGIN_ROOT}/data/preview-${CLAUDE_SESSION_ID}.md` containing the full editable preview:
+   - Write `${CLAUDE_PLUGIN_DATA}/preview-${CLAUDE_SESSION_ID}.md` containing the full editable preview:
 
      ```markdown
      # Cascade preview — <project name>
@@ -188,7 +189,7 @@ linear-devotee:create-project report
   Phase:             committed | partial_failure | cancelled | already-committed
   Last error:        <verbatim Linear error | _none_>
   Preview file:      <abs path>
-  Chain state:       ${CLAUDE_PLUGIN_ROOT}/data/chain-<session>.json
+  Chain state:       ${CLAUDE_PLUGIN_DATA}/chain-<session>.json
   Recommended next:  <identifier> - <title> - <url | _none_>
   Hand-off:          user-starts-greet <identifier> | resume via create-milestone / create-issue | stop | cancelled | linear_error
 ```

@@ -2,6 +2,9 @@
 name: platform-scout
 description: Read-only investigation scout for the notom platform. Creates a temporary cockpit token, queries Loki logs + Prometheus metrics + Scaleway CLI state (and SSHes into Authentik VMs when needed), deletes the token, and returns a structured diagnosis — keeps voluminous log/metric dumps out of the main context.
 model: haiku
+maxTurns: 15
+color: cyan
+skills: [stack-golem:observe-platform]
 tools:
   - Bash
   - Read
@@ -11,7 +14,7 @@ tools:
 
 ## Mission
 
-1. **Parse the input** — extract the service/resource name and the symptom/question from the caller.
+1. **Parse the input** — extract the service/resource name and the symptom/question from the caller. Then read the stack-golem infra map (`shared/infra-map.md` at the plugin root, also referenced from the preloaded observe-platform skill) — it is the single source of truth for endpoints, SSH aliases, and Loki `resource_name` values used below.
 
 2. **Route the investigation** — classify as one of:
    - **Service crash / logs needed** → Step 3 (Loki query)
@@ -21,7 +24,7 @@ tools:
 
 3. **Loki query** (crash diagnosis):
    - Create a temporary cockpit token via `scw cockpit token create` with `token-scopes.0=read_only_logs` scope.
-   - Query the last 30 minutes of logs for the target service (resource_name mapping: Atlas API → `notomapistagingc842d7f8-atlas-api-staging`, PostgreSQL → `notom-db-staging`, Redis → `notom-redis-staging`, App → `notom-app-staging`).
+   - Query the last 30 minutes of logs for the target service (`resource_name` mapping: the `LOKI_RESOURCE_*` keys in the infra map).
    - Parse the JSON response, extract error messages and timestamps.
    - Delete the token immediately (`scw cockpit token delete $TOKEN_ID`).
 
@@ -35,7 +38,7 @@ tools:
    - Summarize status, scaling, node type.
 
 6. **SSH inspection** (if logs/metrics are inconclusive):
-   - SSH into `notom-authentik-staging` or `notom-authentik-prod` (credentials via `~/.ssh/config`).
+   - SSH into the Authentik staging or prod VM (aliases: `SSH_AUTHENTIK_STAGING` / `SSH_AUTHENTIK_PROD` in the infra map; credentials via `~/.ssh/config`).
    - Run `docker ps` or `journalctl -u docker` to inspect the box directly.
    - Report findings.
 

@@ -1,7 +1,14 @@
-# subroutine — code-organisation contract
+---
+name: code-organisation
+description: Code-organisation discipline for all TypeScript work — named exports only, declarative index.ts, one-file-one-responsibility, reuse before writing. Applies whenever editing or creating TypeScript files.
+user-invocable: false
+paths: ["**/*.ts", "**/*.tsx"]
+---
 
-How files, exports, and modules are shaped. The repo's `AGENTS.md` wins on any
-specific — read it first.
+# subroutine — code-organisation discipline
+
+Applies to every TypeScript file created or reshaped: how files, exports, and
+modules are shaped. The repo's `AGENTS.md` wins on any specific — read it first.
 
 ## Exports
 

@@ -1,10 +1,11 @@
 ---
 name: write-checklist
 description: Use when a feature is approaching QA or PR review and the team needs a derived, per-spec acceptance checklist — reads an approved spec, generates a concrete `- [ ]` checklist of verifications drawn from its Acceptance / Constraints / Non-goals sections, writes it to docs/acid-prophet/checklists/<slug>.md, and optionally posts it as a PR comment. Complements `check-drift` (drift = spec↔code mismatch · checklist = did we actually validate the AC).
+argument-hint: [spec-path]
 model: sonnet
 effort: high
 allowed-tools: Read, Glob, Grep, Bash
-context_policy: fresh
+disallowed-tools: Edit, NotebookEdit
 ---
 
 # write-checklist
@@ -18,6 +19,7 @@ Read `../../persona.md` at the start of this skill. That persona is canonical fo
 **Scope:** local to this skill's execution only. Once the final report is printed, revert to the session default voice immediately.
 
 > Voice cadence: at every user-visible workflow transition, try to dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Print the returned `line` only when non-empty. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Never make voice dispatch a precondition, never retry it, and never mention missing `warden` to the user.
+> Voice flag: !`cat "$HOME/.claude/nuthouse/voice.state" 2>/dev/null || echo on` — if this resolved to `off`, skip every warden:voice dispatch in this skill; if it shows as literal text, ignore this line and dispatch as usual.
 
 ## Language
 
@@ -34,7 +36,7 @@ The user has a spec under `docs/acid-prophet/specs/` and wants a concrete valida
    - Check `gh` CLI: `gh --version`. If missing, note "gh not found — PR comment will be skipped." Continue regardless.
    - Ensure `${PROJECT_ROOT}/docs/acid-prophet/checklists/` exists; create if missing.
 2. Resolve the spec:
-   - If the user passed a spec path argument, use it. Resolve to absolute; verify file exists.
+   - If `$ARGUMENTS` contains a spec path, use it. Resolve to absolute; verify file exists.
    - Otherwise, scan `docs/acid-prophet/specs/`. Match by current branch's Linear identifier in the body, then by closest filename slug, then ask if still ambiguous.
    - Abort if zero candidates.
 3. Pre-flight gate:

@@ -1,11 +1,14 @@
 {
   "name": "saucy-status",
+  "displayName": "Saucy Status",
   "description": "Suggestive loading messages while Claude thinks. Modes: saucy, gooning.",
+  "version": "1.0.0",
   "author": {
     "name": "g-bastianelli"
   },
-  "skills": "./claudecode/skills/",
-  "agents": [],
+  "repository": "https://github.com/g-bastianelli/nuthouse",
+  "homepage": "https://github.com/g-bastianelli/nuthouse",
+  "skills": "./skills/",
   "hooks": {
     "SessionStart": [
       {
@@ -27,5 +30,6 @@
         ]
       }
     ]
-  }
+  },
+  "defaultEnabled": false
 }

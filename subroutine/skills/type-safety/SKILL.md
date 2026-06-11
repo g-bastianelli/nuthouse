@@ -1,8 +1,15 @@
-# subroutine — type-safety contract
+---
+name: type-safety
+description: Type-safety discipline for all TypeScript work — no `any`/`as`/`!`, string-literal unions over enums, exhaustive matching. Applies whenever editing or creating TypeScript files.
+user-invocable: false
+paths: ["**/*.ts", "**/*.tsx"]
+---
 
-The collar. These rules bind every implementation, React or Hono. The repo's own
-`AGENTS.md` overrides this file when it states something stricter or different —
-read it first. Otherwise, this is the discipline.
+# subroutine — type-safety discipline
+
+Applies to every TypeScript file touched, React or Hono, front or back. The
+collar. The repo's own `AGENTS.md` overrides this file when it states something
+stricter or different — read it first. Otherwise, this is the discipline.
 
 ## Non-negotiable
 

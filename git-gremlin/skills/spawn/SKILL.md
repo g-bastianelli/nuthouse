@@ -1,7 +1,9 @@
 ---
 name: spawn
 description: Use when a new branch is needed — to create a branch, start work on a new branch, "crée une branche", "nouvelle branche", "bosse sur X dans une nouvelle branche", "spawn a workspace", "nouveau workspace", or when the PreToolUse hook blocked an in-place `git checkout -b` / `git switch -c` / `git branch <new>`. Creates a dedicated Superset workspace (one git worktree per branch) and spawns a fresh agent on the task instead of branching in place. Do not use for switching to an existing branch, deleting/renaming branches, commits, or PRs.
+argument-hint: [branch-or-task-description]
 effort: high
+allowed-tools: Bash(git branch --show-current), Read
 ---
 
 # git-gremlin:spawn
@@ -9,6 +11,17 @@ effort: high
 One workspace per branch. This skill never creates a branch in place — it spins up an isolated Superset workspace (a dedicated git worktree) and hands the task to a fresh agent running inside it. The current agent does not follow the branch; it stops once the workspace is spawned. Match the user's language; keep technical identifiers unchanged.
 
 > Voice cadence: at every user-visible workflow transition, try to dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Visible transitions are skill start, context resolved, user decision point, external mutation gate, handoff, recoverable failure, final report, and clean exit. Print the returned `line` only when non-empty. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Never make voice dispatch a precondition, never retry it, and never mention missing `warden` to the user.
+> Voice flag: !`cat "$HOME/.claude/nuthouse/voice.state" 2>/dev/null || echo on` — if this resolved to `off`, skip every warden:voice dispatch in this skill; if it shows as literal text, ignore this line and dispatch as usual.
+
+## Voice
+
+Read `../../persona.md` at the start of this skill. That persona is
+canonical for all output of this skill. Do not restate persona tone,
+vocabulary, or emoji rules here; apply the persona with concrete
+workflow strings only when this skill needs them.
+
+**Scope:** local to this skill's execution only. Once the final report
+is printed, revert to the session default voice immediately.
 
 ## Workflow
 
@@ -17,7 +30,7 @@ One workspace per branch. This skill never creates a branch in place — it spin
    - Verify it is authenticated: `superset projects list --json`. If it errors with "Not logged in", abort and tell the user to run `superset auth login` (or set `SUPERSET_API_KEY`) themselves, then re-invoke. Never attempt the login.
    - Verify this is a git repository (`git rev-parse --is-inside-work-tree`).
 2. Resolve the workspace inputs (do not invent — ask the user for anything genuinely unknown):
-   - **branch**: the new branch name. Take it from the user's request or from the blocked command the hook intercepted. If absent, ask.
+   - **branch**: the new branch name. Take it from `$ARGUMENTS` when present (a branch name or a task description to derive one from), else from the user's request or from the blocked command the hook intercepted. If absent, ask.
    - **name**: the workspace name (required by `superset workspaces create`). Default it to the **branch** name; surface it and let the user override.
    - **base-branch**: default to the current branch (`git branch --show-current`). Surface it; let the user override.
    - **project**: match the current repo to a Superset project from `superset projects list --json` (by repo path / name). If exactly one matches, use its id; if ambiguous or none, ask the user to pick.

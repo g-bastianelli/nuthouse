@@ -1,16 +1,25 @@
-# subroutine — Hono pipeline contract
+---
+name: hono-pipeline
+description: Layered backend pipeline discipline for Hono + typed-RPC monorepos — contract → error union → pure service → unwrap → thin router. Applies when working on Hono backend code.
+user-invocable: false
+paths: ["**/*.ts"]
+---
 
-The backend discipline (back-of-stack), for a Hono + typed-RPC monorepo. Builds
-on `result-pattern.md`, `validation.md`, and `type-safety.md`. The repo's
-`apps/*/api/AGENTS.md` wins on exact paths, RPC lib, and auth — read it first;
-this is the layered pipeline that holds.
+# subroutine — Hono pipeline discipline
+
+Applies only when working on Hono backend code (routes, RPC procedures,
+services, domain libs, contracts packages) — ignore it for frontend files. The
+backend discipline (back-of-stack), for a Hono + typed-RPC monorepo. Builds on
+the `result-pattern`, `validation`, and `type-safety` discipline skills. The
+repo's `apps/*/api/AGENTS.md` wins on exact paths, RPC lib, and auth — read it
+first; this is the layered pipeline that holds.
 
 ## The layers (a new procedure moves through all of them, in order)
 
 1. **Contract** — the typed input/output schema (Zod) + declared error codes,
    in the contracts package. Single source of truth for the wire shape.
 2. **Error union** — a discriminated `{Resource}Error` (`code` + variant fields)
-   in the domain lib. See `result-pattern.md`.
+   in the domain lib. See the `result-pattern` discipline skill.
 3. **Service** — framework-pure domain logic in the domain lib. Returns
    `Promise<Result<T, {Resource}Error>>`. **No `hono` / RPC / HTTP imports.**
    Threads `tenantId` / auth context explicitly through its signature — no

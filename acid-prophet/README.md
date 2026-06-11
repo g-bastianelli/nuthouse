@@ -48,7 +48,7 @@ It turns rough ideas into reviewed specs, ratifies project-specific articles int
                                           │
                           ┌───────────────┴───────────────┐
                           ▼                               ▼
-                  subroutine:implement       linear-devotee:create-project
+                  implementation turn        linear-devotee:create-project
                           │
                           ▼  (after PR is opened)
                      check-drift

@@ -2,6 +2,8 @@
 name: pr-drafter
 description: Read git log and diff vs base branch, propose a PR title and description; on execute action, run gh pr create with the approved content.
 effort: low
+maxTurns: 5
+color: pink
 tools:
   - Bash
 ---

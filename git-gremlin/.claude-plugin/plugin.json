@@ -1,22 +1,13 @@
 {
   "name": "git-gremlin",
+  "displayName": "Git Gremlin",
   "description": "Git gremlin — auto-triggers contextual review, commit, and GitHub PR helpers, delegates diff-heavy drafting to subagents, and keeps mutations behind scoped intent gates",
+  "version": "1.0.1",
   "author": {
     "name": "g-bastianelli"
   },
+  "repository": "https://github.com/g-bastianelli/nuthouse",
+  "homepage": "https://github.com/g-bastianelli/nuthouse",
   "skills": "./skills/",
-  "agents": ["./agents/commit-drafter.md", "./agents/pr-drafter.md"],
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/claudecode/hooks/intercept-branch.mjs\""
-          }
-        ]
-      }
-    ]
-  }
+  "agents": ["./agents/commit-drafter.md", "./agents/pr-drafter.md", "./agents/reviewer.md"]
 }

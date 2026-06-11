@@ -4,8 +4,8 @@ import path from "node:path";
 
 // Keys whose freshness depends on git HEAD sha — tracked separately in _meta._shas
 // so a later merge (e.g. write-spec writing handoff_spec) does not clobber the sha
-// that was recorded when these keys were first written (by greet / react-monkey:implement).
-const SHA_TRACKED_KEYS = new Set(["relevant_files", "react-monkey.explorer_report"]);
+// that was recorded when these keys were first written (by greet).
+const SHA_TRACKED_KEYS = new Set(["relevant_files"]);
 
 export function storePath(sessionId, projectRoot) {
   // path.basename strips any accidental path separators in the session id.
@@ -202,8 +202,6 @@ export function isStale(session, key, namespace, projectRoot) {
       const storedPath = session["acid-prophet"]?._handoff_spec_path;
       return storedPath !== session.spec_path;
     }
-    case "react-monkey.explorer_report":
-      return shaChanged("react-monkey.explorer_report");
     default:
       return false;
   }

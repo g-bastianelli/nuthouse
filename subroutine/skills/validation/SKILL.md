@@ -1,5 +1,13 @@
-# subroutine — validation contract
+---
+name: validation
+description: Validation discipline for all TypeScript work — Zod as the single validation library, parse at trust boundaries, types inferred from schemas. Applies whenever editing or creating TypeScript files.
+user-invocable: false
+paths: ["**/*.ts", "**/*.tsx"]
+---
 
+# subroutine — validation discipline
+
+Applies to every TypeScript file that touches data crossing a trust boundary.
 Zod is the single validation library across front, back, and libs. The repo's
 `AGENTS.md` wins if it names a different one — read it first.
 
@@ -14,7 +22,7 @@ Zod is the single validation library across front, back, and libs. The repo's
   redeclare a type that a schema already describes.
 - **Shared schemas** (used by ≥2 packages) live in the repo's shared types
   package, not duplicated.
-- **String-literal value sets** pair with the type-safety contract:
+- **String-literal value sets** pair with the type-safety discipline:
   ```ts
   export const PROTOCOLS = ["opcua", "mqtt", "modbus_tcp"] as const;
   export const ProtocolSchema = z.enum(PROTOCOLS);

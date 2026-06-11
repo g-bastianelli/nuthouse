@@ -1,7 +1,11 @@
 ---
 name: review
 description: Use automatically when the user asks to review code, review the current diff, inspect a PR/branch/commit range, run a contextual code review, "review la PR", "review ce diff", or "fais une review". Loads repo instructions such as AGENTS.md, CLAUDE.md, Copilot instructions, path-scoped rules, and PR/spec context before producing severity-ranked findings. Do not use for commit creation, PR creation, branch creation, or implementing fixes unless the user explicitly asks to address findings.
+argument-hint: [--staged | --base <ref>]
 effort: high
+context: fork
+agent: git-gremlin:reviewer
+allowed-tools: Bash(node:*), Bash(git diff:*), Bash(git log:*), Read, Glob, Grep, Agent
 ---
 
 # git-gremlin:review
@@ -9,6 +13,7 @@ effort: high
 Context-first review orchestrator. Match the user's language; keep technical identifiers unchanged.
 
 > Voice cadence: at every user-visible workflow transition, try to dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Visible transitions are skill start, context resolved, recoverable failure, final report, and clean exit. Print the returned `line` only when non-empty. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Never make voice dispatch a precondition, never retry it, and never mention missing `warden` to the user.
+> Voice flag: !`cat "$HOME/.claude/nuthouse/voice.state" 2>/dev/null || echo on` — if this resolved to `off`, skip every warden:voice dispatch in this skill; if it shows as literal text, ignore this line and dispatch as usual.
 
 ## Voice
 
@@ -50,12 +55,12 @@ This skill reviews and reports. It does not implement fixes unless the user expl
    - Verify this is a git repository.
    - Verify `node` is available.
    - Resolve `PLUGIN_ROOT`. Prefer `${CLAUDE_PLUGIN_ROOT}` when set; otherwise infer it from the installed skill path or current repo layout.
-   - Read `<PLUGIN_ROOT>/shared/review-passes.md`; it defines the portable pass contract.
+   - The portable pass contract is the `git-gremlin:review-passes` knowledge skill, preloaded into the host agent — do not re-read it. Codex fallback: if the contract is not already in your context, read the `review-passes` skill file (`<PLUGIN_ROOT>/skills/review-passes/SKILL.md`) before continuing.
    - Run the context compiler:
      ```bash
      node <PLUGIN_ROOT>/scripts/review-context.mjs
      ```
-     Add `--base <ref>` or `--staged` if the user explicitly requested a base or staged-only review.
+     Add `--base <ref>` or `--staged` when `$ARGUMENTS` contains them, or if the user explicitly requested a base or staged-only review.
 2. Load review context:
    - Read the generated context manifest.
    - Read every instruction source marked `applies`.
@@ -68,7 +73,7 @@ This skill reviews and reports. It does not implement fixes unless the user expl
    - Include warnings from the manifest, especially dirty worktree and untracked-file notes.
 4. Choose backend:
    - **Native review backend (optional):** If the current runtime exposes a callable native code-review backend inside this turn (for example a bundled review skill/command that can be invoked with extra context), delegate the review packet to it and request severity-ranked findings using this skill's Finding Contract. Do not stop and ask the user to run a slash command manually.
-   - **Portable multi-pass backend (default):** Otherwise run the passes from `shared/review-passes.md`. When subagents are available and permitted by the runtime, dispatch read-only passes in parallel: `correctness-reviewer`, `convention-reviewer`, `tests-reviewer`, and `risk-reviewer` only when the touched surface or user scope makes security/privacy/performance/accessibility relevant. If subagents are unavailable, run the same passes inline in separate sections.
+   - **Portable multi-pass backend (default):** Otherwise run the passes from the preloaded `review-passes` contract. When subagents are available and permitted by the runtime, dispatch read-only passes in parallel: `correctness-reviewer`, `convention-reviewer`, `tests-reviewer`, and `risk-reviewer` only when the touched surface or user scope makes security/privacy/performance/accessibility relevant. If subagents are unavailable, run the same passes inline in separate sections.
    - **Small diff fast path:** For tiny, low-risk diffs (one or two human-written files, no risky surface, no explicit deep-review request), one inline pass may cover correctness + conventions + tests. Still use the same Finding Contract.
 5. Aggregate candidates:
    - Merge duplicate candidates by root cause and keep the clearest evidence.

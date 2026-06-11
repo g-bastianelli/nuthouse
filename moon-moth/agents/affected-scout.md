@@ -3,6 +3,9 @@ name: affected-scout
 description: Run `moon query` to compute the affected project graph for a moon monorepo and return a structured scope map. Haiku model, read-only, structured output. Used by moon-moth:scope.
 model: haiku
 effort: low
+maxTurns: 10
+color: cyan
+skills: [moon-moth:moon-commands, moon-moth:affected-scope]
 tools:
   - Bash
   - Read
@@ -26,9 +29,11 @@ DOWNSTREAM: <none | direct | deep>   # default deep
 
 ## Mission (in order)
 
-1. **Read the command contract.** Read
-   `${CLAUDE_PLUGIN_ROOT}/shared/moon-commands.md` and
-   `${CLAUDE_PLUGIN_ROOT}/shared/affected-scope.md`. All commands run with
+1. **Know the contracts.** The `moon-moth:moon-commands` and
+   `moon-moth:affected-scope` knowledge skills are preloaded into your context
+   at startup — apply them. If they are missing, read
+   `${CLAUDE_PLUGIN_ROOT}/skills/moon-commands/SKILL.md` and
+   `${CLAUDE_PLUGIN_ROOT}/skills/affected-scope/SKILL.md`. All commands run with
    `cwd = MOON_ROOT`. `moon query` emits JSON on stdout natively (no `--json`).
 
 2. **List changed files** per BASE:

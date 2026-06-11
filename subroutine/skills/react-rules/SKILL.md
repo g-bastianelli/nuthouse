@@ -1,7 +1,14 @@
-# subroutine — React rules contract
+---
+name: react-rules
+description: React component discipline — one component per file, folder mirrors the JSX tree, IDs-only props, state hierarchy. Applies when working on React components and hooks.
+user-invocable: false
+paths: ["**/*.tsx", "**/use*.ts", "**/hooks/**/*.ts"]
+---
 
-The component discipline (front-of-stack), battle-tested across React
-codebases. The repo's `apps/*/AGENTS.md` wins on stack specifics
+# subroutine — React rules discipline
+
+Applies to React component and hook files (front-of-stack), battle-tested across
+React codebases. The repo's `apps/*/AGENTS.md` wins on stack specifics
 (router, forms lib, design system, i18n) — read it first; this is the structural
 discipline that holds regardless.
 

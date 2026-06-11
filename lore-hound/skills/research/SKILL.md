@@ -1,8 +1,10 @@
 ---
 name: research
 description: Use automatically when the user wants a researched, fact-checked, or cited answer from the web — "fais une recherche", "creuse le sujet", "vérifie cette info", "trouve-moi des sources sur", "research X", "fact-check X", "find sources on X", "dig into X", or any question whose answer needs several cross-checked web sources. Prefer this over a bare WebSearch whenever the answer should be sourced rather than answered from memory. Fan-out web search → fetch + summarize → adversarial verification → cited synthesis. Zero parametric knowledge — answers only from verified sources.
+argument-hint: [research-question]
 model: sonnet
 effort: high
+allowed-tools: WebSearch, WebFetch, Agent
 ---
 
 # research
@@ -18,6 +20,12 @@ original.
 the session default voice immediately.
 
 This skill is **rigid** — execute steps in order.
+
+## Context
+
+> Auto-injected on Claude Code at skill load. If the lines below show literal `` !`...` `` text, run those commands manually before step 1.
+
+- Today: !`date +%Y-%m-%d`
 
 ## Language
 
@@ -37,18 +45,18 @@ region) get clarified before the hunt begins.
 
 ## Step 0 — Preconditions
 
-1. Verify cwd contains `.claude-plugin/marketplace.json` (inside the repo).
-2. Verify the runtime can search and fetch the web. On Claude Code that's the `WebSearch` +
+1. Verify the runtime can search and fetch the web. On Claude Code that's the `WebSearch` +
    `WebFetch` tools; on Codex it's the native web search tool (enabled by default — pass
    `--search` for live fetches). If no web search/fetch capability is available, abort with:
    _"les outils de chasse ne sont pas là. active la recherche web avant de relancer."_
-3. Parallelism is achieved by issuing multiple tool calls in a single message (concurrent
+2. Parallelism is achieved by issuing multiple tool calls in a single message (concurrent
    `WebSearch` calls, then concurrent `Agent` dispatches) — no special orchestration tool is
    required.
 
 ## Step 1 — Clarify the research question
 
-If the user's question is vague or under-specified (e.g., "what's a good API?" without
+Treat `$ARGUMENTS` as the research question when non-empty; otherwise take the question
+from the user's message. If the question is vague or under-specified (e.g., "what's a good API?" without
 budget, language, use case, or region), ask **2–3 clarifying questions** before starting
 the hunt. Keep them tight and specific.
 
@@ -65,7 +73,8 @@ via `WebSearch` (do NOT loop sequentially). Angles should be:
 
 - Direct keyword match (e.g., "API for X")
 - Semantic variant (e.g., "how to integrate X")
-- Recent/news angle (e.g., "X 2025 news")
+- Recent/news angle (e.g., "X <current year> news" — derive the year from `Today` in the
+  `## Context` block)
 - Comparison angle (e.g., "X vs Y vs Z")
 - Community/stack overflow angle (e.g., "X pitfalls")
 
@@ -101,7 +110,9 @@ Each `claim-verifier` call:
 
 Verifier behavior:
 
-- Tense when recent and reliable sources back the claim → `confirmed`.
+- Tense when recent and reliable sources back the claim → `confirmed`. Judge source
+  freshness against `Today` from the `## Context` block — never against the model's
+  training-data sense of "now".
 - Hostile: if stale sources or contradictions exist, prefer the recent/reliable source.
 - Default to `refuted` if uncertain — the hound doesn't guess.
 
@@ -153,8 +164,7 @@ Agent({
 })
 ```
 
-Both agents live under `lore-hound/agents/` — scaffold them via `/scaffold-agent` if not
-yet present.
+Both agents live under `lore-hound/agents/`.
 
 ## Final report
 

@@ -187,6 +187,13 @@ tools:
 placeholder). The runtime picks the default.
 [IF Q4b = inherit] Omit the `effort:` line entirely.
 
+**Optional frontmatter** — add only when the agent needs it, omit otherwise:
+
+- `skills: [<plugin>:<skill>, …]` — preloads the **full content** of the listed skills into the agent's context at startup (not just descriptions). Use when the agent must apply a skill's workflow without re-discovering it.
+- `memory: <user | project | local>` — persistent memory across conversations at the given scope. Use for agents that accumulate knowledge between runs (e.g. recurring auditors); omit for stateless scouts.
+- `maxTurns: <N>` — caps agentic turns before the subagent stops. Use to bound runaway loops on fetch/parse agents; omit for open-ended reasoning.
+- `color: <red | blue | green | yellow | purple | orange | pink | cyan>` — UI identification color for the agent. Purely cosmetic; use when a plugin ships several agents and visual distinction helps.
+
 ### Body
 
 ```markdown

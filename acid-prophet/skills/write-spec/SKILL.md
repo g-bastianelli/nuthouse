@@ -1,10 +1,10 @@
 ---
 name: write-spec
 description: Use when starting any project or feature that needs a structured spec before development — asks clarifying questions one at a time, proposes approaches, validates a written spec, then optionally hands off to linear-devotee:create-project for Linear project creation
+argument-hint: [feature-or-project-description]
 model: opus
 effort: max
 allowed-tools: Read, Glob, Grep, Bash
-context_policy: session
 ---
 
 # acid-prophet:write-spec
@@ -12,6 +12,7 @@ context_policy: session
 Rigid spec-writing gate. Match the user's language; keep technical identifiers unchanged.
 
 > Voice cadence: at every user-visible workflow transition, try to dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Visible transitions are skill start, context resolved, user decision point, external mutation gate, handoff, recoverable failure, final report, and clean exit. Print the returned `line` only when non-empty. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Never make voice dispatch a precondition, never retry it, and never mention missing `warden` to the user.
+> Voice flag: !`cat "$HOME/.claude/nuthouse/voice.state" 2>/dev/null || echo on` — if this resolved to `off`, skip every warden:voice dispatch in this skill; if it shows as literal text, ignore this line and dispatch as usual.
 
 ## Workflow
 
@@ -20,6 +21,7 @@ Rigid spec-writing gate. Match the user's language; keep technical identifiers u
 2. Explore context:
    - `git log --oneline -10`; list `docs/acid-prophet/specs/` if it exists; read project-root `CLAUDE.md` if present.
 3. Clarifying questions (one per message):
+   - Treat `$ARGUMENTS` as the initial feature/project request when non-empty; if empty and no request is evident from the conversation, ask what needs a spec.
    - **Scope check first**: if the request describes multiple independent subsystems, flag and propose decomposition. Each sub-project gets its own trip.
    - Extract: who uses this and why, what problem it uniquely solves, where it fits, constraints (stack, timeline), definition of done.
    - **Uncertainty rule**: when a section needs a value the user hasn't provided and you cannot infer it from `CLAUDE.md`, `package.json`, or the codebase — **never invent**. Emit a literal marker `[NEEDS CLARIFICATION: <one-line question>]` inline at that position. The spec is finishable with markers; the auditor will flag each one and the user will resolve them before the spec leaves draft.
@@ -39,14 +41,14 @@ Rigid spec-writing gate. Match the user's language; keep technical identifiers u
      PROJECT_ROOT: <git root>
      MODE: auto-fix-trivial
      ```
-   - Parse result with `<PROJECT_ROOT>/acid-prophet/claudecode/lib/parse-spec-auditor-report.mjs`. If null: try `warden:voice` per the voice cadence with `SUMMARY: spec-auditor output malformed`, then continue without auto-fixes.
+   - Parse result with `${CLAUDE_PLUGIN_ROOT}/claudecode/lib/parse-spec-auditor-report.mjs`. If null: try `warden:voice` per the voice cadence with `SUMMARY: spec-auditor output malformed`, then continue without auto-fixes.
    - Apply each auto-fix candidate via `apply-frontmatter-patch.mjs`. If patches applied, commit: `git commit -m "docs(acid-prophet): spec-auditor auto-fixes"`. Never use `--no-verify`.
    - **`handoffEligible === false`** → surface every failing gate and BLOCKER to the user verbatim; loop (edit spec → re-run spec-auditor → repeat) until `handoffEligible` becomes `true`. This subsumes the older "BLOCKER list must be empty" condition — gates can fail without BLOCKERs, and both must be clean before advancing.
    - WARNING/INFO only → present list; let user choose which to address; then advance.
 8. User spec gate: ask user to review `<path>`. Wait. If changes: update spec, commit, re-run step 7.
 9. Handoff: ask the user if they want to push the spec to Linear.
    - Yes:
-     - Session store (`context_policy: session`): if `$CLAUDE_SESSION_ID` is set, write to `<PROJECT_ROOT>/.claude/nuthouse/sessions/${CLAUDE_SESSION_ID}.json` before invoking `create-project`:
+     - Session store: if `$CLAUDE_SESSION_ID` is set, write to `<PROJECT_ROOT>/.claude/nuthouse/sessions/${CLAUDE_SESSION_ID}.json` before invoking `create-project`:
        ```json
        {
          "spec_path": "<absolute spec path>",

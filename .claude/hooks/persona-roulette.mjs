@@ -51,6 +51,10 @@ export function findPersonas(repoRoot, { stderr = process.stderr } = {}) {
     return [];
   }
 
+  // readdir order is filesystem-dependent (APFS vs ext4) — sort so a seeded
+  // rng picks the same persona on every platform.
+  entries.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+
   const personas = [];
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;

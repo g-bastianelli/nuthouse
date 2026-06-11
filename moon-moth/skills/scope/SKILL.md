@@ -1,7 +1,9 @@
 ---
 name: scope
 description: Use at the start of any task in a moon monorepo to scope work to the affected project graph — runs `moon query changed-files`/`affected`, dispatches the affected-scout subagent, and returns a structured scope map (affected projects, layers, tasks, downstream blast radius). Prefer this over blindly scanning the repo when working in a repo with a `.moon/` workspace.
+argument-hint: [working-tree|default-branch|<base>..<head>]
 effort: high
+allowed-tools: Bash(moon query:*), Bash(git status:*), Bash(git diff:*), Read, Agent
 ---
 
 # scope
@@ -19,6 +21,13 @@ printed, revert to the session default voice.
 
 This skill is **rigid** — execute steps in order.
 
+## Context
+
+> Auto-injected on Claude Code at skill load. If the lines below show literal `` !`...` `` text, run those commands manually before step 1.
+
+- Workspace check: !`ls .moon 2>/dev/null && echo "moon workspace" || echo "no .moon here"`
+- Changed files: !`git status --porcelain | head -30`
+
 ## Language
 
 Adapt all output to match the user's language. Technical identifiers (project
@@ -33,8 +42,10 @@ land only there.
 
 ## Step 0 — Preconditions
 
-1. Find the moon workspace root: walk up from cwd for a directory containing
-   `.moon/`. If none is found, abort: _"pas de lampe ici — ce n'est pas un
+1. Find the moon workspace root: the `Workspace check` line in `## Context`
+   already answers for cwd — `moon workspace` means cwd is the root. On
+   `no .moon here`, walk up from cwd for a directory containing `.moon/`.
+   If none is found, abort: _"pas de lampe ici — ce n'est pas un
    workspace moon (`.moon/` introuvable). rien à éclairer."_ and suggest the
    caller proceed without moon scoping.
 2. Capture `PROJECT_ROOT` = the moon workspace root (it is the git root in a
@@ -45,10 +56,12 @@ land only there.
 
 ## Step 1 — Pick the base
 
-Decide what "changed" means from the user's intent:
+Decide what "changed" means: if `$ARGUMENTS` contains a base (`working-tree`, `default-branch`, or a `<base>..<head>` revision pair), use it; otherwise infer from the user's intent:
 
 - Default (uncommitted work / "what am I touching now") → working tree
-  (`moon query changed-files --local`).
+  (`moon query changed-files --local`). The `Changed files` line in
+  `## Context` previews this; an empty preview hints the working tree is
+  clean and `--default-branch` is probably the intended base.
 - "vs main" / "for this branch" / pre-PR → `moon query changed-files
 --default-branch`.
 - Explicit revisions → `--base <sha> --head <sha>`.
@@ -58,8 +71,10 @@ State the chosen base in one line before dispatching.
 ## Step 2 — Dispatch the affected-scout subagent
 
 Dispatch `moon-moth:affected-scout` (see `## Subagent dispatch`). It runs the
-`moon query` commands from `${CLAUDE_PLUGIN_ROOT}/shared/moon-commands.md` and
-returns the scope map defined in `${CLAUDE_PLUGIN_ROOT}/shared/affected-scope.md`.
+`moon query` commands from the `moon-moth:moon-commands` knowledge skill
+(`${CLAUDE_PLUGIN_ROOT}/skills/moon-commands/SKILL.md`) and returns the scope
+map defined in the `moon-moth:affected-scope` contract
+(`${CLAUDE_PLUGIN_ROOT}/skills/affected-scope/SKILL.md`).
 
 If subagents are unavailable, run the same `moon query` commands inline and build
 the scope map yourself.
@@ -77,8 +92,9 @@ From the returned scope map:
 ## Step 4 — Persist the scope map (optional)
 
 When the task is non-trivial or will be handed off, write the scope map to
-`${PROJECT_ROOT}/docs/moon-moth/scope/<branch-or-timestamp>.json` so `implement`
-and `verify` can read it without recomputing. Skip for a quick one-off scope.
+`${PROJECT_ROOT}/docs/moon-moth/scope/<branch-or-timestamp>.json` so the
+implementation turn and `verify` can read it without recomputing. Skip for a
+quick one-off scope.
 
 ## Step 5 — Final report + hand-off
 
@@ -96,9 +112,25 @@ Then present the hand-off menu:
 
 ```
 <voice intro line — moon-moth>
-(i) implement → hand to subroutine:implement, bounded to the affected set (React or Hono)
+(i) implement → start the implementation turn, bounded to the affected set
 (v) verify    → hand to moon-moth:verify, run affected :typecheck/:lint/:test
 (s) stop      → leave the map, fly off
+```
+
+On `(i)`, hand the artifacts to the implementation turn. Emit this directive to
+the implementing agent: read every provided artifact before writing code, honor
+the repo's `AGENTS.md`/`CLAUDE.md`, let the `subroutine` discipline skills
+activate on matching files, stay bounded to the affected set, and close with
+`moon-moth:verify` (this is a moon workspace). The handoff carries the
+**scope map JSON inline** — affected project ids, layers, stacks, tasks, and
+downstream blast radius — not just a pointer to the persisted file. The
+implementer must see the field of light without re-running `moon query`:
+
+```
+TASK: <what to implement, from the user's intent>
+SCOPE_MAP:
+<full scope map JSON from Step 2, verbatim>
+SCOPE_MAP_FILE: ${PROJECT_ROOT}/docs/moon-moth/scope/<file>.json | _not-persisted_
 ```
 
 Branch on the response. Exit the skill when the chosen branch finishes.

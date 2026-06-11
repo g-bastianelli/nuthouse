@@ -3,6 +3,8 @@ name: issue-drafter
 description: Read-only Linear scout for issue drafting. Consumes a project_id (and optionally a milestone_id, a parent draft context, a freeform issue hint) and produces a strict SDD-formatted issue draft (Goal / Context / Files / Constraints / Acceptance / Non-goals / Edges / Questions) ready to be promoted into a Linear issue by the calling skill. Marks any field not derivable from input as `_unclear_`. Used by `linear-devotee:create-issue`. Never writes to Linear.
 model: sonnet
 effort: high
+maxTurns: 15
+color: blue
 tools:
   - Read
   - Glob
@@ -29,7 +31,7 @@ PROJECT_ROOT: <abs path to the git repo>
 
 - `PROJECT_ID` is mandatory.
 - `MILESTONE_ID` is set when the issue must attach to a specific milestone of the project. Linear constraint: the milestone must belong to the same project as `PROJECT_ID`.
-- `PARENT_DRAFT` is set when chained from `linear-devotee:create-milestone` or `create-project`; it points to `${CLAUDE_PLUGIN_ROOT}/data/chain-<session>.json`. Read it to recover the issue title and any partial fields the parent skill drafted.
+- `PARENT_DRAFT` is set when chained from `linear-devotee:create-milestone` or `create-project`; it points to `${CLAUDE_PLUGIN_DATA}/chain-<session>.json`. Read it to recover the issue title and any partial fields the parent skill drafted.
 - `ISSUE_HINT` is set when invoked standalone with a freeform "create one issue that does X" prompt.
 - `PROJECT_ROOT` is used to resolve any path tokens in the hint or parent draft.
 

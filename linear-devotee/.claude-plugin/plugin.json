@@ -1,38 +1,19 @@
 {
   "name": "linear-devotee",
+  "displayName": "Linear Devotee",
   "description": "Linear workflow plugin for issue intake, planning, next-issue recommendation, project creation, milestone creation, and issue drafting with SDD-formatted context and explicit mutation gates.",
+  "version": "1.0.0",
   "author": {
     "name": "g-bastianelli"
   },
+  "repository": "https://github.com/g-bastianelli/nuthouse",
+  "homepage": "https://github.com/g-bastianelli/nuthouse",
   "skills": "./skills/",
   "agents": [
     "./agents/issue-context.md",
     "./agents/issue-drafter.md",
     "./agents/milestone-drafter.md",
     "./agents/plan-auditor.md",
-    "./agents/project-drafter.md",
-    "./agents/plan-writer.md"
-  ],
-  "hooks": {
-    "SessionStart": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/claudecode/hooks/session-start.mjs\""
-          }
-        ]
-      }
-    ],
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/claudecode/hooks/prompt-submit.mjs\""
-          }
-        ]
-      }
-    ]
-  }
+    "./agents/project-drafter.md"
+  ]
 }

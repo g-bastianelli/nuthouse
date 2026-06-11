@@ -1,8 +1,7 @@
 ---
 name: create-milestone
 description: Use to add a single Milestone to an existing Linear Project (standalone add-on) or to resume a partially-committed create-project cascade. Reads chain-state to detect resume mode and pick the next milestone whose `id` is still null. Drafts via milestone-drafter when needed, clarifies, previews, creates on approval, updates chain state.
-model: opus
-effort: max
+effort: high
 allowed-tools: Read, Glob, Grep, Write
 ---
 
@@ -11,14 +10,15 @@ allowed-tools: Read, Glob, Grep, Write
 Rigid runbook. Match the user's language; keep technical identifiers unchanged.
 
 > Voice cadence: at every user-visible workflow transition, try to dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Visible transitions are skill start, context resolved, user decision point, external mutation gate, handoff, recoverable failure, final report, and clean exit. Print the returned `line` only when non-empty. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Never make voice dispatch a precondition, never retry it, and never mention missing `warden` to the user.
+> Voice flag: !`cat "$HOME/.claude/nuthouse/voice.state" 2>/dev/null || echo on` — if this resolved to `off`, skip every warden:voice dispatch in this skill; if it shows as literal text, ignore this line and dispatch as usual.
 
 ## Workflow
 
 1. Preconditions:
    - Verify Linear access with `ToolSearch` query `linear`.
    - Verify git repo.
-   - Ensure `${CLAUDE_PLUGIN_ROOT}/data`.
-2. Detect mode from `${CLAUDE_PLUGIN_ROOT}/data/chain-${CLAUDE_SESSION_ID}.json`:
+   - Ensure `${CLAUDE_PLUGIN_DATA}`.
+2. Detect mode from `${CLAUDE_PLUGIN_DATA}/chain-${CLAUDE_SESSION_ID}.json`:
    - **Resume**: chain-state exists with `phase: "partial_failure"`, `project.id != null`, and at least one `drafts.milestones[].id == null`.
    - **Chained**: chain-state exists with `project.id != null` and `phase` is `committing` or absent legacy value (pre-resume schema).
    - **Standalone**: no chain-state, or `phase: "committed" | "cancelled"`.

@@ -1,8 +1,10 @@
 ---
 name: milestone-drafter
 description: Read-only Linear scout for milestone drafting. Consumes a project_id and optionally a parent project's draft context, produces a draft milestone description (name, scope, target date suggestion, rationale) plus a list of suggested issue titles to attach. Marks any field not derivable from input as `_unclear_`. Used by `linear-devotee:create-milestone`. Never writes to Linear.
-model: opus
-effort: max
+model: sonnet
+effort: high
+maxTurns: 15
+color: green
 tools:
   - Read
   - Glob
@@ -26,7 +28,7 @@ PROJECT_ROOT: <abs path to the git repo>
 ```
 
 - `PROJECT_ID` is mandatory — milestones are single-project in Linear.
-- `PARENT_DRAFT` is set when chained from `linear-devotee:create-project` and points to `${CLAUDE_PLUGIN_ROOT}/data/chain-<session>.json`. Read it to recover the project's drafted milestone list.
+- `PARENT_DRAFT` is set when chained from `linear-devotee:create-project` and points to `${CLAUDE_PLUGIN_DATA}/chain-<session>.json`. Read it to recover the project's drafted milestone list.
 - `MILESTONE_HINT` is set when the user invokes `create-milestone` standalone with a freeform "I want a phase that does X" prompt.
 - `PROJECT_ROOT` is used to resolve any path tokens in the hint or parent draft.
 

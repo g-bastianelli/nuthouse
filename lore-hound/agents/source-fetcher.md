@@ -3,6 +3,8 @@ name: source-fetcher
 description: Fetch a URL and extract claims with exact citations. Haiku model, structured output for parallel dispatch.
 model: haiku
 effort: low
+maxTurns: 5
+color: cyan
 tools:
   - WebFetch
 ---

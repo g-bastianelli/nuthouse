@@ -1,9 +1,14 @@
+---
+name: moon-commands
+description: Canonical `moon` CLI invocations for scoping and running tasks in a moon monorepo — the single source of truth every moon-moth skill and agent uses for `moon query` and `moon run`. Background knowledge contract, preloaded into moon-moth agents; not a user-facing workflow.
+user-invocable: false
+---
+
 # moon-moth — canonical moon commands
 
 Single source of truth for the `moon` invocations every moon-moth skill and
-agent uses. Reference this file (`${CLAUDE_PLUGIN_ROOT}/shared/moon-commands.md`)
-instead of re-deriving commands. All commands run from the moon workspace root
-(the dir containing `.moon/`).
+agent uses. Reference this contract instead of re-deriving commands. All
+commands run from the moon workspace root (the dir containing `.moon/`).
 
 > Verified against **moon 2.2.4**. `moon query <sub>` emits **JSON on stdout
 > natively** — there is no `--json` flag. CLI flags are kebab-case

@@ -1,6 +1,7 @@
 ---
 name: voice
 description: Use when toggling nuthouse fun messages on or off globally — /warden:voice [on|off|status]. Controls the shared flag read by warden:voice agent before emitting any decorative persona line.
+argument-hint: [on|off|status]
 model: haiku
 allowed-tools: Bash, Read
 ---
@@ -12,7 +13,7 @@ Rigid toggle gate. Match the user's language; keep technical identifiers unchang
 ## Workflow
 
 1. Preconditions:
-   - Parse the argument from the invocation: `on`, `off`, `status`, or absent (treated as `status`).
+   - Parse `$ARGUMENTS`: `on`, `off`, `status`, or empty (treated as `status`).
    - Resolve the flag file absolute path: run `echo "$HOME/.claude/nuthouse/voice.state"` and capture the result.
 2. If argument is `on` or `off`:
    - Run `mkdir -p "$HOME/.claude/nuthouse" && echo "<on_or_off>" > "$HOME/.claude/nuthouse/voice.state"`.

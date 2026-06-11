@@ -1,6 +1,9 @@
 ---
 name: debug-local
 description: Use when the user reports a runtime error, a service not starting, an auth/OIDC failure, or missing env vars in local dev on the notom platform. Investigate proactively with available tools before asking the user to run anything.
+argument-hint: [symptom-description]
+effort: high
+allowed-tools: Read, Glob, Grep, Bash(docker compose ps:*), Bash(docker compose logs:*), Agent
 ---
 
 # debug-local
@@ -18,6 +21,12 @@ Keep scope rules in this section; do not add a separate `## Persona scope`
 section.
 
 This skill is **rigid** — execute steps in order.
+
+## Context
+
+> Auto-injected on Claude Code at skill load. If the lines below show literal `` !`...` `` text, run those commands manually before step 1.
+
+- Docker: !`docker compose ps --format "table {{.Name}}\t{{.Status}}" 2>/dev/null | head -15 || echo "docker unavailable"`
 
 ## Language
 
@@ -39,10 +48,11 @@ check logs yourself before reporting.
 
 1. Verify you are inside a notom-platform worktree or the main project (presence of `docker-compose.yml` at the worktree root).
 2. Verify `docker` / `docker compose` is available.
+3. Read `../../shared/infra-map.md` — the single source of truth for machine-specific paths (e.g. `ROOT_ENV`). Substitute its values wherever a step references an infra-map key.
 
 ## Step 1 — Classify the symptom
 
-Inspect what the user reported and route:
+Inspect what the user reported (start from `$ARGUMENTS` when non-empty) and route:
 
 - **Env var missing** → Step 2a
 - **Service not reachable / auth redirect failing** → Step 2b
@@ -51,7 +61,7 @@ Inspect what the user reported and route:
 ## Step 2a — Missing env var (e.g. `VITE_API_URL`, `AUTHENTIK_ISSUER_URL`)
 
 1. Read `apps/atlas/api/src/env.ts` or `apps/atlas/app/src/env.ts` to see what's required.
-2. Read `/Users/gbastianelli/.superset/projects/notom-platform/.env` (root, source of truth) for the values.
+2. Read the root `.env` (source of truth) for the values — path: `ROOT_ENV`, see infra-map.
 3. Write the missing `.env` file:
    - API `.env` (`apps/atlas/api/.env`) gets backend vars copied from root `.env`.
    - App `.env` (`apps/atlas/app/.env`) gets only `VITE_*` vars + `VITE_API_URL`.
@@ -60,11 +70,11 @@ Inspect what the user reported and route:
 
 ## Step 2b — Service not reachable / auth redirect failing
 
-1. `docker compose ps` — check which containers are up and healthy.
+1. Check which containers are up and healthy — start from the `Docker` snapshot in `## Context`; re-run `docker compose ps` if it shows `docker unavailable` or may be stale.
    Services: `postgres`, `redis`, `authentik-server`, `authentik-worker`.
 2. If Authentik missing:
    ```bash
-   docker compose --env-file /Users/gbastianelli/.superset/projects/notom-platform/.env up -d authentik-server authentik-worker
+   docker compose --env-file "<ROOT_ENV — see infra-map>" up -d authentik-server authentik-worker
    ```
    Authentik takes ~60s to start. Re-check with `docker compose ps`.
 3. `docker compose logs --tail=30 authentik-server authentik-worker` — check for crashes.
@@ -88,7 +98,7 @@ running `moon run db-platform:setup_dev` which requires interactive context).
 | What                          | Where                                                         |
 | ----------------------------- | ------------------------------------------------------------- |
 | Docker Compose                | `docker-compose.yml` at worktree root                         |
-| Root `.env` (source of truth) | `/Users/gbastianelli/.superset/projects/notom-platform/.env`  |
+| Root `.env` (source of truth) | `ROOT_ENV` — see `../../shared/infra-map.md`                  |
 | API `.env`                    | `apps/atlas/api/.env` — copy vars from root `.env`            |
 | App `.env`                    | `apps/atlas/app/.env` — only `VITE_*` vars + `VITE_API_URL`   |
 | Authentik setup               | `moon run db-platform:setup_dev` — creates `atlas-dev` client |

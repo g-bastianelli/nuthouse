@@ -3,6 +3,8 @@ name: claim-verifier
 description: Adversarially verify a claim against retrieved sources. Prefers recent reliable sources over training knowledge. Defaults to refuted if uncertain.
 model: sonnet
 effort: high
+maxTurns: 15
+color: red
 tools:
   - WebFetch
   - WebSearch
