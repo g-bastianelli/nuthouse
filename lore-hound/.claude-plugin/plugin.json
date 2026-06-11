@@ -2,7 +2,7 @@
   "name": "lore-hound",
   "displayName": "Lore Hound",
   "description": "Source-hunting research harness: fan-out web search → fetch+summarize → adversarial verification → cited synthesis. Zero parametric knowledge — answers only from verified sources.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": {
     "name": "g-bastianelli"
   },

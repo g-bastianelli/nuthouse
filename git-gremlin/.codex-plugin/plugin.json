@@ -1,6 +1,6 @@
 {
   "name": "git-gremlin",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Git commit, contextual review, and GitHub PR helper for Codex with stronger automatic skill triggers and scoped mutation gates.",
   "author": {
     "name": "g-bastianelli"

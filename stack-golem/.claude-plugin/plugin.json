@@ -2,7 +2,7 @@
   "name": "stack-golem",
   "displayName": "stack-golem",
   "description": "Personal notom-stack ops & debug toolbox — Scaleway resource control, platform observability (logs/metrics/health on staging+prod), local dev debugging, and Insomnia collection sync. Investigate-first, CLI-driven, never punts to the console.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": {
     "name": "g-bastianelli"
   },

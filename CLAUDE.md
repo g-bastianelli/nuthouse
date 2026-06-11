@@ -142,6 +142,7 @@ Architecture Decision Records live in `_adr/`, numbered sequentially (`NNNN-keba
 
 - `_adr/0001-frontmatter-model-effort-tiering.md` — cognitive-load tiering applied to every skill and agent's `model` / `effort` frontmatter. Read before adding a new skill or agent.
 - `_adr/0002-marketplace-sha-pinning.md` — every `git-subdir` entry in `.claude-plugin/marketplace.json` carries an explicit `sha` to stop the install registry from desyncing. Run `bun run bump:shas` after any merge to `main` that touches a plugin subdir.
+- `_adr/0004-plugin-version-bump-on-release.md` — every content release bumps the plugin's patch `version` in both manifests **before** the sha pins move; a sha bump alone is invisible to existing installs (the plugin cache and updater are keyed by version). Use the local `/release` skill (versions → merge → shas), or `bun run bump:versions` manually.
 
 ---
 
@@ -155,3 +156,4 @@ Architecture Decision Records live in `_adr/`, numbered sequentially (`NNNN-keba
 6. **Subagent-driven dev** — dispatch a fresh subagent for each heavy task, keep the main context for coordination only.
 7. **Frequent commits**: one commit per logical step (`feat(<plugin>): scaffold...`, etc.). Co-author tag is not required.
 8. **Squash-merge** on `main` via GitHub PR (user workflow — no direct merge).
+9. **Release** — `/release` (local skill): bumps changed plugins' versions **before** merge, then `bun run bump:shas` on `main` after merge. Order is load-bearing — see `_adr/0004-plugin-version-bump-on-release.md`.

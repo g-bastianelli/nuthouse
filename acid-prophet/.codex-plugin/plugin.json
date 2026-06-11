@@ -1,6 +1,6 @@
 {
   "name": "acid-prophet",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Spec-driven development for Codex: constitution → spec → audit with Phase -1 gates → implementation plan with typed contracts → acceptance checklist → drift check. Optional Linear handoff.",
   "author": {
     "name": "g-bastianelli"

@@ -29,9 +29,15 @@ A script `scripts/bump-marketplace-shas.mjs`, exposed as `bun run bump:shas`, re
 
 ## Maintenance workflow
 
-After any merge to `main` that touches one or more plugin subdirs:
+> Superseded in part by ADR 0004: a sha bump alone is an **invisible release** —
+> existing installs only pick up changes when the plugin `version` moves.
+> The `/release` local skill runs the full ordered dance (versions → merge →
+> shas). Manual fallback:
 
 ```bash
+# on the feature branch, BEFORE merging:
+bun run bump:versions          # bumps plugin.json versions for changed plugins
+# commit, merge to main, then:
 git checkout main && git pull
 bun run bump:shas              # patches marketplace.json if needed
 git commit -am "chore(marketplace): bump shas after <change>"

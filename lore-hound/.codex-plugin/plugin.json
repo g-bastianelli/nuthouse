@@ -1,6 +1,6 @@
 {
   "name": "lore-hound",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Source-hunting research harness: fan-out web search → fetch+summarize → adversarial verification → cited synthesis. Zero parametric knowledge — answers only from verified sources.",
   "author": {
     "name": "g-bastianelli"

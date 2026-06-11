@@ -2,7 +2,7 @@
   "name": "acid-prophet",
   "displayName": "Acid Prophet",
   "description": "Spec-driven development pipeline. Constitution → spec → audit with Phase -1 gates → implementation plan with typed contracts → acceptance checklist → PR drift check. Asks one question at a time, emits [NEEDS CLARIFICATION] markers when uncertain, blocks Linear handoff until every gate passes.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": {
     "name": "g-bastianelli"
   },
