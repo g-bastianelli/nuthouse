@@ -23,7 +23,7 @@ This skill is **rigid** — execute steps in order.
 
 ## Context
 
-> Auto-injected on Claude Code at skill load. If the lines below show literal `` !`...` `` text, run those commands manually before step 1.
+> Auto-injected on Claude Code at skill load. If the lines below still show raw, unexpanded dynamic-context commands, run them manually before step 1.
 
 - Today: !`date +%Y-%m-%d`
 

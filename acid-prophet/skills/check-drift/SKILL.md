@@ -16,7 +16,7 @@ Rigid drift-detection gate. Match the user's language; keep technical identifier
 
 ## Context
 
-> Auto-injected on Claude Code at skill load. If the lines below show literal `` !`...` `` text, run those commands manually before step 1.
+> Auto-injected on Claude Code at skill load. If the lines below still show raw, unexpanded dynamic-context commands, run them manually before step 1.
 
 - Branch: !`git branch --show-current`
 - Recent commits: !`git log --oneline -15`

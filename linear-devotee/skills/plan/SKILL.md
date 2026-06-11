@@ -15,7 +15,7 @@ Rigid planning gate. Match the user's language; keep technical identifiers uncha
 
 ## Context
 
-> Auto-injected on Claude Code at skill load. If the lines below show literal `` !`...` `` text, run those commands manually before step 1.
+> Auto-injected on Claude Code at skill load. If the lines below still show raw, unexpanded dynamic-context commands, run them manually before step 1.
 
 - Greet context dir listing: !`ls "${CLAUDE_PLUGIN_DATA}" 2>/dev/null | head -20`
 

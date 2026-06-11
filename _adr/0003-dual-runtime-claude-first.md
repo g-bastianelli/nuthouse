@@ -32,9 +32,11 @@ Keep dual-runtime support. Author every skill **Claude Code-first** and adopt
 the native 2026 feature surface, with these degradation conventions:
 
 - **Dynamic injection** lives in a `## Context` block that always carries the
-  caveat line "If the lines below show literal `` !`...` `` text, run those
-  commands manually before step 1" — on Codex the commands read as
-  instructions instead of pre-resolved values.
+  caveat line "If the lines below still show raw, unexpanded dynamic-context
+  commands, run them manually before step 1" — on Codex the commands read as
+  instructions instead of pre-resolved values. Never write the literal
+  bang-backtick pattern in prose: the preprocessor executes any such pattern
+  preceded by whitespace, and a failing command aborts the whole skill load.
 - **`allowed-tools` / `context: fork` / `agent:`** are additive no-ops on
   Codex (unknown frontmatter is ignored; forked skills run inline there).
   Never make workflow correctness depend on them.

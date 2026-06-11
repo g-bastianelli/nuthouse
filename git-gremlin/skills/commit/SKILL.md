@@ -24,7 +24,7 @@ is printed, revert to the session default voice immediately.
 
 ## Context
 
-> Auto-injected on Claude Code at skill load. If the lines below show literal `` !`...` `` text, run those commands manually before step 1.
+> Auto-injected on Claude Code at skill load. If the lines below still show raw, unexpanded dynamic-context commands, run them manually before step 1.
 
 - Staged: !`git diff --cached --stat | tail -20`
 - Working tree: !`git status --short | head -20`
