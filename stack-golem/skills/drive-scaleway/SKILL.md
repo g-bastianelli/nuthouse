@@ -1,6 +1,7 @@
 ---
 name: drive-scaleway
 description: Use when working with any Scaleway resource — IAM, instances, databases, registry, observability, networking. Drives the `scw` CLI directly to inspect and modify resources instead of suggesting manual console actions.
+allowed-tools: Read
 ---
 
 # drive-scaleway

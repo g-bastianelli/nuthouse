@@ -3,6 +3,7 @@ name: implement
 description: Use when creating, refactoring, or implementing TypeScript in a monorepo — React components/hooks/pages (front) or Hono procedures/services/domain libs (back). Explores first, applies a shared discipline (type-safety, Result/unwrap, Zod, named exports), defers to the repo's own AGENTS.md, and verifies through the project toolchain.
 argument-hint: [plan-file|task-description]
 effort: high
+allowed-tools: Read, Glob, Grep, Bash(moon run:*)
 ---
 
 # implement
@@ -21,6 +22,14 @@ gets.
 voice after the final report.
 
 This skill is **rigid** — execute steps in order.
+
+## Context
+
+> Auto-injected on Claude Code at skill load. If the lines below show literal `` !`...` `` text, run those commands manually before step 1.
+
+- Type-safety contract: !`cat "${CLAUDE_PLUGIN_ROOT}/shared/type-safety.md"`
+- Validation contract: !`cat "${CLAUDE_PLUGIN_ROOT}/shared/validation.md"`
+- Code organisation: !`cat "${CLAUDE_PLUGIN_ROOT}/shared/code-organisation.md"`
 
 ## Language
 
@@ -51,11 +60,11 @@ explore-then-plan flow and say so.
 ## The contract you're bound to
 
 This skill applies a shared discipline that lives in
-`${CLAUDE_PLUGIN_ROOT}/shared/`. Read the ones relevant to the task:
+`${CLAUDE_PLUGIN_ROOT}/shared/`. The three always-active contracts —
+`type-safety.md`, `validation.md`, `code-organisation.md` — are already loaded
+via the `## Context` block above; do not re-read them. Read the stack-specific
+ones only when relevant to the task:
 
-- `type-safety.md` — always
-- `validation.md` — always
-- `code-organisation.md` — always
 - `react-rules.md` — when the target is React (front)
 - `hono-pipeline.md` — when the target is Hono/backend (back)
 

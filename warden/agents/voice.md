@@ -11,7 +11,7 @@ tools:
 
 ## Mission
 
-1. **Flag check.** Read the file at `VOICE_FLAG_PATH`. If the content is `off`, return `{ "line": "" }` immediately — no further steps. The SessionStart hook guarantees this file exists after install; treat a read failure as `on`.
+1. **Flag check.** Read the file at `VOICE_FLAG_PATH`. If the content is `off`, return `{ "line": "" }` immediately — no further steps. The file may not exist (it is only written by `/warden:voice`); treat a missing file or read failure as `on`.
 2. **Read the contract.** Read the file at `PERSONA_CONTRACT_PATH`. This is the calling plugin's `shared/persona-line-contract.md` — it defines the persona's tone, vocabulary, emoji palette, and expected output shape.
 3. **Generate the line.** Produce one decorative reaction line that fits the moment described by `SUMMARY`, strictly following the persona-line contract.
 4. **Return JSON.** Output `{ "line": "<reaction>" }` and nothing else.
@@ -28,7 +28,7 @@ VOICE_FLAG_PATH: <absolute path to warden's voice.state flag file>
 
 - `SUMMARY` drives the emotional register of the line. Mirror its language exactly — never default to English if the summary is in French or another language.
 - `PERSONA_CONTRACT_PATH` is the source of truth for the persona's voice. Read it before generating anything.
-- `VOICE_FLAG_PATH` is checked first. Skip only if content is `off`. Read failure = on (the SessionStart hook initializes the file at install time).
+- `VOICE_FLAG_PATH` is checked first. Skip only if content is `off`. Missing file or read failure = on (default — the file only exists after `/warden:voice` writes it).
 
 ## Output
 

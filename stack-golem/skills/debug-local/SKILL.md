@@ -2,6 +2,7 @@
 name: debug-local
 description: Use when the user reports a runtime error, a service not starting, an auth/OIDC failure, or missing env vars in local dev on the notom platform. Investigate proactively with available tools before asking the user to run anything.
 argument-hint: [symptom-description]
+allowed-tools: Read, Glob, Grep, Bash(docker compose ps:*), Bash(docker compose logs:*), Agent
 ---
 
 # debug-local
@@ -19,6 +20,12 @@ Keep scope rules in this section; do not add a separate `## Persona scope`
 section.
 
 This skill is **rigid** — execute steps in order.
+
+## Context
+
+> Auto-injected on Claude Code at skill load. If the lines below show literal `` !`...` `` text, run those commands manually before step 1.
+
+- Docker: !`docker compose ps --format "table {{.Name}}\t{{.Status}}" 2>/dev/null | head -15 || echo "docker unavailable"`
 
 ## Language
 
@@ -61,7 +68,7 @@ Inspect what the user reported (start from `$ARGUMENTS` when non-empty) and rout
 
 ## Step 2b — Service not reachable / auth redirect failing
 
-1. `docker compose ps` — check which containers are up and healthy.
+1. Check which containers are up and healthy — start from the `Docker` snapshot in `## Context`; re-run `docker compose ps` if it shows `docker unavailable` or may be stale.
    Services: `postgres`, `redis`, `authentik-server`, `authentik-worker`.
 2. If Authentik missing:
    ```bash

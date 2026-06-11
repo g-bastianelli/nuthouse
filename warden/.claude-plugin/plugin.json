@@ -9,17 +9,5 @@
   "repository": "https://github.com/g-bastianelli/nuthouse",
   "homepage": "https://github.com/g-bastianelli/nuthouse",
   "skills": "./skills/",
-  "agents": ["./agents/voice.md"],
-  "hooks": {
-    "SessionStart": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/claudecode/hooks/session-start.mjs\""
-          }
-        ]
-      }
-    ]
-  }
+  "agents": ["./agents/voice.md"]
 }

@@ -3,6 +3,7 @@ name: scope
 description: Use at the start of any task in a moon monorepo to scope work to the affected project graph — runs `moon query changed-files`/`affected`, dispatches the affected-scout subagent, and returns a structured scope map (affected projects, layers, tasks, downstream blast radius). Prefer this over blindly scanning the repo when working in a repo with a `.moon/` workspace.
 argument-hint: [working-tree|default-branch|<base>..<head>]
 effort: high
+allowed-tools: Bash(moon query:*), Bash(git status:*), Bash(git diff:*), Read, Agent
 ---
 
 # scope
@@ -20,6 +21,13 @@ printed, revert to the session default voice.
 
 This skill is **rigid** — execute steps in order.
 
+## Context
+
+> Auto-injected on Claude Code at skill load. If the lines below show literal `` !`...` `` text, run those commands manually before step 1.
+
+- Workspace check: !`ls .moon 2>/dev/null && echo "moon workspace" || echo "no .moon here"`
+- Changed files: !`git status --porcelain | head -30`
+
 ## Language
 
 Adapt all output to match the user's language. Technical identifiers (project
@@ -34,8 +42,10 @@ land only there.
 
 ## Step 0 — Preconditions
 
-1. Find the moon workspace root: walk up from cwd for a directory containing
-   `.moon/`. If none is found, abort: _"pas de lampe ici — ce n'est pas un
+1. Find the moon workspace root: the `Workspace check` line in `## Context`
+   already answers for cwd — `moon workspace` means cwd is the root. On
+   `no .moon here`, walk up from cwd for a directory containing `.moon/`.
+   If none is found, abort: _"pas de lampe ici — ce n'est pas un
    workspace moon (`.moon/` introuvable). rien à éclairer."_ and suggest the
    caller proceed without moon scoping.
 2. Capture `PROJECT_ROOT` = the moon workspace root (it is the git root in a
@@ -49,7 +59,9 @@ land only there.
 Decide what "changed" means: if `$ARGUMENTS` contains a base (`working-tree`, `default-branch`, or a `<base>..<head>` revision pair), use it; otherwise infer from the user's intent:
 
 - Default (uncommitted work / "what am I touching now") → working tree
-  (`moon query changed-files --local`).
+  (`moon query changed-files --local`). The `Changed files` line in
+  `## Context` previews this; an empty preview hints the working tree is
+  clean and `--default-branch` is probably the intended base.
 - "vs main" / "for this branch" / pre-PR → `moon query changed-files
 --default-branch`.
 - Explicit revisions → `--base <sha> --head <sha>`.

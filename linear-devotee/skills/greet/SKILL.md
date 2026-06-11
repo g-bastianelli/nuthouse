@@ -3,7 +3,7 @@ name: greet
 description: Use immediately at session start when a Linear issue identifier is detected from branch or first prompt. Delegates issue context to issue-context, optionally prepares branch/status, resolves source spec, writes greet context, then hands off to plan. Never writes implementation code.
 argument-hint: [issue-id] [--fresh]
 model: haiku
-allowed-tools: Read, Glob, Grep
+allowed-tools: Read, Glob, Agent, Bash(git branch --show-current), Bash(cat:*)
 ---
 
 # linear-devotee:greet
@@ -11,14 +11,22 @@ allowed-tools: Read, Glob, Grep
 Rigid context gate. Match the user's language; keep technical identifiers unchanged.
 
 > Voice cadence: at every user-visible workflow transition, try to dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Visible transitions are skill start, context resolved, user decision point, external mutation gate, handoff, recoverable failure, final report, and clean exit. Print the returned `line` only when non-empty. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Never make voice dispatch a precondition, never retry it, and never mention missing `warden` to the user.
+> Voice flag: !`cat "$HOME/.claude/nuthouse/voice.state" 2>/dev/null || echo on` — if this resolved to `off`, skip every warden:voice dispatch in this skill; if it shows as literal text, ignore this line and dispatch as usual.
+
+## Context
+
+> Auto-injected on Claude Code at skill load. If the lines below show literal `` !`...` `` text, run those commands manually before step 1.
+
+- Session state: !`cat "${CLAUDE_PLUGIN_DATA}/state-${CLAUDE_SESSION_ID}.json" 2>/dev/null || echo "no state"`
+- Branch: !`git branch --show-current 2>/dev/null || echo "not a git repo"`
 
 ## Workflow
 
 1. Preconditions:
    - Verify Linear access with `ToolSearch` query `linear`.
-   - Verify git repo.
+   - Verify git repo (the `Branch` line in `## Context` shows `not a git repo` when outside one).
    - If `$ARGUMENTS` contains a Linear issue id (e.g. `ABC-123`), use it as `issue`.
-   - Read `${CLAUDE_PLUGIN_DATA}/state-<session_id>.json`; extract `issue` (unless already set from `$ARGUMENTS`), `current_branch`, `needs_branch`.
+   - Use the `Session state` JSON from `## Context`; extract `issue` (unless already set from `$ARGUMENTS`), `current_branch`, `needs_branch`. If it shows `no state`, treat the state file as absent and rely on `$ARGUMENTS`/the user prompt for the issue id.
    - Stop if `greeted: true` or no issue id.
    - Do not fetch full issue context in main context.
 2. Delegate context:

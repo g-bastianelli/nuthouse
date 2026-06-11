@@ -4,6 +4,7 @@ description: Use automatically when the user wants a researched, fact-checked, o
 argument-hint: [research-question]
 model: sonnet
 effort: high
+allowed-tools: WebSearch, WebFetch, Agent
 ---
 
 # research
@@ -19,6 +20,12 @@ original.
 the session default voice immediately.
 
 This skill is **rigid** — execute steps in order.
+
+## Context
+
+> Auto-injected on Claude Code at skill load. If the lines below show literal `` !`...` `` text, run those commands manually before step 1.
+
+- Today: !`date +%Y-%m-%d`
 
 ## Language
 
@@ -67,7 +74,8 @@ via `WebSearch` (do NOT loop sequentially). Angles should be:
 
 - Direct keyword match (e.g., "API for X")
 - Semantic variant (e.g., "how to integrate X")
-- Recent/news angle (e.g., "X 2025 news")
+- Recent/news angle (e.g., "X <current year> news" — derive the year from `Today` in the
+  `## Context` block)
 - Comparison angle (e.g., "X vs Y vs Z")
 - Community/stack overflow angle (e.g., "X pitfalls")
 
@@ -103,7 +111,9 @@ Each `claim-verifier` call:
 
 Verifier behavior:
 
-- Tense when recent and reliable sources back the claim → `confirmed`.
+- Tense when recent and reliable sources back the claim → `confirmed`. Judge source
+  freshness against `Today` from the `## Context` block — never against the model's
+  training-data sense of "now".
 - Hostile: if stale sources or contradictions exist, prefer the recent/reliable source.
 - Default to `refuted` if uncertain — the hound doesn't guess.
 

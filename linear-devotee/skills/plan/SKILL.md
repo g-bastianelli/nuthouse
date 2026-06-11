@@ -3,7 +3,7 @@ name: plan
 description: Use when planning implementation for a Linear issue after greet or from an issue id. Loads or rebuilds greet context, resolves source spec, drafts and audits a plan, flags drift, writes a validated plan artifact, then syncs accepted spec drift only after validation. Never writes implementation code.
 argument-hint: [issue-id] [--fresh]
 effort: xhigh
-allowed-tools: Read, Glob, Grep
+allowed-tools: Read, Glob, Agent
 ---
 
 # linear-devotee:plan
@@ -11,6 +11,13 @@ allowed-tools: Read, Glob, Grep
 Rigid planning gate. Match the user's language; keep technical identifiers unchanged.
 
 > Voice cadence: at every user-visible workflow transition, try to dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Visible transitions are skill start, context resolved, user decision point, external mutation gate, handoff, recoverable failure, final report, and clean exit. Print the returned `line` only when non-empty. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Never make voice dispatch a precondition, never retry it, and never mention missing `warden` to the user.
+> Voice flag: !`cat "$HOME/.claude/nuthouse/voice.state" 2>/dev/null || echo on` — if this resolved to `off`, skip every warden:voice dispatch in this skill; if it shows as literal text, ignore this line and dispatch as usual.
+
+## Context
+
+> Auto-injected on Claude Code at skill load. If the lines below show literal `` !`...` `` text, run those commands manually before step 1.
+
+- Greet context dir listing: !`ls "${CLAUDE_PLUGIN_DATA}" 2>/dev/null | head -20`
 
 ## Workflow
 
@@ -20,7 +27,7 @@ Rigid planning gate. Match the user's language; keep technical identifiers uncha
    - Detect issue id from `$ARGUMENTS` first, then branch, state file, or recent greet context. Ask if absent.
    - Verify Linear access only when greet context must be rebuilt.
 2. Load context:
-   - Prefer `${CLAUDE_PLUGIN_DATA}/greet-<ISSUE_ID>.json`.
+   - Prefer `${CLAUDE_PLUGIN_DATA}/greet-<ISSUE_ID>.json` (the `## Context` dir listing shows whether it exists).
    - If missing, dispatch `linear-devotee:issue-context` with issue id, git root, `NEEDS_STATUS_METADATA: true`.
    - Do not fetch full Linear context in main context unless delegation fails.
 3. Resolve source spec:

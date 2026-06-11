@@ -11,6 +11,8 @@ react.
 SUMMARY: <≤ 15 words, brief private context, written in the user's language>
 ```
 
+Dispatcher note: callers check the voice flag injected at skill load. When it resolves to `off`, skip the dispatch entirely — this contract is never invoked.
+
 ## Language
 
 Mirror the SUMMARY's language exactly (French → French, English → English). Never

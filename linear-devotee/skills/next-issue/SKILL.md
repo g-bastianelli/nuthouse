@@ -4,7 +4,7 @@ description: Use when the user says a Linear issue is finished/done/complete and
 argument-hint: [issue-id]
 model: haiku
 effort: medium
-allowed-tools: Read, Glob, Grep, Bash
+allowed-tools: Read, Agent
 ---
 
 # linear-devotee:next-issue
@@ -12,6 +12,13 @@ allowed-tools: Read, Glob, Grep, Bash
 Read-only next-work recommender. Match the user's language; keep technical identifiers unchanged.
 
 > Voice cadence: at every user-visible workflow transition, try to dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Visible transitions are skill start, context resolved, user decision point, recoverable failure, final report, and clean exit. Print the returned `line` only when non-empty. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Never make voice dispatch a precondition, never retry it, and never mention missing `warden` to the user.
+> Voice flag: !`cat "$HOME/.claude/nuthouse/voice.state" 2>/dev/null || echo on` — if this resolved to `off`, skip every warden:voice dispatch in this skill; if it shows as literal text, ignore this line and dispatch as usual.
+
+## Context
+
+> Auto-injected on Claude Code at skill load. If the lines below show literal `` !`...` `` text, run those commands manually before step 1.
+
+- Session state: !`cat "${CLAUDE_PLUGIN_DATA}/state-${CLAUDE_SESSION_ID}.json" 2>/dev/null || echo "no state"`
 
 ## Workflow
 
@@ -22,7 +29,7 @@ Read-only next-work recommender. Match the user's language; keep technical ident
 2. Resolve current issue:
    - Priority:
      1. explicit issue id in `$ARGUMENTS` or the user prompt
-     2. `${CLAUDE_PLUGIN_DATA}/state-${CLAUDE_SESSION_ID}.json` `issue`
+     2. `issue` from the `Session state` JSON in `## Context` (skip when it shows `no state`)
      3. most recent `${CLAUDE_PLUGIN_DATA}/greet-<ISSUE_ID>.json`
      4. current branch name containing an issue identifier
    - If absent, ask for the current Linear issue id.

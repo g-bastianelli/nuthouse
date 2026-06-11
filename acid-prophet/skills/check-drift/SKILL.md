@@ -2,7 +2,7 @@
 name: check-drift
 description: Use on a feature branch before or during PR creation — detects drift between the PR diff and the SDD Acceptance/Constraints of the linked project. Prefers the repo spec markdown as primary truth, falls back to Linear project context only when no spec markdown is found, generates a structured drift report, and optionally posts it as a PR comment.
 effort: high
-allowed-tools: Read, Glob, Grep, Bash
+allowed-tools: Bash(git diff:*), Bash(git log:*), Bash(git branch:*), Read, Glob, Grep, Agent
 ---
 
 # acid-prophet:check-drift
@@ -10,6 +10,14 @@ allowed-tools: Read, Glob, Grep, Bash
 Rigid drift-detection gate. Match the user's language; keep technical identifiers unchanged.
 
 > Voice cadence: at every user-visible workflow transition, try to dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Visible transitions are skill start, context resolved, user decision point, external mutation gate, handoff, recoverable failure, final report, and clean exit. Print the returned `line` only when non-empty. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Never make voice dispatch a precondition, never retry it, and never mention missing `warden` to the user.
+> Voice flag: !`cat "$HOME/.claude/nuthouse/voice.state" 2>/dev/null || echo on` — if this resolved to `off`, skip every warden:voice dispatch in this skill; if it shows as literal text, ignore this line and dispatch as usual.
+
+## Context
+
+> Auto-injected on Claude Code at skill load. If the lines below show literal `` !`...` `` text, run those commands manually before step 1.
+
+- Branch: !`git branch --show-current`
+- Recent commits: !`git log --oneline -15`
 
 ## Workflow
 
@@ -17,7 +25,7 @@ Rigid drift-detection gate. Match the user's language; keep technical identifier
    - Verify git repo (`git rev-parse --git-dir`). Abort if not in a repo.
    - Check `gh` CLI: `gh --version`. If missing, note "gh not found — PR comment will be skipped." Continue regardless.
 2. Resolve context:
-   - Capture `BRANCH_ISSUE_ID` from `git branch --show-current` if the branch name contains a Linear identifier.
+   - Capture `BRANCH_ISSUE_ID` from the `Branch` line in `## Context` if the branch name contains a Linear identifier. The `Recent commits` line gives a first read of what the branch claims to deliver.
    - Scan `docs/acid-prophet/specs/` for `.md` files. Select best spec match, in priority order: (1) `linear-project:` equals resolved `PROJECT_ID`, (2) `PROJECT_ID` appears in body, (3) `BRANCH_ISSUE_ID` appears in body, (4) filename slug matches closely. If ambiguity remains, ask.
    - If no spec found and `BRANCH_ISSUE_ID` exists, query `mcp__claude_ai_Linear__get_issue` to resolve `PROJECT_ID`/`PROJECT_NAME`, then re-check spec candidates.
    - If nothing resolves, ask for the Linear project ID. Re-check after answer.

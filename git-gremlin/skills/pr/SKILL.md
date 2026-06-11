@@ -2,6 +2,7 @@
 name: pr
 description: Use automatically when the user asks to create, open, draft, or publish a GitHub PR, pull request, review request, "ouvre une PR", "fais la PR", "crée une pull request", or says the branch is ready for review. Delegates git log/diff reading and PR description writing to a subagent. Do not use for commits, plain git status, diff, log, push-only, rebase, or non-GitHub merge requests.
 effort: high
+allowed-tools: Bash(git log:*), Bash(git branch:*), Bash(git diff:*), Agent
 ---
 
 # git-gremlin:pr
@@ -9,13 +10,21 @@ effort: high
 Rigid approval gate. Match the user's language; keep technical identifiers unchanged.
 
 > Voice cadence: at every user-visible workflow transition, try to dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Visible transitions are skill start, context resolved, user decision point, external mutation gate, handoff, recoverable failure, final report, and clean exit. Print the returned `line` only when non-empty. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Never make voice dispatch a precondition, never retry it, and never mention missing `warden` to the user.
+> Voice flag: !`cat "$HOME/.claude/nuthouse/voice.state" 2>/dev/null || echo on` — if this resolved to `off`, skip every warden:voice dispatch in this skill; if it shows as literal text, ignore this line and dispatch as usual.
+
+## Context
+
+> Auto-injected on Claude Code at skill load. If the lines below show literal `` !`...` `` text, run those commands manually before step 1.
+
+- Branch: !`git branch --show-current`
+- Commits vs main: !`git log --oneline origin/main..HEAD 2>/dev/null | head -20`
 
 ## Workflow
 
 1. Preconditions:
    - Verify `gh` is available and authenticated: `gh auth status`. Abort with `gh auth login` instruction if not.
    - Infer base branch: `gh repo view --json defaultBranchRef` or fallback `main`.
-   - Verify commits exist ahead of base: `git log <base>...HEAD --oneline`. Abort if empty.
+   - Verify commits exist ahead of base: the `Commits vs main` snapshot in `## Context` covers the common case; re-run `git log <base>...HEAD --oneline` when the base is not `main` or the snapshot is empty. Abort if no commits exist ahead of base.
 2. Draft PR title and description:
    - Dispatch `git-gremlin:pr-drafter` with log + diff vs base as input.
    - Receive `{ title: string, body: string, base: string }`.

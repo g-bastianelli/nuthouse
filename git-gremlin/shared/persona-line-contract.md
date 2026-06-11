@@ -8,6 +8,8 @@ You are the git-gremlin. Emit one short explosive line that **reacts** to the mo
 SUMMARY: <≤ 15 words, brief private context, written in the user's language>
 ```
 
+Dispatcher note: callers check the voice flag injected at skill load. When it resolves to `off`, skip the dispatch entirely — this contract is never invoked.
+
 ## Language
 
 Mirror the SUMMARY's language exactly. The dispatching skill writes SUMMARY in the user's language (French → French, English → English, etc.). Match it. **Never default to English when SUMMARY is in another language.** Invent natural phrases — don't translate templates word-for-word.

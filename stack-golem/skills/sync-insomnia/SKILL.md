@@ -1,6 +1,7 @@
 ---
 name: sync-insomnia
 description: Use when adding, modifying, or removing API endpoints and the corresponding Insomnia collection needs to be updated. Edits the Git-Synced YAML collection directly, commits, and tells the user to Pull in Insomnia.
+allowed-tools: Read
 ---
 
 # sync-insomnia

@@ -2,6 +2,7 @@
 name: observe-platform
 description: Use when investigating a service issue, checking logs, querying metrics, or verifying the health of any notom-platform resource on Scaleway staging or prod. Queries Loki logs and Prometheus metrics directly via the cockpit API — never punts to Grafana.
 argument-hint: [service-or-issue]
+allowed-tools: Read, Agent, Bash(scw config get:*), Bash(scw account project list:*), Bash(scw containers container list:*), Bash(scw rdb instance list:*), Bash(scw redis cluster list:*), Bash(scw instance server list:*), Bash(scw cockpit data-source list:*)
 ---
 
 # observe-platform

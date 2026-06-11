@@ -2,6 +2,7 @@
 name: verify
 description: Use after editing code in a moon monorepo, before commit or PR, to verify the change — runs affected :typecheck/:lint/:test via the verify-runner subagent, dispatches change-auditor for an adversarial review of the diff against scope, reports evidence (not assertion), and loops back on a torn wing (failing check). Prefer this over a blind repo-wide test run.
 effort: high
+allowed-tools: Bash(moon run:*), Bash(moon query:*), Bash(git diff:*), Read, Agent
 ---
 
 # verify
