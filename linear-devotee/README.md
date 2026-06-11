@@ -26,7 +26,6 @@ It turns Linear issues and specs into SDD-shaped context, validated implementati
 | `project-drafter`   | Draft project SDD, milestones, and initial issue outline              |
 | `milestone-drafter` | Draft a milestone name, scope, target-date hint, and suggested issues |
 | `issue-drafter`     | Draft strict SDD issue bodies                                         |
-| `plan-writer`       | Write plan artifacts to disk from structured input                    |
 
 All Linear writes stay in skills and require explicit user confirmation. Agents are scouts/drafters, not Linear mutators.
 

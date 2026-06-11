@@ -2,6 +2,7 @@
 name: init
 description: Use to wire a moon TypeScript monorepo for a moon-aware agentic dev loop — generates path-scoped `.claude/rules/`, a moon-command allowlist and plan-default in settings, a cache Read-deny, and a short moon-loop section in the repo's agent contract (AGENTS.md/CLAUDE.md). Idempotent and confirmation-gated; merges into existing config instead of clobbering. Run once per repo to make Claude Code + Codex fast and precise in that monorepo.
 effort: high
+disable-model-invocation: true
 ---
 
 # init

@@ -3,6 +3,8 @@ name: voice
 description: Centralized voice dispatcher. Reads the calling plugin's persona-line contract and emits one decorative reaction line in character. Returns {"line":""} immediately if voice is disabled via the global flag. Never affects workflow decisions.
 model: haiku
 effort: low
+maxTurns: 3
+color: purple
 tools:
   - Read
 ---

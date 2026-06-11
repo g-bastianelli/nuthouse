@@ -1,29 +1,10 @@
 #!/usr/bin/env node
 import { execFileSync } from "node:child_process";
-import fs from "node:fs";
-import { cleanupOldStates, findMoonRoot, writeState } from "./state.mjs";
-
-// CLAUDE_PLUGIN_ROOT resolves to the plugin root (<plugin>/). Bail if absent.
-const PLUGIN_ROOT = process.env.CLAUDE_PLUGIN_ROOT;
-if (!PLUGIN_ROOT) process.exit(0);
-
-function readStdinJson() {
-  try {
-    return JSON.parse(fs.readFileSync(0, "utf8"));
-  } catch {
-    return {};
-  }
-}
-
-const { session_id } = readStdinJson();
-if (!session_id) process.exit(0);
-
-cleanupOldStates(PLUGIN_ROOT, 7);
+import { findMoonRoot } from "./workspace.mjs";
 
 const moonRoot = findMoonRoot();
 if (!moonRoot) {
   // Not a moon workspace — moon-moth stays dark, says nothing.
-  writeState(PLUGIN_ROOT, session_id, { in_moon: false });
   process.exit(0);
 }
 
@@ -51,12 +32,6 @@ if (raw) {
     changedCount = Array.isArray(parsed?.files) ? parsed.files.length : 0;
   } catch {}
 }
-
-writeState(PLUGIN_ROOT, session_id, {
-  in_moon: true,
-  moon_root: moonRoot,
-  changed_files: changedCount,
-});
 
 const lamp =
   changedCount > 0

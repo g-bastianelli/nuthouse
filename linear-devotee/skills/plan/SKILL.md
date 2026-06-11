@@ -3,7 +3,7 @@ name: plan
 description: Use when planning implementation for a Linear issue after greet or from an issue id. Loads or rebuilds greet context, resolves source spec, drafts and audits a plan, flags drift, writes a validated plan artifact, then syncs accepted spec drift only after validation. Never writes implementation code.
 argument-hint: [issue-id] [--fresh]
 effort: xhigh
-allowed-tools: Read, Glob, Agent
+allowed-tools: Read, Glob, Write, Agent
 ---
 
 # linear-devotee:plan
@@ -37,7 +37,7 @@ Rigid planning gate. Match the user's language; keep technical identifiers uncha
      2. Spec body contains exact issue id.
      3. Body or filename matches project slug/name.
    - Ask if multiple candidates; use `_none_` if none.
-4. Dispatch `linear-devotee:plan-writer` with the six plan sections fully drafted:
+4. Draft the six plan sections, then write the artifact yourself with `Write`:
    - **Context** — 1–3 sentences linking issue + spec.
    - **Files** — bulleted paths + one-line role each.
    - **Steps** — atomic verifiable actions as `- [ ]` checkboxes; each step is one edit + an inline verify command when possible.
@@ -45,28 +45,47 @@ Rigid planning gate. Match the user's language; keep technical identifiers uncha
    - **Risks** — uncertainty surfaced for the auditor.
    - **Out of scope** — negative oracle preventing implementing-agent drift.
 
-   Input format:
+   Write the file to `PLAN_FILE = ${PROJECT_ROOT}/docs/linear-devotee/plan/<ISSUE_ID>.md` (overwrite silently if it exists) with exactly this shape — sections verbatim from the draft, `_unclear_` for any missing section:
 
-   ```
-   PROJECT_ROOT: <git root>
-   ISSUE_ID: <id>
-   ISSUE_TITLE: <title>
-   SPEC_FILE: <path | _none_>
-   CONTEXT: <content>
-   FILES:
-   - path/to/file.ts — role
-   STEPS:
-   - [ ] step
-   VERIFY:
-   - command
-   RISKS:
-   - item
-   OUT_OF_SCOPE:
-   - item
+   ```markdown
+   ---
+   issue: <ISSUE_ID>
+   spec: <SPEC_FILE | _none_>
+   status: draft
+   plan-version: 1
+   validated-at: _none_
+   spec-synced-at: _none_
+   ---
+
+   # Plan — <ISSUE_TITLE> (<ISSUE_ID>)
+
+   ## Context
+
+   <CONTEXT>
+
+   ## Files
+
+   <FILES>
+
+   ## Steps
+
+   <STEPS>
+
+   ## Verify
+
+   <VERIFY>
+
+   ## Risks
+
+   <RISKS>
+
+   ## Out of scope
+
+   <OUT_OF_SCOPE>
    ```
 
-   Capture the returned `PLAN_FILE: <path>`. Use this path in all subsequent steps.
-   Do not display plan content in main context — the file is the artifact.
+   Use `PLAN_FILE` in all subsequent steps.
+   Do not re-print the plan content in chat after writing — the file is the artifact.
 
 5. Audit:
    - Session store: if `$CLAUDE_SESSION_ID` is set, read `<PROJECT_ROOT>/.claude/nuthouse/sessions/${CLAUDE_SESSION_ID}.json`. If `relevant_files` key is present (and `_meta._shas.relevant_files` equals HEAD sha when Bash is available; otherwise accept as-is), inject it into the plan-auditor prompt. Skip this lookup when `$ARGUMENTS` contains `--fresh`.
@@ -90,7 +109,7 @@ Rigid planning gate. Match the user's language; keep technical identifiers uncha
    - Expected output: `PLAN_REVIEW`, `SPEC_DRIFT_DETECTED`, `DRIFT_ITEMS`, `BLOCKERS`.
 
 6. Iterate:
-   - If review needs changes, re-dispatch `plan-writer` with revised sections and re-audit. Never display plan content inline.
+   - If review needs changes, rewrite `<PLAN_FILE>` with the revised sections (same artifact shape as step 4) and re-audit. Never display plan content inline.
    - Ask one user-decision blocker at a time.
    - Show drift summary (from audit output); do not patch spec yet.
    - Print `Plan written to: <PLAN_FILE>` then ask `Validate this plan? (y / edit / stop)`.

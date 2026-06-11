@@ -13,6 +13,16 @@ One workspace per branch. This skill never creates a branch in place — it spin
 > Voice cadence: at every user-visible workflow transition, try to dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Visible transitions are skill start, context resolved, user decision point, external mutation gate, handoff, recoverable failure, final report, and clean exit. Print the returned `line` only when non-empty. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Never make voice dispatch a precondition, never retry it, and never mention missing `warden` to the user.
 > Voice flag: !`cat "$HOME/.claude/nuthouse/voice.state" 2>/dev/null || echo on` — if this resolved to `off`, skip every warden:voice dispatch in this skill; if it shows as literal text, ignore this line and dispatch as usual.
 
+## Voice
+
+Read `../../persona.md` at the start of this skill. That persona is
+canonical for all output of this skill. Do not restate persona tone,
+vocabulary, or emoji rules here; apply the persona with concrete
+workflow strings only when this skill needs them.
+
+**Scope:** local to this skill's execution only. Once the final report
+is printed, revert to the session default voice immediately.
+
 ## Workflow
 
 1. Preconditions:

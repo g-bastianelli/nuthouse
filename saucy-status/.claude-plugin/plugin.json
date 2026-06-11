@@ -8,7 +8,7 @@
   },
   "repository": "https://github.com/g-bastianelli/nuthouse",
   "homepage": "https://github.com/g-bastianelli/nuthouse",
-  "skills": "./claudecode/skills/",
+  "skills": "./skills/",
   "hooks": {
     "SessionStart": [
       {
