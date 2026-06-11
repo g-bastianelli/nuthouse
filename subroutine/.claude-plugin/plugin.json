@@ -1,7 +1,13 @@
 {
   "name": "subroutine",
+  "displayName": "Subroutine",
   "description": "Implementation discipline for TypeScript monorepos — one stack-aware `implement` skill (React + Hono) bound to a shared contract of type-safety, Result/unwrap, validation, and code-organisation rules. Defers to the repo's own AGENTS.md. Cross-runtime (Claude Code + Codex).",
-  "author": { "name": "g-bastianelli" },
+  "version": "1.0.0",
+  "author": {
+    "name": "g-bastianelli"
+  },
+  "repository": "https://github.com/g-bastianelli/nuthouse",
+  "homepage": "https://github.com/g-bastianelli/nuthouse",
   "skills": "./skills/",
   "agents": ["./agents/explorer.md"]
 }

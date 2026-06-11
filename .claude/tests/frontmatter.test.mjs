@@ -5,7 +5,7 @@ import path from "node:path";
 
 const REPO_ROOT = path.resolve(import.meta.dir, "..", "..");
 
-const VALID_MODELS = new Set(["haiku", "sonnet", "opus", "inherit"]);
+const VALID_MODELS = new Set(["haiku", "sonnet", "opus", "fable", "inherit"]);
 const VALID_EFFORT = new Set(["low", "medium", "high", "xhigh", "max"]);
 
 function listTrackedFiles() {

@@ -1,9 +1,13 @@
 {
   "name": "acid-prophet",
+  "displayName": "Acid Prophet",
   "description": "Spec-driven development pipeline. Constitution → spec → audit with Phase -1 gates → implementation plan with typed contracts → acceptance checklist → PR drift check. Asks one question at a time, emits [NEEDS CLARIFICATION] markers when uncertain, blocks Linear handoff until every gate passes.",
+  "version": "1.0.0",
   "author": {
     "name": "g-bastianelli"
   },
+  "repository": "https://github.com/g-bastianelli/nuthouse",
+  "homepage": "https://github.com/g-bastianelli/nuthouse",
   "skills": "./skills/",
   "agents": ["./agents/spec-auditor.md"]
 }
