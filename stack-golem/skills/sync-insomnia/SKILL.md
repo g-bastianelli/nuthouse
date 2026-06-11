@@ -1,6 +1,7 @@
 ---
 name: sync-insomnia
 description: Use when adding, modifying, or removing API endpoints and the corresponding Insomnia collection needs to be updated. Edits the Git-Synced YAML collection directly, commits, and tells the user to Pull in Insomnia.
+model: haiku
 allowed-tools: Read
 ---
 
@@ -35,11 +36,12 @@ Use this skill when:
 - The collection uses Git Sync
 - Changes need to be synced between local edits and Insomnia
 
-The skill locates the Insomnia Git repository on disk (macOS: `~/Library/Application Support/Insomnia/version-control/git/`), edits the YAML collection directly, commits the changes, and tells you to Pull in Insomnia's Git Sync panel.
+The skill locates the Insomnia Git repository on disk (`INSOMNIA_GIT_DIR` — see `../../shared/infra-map.md`), edits the YAML collection directly, commits the changes, and tells you to Pull in Insomnia's Git Sync panel.
 
 ## Step 0 — Preconditions
 
-1. Verify Insomnia is installed (directory exists: `~/Library/Application Support/Insomnia/version-control/git/`).
+0. Read `../../shared/infra-map.md` — the single source of truth for machine-specific paths. Substitute its values wherever a step references `INSOMNIA_GIT_DIR`.
+1. Verify Insomnia is installed (the `INSOMNIA_GIT_DIR` directory exists).
 2. Verify the target collection has Git Sync enabled (a subdirectory in the git repos folder).
 3. Verify `git` is available and the collection's git repo is clean or staged.
 
@@ -48,7 +50,7 @@ The skill locates the Insomnia Git repository on disk (macOS: `~/Library/Applica
 Run:
 
 ```bash
-grep -r "url = " ~/Library/Application\ Support/Insomnia/version-control/git/*/git/config
+grep -r "url = " "<INSOMNIA_GIT_DIR — see infra-map>"/*/git/config
 ```
 
 Parse the output to identify the correct repo directory. Then list the YAML files in that repo's git subfolder:

@@ -71,7 +71,8 @@ The skill is intentionally portable across Claude Code and Codex:
    review backend inside the current turn, `git-gremlin:review` can pass it the compiled
    context packet and request findings in the same strict format.
 2. **Portable multi-pass backend, default** — otherwise the skill runs the reusable passes
-   in `shared/review-passes.md`: correctness, conventions, tests/docs, and risk only when
+   from the `git-gremlin:review-passes` knowledge skill (preloaded into the `reviewer` host
+   agent on Claude Code): correctness, conventions, tests/docs, and risk only when
    security/privacy/performance/accessibility is relevant. In runtimes with subagents, the
    passes can run in parallel; without subagents, the same passes run inline.
 3. **Inline fast path** — tiny low-risk diffs can be reviewed in one pass, but still use
@@ -104,19 +105,21 @@ impact, or fix direction.
 The portable backend is defined in:
 
 ```bash
-git-gremlin/shared/review-passes.md
+git-gremlin/skills/review-passes/SKILL.md
 ```
 
-That file contains the shared packet format, candidate finding schema, pass definitions,
-and aggregation rules used by both subagent and inline fallback reviews.
+That knowledge skill (`user-invocable: false`) contains the shared packet format,
+candidate finding schema, pass definitions, and aggregation rules used by both subagent
+and inline fallback reviews. On Claude Code it is preloaded into the `reviewer` host
+agent; on Codex the review skill reads it by name as a fallback.
 
 ### Tuning Notes
 
 Ship it as a first-pass review harness, then tune from real reviews:
 
 - Add or adjust instruction-source patterns only when a real repo needs them.
-- Tune `shared/review-passes.md` before adding runtime-specific agents; the same pass
-  contract should keep Claude Code and Codex behavior aligned.
+- Tune `skills/review-passes/SKILL.md` before adding runtime-specific agents; the same
+  pass contract should keep Claude Code and Codex behavior aligned.
 - Keep false positives visible and convert them into examples or validator checks.
 - Prefer tightening the finding contract over adding broad prose instructions.
 - Keep helper scripts dependency-free (`node:fs`, `node:path`, `node:child_process` only).
@@ -133,10 +136,11 @@ The interception logic works identically on Codex (same `PreToolUse` `permission
 
 ## Agents
 
-| Agent            | Purpose                                                                |
-| ---------------- | ---------------------------------------------------------------------- |
-| `commit-drafter` | Read staged diff and produce a commit proposal or approved commit hash |
-| `pr-drafter`     | Read branch log/diff and produce a PR proposal or approved PR URL      |
+| Agent            | Purpose                                                                         |
+| ---------------- | ------------------------------------------------------------------------------- |
+| `commit-drafter` | Read staged diff and produce a commit proposal or approved commit hash          |
+| `pr-drafter`     | Read branch log/diff and produce a PR proposal or approved PR URL               |
+| `reviewer`       | Host `git-gremlin:review` forked runs with the review-passes contract preloaded |
 
 ## Install
 

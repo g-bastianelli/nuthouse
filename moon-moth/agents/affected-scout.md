@@ -3,6 +3,8 @@ name: affected-scout
 description: Run `moon query` to compute the affected project graph for a moon monorepo and return a structured scope map. Haiku model, read-only, structured output. Used by moon-moth:scope.
 model: haiku
 effort: low
+maxTurns: 10
+color: cyan
 skills: [moon-moth:moon-commands, moon-moth:affected-scope]
 tools:
   - Bash

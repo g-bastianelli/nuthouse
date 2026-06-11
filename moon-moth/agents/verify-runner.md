@@ -3,6 +3,8 @@ name: verify-runner
 description: Execute affected moon tasks (typecheck/lint/test) and return structured per-project pass/fail with failing output captured verbatim. Haiku model, structured output. Used by moon-moth:verify.
 model: haiku
 effort: low
+maxTurns: 15
+color: green
 skills: [moon-moth:moon-commands, moon-moth:affected-scope]
 tools:
   - Bash

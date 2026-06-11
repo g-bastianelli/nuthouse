@@ -4,6 +4,8 @@ description: Use when auditing an existing acid-prophet spec for SDD compliance,
 argument-hint: [spec-path]
 effort: high
 allowed-tools: Read, Glob, Agent, Bash(node:*)
+paths: ["docs/acid-prophet/**"]
+disallowed-tools: Write, Edit, NotebookEdit
 ---
 
 # acid-prophet:audit-spec

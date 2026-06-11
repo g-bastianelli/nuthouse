@@ -353,7 +353,7 @@ Auto-chain to `<DOWNSTREAM_SKILL>`. Print `<DOWNSTREAM_SKILL> <args>` and contin
 
 Use `${CLAUDE_PLUGIN_ROOT}` for Claude Code-visible voice dispatch, as existing root nuthouse skills do. Artifact paths use `${PROJECT_ROOT}/docs/<PLUGIN>/<ARTIFACT_TYPE>/` — same convention for all runtimes.
 
-Before writing, read an existing root skill such as `subroutine/skills/implement/SKILL.md` and copy the relative persona path convention (`../../persona.md`).
+Before writing, read an existing root skill such as `moon-moth/skills/scope/SKILL.md` and copy the relative persona path convention (`../../persona.md`).
 
 ## Step 3 — Final report
 
@@ -390,7 +390,7 @@ After printing the report, present the hand-off menu:
 
 1. **Never `git commit` / `git push` / `git rebase`.** User commits manually.
 2. **Always preserve the root naming rule**: SKILL.md frontmatter uses `name: <skill>` with no plugin prefix. The runtime exposes it as `<plugin>:<skill>`.
-3. **Skill body uses the root nuthouse format**: `## Voice`, `## Language`, workflow steps, final report, and hard rules, matching existing root skills such as `subroutine/skills/implement/SKILL.md`. If Q12 = yes, inject only the one-liner voice-dispatch callout above `## Voice`.
+3. **Skill body uses the root nuthouse format**: `## Voice`, `## Language`, workflow steps, final report, and hard rules, matching existing root skills such as `moon-moth/skills/scope/SKILL.md`. If Q12 = yes, inject only the one-liner voice-dispatch callout above `## Voice`.
 4. **Never invent the persona.** The persona lives in `<plugin>/persona.md`. The skill does not declare or redeclare voice inline.
 5. **Generic agent name reject**: if Q5 = "dedicated agent" and the user
    wants to call it `agent` or `helper`, push back: _"non non non,

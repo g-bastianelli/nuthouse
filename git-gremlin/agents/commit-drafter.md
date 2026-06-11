@@ -3,6 +3,8 @@ name: commit-drafter
 description: Read a staged diff and propose a conventional commit message; on execute action, run git commit with the approved message.
 model: haiku
 effort: low
+maxTurns: 5
+color: orange
 tools:
   - Bash
 ---

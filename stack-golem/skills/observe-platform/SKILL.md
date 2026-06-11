@@ -2,6 +2,7 @@
 name: observe-platform
 description: Use when investigating a service issue, checking logs, querying metrics, or verifying the health of any notom-platform resource on Scaleway staging or prod. Queries Loki logs and Prometheus metrics directly via the cockpit API — never punts to Grafana.
 argument-hint: [service-or-issue]
+effort: high
 context: fork
 agent: stack-golem:platform-scout
 allowed-tools: Read, Bash(scw config get:*), Bash(scw account project list:*), Bash(scw containers container list:*), Bash(scw rdb instance list:*), Bash(scw redis cluster list:*), Bash(scw instance server list:*), Bash(scw cockpit data-source list:*)
@@ -42,6 +43,7 @@ never ask the user to open Grafana for something you can query yourself.
 
 1. Verify `scw` CLI is available and authenticated (`scw config get` or `scw account project list`).
 2. Verify `curl` and `python3` are available (used to query Loki/Prometheus).
+3. Read `../../shared/infra-map.md` — the single source of truth for endpoints, SSH aliases, and Loki `resource_name` values. Substitute its values wherever a step references an infra-map key (`LOKI_ENDPOINT`, `PROM_ENDPOINT`, `LOKI_RESOURCE_*`, `SSH_AUTHENTIK_*`, ...).
 
 ## Step 1 — Classify the issue
 
@@ -76,27 +78,24 @@ Use only the scopes you need: `read_only_logs`, `read_only_metrics`, `write_only
 
 ## Step 3 — Loki (logs)
 
-**Endpoint:** `https://c11ce546-873d-43e2-ae57-a18117f89e4e.logs.cockpit.fr-par.scw.cloud`
+**Endpoint:** `LOKI_ENDPOINT` (see infra-map)
 **Auth header:** `X-Token: $TOKEN` · **API path:** `/loki/api/v1/`
 
 ### Service → resource_name mapping
 
-| Service                          | resource_name                               |
-| -------------------------------- | ------------------------------------------- |
-| Atlas API (serverless container) | `notomapistagingc842d7f8-atlas-api-staging` |
-| PostgreSQL                       | `notom-db-staging`                          |
-| Redis                            | `notom-redis-staging`                       |
-| App (CDN/S3)                     | `notom-app-staging`                         |
+See the `LOKI_RESOURCE_*` keys in `../../shared/infra-map.md` (Atlas API →
+`LOKI_RESOURCE_ATLAS_API`, PostgreSQL → `LOKI_RESOURCE_POSTGRES`, Redis →
+`LOKI_RESOURCE_REDIS`, App → `LOKI_RESOURCE_APP`).
 
 ### Query last N minutes
 
 ```bash
-LOKI="https://c11ce546-873d-43e2-ae57-a18117f89e4e.logs.cockpit.fr-par.scw.cloud"
+LOKI="<LOKI_ENDPOINT — see infra-map>"
 START=$(date -v-30M +%s)000000000
 END=$(date +%s)000000000
 
 curl -sG -H "X-Token: $TOKEN" \
-  --data-urlencode 'query={resource_name="notomapistagingc842d7f8-atlas-api-staging"}' \
+  --data-urlencode 'query={resource_name="<LOKI_RESOURCE_* — see infra-map>"}' \
   --data "limit=50&start=$START&end=$END&direction=backward" \
   "$LOKI/loki/api/v1/query_range" | python3 -c "
 import json, sys, datetime
@@ -118,7 +117,7 @@ curl -s -H "X-Token: $TOKEN" "$LOKI/loki/api/v1/label/resource_name/values"
 
 ## Step 4 — Prometheus (metrics)
 
-**Endpoint:** `https://d8d4c40d-5d0e-4702-8c75-d4e3a70e6f6b.metrics.cockpit.fr-par.scw.cloud`
+**Endpoint:** `PROM_ENDPOINT` (see infra-map)
 **Auth header:** `X-Token: $TOKEN` · **API path:** `/prometheus/api/v1/`
 
 ### Metric families by service
@@ -136,7 +135,7 @@ curl -s -H "X-Token: $TOKEN" "$LOKI/loki/api/v1/label/resource_name/values"
 ### Query a metric
 
 ```bash
-PROM="https://d8d4c40d-5d0e-4702-8c75-d4e3a70e6f6b.metrics.cockpit.fr-par.scw.cloud"
+PROM="<PROM_ENDPOINT — see infra-map>"
 
 # Instant query
 curl -sG -H "X-Token: $TOKEN" \
@@ -176,32 +175,22 @@ scw cockpit data-source list -o json | jq '[.[] | {name, type, synchronized_with
 ## Step 6 — SSH into Authentik VMs (when logs/metrics aren't enough)
 
 The Authentik instances are plain Scaleway VMs (Ubuntu 24.04). SSH in as `root` to
-inspect docker, journald, or disk directly.
-
-| Host alias                | IP                | Scaleway instance                  |
-| ------------------------- | ----------------- | ---------------------------------- |
-| `notom-authentik-staging` | `163.172.165.162` | `notom-authentik-staging` (DEV1-S) |
-| `notom-authentik-prod`    | `212.47.250.52`   | `notom-authentik-prod` (GP1-XS)    |
+inspect docker, journald, or disk directly. Host aliases and IPs: see
+`SSH_AUTHENTIK_STAGING` / `SSH_AUTHENTIK_PROD` in `../../shared/infra-map.md`.
 
 ```bash
-ssh notom-authentik-staging 'docker ps'
-ssh notom-authentik-prod 'journalctl -u docker --since "1 hour ago"'
+ssh <SSH_AUTHENTIK_STAGING — see infra-map> 'docker ps'
+ssh <SSH_AUTHENTIK_PROD — see infra-map> 'journalctl -u docker --since "1 hour ago"'
 ```
 
-Both aliases live in `~/.ssh/config` (`User root`, auth via Bitwarden SSH agent
-`IdentityAgent ~/.bitwarden-ssh-agent.sock`). Check the agent with `ssh-add -l`
-(look for `Notom Prod` / `Notom Staging - SSH provisioning key`). `Permission denied
-(publickey)` usually means the agent is locked, not a config problem.
-
-If an IP changes (instance rebuild), refresh it with:
-
-```bash
-scw instance server list -o json | jq -r '.[] | select(.name|startswith("notom-authentik")) | "\(.name)\t\(.public_ip.address)"'
-```
+Both aliases live in `~/.ssh/config` (`User root`, auth via the Bitwarden SSH agent
+at `SSH_AGENT_SOCK` — see infra-map). The infra-map's Maintenance section covers
+agent troubleshooting (`ssh-add -l`, locked agent) and how to refresh an IP after
+an instance rebuild.
 
 ## Grafana (visual exploration only)
 
-Dashboards: `https://0ff77eb4-546c-48bf-b5d0e-f16585298484.dashboard.cockpit.scaleway.com`
+Dashboards: `GRAFANA_DASHBOARDS` (see `../../shared/infra-map.md`)
 If datasources appear empty: `scw cockpit grafana sync-data-sources`
 
 ## Final report

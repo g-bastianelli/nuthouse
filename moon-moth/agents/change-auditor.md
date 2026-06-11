@@ -3,6 +3,8 @@ name: change-auditor
 description: Adversarially review a working-tree diff in a moon monorepo against the affected scope — flag scope creep, missing tests for new behaviour, and repo-convention/layer-boundary violations a linter can't catch. Returns findings marked real | uncertain. Used by moon-moth:verify.
 model: sonnet
 effort: high
+maxTurns: 20
+color: red
 skills: [moon-moth:moon-commands, moon-moth:affected-scope]
 memory: project
 tools:

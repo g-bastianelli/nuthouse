@@ -1,8 +1,7 @@
 ---
 name: create-milestone
 description: Use to add a single Milestone to an existing Linear Project (standalone add-on) or to resume a partially-committed create-project cascade. Reads chain-state to detect resume mode and pick the next milestone whose `id` is still null. Drafts via milestone-drafter when needed, clarifies, previews, creates on approval, updates chain state.
-model: opus
-effort: max
+effort: high
 allowed-tools: Read, Glob, Grep, Write
 ---
 

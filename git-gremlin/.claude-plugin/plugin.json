@@ -9,5 +9,5 @@
   "repository": "https://github.com/g-bastianelli/nuthouse",
   "homepage": "https://github.com/g-bastianelli/nuthouse",
   "skills": "./skills/",
-  "agents": ["./agents/commit-drafter.md", "./agents/pr-drafter.md"]
+  "agents": ["./agents/commit-drafter.md", "./agents/pr-drafter.md", "./agents/reviewer.md"]
 }

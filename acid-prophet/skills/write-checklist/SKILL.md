@@ -5,6 +5,7 @@ argument-hint: [spec-path]
 model: sonnet
 effort: high
 allowed-tools: Read, Glob, Grep, Bash
+disallowed-tools: Edit, NotebookEdit
 ---
 
 # write-checklist

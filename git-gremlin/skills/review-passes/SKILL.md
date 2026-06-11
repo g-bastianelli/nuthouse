@@ -1,4 +1,10 @@
-# git-gremlin review passes
+---
+name: review-passes
+description: Portable review pass contract for git-gremlin:review — shared input packet, candidate finding schema, the read-only passes (correctness, convention, tests, risk), and aggregation rules. Background knowledge preloaded into the reviewer host agent; not a user-facing workflow.
+user-invocable: false
+---
+
+# git-gremlin — review passes
 
 Reusable review pass contract for `git-gremlin:review`.
 
