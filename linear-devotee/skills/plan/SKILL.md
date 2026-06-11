@@ -125,12 +125,12 @@ Rigid planning gate. Match the user's language; keep technical identifiers uncha
 
      ```
      <voice line — linear-devotee>
-     (i) implement → subroutine:implement (recommended)
+     (i) implement → start the implementation turn (recommended)
      (c) commit    → git-gremlin:commit
      (s) stop
      ```
 
-   - On `(i)`, if `subroutine:implement` is available in this session, invoke it and pass the full planning context as named fields:
+   - On `(i)`, hand the artifacts to the implementation turn. Emit this directive to the implementing agent: read every provided artifact before writing code, honor the repo's `AGENTS.md`/`CLAUDE.md`, let the `subroutine` discipline skills activate on matching files, and close with `moon-moth:verify` when a `.moon` workspace is present. Pass the full planning context as named fields:
 
      ```
      PLAN_FILE: <PLAN_FILE from step 4>
@@ -140,9 +140,8 @@ Rigid planning gate. Match the user's language; keep technical identifiers uncha
      - <abs path>  (the issue-context brief already verified these; from the session store / greet context — omit the section only when genuinely unavailable)
      ```
 
-     so the implementing agent inherits the plan's Files / Steps / Verify, the source spec, and the already-verified relevant files instead of re-planning blind. Do not pre-write any code yourself.
+     so the implementation turn inherits the plan's Files / Steps / Verify, the source spec, and the already-verified relevant files instead of re-planning blind. The implementation turn follows `<PLAN_FILE>`'s Files / Steps / Verify in order as the authoritative plan and runs its Verify commands before reporting. Do not pre-write any code inside this skill.
 
-   - **Fallback when `subroutine:implement` is not installed**: do not silently drop the hand-off. Implement directly against `<PLAN_FILE>`, following its Files / Steps / Verify in order as the authoritative plan, and run its Verify commands before reporting. State plainly that subroutine was unavailable and the plan was executed inline.
    - On `blocked` or `stopped` status, skip the menu and report the reason — never offer implement while blockers remain.
 
 ## Final Report

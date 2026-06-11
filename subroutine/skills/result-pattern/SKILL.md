@@ -1,8 +1,17 @@
-# subroutine — Result / error contract
+---
+name: result-pattern
+description: Result/error discipline for domain and service logic — business outcomes return `Result<T,E>`, never throw; one unwrap at the transport boundary. Applies when working on backend/domain TypeScript code.
+user-invocable: false
+paths: ["**/*.ts"]
+---
 
-How success and failure travel through the code. Domain/business logic **returns
-errors, never throws them**; the throw happens once, at the transport boundary.
-The repo's own `AGENTS.md` wins if it defines a different shape — read it first.
+# subroutine — Result / error discipline
+
+Applies to domain/service logic and transport boundaries (backend services,
+domain libs, RPC/HTTP handlers) — not React UI code. How success and failure
+travel through the code: domain/business logic **returns errors, never throws
+them**; the throw happens once, at the transport boundary. The repo's own
+`AGENTS.md` wins if it defines a different shape — read it first.
 
 ## The Result type
 

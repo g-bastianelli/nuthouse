@@ -92,8 +92,9 @@ From the returned scope map:
 ## Step 4 — Persist the scope map (optional)
 
 When the task is non-trivial or will be handed off, write the scope map to
-`${PROJECT_ROOT}/docs/moon-moth/scope/<branch-or-timestamp>.json` so `implement`
-and `verify` can read it without recomputing. Skip for a quick one-off scope.
+`${PROJECT_ROOT}/docs/moon-moth/scope/<branch-or-timestamp>.json` so the
+implementation turn and `verify` can read it without recomputing. Skip for a
+quick one-off scope.
 
 ## Step 5 — Final report + hand-off
 
@@ -111,15 +112,19 @@ Then present the hand-off menu:
 
 ```
 <voice intro line — moon-moth>
-(i) implement → hand to subroutine:implement, bounded to the affected set (React or Hono)
+(i) implement → start the implementation turn, bounded to the affected set
 (v) verify    → hand to moon-moth:verify, run affected :typecheck/:lint/:test
 (s) stop      → leave the map, fly off
 ```
 
-On `(i)`, the handoff carries the **scope map JSON inline** — affected project
-ids, layers, stacks, tasks, and downstream blast radius — not just a pointer to
-the persisted file. The implementer must see the field of light without
-re-running `moon query`:
+On `(i)`, hand the artifacts to the implementation turn. Emit this directive to
+the implementing agent: read every provided artifact before writing code, honor
+the repo's `AGENTS.md`/`CLAUDE.md`, let the `subroutine` discipline skills
+activate on matching files, stay bounded to the affected set, and close with
+`moon-moth:verify` (this is a moon workspace). The handoff carries the
+**scope map JSON inline** — affected project ids, layers, stacks, tasks, and
+downstream blast radius — not just a pointer to the persisted file. The
+implementer must see the field of light without re-running `moon query`:
 
 ```
 TASK: <what to implement, from the user's intent>

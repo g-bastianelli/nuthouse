@@ -69,7 +69,7 @@ each marked real/uncertain.
 If any check fails or the auditor flags a real blocker:
 
 1. Report the failing evidence plainly.
-2. Either fix it here (small, obvious) or hand back to `subroutine:implement`.
+2. Either fix it here (small, obvious) or hand back to the implementation turn.
    The handback must carry the failing task's output **verbatim** — the
    `output` field verify-runner already captured — never a paraphrase:
 
@@ -108,8 +108,11 @@ On a clean flight, present the hand-off menu:
 (s) stop   → wings checked, fly off
 ```
 
-On a torn wing, hand back to `subroutine:implement` with the Step 3 handback
-block instead — failing output verbatim, never summarised.
+On a torn wing, hand back to the implementation turn with the Step 3 handback
+block instead — failing output verbatim, never summarised. Instruct the
+implementing agent to fix against the failing evidence, honor the repo's
+`AGENTS.md`/`CLAUDE.md`, let the `subroutine` discipline skills activate on
+matching files, and return here (`moon-moth:verify`) to close the loop.
 
 ## Subagent dispatch
 

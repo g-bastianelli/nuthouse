@@ -1,24 +1,23 @@
 {
   "name": "subroutine",
-  "version": "1.0.0",
-  "description": "Implementation discipline for TypeScript monorepos — one stack-aware `implement` skill (React + Hono) bound to a shared contract of type-safety, Result/unwrap, validation, and code-organisation rules. Defers to the repo's own AGENTS.md. Cross-runtime (Claude Code + Codex).",
+  "version": "2.0.0",
+  "description": "Ambient implementation discipline for TypeScript monorepos — paths-activated knowledge skills that silently bind every edit to type-safety, Result/unwrap, Zod validation, code-organisation, React, and Hono pipeline rules. No workflows, no commands: the discipline applies itself when matching files are touched. Defers to the repo's own AGENTS.md. Cross-runtime (Claude Code + Codex).",
   "author": {
     "name": "g-bastianelli"
   },
   "repository": "https://github.com/g-bastianelli/nuthouse",
   "skills": "./skills/",
-  "agents": ["./agents/explorer.md"],
   "interface": {
     "displayName": "Subroutine",
-    "shortDescription": "Type-safe implementation discipline for React + Hono, bound to a shared contract",
-    "longDescription": "Subroutine implements your will with strict, shared discipline: type-safety (no any/as/!, ts-pattern exhaustive), the Result/ok/err pattern with boundary unwrapping, Zod validation, and named-export code organisation — applied to both React (front) and Hono (back). It explores before editing, follows the repo's own AGENTS.md over its built-in contract, and verifies via the project toolchain.",
+    "shortDescription": "Ambient TypeScript discipline — knowledge skills that bind every edit to strict rules",
+    "longDescription": "Subroutine is pure ambient discipline: six knowledge skills that activate when matching files are touched and silently bind the work to strict rules — type-safety (no any/as/!, ts-pattern exhaustive), the Result/ok/err pattern with boundary unwrapping, Zod validation, named-export code organisation, React component structure, and the layered Hono pipeline. It runs no workflows and answers no commands; the repo's own AGENTS.md always wins over its rules.",
     "developerName": "g-bastianelli",
     "category": "Productivity",
-    "capabilities": ["Read", "Write"],
+    "capabilities": ["Read"],
     "websiteURL": "https://github.com/g-bastianelli/nuthouse",
     "defaultPrompt": [
-      "Use Subroutine to implement this React component with strict type-safe discipline.",
-      "Use Subroutine to add this Hono procedure following the Result/unwrap pattern."
+      "Implement this React component — subroutine's ambient discipline keeps it type-safe.",
+      "Add this Hono procedure — subroutine's ambient discipline enforces the Result/unwrap pipeline."
     ],
     "logo": "./assets/banner.png"
   }

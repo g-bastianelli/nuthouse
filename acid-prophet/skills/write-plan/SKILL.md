@@ -1,6 +1,6 @@
 ---
 name: write-plan
-description: Use after a spec has been ratified and before any code is written — turns an approved spec into a concrete implementation plan with file-level architecture decisions, typed API/data contracts, and a quickstart validation scenario. Produces docs/acid-prophet/plans/<slug>/{plan.md, contracts/*.md, quickstart.md, codebase-map.md} and is consumed downstream by subroutine:implement or linear-devotee:create-issue.
+description: Use after a spec has been ratified and before any code is written — turns an approved spec into a concrete implementation plan with file-level architecture decisions, typed API/data contracts, and a quickstart validation scenario. Produces docs/acid-prophet/plans/<slug>/{plan.md, contracts/*.md, quickstart.md, codebase-map.md} and is consumed downstream by the main implementation turn or linear-devotee:create-issue.
 argument-hint: [spec-path]
 model: opus
 effort: xhigh
@@ -26,7 +26,7 @@ Adapt all output to match the user's language. Technical identifiers (file paths
 
 ## When you're invoked
 
-The user has an approved spec under `docs/acid-prophet/specs/` and wants to lock the architecture, contracts, and validation scenario before implementation begins. Typically called between `write-spec` and `subroutine:implement` / `linear-devotee:create-project`. If invoked on an un-approved spec (`status != ratified | approved | implementing`), warn and require explicit user confirmation.
+The user has an approved spec under `docs/acid-prophet/specs/` and wants to lock the architecture, contracts, and validation scenario before implementation begins. Typically called between `write-spec` and the implementation turn / `linear-devotee:create-project`. If invoked on an un-approved spec (`status != ratified | approved | implementing`), warn and require explicit user confirmation.
 
 ## Workflow
 
@@ -142,7 +142,7 @@ The user has an approved spec under `docs/acid-prophet/specs/` and wants to lock
       ```
     - Commit: `git add docs/acid-prophet/plans/<slug>/ && git commit -m "docs(acid-prophet): plan for <slug>"`. Never use `--no-verify`.
 11. Handoff:
-    - Ask: `next step? (i) hand to subroutine:implement | (l) hand to linear-devotee:create-project for issue breakdown | (s) stop`.
+    - Ask: `next step? (i) implement now | (l) hand to linear-devotee:create-project for issue breakdown | (s) stop`.
     - Build the **full artifact set** as named fields — the downstream agent gets every planning artifact explicitly, never a bare directory path or a one-liner:
 
       ```
@@ -156,7 +156,7 @@ The user has an approved spec under `docs/acid-prophet/specs/` and wants to lock
 
       `CONSTITUTION_FILE` is `_none_` when `docs/acid-prophet/constitution.md` does not exist. Omit no field — use `_none_` for anything missing.
 
-    - `(i)`: invoke `subroutine:implement` with the named-field block above as its input.
+    - `(i)`: hand the artifacts to the implementation turn with the named-field block above as its input. Emit this directive to the implementing agent: read every provided artifact before writing code, honor the repo's `AGENTS.md`/`CLAUDE.md`, let the `subroutine` discipline skills activate on matching files, and close with `moon-moth:verify` when a `.moon` workspace is present.
     - `(l)`: invoke `linear-devotee:create-project` with the same named-field block as its input.
     - `(s)`: exit.
 
@@ -171,7 +171,7 @@ acid-prophet:write-plan report
   Steps:        <N atomic>
   Open markers: <N unresolved [NEEDS CLARIFICATION] | none>
   Commits:      <N>
-  Handoff:      <subroutine:implement | linear-devotee:create-project | stopped>
+  Handoff:      <implementation turn | linear-devotee:create-project | stopped>
 ```
 
 ## Never
