@@ -16,8 +16,8 @@ Rigid runbook. Match the user's language; keep technical identifiers unchanged.
 1. Preconditions:
    - Verify Linear access with `ToolSearch` query `linear`.
    - Verify git repo.
-   - Ensure `${CLAUDE_PLUGIN_ROOT}/data`.
-2. Detect mode from `${CLAUDE_PLUGIN_ROOT}/data/chain-${CLAUDE_SESSION_ID}.json`:
+   - Ensure `${CLAUDE_PLUGIN_DATA}`.
+2. Detect mode from `${CLAUDE_PLUGIN_DATA}/chain-${CLAUDE_SESSION_ID}.json`:
    - **Resume**: chain-state exists with `phase: "partial_failure"`, `project.id != null`, all required `drafts.milestones[].id` set, and at least one `drafts.issues[].id == null`.
    - **Chained (legacy)**: chain-state exists with project, created milestone, and uncreated suggested issue.
    - **Standalone**: no chain-state, or `phase: "committed" | "cancelled"`.

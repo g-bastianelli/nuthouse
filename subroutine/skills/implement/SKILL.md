@@ -1,8 +1,8 @@
 ---
 name: implement
 description: Use when creating, refactoring, or implementing TypeScript in a monorepo — React components/hooks/pages (front) or Hono procedures/services/domain libs (back). Explores first, applies a shared discipline (type-safety, Result/unwrap, Zod, named exports), defers to the repo's own AGENTS.md, and verifies through the project toolchain.
+argument-hint: [plan-file|task-description]
 effort: high
-context_policy: fresh
 ---
 
 # implement
@@ -35,6 +35,11 @@ a validated plan artifact:
 ```
 PLAN_FILE: <abs path to docs/linear-devotee/plan/*.md>
 ```
+
+Resolve the input from `$ARGUMENTS` first: if `$ARGUMENTS` contains a
+`PLAN_FILE:` line or a path to a plan markdown, treat it as `PLAN_FILE`;
+otherwise treat `$ARGUMENTS` as the task description (and ask if empty and no
+task is evident from the conversation).
 
 When `PLAN_FILE` is present, read it first and treat its **Files**, **Steps**,
 **Verify**, and **Out of scope** sections as the authoritative plan — do not

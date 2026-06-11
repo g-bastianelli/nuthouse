@@ -1,9 +1,9 @@
 ---
 name: audit-spec
 description: Use when auditing an existing acid-prophet spec for SDD compliance, codebase reality, narrative quality, and style. Takes a spec path, dispatches the `spec-auditor` subagent, renders a structured BLOCKER/WARNING/INFO report, and offers a hand-off menu (apply auto-fixes, open spec, hand to linear-devotee, stop).
+argument-hint: [spec-path]
 effort: high
 allowed-tools: Read, Glob, Grep, Bash
-context_policy: fresh
 ---
 
 # acid-prophet:audit-spec
@@ -16,7 +16,7 @@ Rigid audit gate. Match the user's language; keep technical identifiers unchange
 
 1. Preconditions:
    - Verify git repo: `git rev-parse --show-toplevel`. Capture as `PROJECT_ROOT`. Abort if not in a repo.
-   - Verify spec-path argument. If missing, ask. Resolve to absolute path; verify file exists (abort if not).
+   - Resolve the spec path: if `$ARGUMENTS` contains a spec path, use it; otherwise ask. Resolve to absolute path; verify file exists (abort if not).
    - Warn if spec lives outside `<PROJECT_ROOT>/docs/acid-prophet/specs/`, but continue.
 2. Dispatch spec-auditor:
    ```
@@ -24,7 +24,7 @@ Rigid audit gate. Match the user's language; keep technical identifiers unchange
    ```
    Capture full output as `RAW_REPORT`.
 3. Render report:
-   - Parse with `<PROJECT_ROOT>/acid-prophet/claudecode/lib/parse-spec-auditor-report.mjs`. If null: try `warden:voice` per the voice cadence with `SUMMARY: spec-auditor output malformed`, print `RAW_REPORT` verbatim, skip to `(s)` branch.
+   - Parse with `${CLAUDE_PLUGIN_ROOT}/claudecode/lib/parse-spec-auditor-report.mjs`. If null: try `warden:voice` per the voice cadence with `SUMMARY: spec-auditor output malformed`, print `RAW_REPORT` verbatim, skip to `(s)` branch.
    - Try `warden:voice` per the voice cadence with `SUMMARY: <N> findings in spec` (or `spec is clean` if zero). Then print `RAW_REPORT` exactly as emitted.
 4. Hand-off menu:
    ```

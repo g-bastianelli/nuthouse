@@ -29,7 +29,7 @@ PROJECT_ROOT: <abs path to the git repo>
 
 - `PROJECT_ID` is mandatory.
 - `MILESTONE_ID` is set when the issue must attach to a specific milestone of the project. Linear constraint: the milestone must belong to the same project as `PROJECT_ID`.
-- `PARENT_DRAFT` is set when chained from `linear-devotee:create-milestone` or `create-project`; it points to `${CLAUDE_PLUGIN_ROOT}/data/chain-<session>.json`. Read it to recover the issue title and any partial fields the parent skill drafted.
+- `PARENT_DRAFT` is set when chained from `linear-devotee:create-milestone` or `create-project`; it points to `${CLAUDE_PLUGIN_DATA}/chain-<session>.json`. Read it to recover the issue title and any partial fields the parent skill drafted.
 - `ISSUE_HINT` is set when invoked standalone with a freeform "create one issue that does X" prompt.
 - `PROJECT_ROOT` is used to resolve any path tokens in the hint or parent draft.
 

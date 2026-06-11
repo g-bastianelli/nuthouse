@@ -1,6 +1,7 @@
 ---
 name: spawn
 description: Use when a new branch is needed — to create a branch, start work on a new branch, "crée une branche", "nouvelle branche", "bosse sur X dans une nouvelle branche", "spawn a workspace", "nouveau workspace", or when the PreToolUse hook blocked an in-place `git checkout -b` / `git switch -c` / `git branch <new>`. Creates a dedicated Superset workspace (one git worktree per branch) and spawns a fresh agent on the task instead of branching in place. Do not use for switching to an existing branch, deleting/renaming branches, commits, or PRs.
+argument-hint: [branch-or-task-description]
 effort: high
 ---
 
@@ -17,7 +18,7 @@ One workspace per branch. This skill never creates a branch in place — it spin
    - Verify it is authenticated: `superset projects list --json`. If it errors with "Not logged in", abort and tell the user to run `superset auth login` (or set `SUPERSET_API_KEY`) themselves, then re-invoke. Never attempt the login.
    - Verify this is a git repository (`git rev-parse --is-inside-work-tree`).
 2. Resolve the workspace inputs (do not invent — ask the user for anything genuinely unknown):
-   - **branch**: the new branch name. Take it from the user's request or from the blocked command the hook intercepted. If absent, ask.
+   - **branch**: the new branch name. Take it from `$ARGUMENTS` when present (a branch name or a task description to derive one from), else from the user's request or from the blocked command the hook intercepted. If absent, ask.
    - **name**: the workspace name (required by `superset workspaces create`). Default it to the **branch** name; surface it and let the user override.
    - **base-branch**: default to the current branch (`git branch --show-current`). Surface it; let the user override.
    - **project**: match the current repo to a Superset project from `superset projects list --json` (by repo path / name). If exactly one matches, use its id; if ambiguous or none, ask the user to pick.

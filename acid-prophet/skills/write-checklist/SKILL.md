@@ -1,10 +1,10 @@
 ---
 name: write-checklist
 description: Use when a feature is approaching QA or PR review and the team needs a derived, per-spec acceptance checklist — reads an approved spec, generates a concrete `- [ ]` checklist of verifications drawn from its Acceptance / Constraints / Non-goals sections, writes it to docs/acid-prophet/checklists/<slug>.md, and optionally posts it as a PR comment. Complements `check-drift` (drift = spec↔code mismatch · checklist = did we actually validate the AC).
+argument-hint: [spec-path]
 model: sonnet
 effort: high
 allowed-tools: Read, Glob, Grep, Bash
-context_policy: fresh
 ---
 
 # write-checklist
@@ -34,7 +34,7 @@ The user has a spec under `docs/acid-prophet/specs/` and wants a concrete valida
    - Check `gh` CLI: `gh --version`. If missing, note "gh not found — PR comment will be skipped." Continue regardless.
    - Ensure `${PROJECT_ROOT}/docs/acid-prophet/checklists/` exists; create if missing.
 2. Resolve the spec:
-   - If the user passed a spec path argument, use it. Resolve to absolute; verify file exists.
+   - If `$ARGUMENTS` contains a spec path, use it. Resolve to absolute; verify file exists.
    - Otherwise, scan `docs/acid-prophet/specs/`. Match by current branch's Linear identifier in the body, then by closest filename slug, then ask if still ambiguous.
    - Abort if zero candidates.
 3. Pre-flight gate:

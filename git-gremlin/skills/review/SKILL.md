@@ -1,6 +1,7 @@
 ---
 name: review
 description: Use automatically when the user asks to review code, review the current diff, inspect a PR/branch/commit range, run a contextual code review, "review la PR", "review ce diff", or "fais une review". Loads repo instructions such as AGENTS.md, CLAUDE.md, Copilot instructions, path-scoped rules, and PR/spec context before producing severity-ranked findings. Do not use for commit creation, PR creation, branch creation, or implementing fixes unless the user explicitly asks to address findings.
+argument-hint: [--staged | --base <ref>]
 effort: high
 ---
 
@@ -55,7 +56,7 @@ This skill reviews and reports. It does not implement fixes unless the user expl
      ```bash
      node <PLUGIN_ROOT>/scripts/review-context.mjs
      ```
-     Add `--base <ref>` or `--staged` if the user explicitly requested a base or staged-only review.
+     Add `--base <ref>` or `--staged` when `$ARGUMENTS` contains them, or if the user explicitly requested a base or staged-only review.
 2. Load review context:
    - Read the generated context manifest.
    - Read every instruction source marked `applies`.

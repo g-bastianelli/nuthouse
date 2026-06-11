@@ -1,6 +1,7 @@
 ---
 name: scope
 description: Use at the start of any task in a moon monorepo to scope work to the affected project graph — runs `moon query changed-files`/`affected`, dispatches the affected-scout subagent, and returns a structured scope map (affected projects, layers, tasks, downstream blast radius). Prefer this over blindly scanning the repo when working in a repo with a `.moon/` workspace.
+argument-hint: [working-tree|default-branch|<base>..<head>]
 effort: high
 ---
 
@@ -45,7 +46,7 @@ land only there.
 
 ## Step 1 — Pick the base
 
-Decide what "changed" means from the user's intent:
+Decide what "changed" means: if `$ARGUMENTS` contains a base (`working-tree`, `default-branch`, or a `<base>..<head>` revision pair), use it; otherwise infer from the user's intent:
 
 - Default (uncommitted work / "what am I touching now") → working tree
   (`moon query changed-files --local`).

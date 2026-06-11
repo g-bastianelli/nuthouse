@@ -1,9 +1,9 @@
 ---
 name: greet
 description: Use immediately at session start when a Linear issue identifier is detected from branch or first prompt. Delegates issue context to issue-context, optionally prepares branch/status, resolves source spec, writes greet context, then hands off to plan. Never writes implementation code.
+argument-hint: [issue-id] [--fresh]
 model: haiku
 allowed-tools: Read, Glob, Grep
-context_policy: session
 ---
 
 # linear-devotee:greet
@@ -17,7 +17,8 @@ Rigid context gate. Match the user's language; keep technical identifiers unchan
 1. Preconditions:
    - Verify Linear access with `ToolSearch` query `linear`.
    - Verify git repo.
-   - Read `${CLAUDE_PLUGIN_DATA}/state-<session_id>.json`; extract `issue`, `current_branch`, `needs_branch`.
+   - If `$ARGUMENTS` contains a Linear issue id (e.g. `ABC-123`), use it as `issue`.
+   - Read `${CLAUDE_PLUGIN_DATA}/state-<session_id>.json`; extract `issue` (unless already set from `$ARGUMENTS`), `current_branch`, `needs_branch`.
    - Stop if `greeted: true` or no issue id.
    - Do not fetch full issue context in main context.
 2. Delegate context:
@@ -50,7 +51,7 @@ Rigid context gate. Match the user's language; keep technical identifiers unchan
    - Never compare drift or patch specs here.
 6. Write context:
    - Update state: `greeted: true`, `issue_context_brief`, `spec_file`.
-   - Write `${CLAUDE_PLUGIN_ROOT}/data/greet-<ISSUE_ID>.json`:
+   - Write `${CLAUDE_PLUGIN_DATA}/greet-<ISSUE_ID>.json`:
      ```json
      {
        "issue_id": "<ID>",
@@ -62,9 +63,9 @@ Rigid context gate. Match the user's language; keep technical identifiers unchan
        "created_at": "<ISO 8601>"
      }
      ```
-   - Session store (`context_policy: session`): if `$CLAUDE_SESSION_ID` is set, write to `<PROJECT_ROOT>/.claude/nuthouse/sessions/${CLAUDE_SESSION_ID}.json`:
+   - Session store: if `$CLAUDE_SESSION_ID` is set, write to `<PROJECT_ROOT>/.claude/nuthouse/sessions/${CLAUDE_SESSION_ID}.json`:
      - Extract file paths from the `RELEVANT_FILES:` section of the `issue-context` brief (each line is an absolute path).
-     - If invoked with `--fresh`, skip reading any existing session data before writing.
+     - If `$ARGUMENTS` contains `--fresh`, skip reading any existing session data before writing.
      ```json
      {
        "spec_path": "<spec absolute path | empty string if _none_>",
@@ -86,7 +87,7 @@ linear-devotee:greet report
   Branch:          <current branch> (created: <new-branch> if applicable)
   Brief:           delivered (issue-context) | skipped (reason)
   Spec:            <path | _none_>
-  Context:         ${CLAUDE_PLUGIN_ROOT}/data/greet-<ISSUE_ID>.json
+  Context:         ${CLAUDE_PLUGIN_DATA}/greet-<ISSUE_ID>.json
   Hand-off:        plan | stop
 ```
 

@@ -1,10 +1,10 @@
 ---
 name: write-plan
 description: Use after a spec has been ratified and before any code is written — turns an approved spec into a concrete implementation plan with file-level architecture decisions, typed API/data contracts, and a quickstart validation scenario. Produces docs/acid-prophet/plans/<slug>/{plan.md, contracts/*.md, quickstart.md} and is consumed downstream by subroutine:implement or linear-devotee:create-issue.
+argument-hint: [spec-path]
 model: opus
 effort: xhigh
 allowed-tools: Read, Glob, Grep, Bash
-context_policy: session
 ---
 
 # write-plan
@@ -33,7 +33,7 @@ The user has an approved spec under `docs/acid-prophet/specs/` and wants to lock
    - Verify git repo: `PROJECT_ROOT = $(git rev-parse --show-toplevel)`. Abort if not in a repo.
    - Ensure `${PROJECT_ROOT}/docs/acid-prophet/plans/` exists; create if missing.
 2. Resolve the spec:
-   - If the user passed a spec path argument, use it. Resolve to absolute; verify file exists.
+   - If `$ARGUMENTS` contains a spec path, use it. Resolve to absolute; verify file exists.
    - Otherwise, scan `docs/acid-prophet/specs/`. Match by current branch's Linear identifier, then by closest filename slug, then ask if still ambiguous.
    - Abort if zero candidates.
 3. Pre-flight gate:

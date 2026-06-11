@@ -1,6 +1,7 @@
 ---
 name: debug-local
 description: Use when the user reports a runtime error, a service not starting, an auth/OIDC failure, or missing env vars in local dev on the notom platform. Investigate proactively with available tools before asking the user to run anything.
+argument-hint: [symptom-description]
 ---
 
 # debug-local
@@ -42,7 +43,7 @@ check logs yourself before reporting.
 
 ## Step 1 — Classify the symptom
 
-Inspect what the user reported and route:
+Inspect what the user reported (start from `$ARGUMENTS` when non-empty) and route:
 
 - **Env var missing** → Step 2a
 - **Service not reachable / auth redirect failing** → Step 2b

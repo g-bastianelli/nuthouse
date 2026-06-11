@@ -1,9 +1,9 @@
 ---
 name: plan
 description: Use when planning implementation for a Linear issue after greet or from an issue id. Loads or rebuilds greet context, resolves source spec, drafts and audits a plan, flags drift, writes a validated plan artifact, then syncs accepted spec drift only after validation. Never writes implementation code.
+argument-hint: [issue-id] [--fresh]
 effort: xhigh
 allowed-tools: Read, Glob, Grep
-context_policy: session
 ---
 
 # linear-devotee:plan
@@ -17,10 +17,10 @@ Rigid planning gate. Match the user's language; keep technical identifiers uncha
 1. Preconditions:
    - Verify git repo. Capture `PROJECT_ROOT = $(git rev-parse --show-toplevel)`.
    - Ensure `${PROJECT_ROOT}/docs/linear-devotee/plan/`.
-   - Detect issue id from argument, branch, state file, or recent greet context. Ask if absent.
+   - Detect issue id from `$ARGUMENTS` first, then branch, state file, or recent greet context. Ask if absent.
    - Verify Linear access only when greet context must be rebuilt.
 2. Load context:
-   - Prefer `${CLAUDE_PLUGIN_ROOT}/data/greet-<ISSUE_ID>.json`.
+   - Prefer `${CLAUDE_PLUGIN_DATA}/greet-<ISSUE_ID>.json`.
    - If missing, dispatch `linear-devotee:issue-context` with issue id, git root, `NEEDS_STATUS_METADATA: true`.
    - Do not fetch full Linear context in main context unless delegation fails.
 3. Resolve source spec:
@@ -62,7 +62,7 @@ Rigid planning gate. Match the user's language; keep technical identifiers uncha
    Do not display plan content in main context — the file is the artifact.
 
 5. Audit:
-   - Session store (`context_policy: session`): if `$CLAUDE_SESSION_ID` is set, read `<PROJECT_ROOT>/.claude/nuthouse/sessions/${CLAUDE_SESSION_ID}.json`. If `relevant_files` key is present (and `_meta._shas.relevant_files` equals HEAD sha when Bash is available; otherwise accept as-is), inject it into the plan-auditor prompt. Skip this lookup when invoked with `--fresh`.
+   - Session store: if `$CLAUDE_SESSION_ID` is set, read `<PROJECT_ROOT>/.claude/nuthouse/sessions/${CLAUDE_SESSION_ID}.json`. If `relevant_files` key is present (and `_meta._shas.relevant_files` equals HEAD sha when Bash is available; otherwise accept as-is), inject it into the plan-auditor prompt. Skip this lookup when `$ARGUMENTS` contains `--fresh`.
    - **Staleness caveat**: this skill lacks Bash, so the sha of `relevant_files` cannot be verified against HEAD. If the codebase changed significantly since `greet` ran (e.g. several commits), invoke with `--fresh` to force a full re-fetch and ignore the cached list.
    - Dispatch `linear-devotee:plan-auditor` with:
 

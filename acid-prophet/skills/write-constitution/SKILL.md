@@ -4,7 +4,6 @@ description: Use when a project needs immutable governing principles that every 
 model: opus
 effort: max
 allowed-tools: Read, Glob, Grep, Bash
-context_policy: session
 ---
 
 # write-constitution

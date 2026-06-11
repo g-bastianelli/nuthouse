@@ -1,6 +1,7 @@
 ---
 name: research
 description: Use automatically when the user wants a researched, fact-checked, or cited answer from the web — "fais une recherche", "creuse le sujet", "vérifie cette info", "trouve-moi des sources sur", "research X", "fact-check X", "find sources on X", "dig into X", or any question whose answer needs several cross-checked web sources. Prefer this over a bare WebSearch whenever the answer should be sourced rather than answered from memory. Fan-out web search → fetch + summarize → adversarial verification → cited synthesis. Zero parametric knowledge — answers only from verified sources.
+argument-hint: [research-question]
 model: sonnet
 effort: high
 ---
@@ -48,7 +49,8 @@ region) get clarified before the hunt begins.
 
 ## Step 1 — Clarify the research question
 
-If the user's question is vague or under-specified (e.g., "what's a good API?" without
+Treat `$ARGUMENTS` as the research question when non-empty; otherwise take the question
+from the user's message. If the question is vague or under-specified (e.g., "what's a good API?" without
 budget, language, use case, or region), ask **2–3 clarifying questions** before starting
 the hunt. Keep them tight and specific.
 

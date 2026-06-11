@@ -26,7 +26,7 @@ PROJECT_ROOT: <abs path to the git repo>
 ```
 
 - `PROJECT_ID` is mandatory — milestones are single-project in Linear.
-- `PARENT_DRAFT` is set when chained from `linear-devotee:create-project` and points to `${CLAUDE_PLUGIN_ROOT}/data/chain-<session>.json`. Read it to recover the project's drafted milestone list.
+- `PARENT_DRAFT` is set when chained from `linear-devotee:create-project` and points to `${CLAUDE_PLUGIN_DATA}/chain-<session>.json`. Read it to recover the project's drafted milestone list.
 - `MILESTONE_HINT` is set when the user invokes `create-milestone` standalone with a freeform "I want a phase that does X" prompt.
 - `PROJECT_ROOT` is used to resolve any path tokens in the hint or parent draft.
 

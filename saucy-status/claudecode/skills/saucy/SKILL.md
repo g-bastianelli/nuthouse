@@ -1,6 +1,7 @@
 ---
 name: saucy
 description: Control saucy-status mode. Use when user types /saucy [on|off|gooning|status|install|uninstall]. No arg → toggle off↔saucy.
+argument-hint: [on|off|gooning|status|install|uninstall]
 model: haiku
 ---
 
@@ -14,7 +15,7 @@ Read `../../../persona.md` at skill start — the saucy voice is canonical. Mech
    - Verify `CLAUDE_PLUGIN_DATA` is available. If not, abort: "CLAUDE_PLUGIN_DATA is required — cannot write state."
    - Compute `CLAUDE_PLUGIN_ROOT` as 3 levels above this skill's base directory (`BASE_DIR/../../..`).
 
-2. Parse arg:
+2. Parse arg — the raw invocation argument is `$ARGUMENTS` (empty means no arg):
 
    | Arg             | Action                                                          |
    | --------------- | --------------------------------------------------------------- |

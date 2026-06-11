@@ -1,10 +1,10 @@
 ---
 name: next-issue
 description: Use when the user says a Linear issue is finished/done/complete and wants the next issue to work on, or asks which Linear issue to take next in the same project. Resolves the current issue, reads project issues, respects completed/canceled states and blockers, and recommends the next startable issue without auto-starting greet or mutating Linear.
+argument-hint: [issue-id]
 model: haiku
 effort: medium
 allowed-tools: Read, Glob, Grep, Bash
-context_policy: session
 ---
 
 # linear-devotee:next-issue
@@ -21,9 +21,9 @@ Read-only next-work recommender. Match the user's language; keep technical ident
    - Do not mutate Linear. This skill recommends only.
 2. Resolve current issue:
    - Priority:
-     1. explicit issue id in the user prompt or skill argument
-     2. `${CLAUDE_PLUGIN_ROOT}/data/state-${CLAUDE_SESSION_ID}.json` `issue`
-     3. most recent `${CLAUDE_PLUGIN_ROOT}/data/greet-<ISSUE_ID>.json`
+     1. explicit issue id in `$ARGUMENTS` or the user prompt
+     2. `${CLAUDE_PLUGIN_DATA}/state-${CLAUDE_SESSION_ID}.json` `issue`
+     3. most recent `${CLAUDE_PLUGIN_DATA}/greet-<ISSUE_ID>.json`
      4. current branch name containing an issue identifier
    - If absent, ask for the current Linear issue id.
    - Treat the current issue as completed for recommendation purposes when the user says it is finished/done/complete, even if Linear has not been updated yet. Clearly report this as an assumption. Do not change the Linear status.

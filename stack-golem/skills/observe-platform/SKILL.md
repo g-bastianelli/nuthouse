@@ -1,6 +1,7 @@
 ---
 name: observe-platform
 description: Use when investigating a service issue, checking logs, querying metrics, or verifying the health of any notom-platform resource on Scaleway staging or prod. Queries Loki logs and Prometheus metrics directly via the cockpit API — never punts to Grafana.
+argument-hint: [service-or-issue]
 ---
 
 # observe-platform
@@ -40,6 +41,9 @@ never ask the user to open Grafana for something you can query yourself.
 2. Verify `curl` and `python3` are available (used to query Loki/Prometheus).
 
 ## Step 1 — Classify the issue
+
+Start from `$ARGUMENTS` (a service name or issue description) when non-empty;
+otherwise classify from the user's report.
 
 - **Service down / crash?** → query Loki logs (Step 3) + Scaleway CLI state (Step 5)
 - **Performance / usage?** → query Prometheus metrics (Step 4)
