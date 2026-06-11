@@ -42,8 +42,8 @@ exists — and refuses to call the flight clean on assertion alone.
 ## Step 1 — Run the affected checks (evidence)
 
 Dispatch `moon-moth:verify-runner` (see `## Subagent dispatch`). It executes the
-affected tasks via the commands in
-`${CLAUDE_PLUGIN_ROOT}/shared/moon-commands.md` — typically:
+affected tasks via the commands in the `moon-moth:moon-commands` knowledge
+skill (`${CLAUDE_PLUGIN_ROOT}/skills/moon-commands/SKILL.md`) — typically:
 
 ```
 moon run :typecheck :lint :test --affected --downstream deep
@@ -69,8 +69,18 @@ each marked real/uncertain.
 If any check fails or the auditor flags a real blocker:
 
 1. Report the failing evidence plainly.
-2. Either fix it here (small, obvious) or hand back to `subroutine:implement` with
-   the captured failure.
+2. Either fix it here (small, obvious) or hand back to `subroutine:implement`.
+   The handback must carry the failing task's output **verbatim** — the
+   `output` field verify-runner already captured — never a paraphrase:
+
+   ```
+   FAILING_TASK: <project>:<task>   (one block per failing task)
+   FAILING_OUTPUT:
+   <verbatim failing excerpt from the verify-runner result, unedited>
+   AUDITOR_FINDINGS: <real findings from change-auditor, if any | _none_>
+   SCOPE: <affected project ids>
+   ```
+
 3. Re-run only the affected task that failed (`moon run <project>:<task>`) until
    green. Do not declare a clean flight while a wing is torn.
 
@@ -98,8 +108,8 @@ On a clean flight, present the hand-off menu:
 (s) stop   → wings checked, fly off
 ```
 
-On a torn wing, hand back to `subroutine:implement` with the captured failure
-instead.
+On a torn wing, hand back to `subroutine:implement` with the Step 3 handback
+block instead — failing output verbatim, never summarised.
 
 ## Subagent dispatch
 

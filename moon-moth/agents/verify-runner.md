@@ -3,6 +3,7 @@ name: verify-runner
 description: Execute affected moon tasks (typecheck/lint/test) and return structured per-project pass/fail with failing output captured verbatim. Haiku model, structured output. Used by moon-moth:verify.
 model: haiku
 effort: low
+skills: [moon-moth:moon-commands, moon-moth:affected-scope]
 tools:
   - Bash
   - Read
@@ -26,8 +27,10 @@ SCOPE: <space-separated project ids, OR the literal "--affected --downstream dee
 
 ## Mission (in order)
 
-1. **Read the command contract** at
-   `${CLAUDE_PLUGIN_ROOT}/shared/moon-commands.md`. Run with `cwd = MOON_ROOT`.
+1. **Know the command contract.** The `moon-moth:moon-commands` knowledge skill
+   is preloaded into your context at startup — apply it. If it is missing, read
+   `${CLAUDE_PLUGIN_ROOT}/skills/moon-commands/SKILL.md`. Run with
+   `cwd = MOON_ROOT`.
 
 2. **Run the tasks, scoped:**
    - If SCOPE is `--affected --downstream deep`:

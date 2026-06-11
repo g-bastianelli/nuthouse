@@ -1,6 +1,6 @@
 ---
 name: write-plan
-description: Use after a spec has been ratified and before any code is written — turns an approved spec into a concrete implementation plan with file-level architecture decisions, typed API/data contracts, and a quickstart validation scenario. Produces docs/acid-prophet/plans/<slug>/{plan.md, contracts/*.md, quickstart.md} and is consumed downstream by subroutine:implement or linear-devotee:create-issue.
+description: Use after a spec has been ratified and before any code is written — turns an approved spec into a concrete implementation plan with file-level architecture decisions, typed API/data contracts, and a quickstart validation scenario. Produces docs/acid-prophet/plans/<slug>/{plan.md, contracts/*.md, quickstart.md, codebase-map.md} and is consumed downstream by subroutine:implement or linear-devotee:create-issue.
 argument-hint: [spec-path]
 model: opus
 effort: xhigh
@@ -43,6 +43,7 @@ The user has an approved spec under `docs/acid-prophet/specs/` and wants to lock
    - Read `${PROJECT_ROOT}/docs/acid-prophet/constitution.md` if present. Articles become design constraints for every step below.
 4. Explore the codebase (read-only):
    - Dispatch an `Explore` subagent with the spec body as context. Ask it to: (a) locate every file/path the spec references and report whether it exists, (b) identify existing utilities, hooks, or modules that overlap with the spec's solution, (c) flag any architectural pattern (state management, routing, data fetching) already established in the codebase the plan must conform to. Capture as `CODEBASE_MAP`.
+   - Format `CODEBASE_MAP` as a markdown document destined for `${PROJECT_ROOT}/docs/acid-prophet/plans/<slug>/codebase-map.md` (written in step 10 with the other artifacts). Required sections: `# codebase map — <slug>`, `## Relevant files` (path + one-line role + exists/missing), `## Existing patterns` (established conventions the plan must conform to), `## Integration points` (where the new work plugs into existing code). This map is exploration context that travels with the plan — the implementing agent reads it instead of re-discovering the codebase from zero.
 5. Architecture decisions (one question at a time):
    - For each open architectural question implied by the spec (storage shape, sync vs async, transport, state ownership, error propagation, retry policy) ask the user one focused question. Apply the uncertainty rule: when the user has not specified a value, emit `[NEEDS CLARIFICATION: ...]` inline and move on — never invent.
    - Reuse before adding: when `CODEBASE_MAP` shows an existing utility that fits, propose reuse with a single sentence; require the user to opt out before introducing a parallel implementation.
@@ -123,7 +124,7 @@ The user has an approved spec under `docs/acid-prophet/specs/` and wants to lock
    - Steps must be atomic and ordered. Each step is one edit + one inline verify when possible (`bun test <path>`, `tsc --noEmit`, manual observation). Larger refactors get decomposed.
 
 9. User validation gate:
-   - Print all three artifacts inline: plan.md, every contract, quickstart.md.
+   - Print all artifacts inline: plan.md, every contract, quickstart.md, codebase-map.md.
    - Ask: `validate (y) | revise <artifact> | regenerate <artifact> | abandon (a)`. Wait.
    - On revise/regenerate, return to the relevant step.
    - On abandon, exit, no files written.
@@ -134,6 +135,7 @@ The user has an approved spec under `docs/acid-prophet/specs/` and wants to lock
       ${PROJECT_ROOT}/docs/acid-prophet/plans/<slug>/
         plan.md
         quickstart.md
+        codebase-map.md
         contracts/
           <contract-1>.md
           <contract-2>.md
@@ -141,8 +143,21 @@ The user has an approved spec under `docs/acid-prophet/specs/` and wants to lock
     - Commit: `git add docs/acid-prophet/plans/<slug>/ && git commit -m "docs(acid-prophet): plan for <slug>"`. Never use `--no-verify`.
 11. Handoff:
     - Ask: `next step? (i) hand to subroutine:implement | (l) hand to linear-devotee:create-project for issue breakdown | (s) stop`.
-    - `(i)`: invoke `subroutine:implement` with the plan directory path.
-    - `(l)`: invoke `linear-devotee:create-project` with spec + plan paths.
+    - Build the **full artifact set** as named fields — the downstream agent gets every planning artifact explicitly, never a bare directory path or a one-liner:
+
+      ```
+      PLAN_FILE: ${PROJECT_ROOT}/docs/acid-prophet/plans/<slug>/plan.md
+      CONTRACTS_DIR: ${PROJECT_ROOT}/docs/acid-prophet/plans/<slug>/contracts/
+      QUICKSTART_FILE: ${PROJECT_ROOT}/docs/acid-prophet/plans/<slug>/quickstart.md
+      CODEBASE_MAP_FILE: ${PROJECT_ROOT}/docs/acid-prophet/plans/<slug>/codebase-map.md
+      SPEC_FILE: <absolute path to the source spec resolved in step 2>
+      CONSTITUTION_FILE: ${PROJECT_ROOT}/docs/acid-prophet/constitution.md | _none_
+      ```
+
+      `CONSTITUTION_FILE` is `_none_` when `docs/acid-prophet/constitution.md` does not exist. Omit no field — use `_none_` for anything missing.
+
+    - `(i)`: invoke `subroutine:implement` with the named-field block above as its input.
+    - `(l)`: invoke `linear-devotee:create-project` with the same named-field block as its input.
     - `(s)`: exit.
 
 ## Final Report
@@ -152,6 +167,7 @@ acid-prophet:write-plan report
   Spec:         <path>
   Plan dir:     ${PROJECT_ROOT}/docs/acid-prophet/plans/<slug>/
   Contracts:    <N written>
+  Codebase map: ${PROJECT_ROOT}/docs/acid-prophet/plans/<slug>/codebase-map.md
   Steps:        <N atomic>
   Open markers: <N unresolved [NEEDS CLARIFICATION] | none>
   Commits:      <N>

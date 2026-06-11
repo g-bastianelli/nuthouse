@@ -1,3 +1,9 @@
+---
+name: affected-scope
+description: The scope map JSON contract moon-moth skills and agents exchange — schema and field rules for the affected project set (ids, layers, stacks, tasks, downstream blast radius) computed from `moon query`. Background knowledge contract, preloaded into moon-moth agents; not a user-facing workflow.
+user-invocable: false
+---
+
 # moon-moth — affected scope contract
 
 The **scope map** is the structured artifact the `affected-scout` agent returns
@@ -48,7 +54,8 @@ affected projects found — the working tree is clean or untracked".
 ## Usage
 
 - `scope` builds and (optionally) persists the map to
-  `<PROJECT_ROOT>/docs/moon-moth/scope/<timestamp>.json`.
+  `<PROJECT_ROOT>/docs/moon-moth/scope/<timestamp>.json`, and passes it inline
+  when handing off to implementation.
 - `implement` reads the map to bound which packages it may edit.
 - `verify` reads `affected[].tasks` to know exactly which `moon run` targets to
   execute — it never runs repo-wide `:test` when a scoped set exists.

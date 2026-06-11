@@ -71,8 +71,10 @@ State the chosen base in one line before dispatching.
 ## Step 2 — Dispatch the affected-scout subagent
 
 Dispatch `moon-moth:affected-scout` (see `## Subagent dispatch`). It runs the
-`moon query` commands from `${CLAUDE_PLUGIN_ROOT}/shared/moon-commands.md` and
-returns the scope map defined in `${CLAUDE_PLUGIN_ROOT}/shared/affected-scope.md`.
+`moon query` commands from the `moon-moth:moon-commands` knowledge skill
+(`${CLAUDE_PLUGIN_ROOT}/skills/moon-commands/SKILL.md`) and returns the scope
+map defined in the `moon-moth:affected-scope` contract
+(`${CLAUDE_PLUGIN_ROOT}/skills/affected-scope/SKILL.md`).
 
 If subagents are unavailable, run the same `moon query` commands inline and build
 the scope map yourself.
@@ -112,6 +114,18 @@ Then present the hand-off menu:
 (i) implement → hand to subroutine:implement, bounded to the affected set (React or Hono)
 (v) verify    → hand to moon-moth:verify, run affected :typecheck/:lint/:test
 (s) stop      → leave the map, fly off
+```
+
+On `(i)`, the handoff carries the **scope map JSON inline** — affected project
+ids, layers, stacks, tasks, and downstream blast radius — not just a pointer to
+the persisted file. The implementer must see the field of light without
+re-running `moon query`:
+
+```
+TASK: <what to implement, from the user's intent>
+SCOPE_MAP:
+<full scope map JSON from Step 2, verbatim>
+SCOPE_MAP_FILE: ${PROJECT_ROOT}/docs/moon-moth/scope/<file>.json | _not-persisted_
 ```
 
 Branch on the response. Exit the skill when the chosen branch finishes.

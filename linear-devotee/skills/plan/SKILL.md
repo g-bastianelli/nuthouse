@@ -111,13 +111,17 @@ Rigid planning gate. Match the user's language; keep technical identifiers uncha
      (s) stop
      ```
 
-   - On `(i)`, if `subroutine:implement` is available in this session, invoke it and pass the validated plan path as input:
+   - On `(i)`, if `subroutine:implement` is available in this session, invoke it and pass the full planning context as named fields:
 
      ```
      PLAN_FILE: <PLAN_FILE from step 4>
+     SPEC_FILE: <path from step 3 | _none_>
+     ISSUE_ID: <issue id>
+     RELEVANT_FILES:
+     - <abs path>  (the issue-context brief already verified these; from the session store / greet context — omit the section only when genuinely unavailable)
      ```
 
-     so the implementing agent inherits the plan's Files / Steps / Verify instead of re-planning blind. Do not pre-write any code yourself.
+     so the implementing agent inherits the plan's Files / Steps / Verify, the source spec, and the already-verified relevant files instead of re-planning blind. Do not pre-write any code yourself.
 
    - **Fallback when `subroutine:implement` is not installed**: do not silently drop the hand-off. Implement directly against `<PLAN_FILE>`, following its Files / Steps / Verify in order as the authoritative plan, and run its Verify commands before reporting. State plainly that subroutine was unavailable and the plan was executed inline.
    - On `blocked` or `stopped` status, skip the menu and report the reason — never offer implement while blockers remain.

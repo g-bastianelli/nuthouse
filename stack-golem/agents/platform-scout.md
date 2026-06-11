@@ -2,6 +2,7 @@
 name: platform-scout
 description: Read-only investigation scout for the notom platform. Creates a temporary cockpit token, queries Loki logs + Prometheus metrics + Scaleway CLI state (and SSHes into Authentik VMs when needed), deletes the token, and returns a structured diagnosis — keeps voluminous log/metric dumps out of the main context.
 model: haiku
+skills: [stack-golem:observe-platform]
 tools:
   - Bash
   - Read

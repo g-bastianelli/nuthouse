@@ -3,6 +3,7 @@ name: review
 description: Use automatically when the user asks to review code, review the current diff, inspect a PR/branch/commit range, run a contextual code review, "review la PR", "review ce diff", or "fais une review". Loads repo instructions such as AGENTS.md, CLAUDE.md, Copilot instructions, path-scoped rules, and PR/spec context before producing severity-ranked findings. Do not use for commit creation, PR creation, branch creation, or implementing fixes unless the user explicitly asks to address findings.
 argument-hint: [--staged | --base <ref>]
 effort: high
+context: fork
 allowed-tools: Bash(node:*), Bash(git diff:*), Bash(git log:*), Read, Glob, Grep, Agent
 ---
 

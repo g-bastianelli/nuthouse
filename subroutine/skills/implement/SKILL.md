@@ -38,24 +38,45 @@ English / original form.
 
 ## Input (optional)
 
-This skill runs standalone or chained from `linear-devotee:plan`, which may pass
-a validated plan artifact:
+This skill runs standalone or chained from `linear-devotee:plan` or
+`acid-prophet:write-plan`, which pass a structured handoff with some or all of
+these named fields:
 
 ```
-PLAN_FILE: <abs path to docs/linear-devotee/plan/*.md>
+PLAN_FILE: <abs path to the validated plan markdown>
+CONTRACTS_DIR: <abs path to a contracts/ dir of typed data contracts>
+QUICKSTART_FILE: <abs path to the end-to-end validation scenario>
+CODEBASE_MAP_FILE: <abs path to the planner's codebase exploration map>
+SPEC_FILE: <abs path to the source spec>
+CONSTITUTION_FILE: <abs path to docs/acid-prophet/constitution.md | _none_>
+ISSUE_ID: <Linear issue id, when chained from linear-devotee>
+RELEVANT_FILES: <bulleted abs paths verified by the planner>
 ```
 
-Resolve the input from `$ARGUMENTS` first: if `$ARGUMENTS` contains a
-`PLAN_FILE:` line or a path to a plan markdown, treat it as `PLAN_FILE`;
-otherwise treat `$ARGUMENTS` as the task description (and ask if empty and no
-task is evident from the conversation).
+Resolve the input from `$ARGUMENTS` first: if `$ARGUMENTS` contains any of the
+named fields above or a path to a plan markdown, treat it as a structured
+handoff; otherwise treat `$ARGUMENTS` as the task description (and ask if empty
+and no task is evident from the conversation).
 
-When `PLAN_FILE` is present, read it first and treat its **Files**, **Steps**,
-**Verify**, and **Out of scope** sections as the authoritative plan — do not
-re-plan from scratch in Step 3. Still run Step 2 exploration to ground the edits
-in real code, but scope it to the plan's Files and honour its Out-of-scope
-boundary. If the file path is missing or unreadable, fall back to the normal
-explore-then-plan flow and say so.
+When a structured handoff is present, **Read every provided artifact before
+exploring** (Step 2): `PLAN_FILE`, every contract in `CONTRACTS_DIR`,
+`QUICKSTART_FILE`, `CODEBASE_MAP_FILE`, `SPEC_FILE`, and `CONSTITUTION_FILE`
+(skip fields that are absent or `_none_`). This is the planning context the
+upstream skill already paid for — do not throw it away and re-discover it.
+
+- `PLAN_FILE` is authoritative: treat its **Files**, **Steps**, **Verify**, and
+  **Out of scope** sections as the plan — do not re-plan from scratch in
+  Step 3. If any field's path is missing or unreadable, fall back to the normal
+  explore-then-plan flow for that piece and say so.
+- `CODEBASE_MAP_FILE` is a **head start for Step 2, not a replacement for it**:
+  still dispatch the `subroutine:explorer` subagent, but seed its prompt with
+  the map's relevant files / patterns / integration points and ask it to verify
+  the map against the current code and fill the gaps — code may have moved
+  since planning.
+- `CONTRACTS_DIR` shapes are binding for Step 4; `QUICKSTART_FILE` is the
+  external acceptance scenario Step 5 must satisfy; `CONSTITUTION_FILE`
+  articles are extra design constraints; `RELEVANT_FILES` narrows where to
+  look first.
 
 ## The contract you're bound to
 
