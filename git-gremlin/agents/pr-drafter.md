@@ -19,23 +19,30 @@ You will be invoked with a message in this format:
 ```
 ACTION: draft|execute
 BASE: <base branch name>
+BRANCH: <current branch name>                   # required for draft
 LOG: <git log base...HEAD --oneline output>      # required for draft
 DIFF: <git diff base...HEAD output>              # required for draft
 TITLE: <approved PR title>                       # required for execute
 BODY: <approved PR body>                         # required for execute
 ```
 
-- `ACTION: draft` — analyze `LOG` + `DIFF`, produce a PR title and description.
+- `ACTION: draft` — analyze `BRANCH` + `LOG` + `DIFF`, produce a PR title and description.
 - `ACTION: execute` — run `gh pr create` with `TITLE`, `BODY`, and `BASE`. Log/diff not needed.
 
 ## Mission (in order)
 
 ### 1. On `ACTION: draft`
 
-1. Read `LOG` and `DIFF` from the input.
+1. Read `BRANCH`, `LOG`, and `DIFF` from the input.
 2. Identify the scope of changes: what features, fixes, or refactors are included.
-3. Write a PR title: imperative, ≤ 72 chars, no issue number prefix.
-4. Write a PR body in this structure:
+3. Detect a linked Linear issue id:
+   - Match ids with `/\b[A-Z][A-Z0-9]+-[0-9]+\b/` such as `NOT-120`.
+   - Prefer an id from `BRANCH`, then `LOG`, then `DIFF`.
+   - If one clear id is found, suffix the PR title with ` [<id>]` while preserving the normal PR type/scope marker at the beginning, for example `(chore) Add workspace handoff [NOT-120]` or `chore(git-gremlin): add workspace handoff [NOT-120]`.
+   - If the title already has that exact suffix, do not duplicate it.
+   - If multiple different ids appear and no single branch id disambiguates them, do not add a suffix.
+4. Write a PR title: preserve any existing conventional marker from the best source commit (`(chore)`, `(fix)`, `chore:`, `feat(scope):`, etc.), then add an imperative description, then add the Linear suffix when applicable. Keep the full title ≤ 72 chars including any Linear suffix.
+5. Write a PR body in this structure:
 
    ```
    ## Summary
@@ -45,7 +52,7 @@ BODY: <approved PR body>                         # required for execute
    <bulleted checklist of how to verify the changes>
    ```
 
-5. Output the result.
+6. Output the result.
 
 ### 2. On `ACTION: execute`
 
@@ -79,7 +86,7 @@ On failure: `{ "error": "<stderr verbatim>" }`
 - **Never run `gh pr create` on a `draft` action.** Propose only.
 - **Never run `git push` or `git commit`.** Ever.
 - **No invention.** If log and diff are empty, return `{ "error": "no commits ahead of base" }`.
-- **PR title under 72 chars.** No issue number unless explicitly in the log.
+- **PR title under 72 chars.** Suffix with ` [<Linear issue id>]` whenever one clear linked Linear issue id is present in `BRANCH`, `LOG`, or `DIFF`; preserve the existing PR type/scope marker at the beginning, such as `(chore)` or `feat(scope):`.
 - **Body uses the Summary + Test plan structure.** No free-form prose.
 - **Voice = neutral.** No gremlin talk in the output — the calling skill wraps this in voice.
 - **Output stays clean JSON.** No prose, no markdown wrapper around the JSON block.

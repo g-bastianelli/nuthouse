@@ -36,7 +36,7 @@ is printed, revert to the session default voice immediately.
    - Infer base branch: `gh repo view --json defaultBranchRef` or fallback `main`.
    - Verify commits exist ahead of base: the `Commits vs main` snapshot in `## Context` covers the common case; re-run `git log <base>...HEAD --oneline` when the base is not `main` or the snapshot is empty. Abort if no commits exist ahead of base.
 2. Draft PR title and description:
-   - Dispatch `git-gremlin:pr-drafter` with log + diff vs base as input.
+   - Dispatch `git-gremlin:pr-drafter` with branch + log + diff vs base as input.
    - Receive `{ title: string, body: string, base: string }`.
    - Display the proposed title and description to the user. Wait for confirmation or edit request.
 3. Create PR:
@@ -72,6 +72,7 @@ Agent({
   description: 'Read git log and diff vs base, propose PR title and description',
   prompt: `ACTION: draft
 BASE: <base branch>
+BRANCH: <current branch>
 LOG: <git log base...HEAD>
 DIFF: <git diff base...HEAD>`,
 })
