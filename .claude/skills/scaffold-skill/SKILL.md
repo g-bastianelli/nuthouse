@@ -161,7 +161,7 @@ AskUserQuestion, single-select. Voice: _"où l'organe s'exécute-t-il ?"_
 
 ### Q14 — Arguments
 
-Free-text. Voice: _"l'organe avale-t-il des arguments ?"_ If the skill takes arguments (`$ARGUMENTS`, `$1`, …), **`argument-hint` is REQUIRED** — ask for the hint string (e.g. `[issue-id]`, `[path] [mode]`) → save as `ARGUMENT_HINT`. If the skill takes no arguments, skip and omit the key.
+Free-text. Voice: _"l'organe avale-t-il des arguments ?"_ If the skill takes arguments (`$ARGUMENTS`, `$1`, …), **`argument-hint` is REQUIRED** — ask for the hint string (e.g. `[issue-id]`, `[path] [mode]`) → save as `ARGUMENT_HINT`. If the skill takes no arguments, skip and omit the key. When emitting frontmatter, always wrap `ARGUMENT_HINT` in double quotes and escape any embedded double quotes so multi-group hints remain valid YAML.
 
 ## Step 2 — Generation
 
@@ -194,7 +194,7 @@ name: <SKILL>
 description: <DESCRIPTION>
 model: <Q7-value> # [IF Q7 ∈ {haiku, sonnet, opus}, else omit this line]
 effort: <Q8-value> # [IF Q8 ∈ {low, high, xhigh, max}, else omit this line]
-argument-hint: <ARGUMENT_HINT> # [IF Q14 gave a hint — REQUIRED when the skill takes arguments, else omit]
+argument-hint: "<ARGUMENT_HINT>" # [IF Q14 gave a hint — REQUIRED when the skill takes arguments, else omit]
 context: fork # [IF Q13 = fork, else omit]
 agent: <FORK_AGENT> # [IF Q13 = fork AND FORK_AGENT provided, else omit]
 user-invocable: false # [IF Q13 = knowledge, else omit]
@@ -367,7 +367,7 @@ scaffold-skill report
   Model:         <haiku | sonnet | opus | inherit>
   Effort:        <low | medium | high | xhigh | max | inherit>
   Execution:     <inline | fork (agent: <FORK_AGENT> | default) | knowledge (user-invocable: false)>
-  Arguments:     <none | argument-hint: <ARGUMENT_HINT>>
+  Arguments:     <none | argument-hint: "<ARGUMENT_HINT>">
   Subagent:      <none | <agent-name> — run `/scaffold-agent` next>
   Hand-off:      <none | menu defined>
   Files written: <list>

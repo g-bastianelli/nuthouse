@@ -1,7 +1,7 @@
 ---
 name: plan
 description: Use when planning implementation for a Linear issue after greet or from an issue id. Loads or rebuilds greet context, resolves source spec, drafts and audits a plan, flags drift, writes a validated plan artifact, then syncs accepted spec drift only after validation. Never writes implementation code.
-argument-hint: [issue-id] [--fresh]
+argument-hint: "[issue-id] [--fresh]"
 effort: xhigh
 allowed-tools: Read, Glob, Write, Agent
 ---

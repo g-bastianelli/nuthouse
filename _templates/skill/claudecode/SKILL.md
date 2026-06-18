@@ -16,7 +16,7 @@ description: {{description}}
 
 # allowed-tools: Read, Glob, Grep, Bash # explicit allowlist
 
-# argument-hint: [issue-id] # REQUIRED when the skill takes arguments — autocomplete hint
+# argument-hint: "[issue-id]" # REQUIRED when the skill takes arguments — autocomplete hint
 
 # disable-model-invocation: true # user-triggered only (deploy, commit, …) — Claude never auto-invokes
 

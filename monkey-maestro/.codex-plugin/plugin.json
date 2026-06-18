@@ -1,8 +1,10 @@
 {
   "name": "monkey-maestro",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Deranged maestro that conducts your Linear backlog through the build pipeline — one worktree per issue, your applause between movements.",
-  "author": { "name": "g-bastianelli" },
+  "author": {
+    "name": "g-bastianelli"
+  },
   "repository": "https://github.com/g-bastianelli/nuthouse",
   "skills": "./skills/",
   "interface": {

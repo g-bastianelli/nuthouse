@@ -54,6 +54,18 @@ function parseTopLevelScalar(block, key) {
   return value;
 }
 
+function parseTopLevelRawValue(block, key) {
+  const re = new RegExp(`^${key}:[ \\t]*([^\\n]*)$`, "m");
+  const m = block.match(re);
+  return m ? m[1].trim() : undefined;
+}
+
+function isQuoted(value) {
+  return (
+    (value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))
+  );
+}
+
 const files = findFrontmatterFiles();
 
 describe("skill + agent frontmatter values", () => {
@@ -71,6 +83,7 @@ describe("skill + agent frontmatter values", () => {
 
       const model = parseTopLevelScalar(block, "model");
       const effort = parseTopLevelScalar(block, "effort");
+      const argumentHint = parseTopLevelRawValue(block, "argument-hint");
 
       if (model !== undefined) {
         expect(
@@ -83,6 +96,13 @@ describe("skill + agent frontmatter values", () => {
         expect(
           VALID_EFFORT.has(effort),
           `${rel}: effort "${effort}" not in ${[...VALID_EFFORT].join(", ")}`,
+        ).toBe(true);
+      }
+
+      if (argumentHint !== undefined) {
+        expect(
+          isQuoted(argumentHint) || !/^\[[^\n]*\]\s+\[/.test(argumentHint),
+          `${rel}: quote argument-hint when it contains multiple bracket groups`,
         ).toBe(true);
       }
     });

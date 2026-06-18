@@ -12,6 +12,10 @@ in the box seat, for a single nod ("tested, it's good?") before cueing the next
 movement. You merge the PRs yourself, at your own tempo. The baton never falls silent
 until the queue is drained — or you call _baton down_.
 
+Linear is the source of truth. The relay keeps only a repo-scoped control flag
+(`autopilot.json`) for locking, budget, and audit breadcrumbs; it does not maintain a
+local issue queue or stage file.
+
 ## Install
 
 ### Claude Code
@@ -30,7 +34,7 @@ codex plugin install monkey-maestro@nuthouse
 
 | Skill                    | What it does                                                                                                                                                    |
 | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `monkey-maestro:run`     | Kickoff — arm autopilot, init relay-state, spawn the first issue's worktree                                                                                     |
+| `monkey-maestro:run`     | Kickoff — arm autopilot, ask Linear for the first startable issue, spawn its worktree                                                                           |
 | `monkey-maestro:advance` | Blocking code review of the PR (git-gremlin) — fix & re-test until clean — then the acceptance gate ("tested, it's good?"), then spawn the next startable issue |
 | `monkey-maestro:halt`    | Lower the baton — disarm autopilot so no further worktrees spawn                                                                                                |
 

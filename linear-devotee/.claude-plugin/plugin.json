@@ -2,7 +2,7 @@
   "name": "linear-devotee",
   "displayName": "Linear Devotee",
   "description": "Linear workflow plugin for issue intake, planning, next-issue recommendation, project creation, milestone creation, and issue drafting with SDD-formatted context and explicit mutation gates.",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "author": {
     "name": "g-bastianelli"
   },

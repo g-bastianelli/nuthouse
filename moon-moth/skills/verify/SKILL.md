@@ -86,7 +86,7 @@ If any check fails or the auditor flags a real blocker:
    green. Do not declare a clean flight while a wing is torn.
 
 In autopilot: a torn wing stops the forward chain — report the failing evidence verbatim
-and do NOT auto-chain to commit/pr. The relay pauses here; verify owns no relay-state, so
+and do NOT auto-chain to commit/pr. The relay pauses here; verify owns no queue state, so
 it writes no `phase` — stopping the forward chain IS the halt (per the stop-ladder in
 `monkey-maestro`'s pipeline-contract). The patron fixes and re-verifies (re-running this
 skill), or runs `monkey-maestro:halt` to disarm. Autopilot never papers over a wrong note.

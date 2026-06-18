@@ -55,7 +55,7 @@ stay in their original form regardless of language.
 ## Hard rule
 
 **Actions stay serious. Voice stays brainrot.** The plugin does real work: real `superset`
-spawns, real skill hand-offs, real state files, real reports. No fantasy side-effects, no
+spawns, real skill hand-offs, real control flags, real reports. No fantasy side-effects, no
 joke commits, no "lol whoops" failure modes. The merge is never the monkey's to make — the
 patron merges. When a check fails, the maestro halts the movement; it never papers over a
 wrong note. Only the strings screech.

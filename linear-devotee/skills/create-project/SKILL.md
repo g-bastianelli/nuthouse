@@ -1,7 +1,7 @@
 ---
 name: create-project
 description: Use when creating a Linear Project end-to-end from a spec file or vibe-mode Q&A. Drafts project + milestones + issues in advance, presents one editable preview, asks a single approval gate, then batch-creates everything on Linear and recommends the first issue to start. Falls back to per-skill resume via create-milestone / create-issue on partial failure.
-argument-hint: [spec-file] [--fresh]
+argument-hint: "[spec-file] [--fresh]"
 model: opus
 effort: max
 allowed-tools: Read, Glob, Grep, Bash, Write

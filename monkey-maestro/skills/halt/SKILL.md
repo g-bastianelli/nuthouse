@@ -1,6 +1,6 @@
 ---
 name: halt
-description: Use when the user wants to stop the autopilot relay — "arrête l'autopilote", "baton down", "stop the relay", "autopilote off", "coupe le relais". Disarms the repo-scoped autopilot flag and marks the relay-state stopped so no further worktrees are spawned. The already-open PRs and worktrees stay — the patron merges and cleans those up. Do not use to start the relay (monkey-maestro:run) or to accept a feature and advance (monkey-maestro:advance).
+description: Use when the user wants to stop the autopilot relay — "arrête l'autopilote", "baton down", "stop the relay", "autopilote off", "coupe le relais". Disarms the repo-scoped autopilot control flag so no further worktrees spawn. It does not maintain or edit a local issue queue; Linear and GitHub remain the authority.
 model: haiku
 effort: low
 allowed-tools: Bash(git rev-parse:*), Read, Write
@@ -36,29 +36,30 @@ flags, relay ids) stay in their original form.
 
 The patron calls the symphony to a close mid-performance. The maestro lowers the baton:
 disarm the flag so no further movement begins. Nothing already in flight is destroyed —
-open PRs and worktrees remain for the patron to merge and clean up.
+open PRs, worktrees, and Linear issues remain for the patron to merge, inspect, or clean
+up at their own tempo.
 
 ## Step 0 — Preconditions
 
-1. Verify this is a git repo. Capture `STATE_DIR = $(git rev-parse --path-format=absolute --git-common-dir)/nuthouse` (the repo's shared `.git` dir — the SAME path from the main repo and every worktree, so this works even when auto-chained from `advance` inside a spawned worktree).
+1. Verify this is a git repo. Capture `STATE_DIR = $(git rev-parse --path-format=absolute --git-common-dir)/nuthouse` (the repo's shared `.git` dir — the same path from the main repo and every worktree).
 2. Read `${STATE_DIR}/autopilot.json`. If absent or already `active: false`, report
    "no relay armed here — already silent" and stop (idempotent).
 
 ## Step 1 — Lower the baton
 
-1. Set `${STATE_DIR}/autopilot.json` `active: false` (keep the file as an audit trail; do
-   not delete).
-2. In the matching `${STATE_DIR}/relay-<relay_id>.json` (relay_id from the flag), set
-   `phase: stopped` if it is still `running`. Leave already-`done`/`halted` phases
-   untouched.
+Set `${STATE_DIR}/autopilot.json` `active: false` and `last_halt_reason: stopped_by_user`
+(keep the file as an audit/control trail; do not delete it). Do not read or write any
+`relay-<relay_id>.json` file; local relay-state is obsolete.
 
 ## Step 2 — Report what remains
 
-List from relay-state both the `stage: accepted` issues (their `pr` is recorded — waiting
-to be merged) AND the `stage: spawning` issues (in-flight: a live worktree that may have
-already opened its PR before you stopped, with no `pr` recorded yet). The patron needs
-both — the accepted ones to merge, the spawning ones to check for an open PR and clean up
-the worktree.
+Report only what the control flag actually knows: relay id, last accepted issue/PR,
+budget counter, and flag path. Do not claim a full list of in-flight issues from local
+state. Tell the patron that remaining truth lives in Linear/GitHub:
+
+- Linear issues with status `In Progress` / `In Review` show work currently underway.
+- GitHub open PRs show work awaiting merge.
+- Local worktrees remain intact; this skill never deletes them.
 
 ## Final Report
 
@@ -66,14 +67,17 @@ the worktree.
 monkey-maestro:halt report
   Relay:        <relay_id> → stopped
   Autopilot:    disarmed (active: false)
-  Open PRs:     <accepted issues → pr url awaiting your merge> | none
-  In-flight:    <spawning issues → branch; live worktrees, may have an open PR> | none
+  Last issue:   <last_issue | _none_>
+  Last PR:      <last_pr | _none_>
+  Budget:       <accepted_count>/<max_issues>
+  Authority:    inspect Linear + GitHub for live work; no local relay-state queue
   Worktrees:    left intact — merge + clean up at your tempo
-  Relay state:  <STATE_DIR>/relay-<relay_id>.json
+  Control flag: <STATE_DIR>/autopilot.json
 ```
 
 ## Never
 
 - Run `git push`, `git commit`, or `git rebase`.
-- Merge PRs, remove worktrees, or close Linear issues — only disarm the flag/state.
-- Delete the relay-state or flag file — flip the fields, keep the audit trail.
+- Merge PRs, remove worktrees, or close Linear issues — only disarm the flag.
+- Delete the control flag file — flip fields, keep the audit trail.
+- Read or write `relay-<relay_id>.json` as queue state.
