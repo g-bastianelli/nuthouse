@@ -64,9 +64,9 @@ the first worktree. It does **not** implement and it does **not** merge.
 
 Dispatch the `monkey-maestro:queue-scout` subagent (see `## Subagent dispatch`). It owns
 the Linear tools: it reads the project queue, applies the relay "startable" rule (blockers
-actually merged/Done), and returns the next startable issue plus the spawn parameters
-(branch, base, baton `--prompt`). If `$ARGUMENTS` named an `issue-id`, pass it as the
-preferred start.
+actually merged/Done; never an issue already In Progress on Linear), and returns the next
+startable issue plus the spawn parameters (branch, base, baton `--prompt`). If `$ARGUMENTS`
+named an `issue-id`, pass it as the preferred start.
 
 - If queue-scout reports Linear unreachable → set `phase: halted`, reason `auth_expired`,
   set `autopilot.json active: false`, report, and stop.
@@ -114,9 +114,9 @@ Agent({
 STATE_DIR: <abs git-common-dir>/nuthouse
 PREFERRED_ISSUE: <issue-id from $ARGUMENTS | _none_>
 RELAY_ID: <relay_id>
-Apply the relay startable rule (blockers actually merged/Done). Report Linear-unreachable
-if you cannot read the queue. Return the next issue and the spawn parameters per the
-pipeline-contract baton prompt.`,
+Apply the relay startable rule (blockers actually merged/Done; skip any issue already In
+Progress on Linear). Report Linear-unreachable if you cannot read the queue. Return the
+next issue and the spawn parameters per the pipeline-contract baton prompt.`,
 })
 ```
 

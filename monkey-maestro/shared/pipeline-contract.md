@@ -68,6 +68,11 @@ There are no `greeted`/`planned`/`verified`/`pr_open` stages — the worktree sk
 no relay-state writes, so those would be dead values. A crashed in-flight issue is
 detected by its `spawning` entry with no matching `accepted`; the patron re-runs.
 
+An optional `review_rounds` counter on an issue entry tracks the blocking-review fix loop
+in `advance` (Step 2): `advance` increments it on each hand-back for blocking
+(`BLOCKER`/`HIGH`) findings and bounds it at 3 before escalating to the patron. It is not
+a stage — the entry stays `spawning` across the loop.
+
 Known edge: a `non` (rework) verdict at the acceptance gate keeps the issue at `spawning`;
 if that worktree is later reopened in a _fresh_ session, `greet`'s guard (which stops only
 on `accepted`) re-greets and re-plans it — the rework notes lived only in the original
@@ -89,6 +94,7 @@ keep the enum minimal.
       "branch": "g/not-101-x",
       "pr": "https://.../42",
       "stage": "accepted",
+      "review_rounds": 1, // optional; blocking-review fix loops in advance (bounded at 3)
     },
     { "client_ref": "r2", "id": null, "stage": "pending" }, // pending | spawning | accepted
   ],
@@ -99,9 +105,13 @@ keep the enum minimal.
 ## The "startable" rule in relay mode
 
 A candidate issue is startable only when **every blocker is actually merged/Done in
-Linear** — a just-accepted-but-unmerged issue does NOT unblock its dependents. This
-guarantees each new worktree branches from a `main` that already contains the code it
-depends on. Independent issues flow on automatically. A pure dependency chain, by
+Linear** AND **the issue is not already In Progress on Linear** — a just-accepted-but-unmerged
+issue does NOT unblock its dependents. The In-Progress guard (Linear status type `started`
+— In Progress / In Review) means a worktree is already on that issue (the relay's own, or
+the patron's by hand); the relay never opens a second one for it, even when the relay-state
+doesn't list it (e.g. a fresh `monkey-maestro:run` over a chain the previous relay already
+started). The blocker guard guarantees each new worktree branches from a `main` that
+already contains the code it depends on. Independent, un-started issues flow on automatically. A pure dependency chain, by
 contrast, drains to `phase: done` (`queue_drained`) after its first issue — there is no
 hook to re-trigger on merge — and `run`/`advance` **disarm the flag on `done`**, so the
 patron merges the open PR(s) and runs `monkey-maestro:run` again to resume the chain.
@@ -117,6 +127,12 @@ forward, which pauses the relay (no further worktree is spawned).
   does **not** auto-advance to commit/pr. The relay pauses there; the patron fixes and
   re-verifies, or runs `monkey-maestro:halt`. (verify owns no relay-state and writes no
   `phase` — stopping the forward chain is the halt.)
+- `git-gremlin:reviewer` returns blocking findings (`BLOCKER`/`HIGH`) in `advance` → the
+  acceptance gate is NOT presented and no worktree is spawned. `advance` hands back to the
+  implementation turn (fix → re-verify → commit → pr → advance) and loops until the review
+  is clean, bounded at 3 rounds (`review_rounds` on the entry) before escalating to the
+  patron (continue fixing / accept anyway / stop). The entry stays `spawning` across the
+  loop — the paused forward chain is the halt.
 - `git-gremlin:commit`/`pr` surface non-zero stderr → stop, stderr verbatim, no
   auto-chain (inherits each skill's existing "surface stderr and stop").
 - `gh auth status` / `superset projects list` / `queue-scout` Linear access fails →
@@ -145,9 +161,13 @@ keeps the flag armed.
 5. `moon-moth:verify` [F] → clean flight auto-chains `git-gremlin:commit` → `pr`.
 6. `git-gremlin:pr` [F] → PR title `[ISSUE]`, body contains `Closes <ISSUE>`; auto-chains
    `monkey-maestro:advance`.
-7. `monkey-maestro:advance` → presents the feature + verify evidence; **acceptance gate
-   [H]** "tested, it's good? (oui / non / stop)"; on `oui` → `queue-scout` → spawn the
-   next worktree → STOP. The patron merges PRs out-of-band, at their own tempo.
+7. `monkey-maestro:advance` → presents the feature + verify evidence; **always runs a
+   `git-gremlin:reviewer` code review of the PR diff — a hard gate.** Blocking findings
+   (`BLOCKER`/`HIGH`) hand back to the implementation turn (fix → re-verify → commit → pr
+   → advance) and loop until the review is clean (bounded at 3 rounds; persistent blockers
+   escalate to the patron). Only on a clean review is the **acceptance gate [H]** "tested,
+   it's good? (oui / non / stop)" presented; on `oui` → `queue-scout` → spawn the next
+   worktree → STOP. The patron merges PRs out-of-band, at their own tempo.
 
 ## The spawn baton prompt (handed to the next worktree's fresh agent)
 

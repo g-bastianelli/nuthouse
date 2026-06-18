@@ -28,11 +28,11 @@ codex plugin install monkey-maestro@nuthouse
 
 ## Skills
 
-| Skill                    | What it does                                                                |
-| ------------------------ | --------------------------------------------------------------------------- |
-| `monkey-maestro:run`     | Kickoff — arm autopilot, init relay-state, spawn the first issue's worktree |
-| `monkey-maestro:advance` | Acceptance gate ("tested, it's good?"), then spawn the next startable issue |
-| `monkey-maestro:halt`    | Lower the baton — disarm autopilot so no further worktrees spawn            |
+| Skill                    | What it does                                                                                                                                                    |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `monkey-maestro:run`     | Kickoff — arm autopilot, init relay-state, spawn the first issue's worktree                                                                                     |
+| `monkey-maestro:advance` | Blocking code review of the PR (git-gremlin) — fix & re-test until clean — then the acceptance gate ("tested, it's good?"), then spawn the next startable issue |
+| `monkey-maestro:halt`    | Lower the baton — disarm autopilot so no further worktrees spawn                                                                                                |
 
 ## Agents
 

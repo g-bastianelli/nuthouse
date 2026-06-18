@@ -1,6 +1,6 @@
 ---
 name: queue-scout
-description: Read-only Linear scout for the monkey-maestro autopilot relay. Reads the Linear project queue, applies the relay startable rule (a candidate is startable only when every blocker is actually merged/Done), and returns the next startable issue plus the git-gremlin:spawn parameters (branch, base, baton prompt) as strict JSON. Never writes to Linear or git. Used by monkey-maestro:run and monkey-maestro:advance.
+description: Read-only Linear scout for the monkey-maestro autopilot relay. Reads the Linear project queue, applies the relay startable rule (a candidate is startable only when every blocker is actually merged/Done and the issue is not already In Progress on Linear), and returns the next startable issue plus the git-gremlin:spawn parameters (branch, base, baton prompt) as strict JSON. Never writes to Linear or git. Used by monkey-maestro:run and monkey-maestro:advance.
 model: haiku
 effort: low
 maxTurns: 10
@@ -50,8 +50,10 @@ unreachable, fall back to read-only `linear` CLI via `Bash`. Never invent issues
 ### 2. Apply the relay startable rule
 
 Exclude: the `ACCEPTED_ISSUE`/`PREFERRED_ISSUE` itself, any issue with status type
-`completed` or `canceled`, and any issue already present in the relay-state `issues[]`
-(already in flight or done — never re-select it).
+`completed` or `canceled`, **any issue already `started` on Linear** (status type
+`started` — i.e. In Progress / In Review: work is already underway on it, so the relay
+must never open a (second) worktree for it), and any issue already present in the
+relay-state `issues[]` (already in flight or done — never re-select it).
 
 A remaining candidate is **startable only when every blocker is actually merged/Done** —
 i.e. each blocking issue has status type `completed` or `canceled`. A blocker that is
@@ -83,7 +85,8 @@ For the chosen issue, compute (read-only):
 
 Return ONLY the JSON below. If no startable issue exists, set `next`/`spawn` to `null`,
 `drained: true`, and explain in `note` (e.g. how many candidates are blocked by still-open
-PRs, so the patron knows merging unblocks the rest).
+PRs, and how many were skipped as already In Progress / In Review on Linear — so the
+patron knows what merging or finishing unblocks the rest).
 
 ## Output
 
@@ -122,4 +125,8 @@ When the queue is drained: `{ "next": null, "spawn": null, "drained": true, "not
 - **Deterministic JSON.** Output exactly the shape above so the calling skill can parse it.
 - **Respect issues already in flight.** Never re-select an issue present in the
   relay-state `issues[]`.
+- **Never open a worktree for in-progress work.** An issue already `started` on Linear
+  (In Progress / In Review) is being worked elsewhere — exclude it from selection. The
+  relay only picks up un-started issues, even when the relay-state doesn't list it (e.g. a
+  fresh relay re-run, or work the patron started by hand).
 - **Voice = neutral.** No maestro talk in the output; the calling skill wraps it in voice.

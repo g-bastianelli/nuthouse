@@ -1,6 +1,6 @@
 ---
 name: advance
-description: Use when a feature is implemented, verified, and its PR is open and the autopilot relay must move on — auto-invoked by git-gremlin:pr in autopilot, or "issue suivante", "continue le relais", "next movement". Holds the per-feature acceptance gate ("tested, it's good?"); on approval resolves and spawns the next startable issue's worktree, then stops. Does not merge (the patron merges PRs). Do not use to start the relay (monkey-maestro:run) or to stop it (monkey-maestro:halt).
+description: Use when a feature is implemented, verified, and its PR is open and the autopilot relay must move on — auto-invoked by git-gremlin:pr in autopilot, or "issue suivante", "continue le relais", "next movement". Always runs a blocking git-gremlin:review code review of the PR — on blocking findings it hands back to fix and re-test, looping until the review is clean — then holds the per-feature acceptance gate ("tested, it's good?"); on approval resolves and spawns the next startable issue's worktree, then stops. Does not merge (the patron merges PRs). Do not use to start the relay (monkey-maestro:run) or to stop it (monkey-maestro:halt).
 effort: high
 argument-hint: [issue-id]
 allowed-tools: Bash(git rev-parse:*), Bash(git branch --show-current), Bash(gh pr view:*), Bash(gh pr checks:*), Read, Write, Agent
@@ -65,9 +65,48 @@ Resolve the PR for the current branch: `gh pr view --json number,title,url,state
 If no PR exists, or checks are failing, do NOT offer acceptance — report the gap and
 hand back to the implementation turn (a wrong note; the movement is not done).
 
-## Step 2 — The acceptance gate (the human gate)
+## Step 2 — Code review the PR (always; blocking)
 
-Present, in voice intro + plain options:
+Every movement gets a code review before the patron is asked to accept — green checks
+prove it runs, the review proves it reads right. The review is a **hard gate**: the
+acceptance gate is never reached while blocking findings stand. Dispatch the
+`git-gremlin:reviewer` subagent (see `## Subagent dispatch`) against the PR diff (current
+branch vs base `main`, the diff `git-gremlin:pr` just opened). It is read-only: it never
+touches git state, the PR, or any file.
+
+Triage the reviewer's severity-ranked findings. **`BLOCKER` and `HIGH` are blocking**;
+`MEDIUM`/`LOW`/`NIT`/`INFO` are surfaced but never block (per git-gremlin's scale, `NIT`
+never blocks and `INFO` is not a requested change).
+
+- **Blocking findings present** → the movement is NOT done. Do **not** present the
+  acceptance gate and do **not** spawn the next movement. Read the issue entry's
+  `review_rounds` (absent = `0`):
+  - `review_rounds < 3` → increment it, set the issue `stage: spawning` (still in-flight,
+    not accepted), write relay-state, then hand control back to the implementation turn
+    with the blocking findings as **concrete fix instructions** (`file:line` + the
+    reviewer's `Fix`). This skill has no `Edit`/`commit`/`push` — it never fixes itself;
+    the implementation turn corrects the code, then re-runs the movement tail —
+    `moon-moth:verify` (test) → `git-gremlin:commit` → `git-gremlin:pr` (updates the PR)
+    → `monkey-maestro:advance` — which re-reviews. The loop repeats until the review is
+    clean. Print the hand-off (findings + "handing back to fix, round N/3") and **stop**.
+  - `review_rounds >= 3` → the findings won't converge unattended. Do not loop again:
+    surface the persistent findings and escalate to the patron with a decision — `(c)
+continue fixing` (one more hand-back round) / `(o) accept anyway` (override → Step 4)
+    / `(s) stop` (→ `monkey-maestro:halt`). The relay never silently accepts past a
+    persistent blocker.
+- **No blocking findings** → say so (`No blocking findings`), carry any `MEDIUM`/`LOW`
+  residual risk into the presentation, and continue to the acceptance gate (Step 3).
+- **Reviewer unavailable or errors** → the review gate cannot be certified. Do not
+  silently accept: surface `review unavailable: <reason>` and present the acceptance gate
+  as an explicit patron escalation — the voice intro must state the review did not run, so
+  an `oui` is a conscious "accept without review". A review-tool failure must not wedge the
+  relay in a loop.
+
+## Step 3 — The acceptance gate (the human gate)
+
+Reached only on a clean review (Step 2). With the PR, verify evidence, and the clean
+review (plus any `MEDIUM`/`LOW` residual) shown above, present, in voice intro + plain
+options:
 
 ```
 <voice intro line — monkey-maestro>
@@ -82,9 +121,9 @@ Branch on the response:
   (still in-flight, not accepted), and hand control to the implementation turn with the
   patron's notes verbatim. Stop.
 - **stop** → auto-chain to `monkey-maestro:halt` (disarm flag, `phase: stopped`). Stop.
-- **oui** → continue to Step 3.
+- **oui** → continue to Step 4.
 
-## Step 3 — Accept + budget check
+## Step 4 — Accept + budget check
 
 1. Update the current issue entry **in place**: `stage: accepted`, record the `pr`.
    Increment `completed_count`. Write relay-state before anything else. Also refresh
@@ -94,12 +133,13 @@ Branch on the response:
    `autopilot.json active: false` (disarm), report "the coda — budget reached", and stop
    (do not spawn).
 
-## Step 4 — Resolve + cue the next movement (dispatch queue-scout)
+## Step 5 — Resolve + cue the next movement (dispatch queue-scout)
 
 Dispatch `monkey-maestro:queue-scout` (see `## Subagent dispatch`) in `MODE: next`, passing
 the just-accepted issue. It applies the relay "startable" rule — **blockers must be
-actually merged/Done**, so a dependent of the just-accepted-but-unmerged issue is NOT
-yet startable.
+actually merged/Done** (so a dependent of the just-accepted-but-unmerged issue is NOT yet
+startable) and the candidate **must not already be In Progress on Linear** (no second
+worktree over work already underway).
 
 - If queue-scout returns no startable issue → set `phase: done`, reason `queue_drained`,
   set `autopilot.json active: false` (disarm so a later re-run is not blocked). Report it;
@@ -119,6 +159,7 @@ On any scout/spawn failure: set `phase: halted` + `reason`, set `autopilot.json 
 ```text
 monkey-maestro:advance report
   Accepted:     <identifier> - <title> (PR <url>)
+  Review:       clean after <review_rounds> fix round(s) | overridden by patron (<n> blocking) | unavailable: <reason> (git-gremlin:reviewer)
   Completed:    <completed_count>/<max_issues>
   Next issue:   <identifier> - <title> | _none_ (<queue_drained|budget_reached>)
   Worktree:     spawning <branch> via git-gremlin:spawn | not spawned (<reason>)
@@ -126,9 +167,26 @@ monkey-maestro:advance report
   Reminder:     merge the open PRs at your own tempo — the relay never merges
 ```
 
-## Subagent dispatch (Step 4)
+## Subagent dispatch
 
-This skill dispatches the `monkey-maestro:queue-scout` subagent.
+This skill dispatches two subagents: `git-gremlin:reviewer` (Step 2) and
+`monkey-maestro:queue-scout` (Step 5).
+
+**Step 2 — code review the PR** (`git-gremlin:reviewer`, read-only, returns severity-ranked findings):
+
+```
+Agent({
+  subagent_type: 'git-gremlin:reviewer',
+  description: 'code review the relay movement PR diff vs main',
+  prompt: `Review the PR diff for the current relay movement: branch <BRANCH> vs base
+\`main\` — the diff git-gremlin:pr just opened. Run your context compiler with
+\`--base main\`, load the applied repo rules, run the portable review passes, and return
+your severity-ranked Final Report (findings first, then the manifest summary). Read-only:
+never touch git state, the PR, or any file.`,
+})
+```
+
+**Step 5 — resolve the next startable issue** (`monkey-maestro:queue-scout`):
 
 ```
 Agent({
@@ -139,8 +197,9 @@ STATE_DIR: <abs git-common-dir>/nuthouse
 ACCEPTED_ISSUE: <identifier just accepted>
 RELAY_ID: <relay_id>
 Apply the relay startable rule (blockers actually merged/Done; the accepted-but-unmerged
-issue does NOT unblock its dependents). Return the next issue and spawn parameters per
-the pipeline-contract baton prompt, or _none_ if the queue is drained.`,
+issue does NOT unblock its dependents; skip any issue already In Progress on Linear).
+Return the next issue and spawn parameters per the pipeline-contract baton prompt, or
+_none_ if the queue is drained.`,
 })
 ```
 
@@ -149,6 +208,13 @@ the pipeline-contract baton prompt, or _none_ if the queue is drained.`,
 - Run `git push`, `git commit`, or `git rebase`.
 - Merge the PR or mark the Linear issue Done — the patron merges; `Closes <id>` closes it.
 - Auto-answer the acceptance gate — it is always the patron's, even with autopilot on.
+  (The gate is only _reached_ on a clean review; its answer is still never the maestro's.)
+- Skip the PR code review — it runs every movement; it is a blocking gate.
+- Present the acceptance gate while blocking (`BLOCKER`/`HIGH`) findings stand — hand back
+  to fix and re-test first; loop until clean, escalate to the patron after 3 rounds.
+- Loop the review-fix cycle unattended forever — bound it at 3 rounds, then escalate.
+- Fix code, commit, or push from this skill — it has no `Edit`/`commit`/`push`; it hands
+  the findings to the implementation turn and re-enters after the re-verify.
 - Accept a feature whose checks are failing or whose PR is missing — hand back instead.
 - Double-spawn an issue already `accepted` in relay-state.
 - Spawn the next worktree if the scout failed — halt instead.
