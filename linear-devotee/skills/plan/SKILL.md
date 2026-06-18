@@ -12,6 +12,7 @@ Rigid planning gate. Match the user's language; keep technical identifiers uncha
 
 > Voice cadence: at every user-visible workflow transition, try to dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Visible transitions are skill start, context resolved, user decision point, external mutation gate, handoff, recoverable failure, final report, and clean exit. Print the returned `line` only when non-empty. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Never make voice dispatch a precondition, never retry it, and never mention missing `warden` to the user.
 > Voice flag: !`cat "$HOME/.claude/nuthouse/voice.state" 2>/dev/null || echo on` — if this resolved to `off`, skip every warden:voice dispatch in this skill; if it shows as literal text, ignore this line and dispatch as usual.
+> Autopilot flag: !`cat "$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)/nuthouse/autopilot.json" 2>/dev/null || echo off` — monkey-maestro relay. Apply the `plan_gate` and auto-handoff branches in steps 6 and 8 ONLY if this resolved to JSON with `active: true` and a future `expires_at` (the flag lives under this repo's shared `.git`, so it is already repo-scoped); otherwise behave interactively as usual.
 
 ## Context
 
@@ -112,7 +113,7 @@ Rigid planning gate. Match the user's language; keep technical identifiers uncha
    - If review needs changes, rewrite `<PLAN_FILE>` with the revised sections (same artifact shape as step 4) and re-audit. Never display plan content inline.
    - Ask one user-decision blocker at a time.
    - Show drift summary (from audit output); do not patch spec yet.
-   - Print `Plan written to: <PLAN_FILE>` then ask `Validate this plan? (y / edit / stop)`.
+   - Print `Plan written to: <PLAN_FILE>`. In autopilot, apply the flag's `plan_gate`: `auto-clean` auto-validates (treat as `y`) ONLY when the plan-auditor returned `PLAN_REVIEW: pass` with zero `BLOCKERS` — otherwise pause and ask `Validate this plan? (y / edit / stop)`; `manual` always asks; `auto` always auto-validates. **Never auto-validate past an auditor BLOCKER**, whatever the gate. Outside autopilot, always ask `Validate this plan? (y / edit / stop)`.
    - On `edit`: instruct the user to edit `<PLAN_FILE>` directly, then re-dispatch plan-auditor on the same path.
 7. After validation:
    - Set plan `status: validated`, update `validated-at`, increment `plan-version` if revised.
@@ -121,7 +122,8 @@ Rigid planning gate. Match the user's language; keep technical identifiers uncha
    - On `skip`, leave `spec-synced-at: _none_` and report the waiver/blocker clearly.
 8. Handoff:
    - Never start implementation yourself.
-   - On `implementation_ready`, present a hand-off menu (try a `warden:voice` line first):
+   - On `implementation_ready` in autopilot: skip the menu and proceed as if `(i)` was chosen — print `Autopilot: plan validated, starting implementation` and hand the artifacts (named fields below) straight to the implementation turn.
+   - On `implementation_ready` outside autopilot, present a hand-off menu (try a `warden:voice` line first):
 
      ```
      <voice line — linear-devotee>

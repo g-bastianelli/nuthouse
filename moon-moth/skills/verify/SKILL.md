@@ -8,6 +8,7 @@ allowed-tools: Bash(moon run:*), Bash(moon query:*), Bash(git diff:*), Read, Age
 # verify
 
 > At visible transitions, try to dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Print the returned `line` only when non-empty. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Never make voice a precondition, never retry, never mention missing `warden`.
+> Autopilot flag: !`cat "$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)/nuthouse/autopilot.json" 2>/dev/null || echo off` — monkey-maestro relay. Take the **autopilot branch** in Steps 3–4 ONLY if this resolved to JSON with `active: true` and a future `expires_at` (the flag lives under this repo's shared `.git`, so it is already repo-scoped); otherwise behave interactively as usual.
 
 ## Voice
 
@@ -84,6 +85,12 @@ If any check fails or the auditor flags a real blocker:
 3. Re-run only the affected task that failed (`moon run <project>:<task>`) until
    green. Do not declare a clean flight while a wing is torn.
 
+In autopilot: a torn wing stops the forward chain — report the failing evidence verbatim
+and do NOT auto-chain to commit/pr. The relay pauses here; verify owns no relay-state, so
+it writes no `phase` — stopping the forward chain IS the halt (per the stop-ladder in
+`monkey-maestro`'s pipeline-contract). The patron fixes and re-verifies (re-running this
+skill), or runs `monkey-maestro:halt` to disarm. Autopilot never papers over a wrong note.
+
 ## Step 4 — Final report + hand-off
 
 ```text
@@ -99,7 +106,10 @@ moon-moth:verify report
 A `clean flight 🌙` line is allowed **only** when every affected check passed on
 real output and the auditor found no real blocker.
 
-On a clean flight, present the hand-off menu:
+On a clean flight in autopilot: skip the menu and auto-chain — invoke `git-gremlin:commit`
+(the relay commits the whole movement), then on its return `git-gremlin:pr`. The pr step
+then hands to `monkey-maestro:advance` for the acceptance gate. Otherwise, present the
+hand-off menu:
 
 ```
 <voice intro line — moon-moth>

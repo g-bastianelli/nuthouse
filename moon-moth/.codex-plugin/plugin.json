@@ -1,6 +1,6 @@
 {
   "name": "moon-moth",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Moon-aware agentic dev loop for TypeScript monorepos — scopes work to affected projects via `moon query`, implements TDD-first, verifies via affected :typecheck/:lint/:test before handoff. Cross-runtime (Claude Code + Codex).",
   "author": {
     "name": "g-bastianelli"

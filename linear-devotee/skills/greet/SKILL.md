@@ -3,7 +3,7 @@ name: greet
 description: Use immediately at session start when a Linear issue identifier is detected from branch or first prompt. Delegates issue context to issue-context, optionally prepares branch/status, resolves source spec, writes greet context, then hands off to plan. Never writes implementation code.
 argument-hint: [issue-id] [--fresh]
 model: haiku
-allowed-tools: Read, Glob, Agent, Bash(git branch --show-current), Bash(cat:*)
+allowed-tools: Read, Glob, Agent, Bash(git branch --show-current), Bash(git rev-parse:*), Bash(cat:*)
 ---
 
 # linear-devotee:greet
@@ -12,6 +12,7 @@ Rigid context gate. Match the user's language; keep technical identifiers unchan
 
 > Voice cadence: at every user-visible workflow transition, try to dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Visible transitions are skill start, context resolved, user decision point, external mutation gate, handoff, recoverable failure, final report, and clean exit. Print the returned `line` only when non-empty. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Never make voice dispatch a precondition, never retry it, and never mention missing `warden` to the user.
 > Voice flag: !`cat "$HOME/.claude/nuthouse/voice.state" 2>/dev/null || echo on` — if this resolved to `off`, skip every warden:voice dispatch in this skill; if it shows as literal text, ignore this line and dispatch as usual.
+> Autopilot flag: !`cat "$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)/nuthouse/autopilot.json" 2>/dev/null || echo off` — monkey-maestro relay. When this resolved to JSON with `active: true` and a future `expires_at` (the flag lives under this repo's shared `.git`, so it is already repo-scoped), apply the autopilot guard in step 1; otherwise ignore it.
 
 ## Context
 
@@ -28,6 +29,7 @@ Rigid context gate. Match the user's language; keep technical identifiers unchan
    - If `$ARGUMENTS` contains a Linear issue id (e.g. `ABC-123`), use it as `issue`.
    - Use the `Session state` JSON from `## Context`; extract `issue` (unless already set from `$ARGUMENTS`), `current_branch`, `needs_branch`. If it shows `no state`, treat the state file as absent and rely on `$ARGUMENTS`/the user prompt for the issue id.
    - Stop if `greeted: true` or no issue id.
+   - Autopilot guard: when the autopilot flag is on (see the header line), read the relay-state at `$(git rev-parse --path-format=absolute --git-common-dir)/nuthouse/relay-<relay_id>.json` (relay_id from the flag) with `Read`. If this issue's entry is already at `stage: accepted`, stop — the movement is already done; do not re-greet, re-flip status, or re-loop. (A re-opened workspace gets a fresh session id, so the session-scoped `greeted` flag alone won't catch this.)
    - Do not fetch full issue context in main context.
 2. Delegate context:
    - Dispatch `linear-devotee:issue-context` with:

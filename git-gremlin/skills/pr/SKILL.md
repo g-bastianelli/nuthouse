@@ -11,6 +11,7 @@ Rigid approval gate. Match the user's language; keep technical identifiers uncha
 
 > Voice cadence: at every user-visible workflow transition, try to dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Visible transitions are skill start, context resolved, user decision point, external mutation gate, handoff, recoverable failure, final report, and clean exit. Print the returned `line` only when non-empty. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Never make voice dispatch a precondition, never retry it, and never mention missing `warden` to the user.
 > Voice flag: !`cat "$HOME/.claude/nuthouse/voice.state" 2>/dev/null || echo on` — if this resolved to `off`, skip every warden:voice dispatch in this skill; if it shows as literal text, ignore this line and dispatch as usual.
+> Autopilot flag: !`cat "$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)/nuthouse/autopilot.json" 2>/dev/null || echo off` — monkey-maestro relay. Take the **autopilot branch** in the steps below ONLY if this resolved to JSON with `active: true` and a future `expires_at` (the flag lives under this repo's shared `.git`, so it is already repo-scoped); otherwise behave interactively as usual.
 
 ## Voice
 
@@ -38,13 +39,14 @@ is printed, revert to the session default voice immediately.
 2. Draft PR title and description:
    - Dispatch `git-gremlin:pr-drafter` with branch + log + diff vs base as input.
    - Receive `{ title: string, body: string, base: string }`.
-   - Display the proposed title and description to the user. Wait for confirmation or edit request.
+   - In autopilot: treat the drafted title/body as approved — print them for the record and proceed directly to step 3 without waiting. Otherwise: display the proposed title and description to the user and wait for confirmation or edit request.
 3. Create PR:
    - On confirmation: re-dispatch `git-gremlin:pr-drafter` with `action: execute`.
    - Receive `{ url: string }`.
    - On rejection: offer to regenerate or cancel. Never create PR silently.
-4. Report:
+4. Report and hand off:
    - Return result.
+   - In autopilot: auto-chain to `monkey-maestro:advance` — print `monkey-maestro:advance` and continue immediately so the maestro holds the per-feature acceptance gate. Otherwise: stop after the report.
 
 ## Final Report
 
@@ -58,7 +60,7 @@ git-gremlin:pr report
 ## Never
 
 - Run `gh pr create` directly from the skill (only via pr-drafter).
-- Create a PR without explicit user confirmation.
+- Create a PR without explicit user confirmation (in autopilot, the armed relay flag is that standing confirmation).
 - Skip the `gh auth status` check.
 - Retry silently after `gh pr create` failure — surface stderr verbatim and stop.
 

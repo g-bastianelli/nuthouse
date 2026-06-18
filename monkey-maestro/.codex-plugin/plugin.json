@@ -1,0 +1,21 @@
+{
+  "name": "monkey-maestro",
+  "version": "1.0.0",
+  "description": "Deranged maestro that conducts your Linear backlog through the build pipeline — one worktree per issue, your applause between movements.",
+  "author": { "name": "g-bastianelli" },
+  "repository": "https://github.com/g-bastianelli/nuthouse",
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Monkey Maestro",
+    "shortDescription": "Conducts your Linear backlog through the build pipeline, one worktree per issue.",
+    "developerName": "g-bastianelli",
+    "category": "Productivity",
+    "capabilities": ["Read", "Write"],
+    "websiteURL": "https://github.com/g-bastianelli/nuthouse",
+    "defaultPrompt": [
+      "Use Monkey Maestro to run my Linear backlog through the build pipeline.",
+      "Use Monkey Maestro to start the autopilot relay on the next issue."
+    ],
+    "logo": "./assets/banner.png"
+  }
+}

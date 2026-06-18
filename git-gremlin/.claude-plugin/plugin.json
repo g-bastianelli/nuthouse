@@ -2,7 +2,7 @@
   "name": "git-gremlin",
   "displayName": "Git Gremlin",
   "description": "Git gremlin — auto-triggers contextual review, commit, and GitHub PR helpers, delegates diff-heavy drafting to subagents, and keeps mutations behind scoped intent gates",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "author": {
     "name": "g-bastianelli"
   },

@@ -52,6 +52,12 @@ BODY: <approved PR body>                         # required for execute
    <bulleted checklist of how to verify the changes>
    ```
 
+   When one clear linked Linear issue id was detected in step 3, append a closing reference on its own line at the end of the body, so the issue auto-transitions/closes when the PR is merged (Linear GitHub integration):
+
+   ```
+   Closes <id>
+   ```
+
 6. Output the result.
 
 ### 2. On `ACTION: execute`
@@ -87,6 +93,6 @@ On failure: `{ "error": "<stderr verbatim>" }`
 - **Never run `git push` or `git commit`.** Ever.
 - **No invention.** If log and diff are empty, return `{ "error": "no commits ahead of base" }`.
 - **PR title under 72 chars.** Suffix with ` [<Linear issue id>]` whenever one clear linked Linear issue id is present in `BRANCH`, `LOG`, or `DIFF`; preserve the existing PR type/scope marker at the beginning, such as `(chore)` or `feat(scope):`.
-- **Body uses the Summary + Test plan structure.** No free-form prose.
+- **Body uses the Summary + Test plan structure**, plus a `Closes <id>` line at the end when one clear linked Linear issue id is present. No free-form prose.
 - **Voice = neutral.** No gremlin talk in the output — the calling skill wraps this in voice.
 - **Output stays clean JSON.** No prose, no markdown wrapper around the JSON block.

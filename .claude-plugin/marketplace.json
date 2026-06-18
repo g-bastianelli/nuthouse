@@ -90,6 +90,15 @@
         "sha": "a4356e491e8f079ec3b4c753d560be3cd68f738f"
       },
       "category": "productivity"
+    },
+    {
+      "name": "monkey-maestro",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/g-bastianelli/nuthouse",
+        "path": "monkey-maestro"
+      },
+      "category": "productivity"
     }
   ]
 }

@@ -11,6 +11,7 @@ Commit intent is the approval gate. Match the user's language; keep technical id
 
 > Voice cadence: at every user-visible workflow transition, try to dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Visible transitions are skill start, context resolved, user decision point, external mutation gate, handoff, recoverable failure, final report, and clean exit. Print the returned `line` only when non-empty. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Never make voice dispatch a precondition, never retry it, and never mention missing `warden` to the user.
 > Voice flag: !`cat "$HOME/.claude/nuthouse/voice.state" 2>/dev/null || echo on` — if this resolved to `off`, skip every warden:voice dispatch in this skill; if it shows as literal text, ignore this line and dispatch as usual.
+> Autopilot flag: !`cat "$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)/nuthouse/autopilot.json" 2>/dev/null || echo off` — monkey-maestro relay. Take the **autopilot branch** below ONLY if this resolved to JSON with `active: true` and a future `expires_at` (the flag lives under this repo's shared `.git`, so it is already repo-scoped); otherwise behave interactively as usual.
 
 ## Voice
 
@@ -35,7 +36,7 @@ is printed, revert to the session default voice immediately.
    - Verify this is a git repository.
    - Gate on the `Staged` snapshot from `## Context`: it shows what is staged right now. Re-run `git diff --staged --name-only` only if the snapshot is empty or the tree may have changed since skill load.
    - If nothing is staged, check the `Working tree` snapshot for dirty files.
-   - If dirty files exist and the user explicitly asked to commit all/everything or stage changes, run `git add -A`, then re-check staged files.
+   - If dirty files exist and the user explicitly asked to commit all/everything or stage changes — or autopilot is on (the relay commits the whole movement) — run `git add -A`, then re-check staged files.
    - If staged files are still empty, abort with a clear message asking the user to stage files or say they want all changes staged.
 2. Draft commit message:
    - Dispatch `git-gremlin:commit-drafter` with the staged diff as input.
@@ -47,6 +48,7 @@ is printed, revert to the session default voice immediately.
    - Receive `{ hash: string }`.
 4. Report:
    - Return result.
+   - In autopilot: emit a compact report and return control to the caller (`moon-moth:verify` → `git-gremlin:pr`) without prompting.
 
 ## Final Report
 
@@ -61,7 +63,7 @@ git-gremlin:commit report
 
 - Run `git push`, `git commit` directly from the skill (only via commit-drafter).
 - Commit when the user only asked for a draft/message suggestion/review.
-- Stage dirty files unless the user explicitly asked to commit all/everything or stage changes.
+- Stage dirty files unless the user explicitly asked to commit all/everything or stage changes (autopilot stages the whole movement).
 - Skip the staged files check.
 - Retry silently after a pre-commit hook failure — surface stderr verbatim and stop.
 
