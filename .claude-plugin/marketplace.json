@@ -27,7 +27,7 @@
         "source": "git-subdir",
         "url": "https://github.com/g-bastianelli/nuthouse",
         "path": "linear-devotee",
-        "sha": "a4356e491e8f079ec3b4c753d560be3cd68f738f"
+        "sha": "26088d674c882fbfb2e27884196e2478bc47c17f"
       },
       "category": "productivity"
     },
@@ -57,7 +57,7 @@
         "source": "git-subdir",
         "url": "https://github.com/g-bastianelli/nuthouse",
         "path": "git-gremlin",
-        "sha": "be015ccd1f98d7d18d3cbd1c129de8f73134ad28"
+        "sha": "26088d674c882fbfb2e27884196e2478bc47c17f"
       },
       "category": "productivity"
     },
@@ -87,7 +87,7 @@
         "source": "git-subdir",
         "url": "https://github.com/g-bastianelli/nuthouse",
         "path": "moon-moth",
-        "sha": "a4356e491e8f079ec3b4c753d560be3cd68f738f"
+        "sha": "26088d674c882fbfb2e27884196e2478bc47c17f"
       },
       "category": "productivity"
     },
@@ -96,7 +96,8 @@
       "source": {
         "source": "git-subdir",
         "url": "https://github.com/g-bastianelli/nuthouse",
-        "path": "monkey-maestro"
+        "path": "monkey-maestro",
+        "sha": "26088d674c882fbfb2e27884196e2478bc47c17f"
       },
       "category": "productivity"
     }
