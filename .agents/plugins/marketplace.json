@@ -120,6 +120,19 @@
         "authentication": "ON_INSTALL"
       },
       "category": "Productivity"
+    },
+    {
+      "name": "hermes-tweet",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/Xquik-dev/hermes-tweet",
+        "path": "."
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
     }
   ]
 }
