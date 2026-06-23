@@ -1,8 +1,8 @@
 {
   "name": "subroutine",
   "displayName": "Subroutine",
-  "description": "Ambient implementation discipline for TypeScript monorepos — paths-activated knowledge skills that silently bind every edit to type-safety, Result/unwrap, Zod validation, code-organisation, React, and Hono pipeline rules. No workflows, no commands: the discipline applies itself when matching files are touched. Defers to the repo's own AGENTS.md. Cross-runtime (Claude Code + Codex).",
-  "version": "2.0.0",
+  "description": "Ambient implementation discipline for TypeScript monorepos — a PostToolUse/SubagentStart/SessionStart hook deterministically injects type-safety, Result/unwrap, Zod validation, code-organisation, React, and Hono-pipeline rules whenever a matching file is edited or reviewed. The SKILL.md files hold the rules; the hook delivers them, so the discipline rides along even when model-driven skill invocation wouldn't. No workflows, no commands. Defers to the repo's own AGENTS.md. Cross-runtime (Claude Code + Codex).",
+  "version": "2.1.0",
   "author": {
     "name": "g-bastianelli"
   },

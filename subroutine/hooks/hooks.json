@@ -1,0 +1,40 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT:-$CLAUDE_PLUGIN_ROOT}/claudecode/hooks/inject-digest.mjs\"",
+            "statusMessage": "Loading subroutine discipline"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT:-$CLAUDE_PLUGIN_ROOT}/claudecode/hooks/inject-on-edit.mjs\"",
+            "statusMessage": "Binding edit to subroutine discipline"
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "matcher": "review|auditor",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT:-$CLAUDE_PLUGIN_ROOT}/claudecode/hooks/inject-on-review.mjs\"",
+            "statusMessage": "Briefing reviewer on subroutine discipline"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -6,17 +6,35 @@
 
 Ambient implementation discipline for TypeScript monorepos. The subroutine
 doesn't speak, doesn't decide, doesn't run workflows — it _silently obeys_.
-Install it and six paths-activated knowledge skills bind every matching edit to
-the discipline: type-safety, the Result/unwrap pattern, Zod validation,
-named-export code organisation, React component structure, and the layered Hono
-pipeline. No commands to invoke, no orchestration — the agent does the work, the
-collar holds it to the rules. The stricter your rules, the happier it is. The
-repo's own `AGENTS.md` always wins over the plugin's discipline.
+Install it and a hook binds the discipline to your work: type-safety, the
+Result/unwrap pattern, Zod validation, named-export code organisation, React
+component structure, and the layered Hono pipeline. No commands to invoke, no
+orchestration — the agent does the work, the collar holds it to the rules. The
+stricter your rules, the happier it is. The repo's own `AGENTS.md` always wins
+over the plugin's discipline.
 
-## Discipline (knowledge skills)
+## How it binds
 
-All skills are `user-invocable: false` — they activate automatically when the
-files being worked on match their `paths` globs:
+The discipline lives in six `SKILL.md` files, but it is **delivered by a hook**,
+not by hoping the model invokes a skill. Model-driven skill invocation is
+unreliable for passive knowledge, and subagents don't inherit the parent
+session's skills at all — so a hook is the only mechanism that loads the rules
+deterministically, during both implementation and review:
+
+| Hook event      | Matcher                  | What it does                                                                                                                        |
+| --------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `PostToolUse`   | `Edit\|Write\|MultiEdit` | Reads the edited file path, matches it against each skill's `paths`, injects the matching discipline bodies as `additionalContext`. |
+| `SubagentStart` | `review`                 | A code-review subagent starts blind to the parent's skills — this injects the disciplines so the reviewer can flag violations.      |
+| `SessionStart`  | `startup\|resume`        | In a TypeScript repo, injects a one-line-per-discipline digest so the spine is present before the first edit.                       |
+
+Bodies are packed under the runtime's 10 000-char `additionalContext` budget:
+when several disciplines match one file, the universal rules go in full and the
+lowest-priority overflow degrades to a one-line summary. The `SKILL.md` files
+remain the single source of truth — edit them, and the hook delivers the change.
+
+## Discipline (the six rule sets)
+
+Each discipline matches files by its `paths` globs:
 
 | Skill               | Paths                                        | Discipline                                                                               |
 | ------------------- | -------------------------------------------- | ---------------------------------------------------------------------------------------- |
@@ -51,9 +69,11 @@ codex plugin add subroutine@nuthouse
 
 Restart the Codex session after install.
 
-> Note: Codex ignores `paths` and `user-invocable`, so these knowledge skills
-> surface there as ordinary low-priority skills instead of paths-activated
-> ambient discipline.
+> Note: Codex discovers `hooks/hooks.json` the same way Claude Code does, so the
+> discipline is delivered by the hook on both runtimes. `PostToolUse`-on-edit
+> injection works wherever Codex fires that event; `SubagentStart` /
+> `SessionStart` parity on Codex is unverified — validate before relying on the
+> review and session-digest injection there.
 
 ## Persona
 
