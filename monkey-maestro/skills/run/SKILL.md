@@ -65,8 +65,9 @@ does **not** implement, merge, or maintain a local issue queue.
 Dispatch the `monkey-maestro:queue-scout` subagent (see `## Subagent dispatch`). It owns
 the Linear read path: it reads the project queue, applies the startable rule, checks local
 branches/worktrees for duplicate-spawn protection, and returns the next startable issue
-plus `git-gremlin:spawn` parameters. If `$ARGUMENTS` named an `issue-id`, pass it as the
-preferred start; `queue-scout` should pick it first if it is startable.
+plus `git-gremlin:spawn` parameters. It must not choose a spawned agent; `git-gremlin:spawn`
+asks the user for `codex` or `claude` every time. If `$ARGUMENTS` named an `issue-id`,
+pass it as the preferred start; `queue-scout` should pick it first if it is startable.
 
 - If queue-scout reports Linear unreachable → set `autopilot.json active: false`,
   `last_halt_reason: auth_expired`, report, and stop.
@@ -79,11 +80,12 @@ preferred start; `queue-scout` should pick it first if it is startable.
 ## Step 3 — Cue the first worktree
 
 Auto-chain to `git-gremlin:spawn` with the queue-scout parameters (project, name, branch,
-base-branch `main`, agent, and the relay baton prompt beginning with the exact marker
-`AUTOPILOT RELAY (monkey-maestro)`). Print the invocation and continue — `spawn` drains
-its own mutation gate because autopilot is on and the prompt carries the relay marker.
-`spawn` creates the worktree, opens it, and the current agent STOPS there. The fresh agent
-in the new worktree picks up the movement via `linear-devotee:greet`.
+base-branch `main`, and the relay baton prompt beginning with the exact marker
+`AUTOPILOT RELAY (monkey-maestro)`). Print the invocation and continue. `spawn` must ask
+the user to choose `codex` or `claude`; after that, it drains its own final mutation gate
+because autopilot is on and the prompt carries the relay marker. `spawn` creates the
+worktree, opens it, and the current agent STOPS there. The fresh agent in the new
+worktree picks up the movement via `linear-devotee:greet`.
 
 On any scout/spawn failure, do not spawn: set `autopilot.json active: false`,
 `last_halt_reason: <reason>`, report, and stop.

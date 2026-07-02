@@ -95,6 +95,13 @@ In `MODE: first`, a `PREFERRED_ISSUE` is a real preferred start: if it is starta
 it before scanning the rest of the queue. In `MODE: next`, the `ACCEPTED_ISSUE` is only an
 anchor and must be excluded from candidates.
 
+## Spawn agent selection
+
+`git-gremlin:spawn` owns agent selection. `run`, `advance`, and `queue-scout` must not
+choose or default the spawned agent. Every workspace spawn asks the user to choose
+`codex` or `claude`; only after that choice does `git-gremlin:spawn` validate the selected
+agent against `superset agents list --local` and create the workspace.
+
 ## Stop ladder
 
 Any of these stops forward progress:

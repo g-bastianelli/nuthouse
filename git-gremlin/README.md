@@ -8,12 +8,12 @@ It recognizes review, commit, or PR intent, compiles repo instructions before re
 
 ## Skills
 
-| Skill                | Purpose                                                                                 |
-| -------------------- | --------------------------------------------------------------------------------------- |
-| `git-gremlin:commit` | Run a conventional commit from staged or explicitly approved changes                    |
-| `git-gremlin:pr`     | Draft and optionally create a GitHub pull request from branch history and diff          |
-| `git-gremlin:review` | Review the current diff/branch with repo instruction files explicitly loaded            |
-| `git-gremlin:spawn`  | Create a per-branch Superset workspace (one git worktree per branch) and spawn an agent |
+| Skill                | Purpose                                                                                                |
+| -------------------- | ------------------------------------------------------------------------------------------------------ |
+| `git-gremlin:commit` | Run a conventional commit from staged or explicitly approved changes                                   |
+| `git-gremlin:pr`     | Draft and optionally create a GitHub pull request from branch history and diff                         |
+| `git-gremlin:review` | Review the current diff/branch with repo instruction files explicitly loaded                           |
+| `git-gremlin:spawn`  | Create a per-branch Superset workspace (one git worktree per branch) and spawn a Codex or Claude agent |
 
 ## Review Skill
 

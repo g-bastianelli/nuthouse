@@ -33,6 +33,7 @@ test("denies branch creation inside a Superset workspace", () => {
   expect(out.permissionDecisionReason).toContain("git-gremlin:spawn");
   expect(out.permissionDecisionReason).toContain("feat-x");
   expect(out.permissionDecisionReason).toContain("superset workspaces create");
+  expect(out.permissionDecisionReason).toContain("choose Codex or Claude");
 });
 
 test("allows branch creation OUTSIDE the Superset tree", () => {

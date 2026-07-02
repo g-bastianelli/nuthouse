@@ -64,8 +64,10 @@ const reason = [
   "",
   "Preferred: invoke the `git-gremlin:spawn` skill. It wraps, roughly:",
   `  superset workspaces create --local --branch ${branch} \\`,
-  "    --base-branch <current-branch> --agent <claude|codex> \\",
+  "    --base-branch <current-branch> --agent <user-chosen codex|claude> \\",
   '    --prompt "<the task to continue, summarized>"',
+  "",
+  "The spawn skill must ask the user to choose Codex or Claude before building that command.",
   "",
   "The new agent takes over inside its own worktree. The current agent does not create the branch.",
 ].join("\n");

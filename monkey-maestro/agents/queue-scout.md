@@ -1,6 +1,6 @@
 ---
 name: queue-scout
-description: Read-only Linear scout for the monkey-maestro autopilot relay. Reads the Linear project queue fresh, applies the startable rule, checks local branches/worktrees to avoid duplicate spawns, and returns the next issue plus git-gremlin:spawn parameters as strict JSON. Never writes to Linear, git, or local relay state. Used by monkey-maestro:run and monkey-maestro:advance.
+description: Read-only Linear scout for the monkey-maestro autopilot relay. Reads the Linear project queue fresh, applies the startable rule, checks local branches/worktrees to avoid duplicate spawns, and returns the next issue plus git-gremlin:spawn parameters as strict JSON. Never chooses the spawned Codex/Claude agent; git-gremlin:spawn asks the user every time. Never writes to Linear, git, or local relay state. Used by monkey-maestro:run and monkey-maestro:advance.
 model: haiku
 effort: low
 maxTurns: 10
@@ -90,7 +90,6 @@ For the chosen issue, compute (read-only):
   `git config user.name` (kebab it), id lowercased, title kebab-cased and trimmed to
   ~50 chars. Same convention as `linear-devotee:greet`.
 - `base_branch`: `main` (or the repo default branch if discoverable read-only).
-- `agent`: `claude`.
 - `project_hint`: the repo folder name.
 - `prompt`: the relay baton prompt from
   `${CLAUDE_PLUGIN_ROOT}/shared/pipeline-contract.md`, with `<ISSUE>`, `<BRANCH>`,
@@ -122,7 +121,6 @@ Return **strict JSON only**, no prose, no markdown fence:
     "name": "<git-user>/<id>-<kebab-title>",
     "branch": "<git-user>/<id>-<kebab-title>",
     "base_branch": "main",
-    "agent": "claude",
     "prompt": "<filled relay baton prompt>"
   },
   "drained": false,

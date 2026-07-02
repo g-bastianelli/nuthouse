@@ -125,16 +125,19 @@ budget_reached`, report the budget reached, and stop without spawning.
 ## Step 5 — Resolve + cue the next movement (dispatch queue-scout)
 
 Dispatch `monkey-maestro:queue-scout` in `MODE: next`, passing the just-accepted issue,
-the cached Linear project id, and the audit breadcrumbs from the control flag. Queue-scout
-reads Linear fresh, applies the startable rule, checks local branches/worktrees for
-duplicate-spawn protection, and returns the next startable issue plus spawn parameters.
+the cached Linear project id, and the audit breadcrumbs from the control flag.
+Queue-scout reads Linear fresh, applies the startable rule, checks local branches/worktrees
+for duplicate-spawn protection, and returns the next startable issue plus spawn
+parameters. It must not choose a spawned agent; `git-gremlin:spawn` asks the user for
+`codex` or `claude` every time.
 
 - If queue-scout returns no startable issue → set `autopilot.json active: false`,
   `last_halt_reason: queue_drained`. Report it; if open PRs are blocking dependents, tell
   the patron to merge them and re-run `monkey-maestro:run` to resume. Stop.
 - Otherwise → auto-chain to `git-gremlin:spawn` with the queue-scout parameters
   (base-branch `main`, baton prompt beginning with `AUTOPILOT RELAY (monkey-maestro)`).
-  `spawn` drains its gate, creates the worktree, opens it, and this agent STOPS.
+  `spawn` asks the user to choose `codex` or `claude`, then drains its final gate, creates
+  the worktree, opens it, and this agent STOPS.
 
 On any scout/spawn failure: set `autopilot.json active: false`,
 `last_halt_reason: <reason>`, report, and stop.

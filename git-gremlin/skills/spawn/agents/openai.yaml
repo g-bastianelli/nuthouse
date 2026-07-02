@@ -1,8 +1,8 @@
 interface:
   display_name: "Git Spawn"
-  short_description: "Spawn a per-branch Superset workspace with a fresh agent"
+  short_description: "Spawn a per-branch Superset workspace with Codex or Claude"
   icon_large: "../../../assets/banner.png"
-  default_prompt: "Use $git-gremlin:spawn to create a new workspace for a branch instead of branching in place."
+  default_prompt: "Use $git-gremlin:spawn to create a new workspace for a branch with Codex or Claude instead of branching in place."
 
 policy:
   allow_implicit_invocation: true
