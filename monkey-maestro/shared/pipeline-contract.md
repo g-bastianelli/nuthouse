@@ -102,6 +102,16 @@ choose or default the spawned agent. Every workspace spawn asks the user to choo
 `codex` or `claude`; only after that choice does `git-gremlin:spawn` validate the selected
 agent against `superset agents list --local` and create the workspace.
 
+## Previous workspace cleanup
+
+`advance` may pass `cleanup_workspace_id` to `git-gremlin:spawn` after the patron accepts
+a movement and a next issue exists. The id must resolve to exactly one local Superset
+workspace for the current branch, with `type: "worktree"`, and the current worktree must
+be clean (`git status --porcelain` empty). `spawn` deletes that previous workspace only
+after the next workspace is created and opened, never for `type: "main"`, and never when
+the cleanup id equals the new workspace id. Cleanup failure is reported but does not fail
+the already-created next workspace.
+
 ## Stop ladder
 
 Any of these stops forward progress:
@@ -132,7 +142,8 @@ single-relay lock armed after forward progress has stopped.
    auto-chains `monkey-maestro:advance`.
 7. `monkey-maestro:advance` [H] → reviews the PR, asks the patron "tested, it's good?",
    records only audit/budget fields in `autopilot.json`, then asks `queue-scout` for the
-   next startable Linear issue and spawns it.
+   next startable Linear issue, spawns it, and best-effort deletes the previous accepted
+   worktree after the new workspace opens.
 
 The patron merges PRs out-of-band, at their own tempo.
 

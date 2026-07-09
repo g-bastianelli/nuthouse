@@ -3,7 +3,7 @@ name: advance
 description: Use when a feature is implemented, verified, and its PR is open and the autopilot relay must move on — auto-invoked by git-gremlin:pr in autopilot, or "issue suivante", "continue le relais", "next movement". Runs a blocking code review of the PR, holds the human acceptance gate, updates only the repo-scoped autopilot control flag, then asks Linear for the next startable issue and spawns it. Does not merge. Does not use local relay-state as queue authority.
 effort: high
 argument-hint: [issue-id]
-allowed-tools: Bash(git rev-parse:*), Bash(git branch --show-current), Bash(gh pr view:*), Bash(gh pr checks:*), Read, Write, Agent
+allowed-tools: Bash(git rev-parse:*), Bash(git branch --show-current), Bash(git status:*), Bash(gh pr view:*), Bash(gh pr checks:*), Bash(superset workspaces list:*), Read, Write, Agent
 ---
 
 # advance
@@ -124,8 +124,19 @@ budget_reached`, report the budget reached, and stop without spawning.
 
 ## Step 5 — Resolve + cue the next movement (dispatch queue-scout)
 
-Dispatch `monkey-maestro:queue-scout` in `MODE: next`, passing the just-accepted issue,
-the cached Linear project id, and the audit breadcrumbs from the control flag.
+Resolve the current workspace cleanup target before dispatch:
+
+1. Run `git status --porcelain`. If it is non-empty, set cleanup to
+   `skipped: dirty_worktree`.
+2. Otherwise run `superset workspaces list --local --json` and match the current branch.
+   If exactly one local workspace has `type: "worktree"` and `branch` equal to the current
+   branch, set `cleanup_workspace_id` to that id. If none, multiple, or `type: "main"`,
+   set cleanup to `skipped: not_a_unique_worktree`.
+3. This cleanup target is advisory. It is passed to `git-gremlin:spawn`, which deletes it
+   only after the next workspace has been created and opened.
+
+Then dispatch `monkey-maestro:queue-scout` in `MODE: next`, passing the just-accepted
+issue, the cached Linear project id, and the audit breadcrumbs from the control flag.
 Queue-scout reads Linear fresh, applies the startable rule, checks local branches/worktrees
 for duplicate-spawn protection, and returns the next startable issue plus spawn
 parameters. It must not choose a spawned agent; `git-gremlin:spawn` asks the user for
@@ -135,9 +146,10 @@ parameters. It must not choose a spawned agent; `git-gremlin:spawn` asks the use
   `last_halt_reason: queue_drained`. Report it; if open PRs are blocking dependents, tell
   the patron to merge them and re-run `monkey-maestro:run` to resume. Stop.
 - Otherwise → auto-chain to `git-gremlin:spawn` with the queue-scout parameters
-  (base-branch `main`, baton prompt beginning with `AUTOPILOT RELAY (monkey-maestro)`).
-  `spawn` asks the user to choose `codex` or `claude`, then drains its final gate, creates
-  the worktree, opens it, and this agent STOPS.
+  (base-branch `main`, baton prompt beginning with `AUTOPILOT RELAY (monkey-maestro)`,
+  plus `cleanup_workspace_id` when one was resolved). `spawn` asks the user to choose
+  `codex` or `claude`, then drains its final gate, creates the worktree, opens it, deletes
+  the previous workspace when cleanup is safe, and this agent STOPS.
 
 On any scout/spawn failure: set `autopilot.json active: false`,
 `last_halt_reason: <reason>`, report, and stop.
@@ -151,6 +163,7 @@ monkey-maestro:advance report
   Budget:       <accepted_count>/<max_issues>
   Next issue:   <identifier> - <title> | _none_ (<queue_drained|budget_reached>)
   Worktree:     spawning <branch> via git-gremlin:spawn | not spawned (<reason>)
+  Cleanup:      previous workspace <id> queued | skipped (<reason>)
   Authority:    Linear queue + GitHub PRs; no local relay-state queue
   Reminder:     merge the open PRs at your own tempo — the relay never merges
 ```
