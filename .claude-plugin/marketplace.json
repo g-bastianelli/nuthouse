@@ -57,7 +57,7 @@
         "source": "git-subdir",
         "url": "https://github.com/g-bastianelli/nuthouse",
         "path": "git-gremlin",
-        "sha": "f155a318ba413795a8c4b7caf0db4e7a1141f556"
+        "sha": "81520afdb9a916e85c0313729794602276e7ed1b"
       },
       "category": "productivity"
     },
@@ -97,7 +97,7 @@
         "source": "git-subdir",
         "url": "https://github.com/g-bastianelli/nuthouse",
         "path": "monkey-maestro",
-        "sha": "f155a318ba413795a8c4b7caf0db4e7a1141f556"
+        "sha": "81520afdb9a916e85c0313729794602276e7ed1b"
       },
       "category": "productivity"
     }
