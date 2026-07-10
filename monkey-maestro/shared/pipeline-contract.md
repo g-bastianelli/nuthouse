@@ -14,7 +14,6 @@ Local files are **control plane only**:
 - whether autopilot is armed for one Linear project in this repo,
 - the relay id for logging and baton prompts,
 - the plan gate,
-- the optional budget cap,
 - short audit breadcrumbs such as the last accepted issue/PR.
 
 Local files must never decide which issue is current, which issue is next, whether an
@@ -52,8 +51,6 @@ Path: `<PROJECT_STATE_DIR>/autopilot.json`.
   "repo": "/abs/path/.git", // git common dir, audit only
   "linear_project_id": "<id>", // required; must equal the directory name
   "plan_gate": "auto-clean", // auto-clean | manual | auto
-  "max_issues": 5,
-  "accepted_count": 0, // budget counter only; never queue authority
   "last_issue": null, // audit/baton breadcrumb only
   "last_pr": null, // audit/baton breadcrumb only
   "last_halt_reason": null,
@@ -83,10 +80,9 @@ worktree. If the matching flag is active and unexpired, report that relay. If no
 flag exists, treat the lock as an in-progress initialization; only reclaim it after its
 mtime is older than 30 minutes, then retry `mkdir` once. Never remove a fresh lock.
 
-Whenever a relay is disarmed (`queue_drained`, `budget_reached`, a spawn failure, or
-`halt`), set its matching flag to `active: false` and remove only its matching empty
-`LOCK_DIR`. A failed verification intentionally leaves both in place: the relay is paused,
-not abandoned.
+Whenever a relay is disarmed (`queue_drained`, a spawn failure, or `halt`), set its
+matching flag to `active: false` and remove only its matching empty `LOCK_DIR`. A failed
+verification intentionally leaves both in place: the relay is paused, not abandoned.
 
 ## Legacy global flag
 
@@ -160,7 +156,6 @@ Any of these stops forward progress:
 - `git-gremlin:commit`/`pr` surface non-zero stderr → stop and surface stderr.
 - `gh auth status`, `superset projects list`, or Linear queue access fails → disarm the
   flag with `last_halt_reason`.
-- `accepted_count >= max_issues` → disarm with `budget_reached`.
 - `queue-scout` finds no startable issue → disarm with `queue_drained`.
 
 Whenever a relay is done or halted, set its matching `RELAY_FLAG` to `active: false` and
@@ -180,9 +175,9 @@ progress has stopped.
 6. `git-gremlin:pr` [F] → PR title/body includes the Linear issue and `Closes <ISSUE>`;
    auto-chains `monkey-maestro:advance`.
 7. `monkey-maestro:advance` [H] → reviews the PR, asks the patron "tested, it's good?",
-   records only audit/budget fields in the matching project `RELAY_FLAG`, then asks
-   `queue-scout` for the next startable issue in that same Linear project, spawns it, and
-   best-effort deletes the previous accepted worktree after the new workspace opens.
+   records audit breadcrumbs in the matching project `RELAY_FLAG`, then asks `queue-scout`
+   for the next startable issue in that same Linear project, spawns it, and best-effort
+   deletes the previous accepted worktree after the new workspace opens.
 
 The patron merges PRs out-of-band, at their own tempo.
 

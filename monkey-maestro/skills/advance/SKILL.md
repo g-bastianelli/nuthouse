@@ -105,7 +105,7 @@ Branch on the response:
 - **stop** → auto-chain to `monkey-maestro:halt <current issue id>`. Stop.
 - **oui** → continue to Step 4.
 
-## Step 4 — Accept + budget check
+## Step 4 — Accept + record
 
 Update only this project's `RELAY_FLAG`, never a local issue queue:
 
@@ -115,11 +115,6 @@ Update only this project's `RELAY_FLAG`, never a local issue queue:
 3. Preserve `linear_project_id` exactly as the current issue's validated Linear project
    id. If the stored value differs, stop with `project_scope_mismatch`; never repair a
    foreign flag in place.
-4. Increment `accepted_count` by 1 for budget enforcement only. This counter never decides
-   issue status or queue membership.
-5. If `accepted_count >= max_issues` → set this flag `active: false`,
-   `last_halt_reason: budget_reached`, remove only this empty `LOCK_DIR`, report the
-   budget reached, and stop without spawning.
 
 ## Step 5 — Resolve + cue the next movement (dispatch queue-scout)
 
@@ -165,8 +160,7 @@ monkey-maestro:advance report
   Accepted:     <identifier> - <title> (PR <url>)
   Project:      <linear project id>
   Review:       clean | overridden by patron | unavailable: <reason>
-  Budget:       <accepted_count>/<max_issues>
-  Next issue:   <identifier> - <title> | _none_ (<queue_drained|budget_reached>)
+  Next issue:   <identifier> - <title> | _none_ (<queue_drained>)
   Worktree:     spawning <branch> via git-gremlin:spawn | not spawned (<reason>)
   Cleanup:      previous workspace <id> queued | skipped (<reason>)
   Authority:    Linear queue + GitHub PRs; no local relay-state queue
@@ -223,5 +217,5 @@ and spawn parameters per the pipeline-contract baton prompt, or _none_ if draine
 - Create, read, or trust `relay-<relay_id>.json` as queue state.
 - Spawn the next worktree if the scout failed.
 - Update, disarm, or remove a flag/lock belonging to another Linear project.
-- Leave this project's flag `active: true` or its lock present after queue drained,
-  budget reached, spawn failure, or halt.
+- Leave this project's flag `active: true` or its lock present after queue drained, spawn
+  failure, or halt.

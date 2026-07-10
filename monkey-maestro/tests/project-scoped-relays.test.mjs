@@ -58,4 +58,19 @@ describe("project-scoped autopilot relays", () => {
     expect(plan).toContain("git rev-parse HEAD");
     expect(plan).not.toContain("this skill lacks Bash");
   });
+
+  test("does not impose an issue budget on a relay", () => {
+    const relayDocs = [
+      "monkey-maestro/shared/pipeline-contract.md",
+      "monkey-maestro/skills/run/SKILL.md",
+      "monkey-maestro/skills/advance/SKILL.md",
+      "monkey-maestro/skills/halt/SKILL.md",
+    ].map(read);
+
+    for (const doc of relayDocs) {
+      expect(doc).not.toContain("max_issues");
+      expect(doc).not.toContain("accepted_count");
+      expect(doc).not.toContain("budget_reached");
+    }
+  });
 });

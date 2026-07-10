@@ -2,7 +2,7 @@
 name: run
 description: Use when the user wants to start the autopilot relay over a Linear project — "lance l'autopilote", "enchaîne mes issues", "run the relay", "autopilote on", "conduct my backlog". Resolves the project from a starting issue, atomically arms that project's control flag, and spawns its first worktree. Several Linear projects can run concurrently in one Git repo; one project cannot have two relays. Linear remains the source of truth; no local relay queue is maintained. Do not use to stop the relay (monkey-maestro:halt) or to advance after acceptance (monkey-maestro:advance).
 effort: high
-argument-hint: "<issue-id> [--max <n>]"
+argument-hint: "<issue-id>"
 allowed-tools: Bash(git rev-parse:*), Bash(gh auth status), Bash(superset projects list:*), Bash(mkdir:*), Bash(rmdir:*), Bash(stat:*), Bash(cat:*), Read, Write, Agent
 ---
 
@@ -36,7 +36,8 @@ the first worktree. It does **not** implement, merge, or maintain a local issue 
 
 1. Verify this is a git repo. Capture `STATE_ROOT = $(git rev-parse --path-format=absolute --git-common-dir)/nuthouse/relays` (the repo's shared `.git` dir, visible from every worktree — see `${CLAUDE_PLUGIN_ROOT}/shared/pipeline-contract.md`).
 2. `gh auth status` and `superset projects list --json` must succeed (the relay opens PRs and spawns worktrees downstream). On failure, abort with the auth instruction — never run a login on the patron's behalf. Linear access is verified later by `queue-scout`.
-3. Parse `$ARGUMENTS`: a required starting `issue-id` and optional `--max <n>` (default 5). If no issue id is present, abort before writing any state: the project cannot be inferred safely. If `<n> < 1`, abort — a relay with a zero/negative budget conducts nothing.
+3. Parse `$ARGUMENTS`: a required starting `issue-id`. If no issue id is present, abort
+   before writing any state: the project cannot be inferred safely.
 4. Read the legacy `<git-common-dir>/nuthouse/autopilot.json` only for migration. If it is active and unexpired, stop and report that an older global relay is still armed; it must finish or be halted before project-scoped relays are started.
 
 ## Step 1 — Resolve the target project + first movement
@@ -75,9 +76,8 @@ the first worktree. It does **not** implement, merge, or maintain a local issue 
 5. After the live-flag check, write `RELAY_FLAG` per the pipeline contract:
    `relay_id`, `active: true`, `repo: <git common dir>`,
    `linear_project_id: <queue-scout project id>`, `plan_gate: auto-clean`,
-   `max_issues: <n>`, `accepted_count: 0`, `last_issue: null`, `last_pr: null`,
-   `last_halt_reason: null`, and `expires_at` (~24h). Do **not** create or read
-   `relay-<relay_id>.json`.
+   `last_issue: null`, `last_pr: null`, `last_halt_reason: null`, and `expires_at` (~24h).
+   Do **not** create or read `relay-<relay_id>.json`.
 
 ## Step 3 — Cue the first worktree
 
@@ -99,7 +99,7 @@ from Step 2. On any spawn failure, set this `RELAY_FLAG` to `active: false`, set
 monkey-maestro:run report
   Relay:        <relay_id> (armed | done | halted)
   Project:      <Linear project id>
-  Autopilot:    <RELAY_FLAG> (plan_gate: <auto-clean|manual|auto>, max_issues: <n>)
+  Autopilot:    <RELAY_FLAG> (plan_gate: <auto-clean|manual|auto>)
   First issue:  <identifier> - <title> | _none_ (<reason>)
   Worktree:     spawning <branch> via git-gremlin:spawn | not spawned (<reason>)
   Authority:    Linear queue + GitHub PRs; no local relay-state queue

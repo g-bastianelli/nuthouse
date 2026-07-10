@@ -68,8 +68,8 @@ each active project flag and its sibling lock. Do not read or write any
 ## Step 2 — Report what remains
 
 Report only what the selected control flag(s) actually know: project id, relay id, last
-accepted issue/PR, budget counter, and flag path. Do not claim a full list of in-flight
-issues from local state. Tell the patron that remaining truth lives in Linear/GitHub:
+accepted issue/PR, and flag path. Do not claim a full list of in-flight issues from local
+state. Tell the patron that remaining truth lives in Linear/GitHub:
 
 - Linear issues with status `In Progress` / `In Review` show work currently underway.
 - GitHub open PRs show work awaiting merge.
@@ -84,7 +84,6 @@ monkey-maestro:halt report
   Autopilot:    disarmed (active: false)
   Last issue:   <last_issue | _none_>
   Last PR:      <last_pr | _none_>
-  Budget:       <accepted_count>/<max_issues>
   Authority:    inspect Linear + GitHub for live work; no local relay-state queue
   Worktrees:    left intact — merge + clean up at your tempo
   Control flag: <RELAY_FLAG>
