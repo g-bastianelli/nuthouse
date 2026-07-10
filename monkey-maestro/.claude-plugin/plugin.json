@@ -2,7 +2,7 @@
   "name": "monkey-maestro",
   "displayName": "Monkey Maestro",
   "description": "Deranged maestro that conducts your Linear backlog through the build pipeline — one worktree per issue, your applause between movements.",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "author": {
     "name": "g-bastianelli"
   },

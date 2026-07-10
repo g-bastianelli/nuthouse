@@ -1,9 +1,9 @@
 ---
 name: advance
-description: Use when a feature is implemented, verified, and its PR is open and the autopilot relay must move on — auto-invoked by git-gremlin:pr in autopilot, or "issue suivante", "continue le relais", "next movement". Runs a blocking code review of the PR, holds the human acceptance gate, updates only this Linear project's control flag, then asks Linear for the next startable issue and spawns it. Does not merge. Does not use local relay-state as queue authority.
+description: Use when a feature is implemented, verified, and its PR is open or merged and the autopilot relay must move on — auto-invoked by git-gremlin:pr in autopilot, or "issue suivante", "continue le relais", "next movement". Reviews an open PR and records the human acceptance, then waits for that exact PR to be merged into its base branch. Only a verified merged PR can resolve and spawn the next issue. Does not merge. Does not use local relay-state as queue authority.
 effort: high
 argument-hint: [issue-id]
-allowed-tools: Bash(git rev-parse:*), Bash(git branch --show-current), Bash(git status:*), Bash(gh pr view:*), Bash(gh pr checks:*), Bash(superset workspaces list:*), Bash(cat:*), Bash(rmdir:*), Read, Write, Agent, mcp__claude_ai_Linear__get_issue
+allowed-tools: Bash(git rev-parse:*), Bash(git branch --show-current), Bash(git status:*), Bash(git fetch:*), Bash(git merge-base:*), Bash(gh pr view:*), Bash(gh pr checks:*), Bash(superset workspaces list:*), Bash(cat:*), Bash(rmdir:*), Read, Write, Agent, mcp__claude_ai_Linear__get_issue
 ---
 
 # advance
@@ -29,8 +29,8 @@ paths, CLI flags, tool names, branches) stay in their original form.
 
 The movement is played: the feature is implemented, `moon-moth:verify` is green, and
 `git-gremlin:pr` opened the PR. The maestro turns to the box seat. This is the **one
-human gate per issue** — the patron's nod — after which the baton asks Linear for the
-next movement.
+human gate per issue** — the patron's nod — after which the relay waits for the PR merge.
+It never asks Linear for the next movement while the current PR is unmerged.
 
 ## Step 0 — Preconditions
 
@@ -47,20 +47,37 @@ next movement.
 4. Do not read `relay-<relay_id>.json`; local relay-state is obsolete and must never block
    a movement that Linear/GitHub says exists.
 
-## Step 1 — Present the finished movement
+## Step 1 — Classify the current PR
 
-Resolve the PR for the current branch: `gh pr view --json number,title,url,state` and
-`gh pr checks`. Show the patron, plainly:
+Resolve the PR for the current branch with `gh pr view --json
+number,title,url,state,mergedAt,mergeCommit,baseRefName,headRefName,headRefOid`. If no PR
+exists, stop. Branch by its state before any review, acceptance, queue lookup, or spawn:
 
-- the current Linear issue id,
-- the PR (number, title, url),
-- the verify evidence (checks green / the `moon-moth:verify` result),
-- a short "how to test" derived from the issue's acceptance criteria when available.
+- **`OPEN`**: before running checks or review, verify the submitted worktree exactly
+  matches the PR:
+  1. `git status --porcelain` must be empty.
+  2. Run `git fetch origin <headRefName>`, then verify both local `HEAD` and
+     `origin/<headRefName>` equal the PR `headRefOid`.
+     If any check fails, report `push unverified` and stop. Do not review, accept, look up,
+     propose, or spawn another issue from an unpushed or dirty worktree.
+     Then run `gh pr checks`. If checks are failing, do NOT offer acceptance — report the gap
+     and hand back to the implementation turn. Otherwise show the patron:
+  - the current Linear issue id,
+  - the PR (number, title, url),
+  - the verify evidence (checks green / the `moon-moth:verify` result),
+  - a short "how to test" derived from the issue's acceptance criteria when available.
+- **`MERGED`**: this is the only state allowed to continue to Step 5. Before continuing:
+  1. Verify `RELAY_FLAG.last_issue` equals the current issue and `last_pr` equals this PR
+     URL. If not, stop: the PR was never reviewed and accepted through this relay.
+  2. Run `git fetch origin <baseRefName>`, then verify the PR `mergeCommit` is an ancestor
+     of `origin/<baseRefName>` with `git merge-base --is-ancestor`. If either check fails,
+     stop and report `merge unverified`; do not look up or propose a next issue.
+  3. Report the accepted PR as merged into its base, then skip Steps 2–4 and continue at
+     Step 5.
+- **Any other state** (`CLOSED`, `DRAFT`, unknown): stop. A closed-but-unmerged PR never
+  permits a spawn.
 
-If no PR exists, or checks are failing, do NOT offer acceptance — report the gap and hand
-back to the implementation turn. The movement is not done.
-
-## Step 2 — Code review the PR (always; blocking)
+## Step 2 — Code review the open PR (blocking)
 
 Every movement gets a code review before the patron is asked to accept. Dispatch the
 `git-gremlin:reviewer` subagent (see `## Subagent dispatch`) against the PR diff (current
@@ -86,14 +103,14 @@ Triage the reviewer's severity-ranked findings. **`BLOCKER` and `HIGH` are block
 No local review counter is kept. If the same review keeps failing, the evidence is in the
 current PR/review output, not in a private relay file.
 
-## Step 3 — The acceptance gate (the human gate)
+## Step 3 — The acceptance gate for the open PR
 
 Reached only after Step 2 has either a clean review or an explicit review-unavailable
 escalation. With the PR, verify evidence, and review status shown above, present:
 
 ```text
 <voice intro line — monkey-maestro>
-(o) oui   → feature tested & good — accept it and cue the next movement
+(o) oui   → feature tested & good — record approval and wait for PR merge
 (n) non   → not good — hand back to the implementation turn with your notes
 (s) stop  → baton down — disarm autopilot and stop the relay
 ```
@@ -105,7 +122,7 @@ Branch on the response:
 - **stop** → auto-chain to `monkey-maestro:halt <current issue id>`. Stop.
 - **oui** → continue to Step 4.
 
-## Step 4 — Accept + record
+## Step 4 — Accept + wait for merge
 
 Update only this project's `RELAY_FLAG`, never a local issue queue:
 
@@ -115,8 +132,16 @@ Update only this project's `RELAY_FLAG`, never a local issue queue:
 3. Preserve `linear_project_id` exactly as the current issue's validated Linear project
    id. If the stored value differs, stop with `project_scope_mismatch`; never repair a
    foreign flag in place.
+4. Report `accepted, awaiting merge` and stop. Do not dispatch `queue-scout`, propose a
+   spawn, or remove this worktree. After the patron merges the PR, invoke
+   `monkey-maestro:advance <current issue id>` again; Step 1 verifies the merge before it
+   may continue.
 
-## Step 5 — Resolve + cue the next movement (dispatch queue-scout)
+## Step 5 — Resolve + cue the next movement after verified merge
+
+This step is reachable **only** from the `MERGED` branch of Step 1, after the exact
+accepted PR's merge commit is verified on `origin/<baseRefName>`. Never infer that an open
+PR will merge or treat an independent next issue as an exception.
 
 Resolve the current workspace cleanup target before dispatch:
 
@@ -157,10 +182,11 @@ On any scout/spawn failure: set this `RELAY_FLAG active: false`,
 
 ```text
 monkey-maestro:advance report
-  Accepted:     <identifier> - <title> (PR <url>)
+  Accepted PR:  <identifier> - <title> (PR <url>)
   Project:      <linear project id>
-  Review:       clean | overridden by patron | unavailable: <reason>
-  Next issue:   <identifier> - <title> | _none_ (<queue_drained>)
+  State:        awaiting merge | merged and verified
+  Review:       clean | overridden by patron | unavailable: <reason> | previously accepted
+  Next issue:   <identifier> - <title> | not proposed (awaiting merge) | _none_ (<queue_drained>)
   Worktree:     spawning <branch> via git-gremlin:spawn | not spawned (<reason>)
   Cleanup:      previous workspace <id> offered for confirmation | skipped (<reason>)
   Authority:    Linear queue + GitHub PRs; no local relay-state queue
@@ -186,7 +212,7 @@ never touch git state, the PR, or any file.`,
 })
 ```
 
-**Step 5 — resolve the next startable issue** (`monkey-maestro:queue-scout`):
+**Step 5 — resolve the next startable issue after merge** (`monkey-maestro:queue-scout`):
 
 ```
 Agent({
@@ -215,6 +241,8 @@ and spawn parameters per the pipeline-contract baton prompt, or _none_ if draine
 - Fix code, commit, or push from this skill — hand findings to the implementation turn.
 - Accept a feature whose checks are failing or whose PR is missing.
 - Create, read, or trust `relay-<relay_id>.json` as queue state.
+- Dispatch `queue-scout` or propose/spawn a next worktree unless the current accepted PR is
+  `MERGED` and its merge commit is verified on the base branch.
 - Spawn the next worktree if the scout failed.
 - Update, disarm, or remove a flag/lock belonging to another Linear project.
 - Leave this project's flag `active: true` or its lock present after queue drained, spawn

@@ -83,4 +83,14 @@ describe("project-scoped autopilot relays", () => {
     expect(spawn).toContain("or delete without explicit user\n  confirmation");
     expect(contract).toContain("asks the patron whether to delete the previous workspace");
   });
+
+  test("never advances beyond an unpushed or unmerged PR", () => {
+    const advance = read("monkey-maestro/skills/advance/SKILL.md");
+    const contract = read("monkey-maestro/shared/pipeline-contract.md");
+
+    expect(advance).toContain("report `push unverified` and stop");
+    expect(advance).toContain("Do not dispatch `queue-scout`, propose a\n   spawn");
+    expect(advance).toContain("`MERGED` and its merge commit is verified on the base branch");
+    expect(contract).toContain("Strict serial merge rule.");
+  });
 });

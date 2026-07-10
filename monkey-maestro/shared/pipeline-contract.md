@@ -16,9 +16,11 @@ Local files are **control plane only**:
 - the plan gate,
 - short audit breadcrumbs such as the last accepted issue/PR.
 
-Local files must never decide which issue is current, which issue is next, whether an
-issue is accepted, or whether a blocker is satisfied. Those facts are reconstructed from
-Linear and GitHub every time. If local state and Linear disagree, Linear wins.
+Local files must never decide which issue is current, which issue is next, or whether a
+blocker is satisfied. Those facts are reconstructed from Linear and GitHub every time. If
+local state and Linear disagree, Linear wins. The recorded `last_issue`/`last_pr` is only
+the patron's relay-acceptance receipt; it can authorize the post-merge handoff but never
+override GitHub's merge state.
 
 ## State paths — project-scoped and worktree-shared
 
@@ -106,7 +108,8 @@ queue movement. Each fact is resolved at the edge where it is needed:
 - **Already in flight**: Linear `started` status, plus read-only local branch/worktree
   existence as a duplicate-spawn guard.
 - **Accepted by the patron**: only the current `advance` invocation after the human `oui`;
-  record as `last_issue`/`last_pr` for audit, not queue authority.
+  record as `last_issue`/`last_pr`. It authorizes resuming that exact relay only after
+  GitHub reports the PR `MERGED`; it is never queue authority.
 
 This makes the relay crash-tolerant without becoming a second database. A crashed spawn is
 recovered by inspecting actual git branches/worktrees and Linear status, not by trusting a
@@ -121,9 +124,12 @@ A candidate issue is startable only when all are true:
 3. Every blocker is actually completed/canceled in Linear.
 4. No local branch or worktree already appears to target that issue id.
 
-The just-accepted-but-unmerged issue does not unblock dependents unless Linear/GitHub has
-actually moved it to a completed/merged state. This guarantees each new worktree branches
-from a `main` that already contains the code it depends on.
+**Strict serial merge rule.** The just-accepted-but-unmerged issue does not unblock
+dependents unless Linear/GitHub has actually moved it to a completed/merged state. More
+strictly, the relay must not even select or spawn an independent next issue until the
+current accepted PR is `MERGED` and its merge commit is verified on the base branch. This
+guarantees each new worktree branches from a `main` that already contains the code it
+depends on.
 
 In `MODE: first`, a `PREFERRED_ISSUE` is a real preferred start: if it is startable, pick
 it before scanning the rest of the queue. In `MODE: next`, the `ACCEPTED_ISSUE` is only an
@@ -174,10 +180,12 @@ progress has stopped.
 5. `moon-moth:verify` [F] → clean run auto-chains `git-gremlin:commit` → `pr`.
 6. `git-gremlin:pr` [F] → PR title/body includes the Linear issue and `Closes <ISSUE>`;
    auto-chains `monkey-maestro:advance`.
-7. `monkey-maestro:advance` [H] → reviews the PR, asks the patron "tested, it's good?",
-   records audit breadcrumbs in the matching project `RELAY_FLAG`, then asks `queue-scout`
-   for the next startable issue in that same Linear project, spawns it, and best-effort
-   offers deletion of the previous accepted worktree only after the new workspace opens.
+7. `monkey-maestro:advance` [H] → first verifies the worktree is clean and its `HEAD`
+   exactly matches the PR's remote head, then reviews the open PR and asks the patron
+   "tested, it's good?". On approval it records the relay acceptance and stops for the
+   patron's merge. A later `advance` verifies that exact PR is merged into its base before
+   it asks `queue-scout` for the next issue, spawns it, and offers deletion of the previous
+   accepted worktree only after the new workspace opens.
 
 The patron merges PRs out-of-band, at their own tempo.
 
@@ -196,6 +204,8 @@ START NOW: invoke `linear-devotee:greet <ISSUE>` before anything else.
 Chain: greet → plan (auto per plan_gate) → implement → moon-moth:verify → git-gremlin:commit
 → git-gremlin:pr (body must contain `Closes <ISSUE>`) → monkey-maestro:advance.
 At monkey-maestro:advance, STOP and ask the patron "tested, it's good?". Do NOT merge —
-the patron merges. On any failing check, halt per the stop ladder.
+the patron merges. After approval, wait for that PR to be merged, then invoke
+`monkey-maestro:advance <ISSUE>` again; it alone may spawn the next issue. On any failing
+check, halt per the stop ladder.
 PREVIOUS: issue <PREV_ISSUE> — PR <PREV_PR>. Order: <one-line reason from queue-scout>.
 ```
