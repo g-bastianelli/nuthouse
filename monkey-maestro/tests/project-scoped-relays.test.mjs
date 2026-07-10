@@ -73,4 +73,14 @@ describe("project-scoped autopilot relays", () => {
       expect(doc).not.toContain("budget_reached");
     }
   });
+
+  test("verifies a new workspace and asks before cleanup", () => {
+    const spawn = read("git-gremlin/skills/spawn/SKILL.md");
+    const contract = read("monkey-maestro/shared/pipeline-contract.md");
+
+    expect(spawn).toContain("report `spawn unverified`");
+    expect(spawn).toContain("This confirmation is mandatory even for relay-origin spawns");
+    expect(spawn).toContain("or delete without explicit user\n  confirmation");
+    expect(contract).toContain("asks the patron whether to delete the previous workspace");
+  });
 });

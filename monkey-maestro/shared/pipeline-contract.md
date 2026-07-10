@@ -141,10 +141,10 @@ agent against `superset agents list --local` and create the workspace.
 `advance` may pass `cleanup_workspace_id` to `git-gremlin:spawn` after the patron accepts
 a movement and a next issue exists. The id must resolve to exactly one local Superset
 workspace for the current branch, with `type: "worktree"`, and the current worktree must
-be clean (`git status --porcelain` empty). `spawn` deletes that previous workspace only
-after the next workspace is created and opened, never for `type: "main"`, and never when
-the cleanup id equals the new workspace id. Cleanup failure is reported but does not fail
-the already-created next workspace.
+be clean (`git status --porcelain` empty). `spawn` first verifies the new workspace exists
+and opens it, then asks the patron whether to delete the previous workspace. It never
+deletes `type: "main"`, the new workspace, or any workspace without that confirmation.
+Cleanup failure or a declined deletion does not fail the already-created next workspace.
 
 ## Stop ladder
 
@@ -177,7 +177,7 @@ progress has stopped.
 7. `monkey-maestro:advance` [H] → reviews the PR, asks the patron "tested, it's good?",
    records audit breadcrumbs in the matching project `RELAY_FLAG`, then asks `queue-scout`
    for the next startable issue in that same Linear project, spawns it, and best-effort
-   deletes the previous accepted worktree after the new workspace opens.
+   offers deletion of the previous accepted worktree only after the new workspace opens.
 
 The patron merges PRs out-of-band, at their own tempo.
 

@@ -126,8 +126,8 @@ Resolve the current workspace cleanup target before dispatch:
    If exactly one local workspace has `type: "worktree"` and `branch` equal to the current
    branch, set `cleanup_workspace_id` to that id. If none, multiple, or `type: "main"`,
    set cleanup to `skipped: not_a_unique_worktree`.
-3. This cleanup target is advisory. It is passed to `git-gremlin:spawn`, which deletes it
-   only after the next workspace has been created and opened.
+3. This cleanup target is advisory. It is passed to `git-gremlin:spawn`, which verifies
+   and opens the next workspace, then asks the patron whether to delete it.
 
 Then dispatch `monkey-maestro:queue-scout` in `MODE: next`, passing the just-accepted
 issue, the cached Linear project id, and the audit breadcrumbs from the control flag.
@@ -147,8 +147,8 @@ parameters. It must not choose a spawned agent; `git-gremlin:spawn` asks the use
 - Otherwise → auto-chain to `git-gremlin:spawn` with the queue-scout parameters
   (base-branch `main`, baton prompt beginning with `AUTOPILOT RELAY (monkey-maestro)`,
   plus `cleanup_workspace_id` when one was resolved). `spawn` asks the user to choose
-  `codex` or `claude`, then drains its final gate, creates the worktree, opens it, deletes
-  the previous workspace when cleanup is safe, and this agent STOPS.
+  `codex` or `claude`, then drains its final gate, creates and verifies the worktree, opens
+  it, and asks before deleting the previous workspace. This agent stops after that choice.
 
 On any scout/spawn failure: set this `RELAY_FLAG active: false`,
 `last_halt_reason: <reason>`, remove only this `LOCK_DIR`, report, and stop.
@@ -162,7 +162,7 @@ monkey-maestro:advance report
   Review:       clean | overridden by patron | unavailable: <reason>
   Next issue:   <identifier> - <title> | _none_ (<queue_drained>)
   Worktree:     spawning <branch> via git-gremlin:spawn | not spawned (<reason>)
-  Cleanup:      previous workspace <id> queued | skipped (<reason>)
+  Cleanup:      previous workspace <id> offered for confirmation | skipped (<reason>)
   Authority:    Linear queue + GitHub PRs; no local relay-state queue
   Reminder:     merge the open PRs at your own tempo — the relay never merges
 ```
