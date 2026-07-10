@@ -28,6 +28,7 @@
 | [stack-golem](./stack-golem)       | Claude Code + Codex | Notom-stack ops & debug — Scaleway, observability, local dev, Insomnia                                   |
 | [moon-moth](./moon-moth)           | Claude Code + Codex | Moon-aware dev loop — scope to affected projects, implement TDD-first, verify                            |
 | [monkey-maestro](./monkey-maestro) | Claude Code + Codex | Autopilot relay — conducts Linear issues through the pipeline, one worktree per issue, gated on your nod |
+| [hermes-tweet](https://github.com/Xquik-dev/hermes-tweet) | Claude Code + Codex | Native Hermes Agent X/Twitter workflows through Xquik with read-first tools and approval-gated actions |
 
 ## Install
 
