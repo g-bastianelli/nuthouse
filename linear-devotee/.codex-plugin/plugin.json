@@ -1,6 +1,6 @@
 {
   "name": "linear-devotee",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Linear project, milestone, issue orchestration, and next-work recommendations for Codex with SDD-formatted briefs and explicit mutation gates.",
   "author": {
     "name": "g-bastianelli"

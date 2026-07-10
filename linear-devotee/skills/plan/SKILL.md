@@ -3,7 +3,7 @@ name: plan
 description: Use when planning implementation for a Linear issue after greet or from an issue id. Loads or rebuilds greet context, resolves source spec, drafts and audits a plan, flags drift, writes a validated plan artifact, then syncs accepted spec drift only after validation. Never writes implementation code.
 argument-hint: "[issue-id] [--fresh]"
 effort: xhigh
-allowed-tools: Read, Glob, Write, Agent
+allowed-tools: Read, Glob, Write, Agent, Bash(git rev-parse:*), Bash(cat:*), mcp__claude_ai_Linear__get_issue
 ---
 
 # linear-devotee:plan
@@ -12,7 +12,7 @@ Rigid planning gate. Match the user's language; keep technical identifiers uncha
 
 > Voice cadence: at every user-visible workflow transition, try to dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Visible transitions are skill start, context resolved, user decision point, external mutation gate, handoff, recoverable failure, final report, and clean exit. Print the returned `line` only when non-empty. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Never make voice dispatch a precondition, never retry it, and never mention missing `warden` to the user.
 > Voice flag: !`cat "$HOME/.claude/nuthouse/voice.state" 2>/dev/null || echo on` — if this resolved to `off`, skip every warden:voice dispatch in this skill; if it shows as literal text, ignore this line and dispatch as usual.
-> Autopilot flag: !`cat "$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)/nuthouse/autopilot.json" 2>/dev/null || echo off` — monkey-maestro relay. Apply the `plan_gate` and auto-handoff branches in steps 6 and 8 ONLY if this resolved to JSON with `active: true` and a future `expires_at` (the flag lives under this repo's shared `.git`, so it is already repo-scoped); otherwise behave interactively as usual.
+> Autopilot scope: after resolving the issue's Linear project id, read only `<git-common-dir>/nuthouse/relays/<project-id>/autopilot.json`. Apply the `plan_gate` and auto-handoff branches in steps 6 and 8 only when that exact flag is active, unexpired, and embeds the same project id; otherwise behave interactively.
 
 ## Context
 
@@ -26,11 +26,16 @@ Rigid planning gate. Match the user's language; keep technical identifiers uncha
    - Verify git repo. Capture `PROJECT_ROOT = $(git rev-parse --show-toplevel)`.
    - Ensure `${PROJECT_ROOT}/docs/linear-devotee/plan/`.
    - Detect issue id from `$ARGUMENTS` first, then branch, state file, or recent greet context. Ask if absent.
-   - Verify Linear access only when greet context must be rebuilt.
+   - Verify Linear access when greet context must be rebuilt or project-id fallback is needed.
 2. Load context:
    - Prefer `${CLAUDE_PLUGIN_DATA}/greet-<ISSUE_ID>.json` (the `## Context` dir listing shows whether it exists).
    - If missing, dispatch `linear-devotee:issue-context` with issue id, git root, `NEEDS_STATUS_METADATA: true`.
    - Do not fetch full Linear context in main context unless delegation fails.
+   - Extract `linear_project_id` from the greet context or issue-context brief. If it is
+     missing or `_unclear_`, fetch the current issue with `mcp__claude_ai_Linear__get_issue`
+     and extract only its project id rather than inspecting other relay flags.
+     Set `RELAY_FLAG` to the matching project-scoped path and use it as the sole autopilot
+     authority for this invocation.
 3. Resolve source spec:
    - Use `spec_file` from greet context if it still exists.
    - Otherwise search `docs/acid-prophet/specs/`, choosing only unambiguous matches:
@@ -51,6 +56,7 @@ Rigid planning gate. Match the user's language; keep technical identifiers uncha
    ```markdown
    ---
    issue: <ISSUE_ID>
+   linear-project: <LINEAR_PROJECT_ID>
    spec: <SPEC_FILE | _none_>
    status: draft
    plan-version: 1
@@ -89,8 +95,7 @@ Rigid planning gate. Match the user's language; keep technical identifiers uncha
    Do not re-print the plan content in chat after writing — the file is the artifact.
 
 5. Audit:
-   - Session store: if `$CLAUDE_SESSION_ID` is set, read `<PROJECT_ROOT>/.claude/nuthouse/sessions/${CLAUDE_SESSION_ID}.json`. If `relevant_files` key is present (and `_meta._shas.relevant_files` equals HEAD sha when Bash is available; otherwise accept as-is), inject it into the plan-auditor prompt. Skip this lookup when `$ARGUMENTS` contains `--fresh`.
-   - **Staleness caveat**: this skill lacks Bash, so the sha of `relevant_files` cannot be verified against HEAD. If the codebase changed significantly since `greet` ran (e.g. several commits), invoke with `--fresh` to force a full re-fetch and ignore the cached list.
+   - Session store: if `$CLAUDE_SESSION_ID` is set, read `<PROJECT_ROOT>/.claude/nuthouse/sessions/${CLAUDE_SESSION_ID}.json`. When `relevant_files` exists, run `git rev-parse HEAD` and inject it into the plan-auditor prompt only when `_meta._shas.relevant_files` exactly equals that SHA. On a missing/mismatched SHA, omit `RELEVANT_FILES` and report the cache as stale. Skip this lookup when `$ARGUMENTS` contains `--fresh`.
    - Dispatch `linear-devotee:plan-auditor` with:
 
      ```

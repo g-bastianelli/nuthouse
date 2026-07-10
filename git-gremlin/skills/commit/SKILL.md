@@ -2,7 +2,7 @@
 name: commit
 description: Use automatically when the user asks to commit changes, create a commit, write a commit message, commit staged changes, commit everything, run git commit, "fais le commit", "commit mes changements", or "crée un commit". Handles staged changes first and stages dirty changes only when the user explicitly asks to commit all/everything or stage changes. Do not use for plain git status, diff, log, push, rebase, or PR creation.
 effort: high
-allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git log:*), Agent
+allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git branch --show-current), Bash(git rev-parse:*), Bash(cat:*), Read, Agent, mcp__claude_ai_Linear__get_issue
 ---
 
 # git-gremlin:commit
@@ -11,7 +11,7 @@ Commit intent is the approval gate. Match the user's language; keep technical id
 
 > Voice cadence: at every user-visible workflow transition, try to dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Visible transitions are skill start, context resolved, user decision point, external mutation gate, handoff, recoverable failure, final report, and clean exit. Print the returned `line` only when non-empty. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Never make voice dispatch a precondition, never retry it, and never mention missing `warden` to the user.
 > Voice flag: !`cat "$HOME/.claude/nuthouse/voice.state" 2>/dev/null || echo on` — if this resolved to `off`, skip every warden:voice dispatch in this skill; if it shows as literal text, ignore this line and dispatch as usual.
-> Autopilot flag: !`cat "$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)/nuthouse/autopilot.json" 2>/dev/null || echo off` — monkey-maestro relay. Take the **autopilot branch** below ONLY if this resolved to JSON with `active: true` and a future `expires_at` (the flag lives under this repo's shared `.git`, so it is already repo-scoped); otherwise behave interactively as usual.
+> Autopilot scope: resolve the current branch's Linear issue and project. Take the **autopilot branch** below only when that project's `<git-common-dir>/nuthouse/relays/<project-id>/autopilot.json` is active, unexpired, and embeds the same project id; otherwise behave interactively. Never use another project's flag.
 
 ## Voice
 
@@ -34,6 +34,10 @@ is printed, revert to the session default voice immediately.
 
 1. Preconditions:
    - Verify this is a git repository.
+   - Resolve the current issue id from the branch and project id from
+     `docs/linear-devotee/plan/<ISSUE_ID>.md`'s `linear-project` field. If unavailable,
+     fetch the issue from Linear. Read only the corresponding project flag before deciding
+     whether autopilot may stage the whole movement.
    - Gate on the `Staged` snapshot from `## Context`: it shows what is staged right now. Re-run `git diff --staged --name-only` only if the snapshot is empty or the tree may have changed since skill load.
    - If nothing is staged, check the `Working tree` snapshot for dirty files.
    - If dirty files exist and the user explicitly asked to commit all/everything or stage changes — or autopilot is on (the relay commits the whole movement) — run `git add -A`, then re-check staged files.

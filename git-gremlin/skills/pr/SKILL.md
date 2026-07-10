@@ -2,7 +2,7 @@
 name: pr
 description: Use automatically when the user asks to create, open, draft, or publish a GitHub PR, pull request, review request, "ouvre une PR", "fais la PR", "crée une pull request", or says the branch is ready for review. Delegates git log/diff reading and PR description writing to a subagent. Do not use for commits, plain git status, diff, log, push-only, rebase, or non-GitHub merge requests.
 effort: high
-allowed-tools: Bash(git log:*), Bash(git branch:*), Bash(git diff:*), Agent
+allowed-tools: Bash(git log:*), Bash(git branch:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(cat:*), Read, Agent, mcp__claude_ai_Linear__get_issue
 ---
 
 # git-gremlin:pr
@@ -11,7 +11,7 @@ Rigid approval gate. Match the user's language; keep technical identifiers uncha
 
 > Voice cadence: at every user-visible workflow transition, try to dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Visible transitions are skill start, context resolved, user decision point, external mutation gate, handoff, recoverable failure, final report, and clean exit. Print the returned `line` only when non-empty. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Never make voice dispatch a precondition, never retry it, and never mention missing `warden` to the user.
 > Voice flag: !`cat "$HOME/.claude/nuthouse/voice.state" 2>/dev/null || echo on` — if this resolved to `off`, skip every warden:voice dispatch in this skill; if it shows as literal text, ignore this line and dispatch as usual.
-> Autopilot flag: !`cat "$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)/nuthouse/autopilot.json" 2>/dev/null || echo off` — monkey-maestro relay. Take the **autopilot branch** in the steps below ONLY if this resolved to JSON with `active: true` and a future `expires_at` (the flag lives under this repo's shared `.git`, so it is already repo-scoped); otherwise behave interactively as usual.
+> Autopilot scope: resolve the current branch's Linear issue and project. Take the **autopilot branch** below only when that project's `<git-common-dir>/nuthouse/relays/<project-id>/autopilot.json` is active, unexpired, and embeds the same project id; otherwise behave interactively. Never use another project's flag.
 
 ## Voice
 
@@ -34,6 +34,10 @@ is printed, revert to the session default voice immediately.
 
 1. Preconditions:
    - Verify `gh` is available and authenticated: `gh auth status`. Abort with `gh auth login` instruction if not.
+   - Resolve the current issue id from the branch and project id from
+     `docs/linear-devotee/plan/<ISSUE_ID>.md`'s `linear-project` field. If unavailable,
+     fetch the issue from Linear. Read only the corresponding project flag before deciding
+     whether autopilot may skip confirmation.
    - Infer base branch: `gh repo view --json defaultBranchRef` or fallback `main`.
    - Verify commits exist ahead of base: the `Commits vs main` snapshot in `## Context` covers the common case; re-run `git log <base>...HEAD --oneline` when the base is not `main` or the snapshot is empty. Abort if no commits exist ahead of base.
 2. Draft PR title and description:
@@ -46,7 +50,9 @@ is printed, revert to the session default voice immediately.
    - On rejection: offer to regenerate or cancel. Never create PR silently.
 4. Report and hand off:
    - Return result.
-   - In autopilot: auto-chain to `monkey-maestro:advance` — print `monkey-maestro:advance` and continue immediately so the maestro holds the per-feature acceptance gate. Otherwise: stop after the report.
+   - In autopilot: auto-chain to `monkey-maestro:advance <ISSUE_ID>` — print that exact
+     invocation and continue immediately so the maestro holds the per-feature acceptance
+     gate. Otherwise: stop after the report.
 
 ## Final Report
 

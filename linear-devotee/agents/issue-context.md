@@ -77,6 +77,7 @@ Return **only** this markdown, under 500 words. Never invent content. If a field
 
 **Issue** : <ID> — <title>
 **Project** : <project-name> · **URL** : <url>
+**Project ID** : <project.id> | _unclear_
 **Status** : <status.name> (<status.type>) | _unclear_
 **Started state id** : <stateId> | _unclear_
 

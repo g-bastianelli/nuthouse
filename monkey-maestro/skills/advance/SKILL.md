@@ -1,9 +1,9 @@
 ---
 name: advance
-description: Use when a feature is implemented, verified, and its PR is open and the autopilot relay must move on — auto-invoked by git-gremlin:pr in autopilot, or "issue suivante", "continue le relais", "next movement". Runs a blocking code review of the PR, holds the human acceptance gate, updates only the repo-scoped autopilot control flag, then asks Linear for the next startable issue and spawns it. Does not merge. Does not use local relay-state as queue authority.
+description: Use when a feature is implemented, verified, and its PR is open and the autopilot relay must move on — auto-invoked by git-gremlin:pr in autopilot, or "issue suivante", "continue le relais", "next movement". Runs a blocking code review of the PR, holds the human acceptance gate, updates only this Linear project's control flag, then asks Linear for the next startable issue and spawns it. Does not merge. Does not use local relay-state as queue authority.
 effort: high
 argument-hint: [issue-id]
-allowed-tools: Bash(git rev-parse:*), Bash(git branch --show-current), Bash(git status:*), Bash(gh pr view:*), Bash(gh pr checks:*), Bash(superset workspaces list:*), Read, Write, Agent
+allowed-tools: Bash(git rev-parse:*), Bash(git branch --show-current), Bash(git status:*), Bash(gh pr view:*), Bash(gh pr checks:*), Bash(superset workspaces list:*), Bash(cat:*), Bash(rmdir:*), Read, Write, Agent, mcp__claude_ai_Linear__get_issue
 ---
 
 # advance
@@ -25,14 +25,6 @@ This skill is **rigid** — execute steps in order.
 Adapt all output to match the user's language. Technical identifiers (issue ids, file
 paths, CLI flags, tool names, branches) stay in their original form.
 
-## Context
-
-> Auto-injected on Claude Code at skill load. If the lines below still show raw,
-> unexpanded dynamic-context commands, run them manually before Step 0.
-
-- Current branch: !`git branch --show-current 2>/dev/null`
-- Relay flag: !`cat "$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)/nuthouse/autopilot.json" 2>/dev/null || echo "none"`
-
 ## When you're invoked
 
 The movement is played: the feature is implemented, `moon-moth:verify` is green, and
@@ -42,13 +34,18 @@ next movement.
 
 ## Step 0 — Preconditions
 
-1. Verify this is a git repo. Capture `STATE_DIR = $(git rev-parse --path-format=absolute --git-common-dir)/nuthouse` (the repo's shared `.git` dir, identical across worktrees — see `${CLAUDE_PLUGIN_ROOT}/shared/pipeline-contract.md`).
-2. Read `${STATE_DIR}/autopilot.json`. Honor autopilot only if `active: true` and
-   `expires_at` is in the future. If the flag is off/invalid, present a plain `(s) stop`
-   and tell the patron the relay is not armed (start it with `monkey-maestro:run`).
-3. Resolve the current issue from `$ARGUMENTS` first, then the current branch. Do not read
-   `relay-<relay_id>.json`; local relay-state is obsolete and must never block a movement
-   that Linear/GitHub says exists.
+1. Verify this is a git repo. Capture `STATE_ROOT = $(git rev-parse --path-format=absolute --git-common-dir)/nuthouse/relays` (the repo's shared `.git` dir, identical across worktrees — see `${CLAUDE_PLUGIN_ROOT}/shared/pipeline-contract.md`).
+2. Resolve the current issue from `$ARGUMENTS` first, then the current branch. Fetch that
+   issue from Linear and capture its authoritative `linear_project_id`. Do not infer the
+   project from another active flag or from a directory name.
+3. Set `PROJECT_STATE_DIR = ${STATE_ROOT}/<linear_project_id>`,
+   `RELAY_FLAG = ${PROJECT_STATE_DIR}/autopilot.json`, and `LOCK_DIR = ${PROJECT_STATE_DIR}/lock`.
+   Read `RELAY_FLAG`. Honor autopilot only when it is active, unexpired, and its embedded
+   `linear_project_id` equals the current issue's project. Otherwise present a plain `(s)`
+   stop and tell the patron this project has no armed relay (start it with
+   `monkey-maestro:run <issue-id>`).
+4. Do not read `relay-<relay_id>.json`; local relay-state is obsolete and must never block
+   a movement that Linear/GitHub says exists.
 
 ## Step 1 — Present the finished movement
 
@@ -105,22 +102,24 @@ Branch on the response:
 
 - **non** → ask for the specific fix and hand control to the implementation turn with the
   patron's notes verbatim. Stop. Do not write queue state.
-- **stop** → auto-chain to `monkey-maestro:halt`. Stop.
+- **stop** → auto-chain to `monkey-maestro:halt <current issue id>`. Stop.
 - **oui** → continue to Step 4.
 
 ## Step 4 — Accept + budget check
 
-Update only the control flag, never a local issue queue:
+Update only this project's `RELAY_FLAG`, never a local issue queue:
 
-1. Refresh `autopilot.json` `expires_at` (~24h forward).
+1. Refresh `RELAY_FLAG` `expires_at` (~24h forward).
 2. Set `last_issue: <current issue>`, `last_pr: <current PR url>`, and
    `last_halt_reason: null` for audit/baton context.
-3. If the current issue's Linear project id is known, set `linear_project_id` as a cached
-   hint only. Queue-scout must still verify the project from Linear.
+3. Preserve `linear_project_id` exactly as the current issue's validated Linear project
+   id. If the stored value differs, stop with `project_scope_mismatch`; never repair a
+   foreign flag in place.
 4. Increment `accepted_count` by 1 for budget enforcement only. This counter never decides
    issue status or queue membership.
-5. If `accepted_count >= max_issues` → set `active: false`, `last_halt_reason:
-budget_reached`, report the budget reached, and stop without spawning.
+5. If `accepted_count >= max_issues` → set this flag `active: false`,
+   `last_halt_reason: budget_reached`, remove only this empty `LOCK_DIR`, report the
+   budget reached, and stop without spawning.
 
 ## Step 5 — Resolve + cue the next movement (dispatch queue-scout)
 
@@ -142,23 +141,29 @@ for duplicate-spawn protection, and returns the next startable issue plus spawn
 parameters. It must not choose a spawned agent; `git-gremlin:spawn` asks the user for
 `codex` or `claude` every time.
 
-- If queue-scout returns no startable issue → set `autopilot.json active: false`,
-  `last_halt_reason: queue_drained`. Report it; if open PRs are blocking dependents, tell
-  the patron to merge them and re-run `monkey-maestro:run` to resume. Stop.
+- If queue-scout returns no startable issue → set this `RELAY_FLAG active: false`,
+  `last_halt_reason: queue_drained`, remove only this `LOCK_DIR`. Report it; if open PRs
+  are blocking dependents, tell the patron to merge them and re-run
+  `monkey-maestro:run <issue-id>` to resume. Stop.
+- If queue-scout reports `project_scope_mismatch` or returns `next: null` with
+  `drained: false`, set this `RELAY_FLAG active: false`, set
+  `last_halt_reason: project_scope_mismatch`, remove only this `LOCK_DIR`, report the
+  mismatch, and stop. Never spawn from an ambiguous scout result.
 - Otherwise → auto-chain to `git-gremlin:spawn` with the queue-scout parameters
   (base-branch `main`, baton prompt beginning with `AUTOPILOT RELAY (monkey-maestro)`,
   plus `cleanup_workspace_id` when one was resolved). `spawn` asks the user to choose
   `codex` or `claude`, then drains its final gate, creates the worktree, opens it, deletes
   the previous workspace when cleanup is safe, and this agent STOPS.
 
-On any scout/spawn failure: set `autopilot.json active: false`,
-`last_halt_reason: <reason>`, report, and stop.
+On any scout/spawn failure: set this `RELAY_FLAG active: false`,
+`last_halt_reason: <reason>`, remove only this `LOCK_DIR`, report, and stop.
 
 ## Final Report
 
 ```text
 monkey-maestro:advance report
   Accepted:     <identifier> - <title> (PR <url>)
+  Project:      <linear project id>
   Review:       clean | overridden by patron | unavailable: <reason>
   Budget:       <accepted_count>/<max_issues>
   Next issue:   <identifier> - <title> | _none_ (<queue_drained|budget_reached>)
@@ -195,7 +200,7 @@ Agent({
   description: 'resolve the next startable Linear issue + spawn params',
   prompt: `MODE: next
 RELAY_ID: <relay_id>
-LINEAR_PROJECT_ID: <cached project id from flag | _none_>
+LINEAR_PROJECT_ID: <validated current issue project id>
 PREFERRED_ISSUE: _none_
 ACCEPTED_ISSUE: <identifier just accepted>
 LAST_ISSUE: <current issue>
@@ -217,4 +222,6 @@ and spawn parameters per the pipeline-contract baton prompt, or _none_ if draine
 - Accept a feature whose checks are failing or whose PR is missing.
 - Create, read, or trust `relay-<relay_id>.json` as queue state.
 - Spawn the next worktree if the scout failed.
-- Leave the flag `active: true` after queue drained, budget reached, or halt.
+- Update, disarm, or remove a flag/lock belonging to another Linear project.
+- Leave this project's flag `active: true` or its lock present after queue drained,
+  budget reached, spawn failure, or halt.

@@ -2,13 +2,13 @@
 name: verify
 description: Use after editing code in a moon monorepo, before commit or PR, to verify the change — runs affected :typecheck/:lint/:test via the verify-runner subagent, dispatches change-auditor for an adversarial review of the diff against scope, reports evidence (not assertion), and loops back on a torn wing (failing check). Prefer this over a blind repo-wide test run.
 effort: high
-allowed-tools: Bash(moon run:*), Bash(moon query:*), Bash(git diff:*), Read, Agent
+allowed-tools: Bash(moon run:*), Bash(moon query:*), Bash(git diff:*), Bash(git branch --show-current), Bash(git rev-parse:*), Bash(cat:*), Read, Agent, mcp__claude_ai_Linear__get_issue
 ---
 
 # verify
 
 > At visible transitions, try to dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Print the returned `line` only when non-empty. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Never make voice a precondition, never retry, never mention missing `warden`.
-> Autopilot flag: !`cat "$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)/nuthouse/autopilot.json" 2>/dev/null || echo off` — monkey-maestro relay. Take the **autopilot branch** in Steps 3–4 ONLY if this resolved to JSON with `active: true` and a future `expires_at` (the flag lives under this repo's shared `.git`, so it is already repo-scoped); otherwise behave interactively as usual.
+> Autopilot scope: resolve the current branch's Linear issue and project before Steps 3–4. Take the **autopilot branch** only when that project's `<git-common-dir>/nuthouse/relays/<project-id>/autopilot.json` is active, unexpired, and embeds the same project id; otherwise behave interactively. A flag from another Linear project in this repo never applies.
 
 ## Voice
 
@@ -36,7 +36,11 @@ exists — and refuses to call the flight clean on assertion alone.
 
 1. Confirm a moon workspace (`.moon/` up-tree); capture `PROJECT_ROOT` = moon
    root. If not a moon repo, abort and suggest running the repo's own checks.
-2. Obtain the affected scope: read a persisted scope map under
+2. Resolve the current issue id from the branch and its project id from
+   `docs/linear-devotee/plan/<ISSUE_ID>.md`'s `linear-project` field. If the artifact is
+   absent or lacks the field, fetch the issue from Linear. Read only that project's relay
+   flag to decide whether autopilot is on.
+3. Obtain the affected scope: read a persisted scope map under
    `${PROJECT_ROOT}/docs/moon-moth/scope/`, else run `moon-moth:scope` first.
    The set of `tasks` per affected project tells you which targets to run.
 

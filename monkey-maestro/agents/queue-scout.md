@@ -54,6 +54,12 @@ milestone + milestone order, sort order, issue number, created date, and blocker
 `blockedBy` when exposed). If Linear MCP is unreachable, fall back to read-only `linear`
 CLI via `Bash`. Never invent issues.
 
+In `MODE: next`, `ACCEPTED_ISSUE` is authoritative for the target project. When
+`LINEAR_PROJECT_ID` is also set, it must equal the accepted issue's project id. On a
+mismatch, return `next: null`, `spawn: null`, `drained: false`, and a `note` describing
+the cross-project mismatch prefixed `project_scope_mismatch:`. Never use a cached id to
+jump from one Linear project to another.
+
 ### 2. Build duplicate-spawn guards from git reality
 
 Read local branches and worktrees. For each Linear issue identifier, consider it already
@@ -93,8 +99,10 @@ For the chosen issue, compute (read-only):
 - `project_hint`: the repo folder name.
 - `prompt`: the relay baton prompt from
   `${CLAUDE_PLUGIN_ROOT}/shared/pipeline-contract.md`, with `<ISSUE>`, `<BRANCH>`,
-  `<PREV_ISSUE>`, `<PREV_PR>` filled from `LAST_ISSUE`/`LAST_PR`, and the order
-  `<reason>` from step 3.
+  `<LINEAR_PROJECT_ID>`, `<RELAY_ID>`, `<RELAY_FLAG>`, `<PREV_ISSUE>`, and `<PREV_PR>`
+  filled from this result/input. Derive `RELAY_FLAG` as
+  `$(git rev-parse --path-format=absolute --git-common-dir)/nuthouse/relays/<project id>/autopilot.json`.
+  Fill the order `<reason>` from step 3.
 
 ### 5. Output the result
 
@@ -148,6 +156,8 @@ When the queue is drained:
 - **No invention.** Every issue, status, blocker, and project comes from Linear (or the
   read-only `linear` CLI). If the project/queue cannot be resolved, return `next: null`,
   `drained: false`, and a `note` explaining what was missing.
+- **Project boundary.** In `MODE: next`, reject a result whose project id differs from
+  `LINEAR_PROJECT_ID`; a relay may only progress within its own Linear project.
 - **Deterministic JSON.** Output exactly the shape above so the calling skill can parse it.
 - **Never open a duplicate worktree.** Exclude issues already `started` on Linear and
   issues with an existing local branch/worktree token.

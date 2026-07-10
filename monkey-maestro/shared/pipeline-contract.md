@@ -11,7 +11,7 @@ The relay must not maintain a shadow queue. Linear owns issue identity, project
 membership, status, blockers, and ordering. GitHub owns PR existence and merge state.
 Local files are **control plane only**:
 
-- whether autopilot is armed for this repo,
+- whether autopilot is armed for one Linear project in this repo,
 - the relay id for logging and baton prompts,
 - the plan gate,
 - the optional budget cap,
@@ -21,26 +21,36 @@ Local files must never decide which issue is current, which issue is next, wheth
 issue is accepted, or whether a blocker is satisfied. Those facts are reconstructed from
 Linear and GitHub every time. If local state and Linear disagree, Linear wins.
 
-## STATE_DIR — where the control flag lives (worktree-shared)
+## State paths — project-scoped and worktree-shared
 
-`STATE_DIR = $(git rev-parse --path-format=absolute --git-common-dir)/nuthouse`
+```text
+STATE_ROOT = $(git rev-parse --path-format=absolute --git-common-dir)/nuthouse/relays
+PROJECT_STATE_DIR = <STATE_ROOT>/<LINEAR_PROJECT_ID>
+RELAY_FLAG = <PROJECT_STATE_DIR>/autopilot.json
+LOCK_DIR = <PROJECT_STATE_DIR>/lock
+```
 
 `--git-common-dir` resolves to the same shared `.git` directory from the main repo and
 every linked worktree of that repo. This is load-bearing: the relay runs each issue in
 its own spawned Superset worktree, and `git rev-parse --show-toplevel` resolves
-differently in each worktree. `STATE_DIR` lives inside `.git/`, so it is repo-scoped and
-never staged by `git add`.
+differently in each worktree. `STATE_ROOT` lives inside `.git/`, so it is shared by that
+repo's worktrees and never staged by `git add`.
+
+`LINEAR_PROJECT_ID` is the only partition key. Every skill must resolve the current
+issue's project from Linear (or from an issue-context/plan artifact that originated from
+Linear) before it reads a flag. A flag for another project in the same repository is not
+evidence that autopilot is on for the current worktree.
 
 ## The autopilot control flag
 
-Path: `<STATE_DIR>/autopilot.json`.
+Path: `<PROJECT_STATE_DIR>/autopilot.json`.
 
 ```jsonc
 {
   "relay_id": "<uuid v4>",
   "active": true,
   "repo": "/abs/path/.git", // git common dir, audit only
-  "linear_project_id": "<id | null>", // cached hint only; queue-scout verifies via Linear
+  "linear_project_id": "<id>", // required; must equal the directory name
   "plan_gate": "auto-clean", // auto-clean | manual | auto
   "max_issues": 5,
   "accepted_count": 0, // budget counter only; never queue authority
@@ -51,13 +61,41 @@ Path: `<STATE_DIR>/autopilot.json`.
 }
 ```
 
-**Read rule.** A skill takes its autopilot branch only when all hold: the file exists
-under this repo's `STATE_DIR`, `active === true`, and `expires_at` is in the future.
-Otherwise the skill behaves interactively.
+**Read rule.** A skill takes its autopilot branch only when all hold: it resolved the
+current issue's project id, the matching `RELAY_FLAG` exists, its
+`linear_project_id` equals that id, `active === true`, and `expires_at` is in the future.
+Otherwise the skill behaves interactively. It must never scan for any active flag and
+pick one arbitrarily.
 
-**Write rule.** `run`, `advance`, and `halt` may update `autopilot.json`. No skill writes
-a relay queue file. The former `relay-<relay_id>.json` state file is obsolete and must not
-be read as authority.
+**Write rule.** `run`, `advance`, and `halt` may update only the matching
+`RELAY_FLAG`. No skill writes a relay queue file. The former `relay-<relay_id>.json`
+state file is obsolete and must not be read as authority.
+
+## Per-project relay lock
+
+`LOCK_DIR` is an empty directory acquired with `mkdir <LOCK_DIR>`. `mkdir` is atomic,
+so exactly one `run` invocation can own a given Linear project even when two invocations
+start simultaneously. The owner writes `RELAY_FLAG` immediately after acquiring it and
+keeps `LOCK_DIR` until the relay is halted or completed.
+
+When `mkdir <LOCK_DIR>` fails, `run` must not overwrite the flag or start a second
+worktree. If the matching flag is active and unexpired, report that relay. If no valid
+flag exists, treat the lock as an in-progress initialization; only reclaim it after its
+mtime is older than 30 minutes, then retry `mkdir` once. Never remove a fresh lock.
+
+Whenever a relay is disarmed (`queue_drained`, `budget_reached`, a spawn failure, or
+`halt`), set its matching flag to `active: false` and remove only its matching empty
+`LOCK_DIR`. A failed verification intentionally leaves both in place: the relay is paused,
+not abandoned.
+
+## Legacy global flag
+
+`<git-common-dir>/nuthouse/autopilot.json` was the pre-project-scoping location. New
+relays must not use it. If it is active and unexpired, `run` must refuse to start any new
+relay and ask the user to finish or halt that legacy relay first; otherwise an old agent
+could still treat the global file as authority. An inactive or expired legacy file is
+ignored and is never updated. `monkey-maestro:halt --legacy` is the one explicit migration
+operation that may disarm it.
 
 ## What replaced relay-state
 
@@ -125,8 +163,9 @@ Any of these stops forward progress:
 - `accepted_count >= max_issues` → disarm with `budget_reached`.
 - `queue-scout` finds no startable issue → disarm with `queue_drained`.
 
-Whenever the relay is done or halted, set `autopilot.json active: false`; never leave the
-single-relay lock armed after forward progress has stopped.
+Whenever a relay is done or halted, set its matching `RELAY_FLAG` to `active: false` and
+remove its matching `LOCK_DIR`; never leave that project's lock armed after forward
+progress has stopped.
 
 ## The movement (per-worktree lifecycle)
 
@@ -141,9 +180,9 @@ single-relay lock armed after forward progress has stopped.
 6. `git-gremlin:pr` [F] → PR title/body includes the Linear issue and `Closes <ISSUE>`;
    auto-chains `monkey-maestro:advance`.
 7. `monkey-maestro:advance` [H] → reviews the PR, asks the patron "tested, it's good?",
-   records only audit/budget fields in `autopilot.json`, then asks `queue-scout` for the
-   next startable Linear issue, spawns it, and best-effort deletes the previous accepted
-   worktree after the new workspace opens.
+   records only audit/budget fields in the matching project `RELAY_FLAG`, then asks
+   `queue-scout` for the next startable issue in that same Linear project, spawns it, and
+   best-effort deletes the previous accepted worktree after the new workspace opens.
 
 The patron merges PRs out-of-band, at their own tempo.
 
@@ -156,7 +195,8 @@ gate-bypass on that observable prefix.
 ```text
 AUTOPILOT RELAY (monkey-maestro) — continue the symphony.
 You are a fresh agent in a dedicated worktree for Linear issue <ISSUE> on branch <BRANCH>.
-Autopilot is ON for this project (relay <RELAY_ID>). Run the movement unattended up to the acceptance gate.
+Autopilot is ON for Linear project <LINEAR_PROJECT_ID> (relay <RELAY_ID>).
+Its only control flag is <RELAY_FLAG>. Run the movement unattended up to the acceptance gate.
 START NOW: invoke `linear-devotee:greet <ISSUE>` before anything else.
 Chain: greet → plan (auto per plan_gate) → implement → moon-moth:verify → git-gremlin:commit
 → git-gremlin:pr (body must contain `Closes <ISSUE>`) → monkey-maestro:advance.

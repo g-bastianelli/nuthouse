@@ -72,10 +72,15 @@ to the original file. Each child takes IDs, fetches its own data.
 
 1. Server state → the data-fetching library (TanStack Query / SWR…). Never store
    fetched data in global state.
-2. URL state → router search params (selected id, active tab, open modal — if
-   shareable/navigable).
-3. Global session → Context (auth, current user, theme).
-4. Local UI → `useState` (last resort).
+2. URL state → typed router search params for shareable, bookmarkable, or
+   refresh-persistent view state (filters, sort, paging, query, tabs, selection,
+   deep-linkable modal). The URL is the source of truth; use `replace` for
+   high-frequency updates. Hash is only for client-only anchors/state; never put
+   secrets, PII, or large blobs in the URL.
+3. Global session → Context only for low-frequency, non-shareable DI (auth,
+   current user, theme, locale), never as a broad state store.
+4. Local UI → `useState` for ephemeral, non-shareable state (hover, focus, a
+   dropdown that should not deep-link).
 
 ## Hooks & a11y
 

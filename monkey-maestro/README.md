@@ -12,9 +12,11 @@ in the box seat, for a single nod ("tested, it's good?") before cueing the next
 movement. You merge the PRs yourself, at your own tempo. The baton never falls silent
 until the queue is drained — or you call _baton down_.
 
-Linear is the source of truth. The relay keeps only a repo-scoped control flag
-(`autopilot.json`) for locking, budget, and audit breadcrumbs; it does not maintain a
-local issue queue or stage file.
+Linear is the source of truth. Each Linear project gets its own control flag under the
+repository's shared `.git/nuthouse/relays/<project-id>/autopilot.json`, with an atomic
+lock beside it. Several projects can run concurrently in one Git repository, while a
+single project cannot start two relays. The relay does not maintain a local issue queue or
+stage file.
 
 ## Install
 

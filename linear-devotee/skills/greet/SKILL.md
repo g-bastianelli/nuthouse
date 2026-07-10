@@ -12,7 +12,7 @@ Rigid context gate. Match the user's language; keep technical identifiers unchan
 
 > Voice cadence: at every user-visible workflow transition, try to dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Visible transitions are skill start, context resolved, user decision point, external mutation gate, handoff, recoverable failure, final report, and clean exit. Print the returned `line` only when non-empty. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Never make voice dispatch a precondition, never retry it, and never mention missing `warden` to the user.
 > Voice flag: !`cat "$HOME/.claude/nuthouse/voice.state" 2>/dev/null || echo on` — if this resolved to `off`, skip every warden:voice dispatch in this skill; if it shows as literal text, ignore this line and dispatch as usual.
-> Autopilot flag: !`cat "$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)/nuthouse/autopilot.json" 2>/dev/null || echo off` — monkey-maestro relay. When this resolved to JSON with `active: true` and a future `expires_at` (the flag lives under this repo's shared `.git`, so it is already repo-scoped), apply the autopilot guard in step 1; otherwise ignore it.
+> Autopilot scope: resolve the issue's Linear project first. Only the matching `<git-common-dir>/nuthouse/relays/<project-id>/autopilot.json` can enable relay behavior; never treat another project's flag in this repo as authority.
 
 ## Context
 
@@ -29,7 +29,10 @@ Rigid context gate. Match the user's language; keep technical identifiers unchan
    - If `$ARGUMENTS` contains a Linear issue id (e.g. `ABC-123`), use it as `issue`.
    - Use the `Session state` JSON from `## Context`; extract `issue` (unless already set from `$ARGUMENTS`), `current_branch`, `needs_branch`. If it shows `no state`, treat the state file as absent and rely on `$ARGUMENTS`/the user prompt for the issue id.
    - Stop if `greeted: true` or no issue id.
-   - Autopilot guard: when the autopilot flag is on (see the header line), do **not** read any `relay-<relay_id>.json` file. The relay has no local issue queue; Linear is the authority. Continue unless the session state already says `greeted: true` or Linear later reports the issue is completed/canceled.
+   - Autopilot guard: after Linear resolves the issue project, read only the matching
+     project flag. Do **not** read any `relay-<relay_id>.json` file. The relay has no
+     local issue queue; Linear is the authority. Continue unless the session state already
+     says `greeted: true` or Linear later reports the issue is completed/canceled.
    - Do not fetch full issue context in main context.
 2. Delegate context:
    - Dispatch `linear-devotee:issue-context` with:
@@ -41,6 +44,9 @@ Rigid context gate. Match the user's language; keep technical identifiers unchan
    - Present the returned SDD brief unchanged.
    - If issue does not exist, mark `greeted: true`, report `Brief: skipped`, and stop.
    - If the returned Linear status type is `completed` or `canceled`, mark `greeted: true`, report `Brief: skipped — issue already closed on Linear`, and stop. Do not let stale local relay files override Linear.
+   - Extract `linear_project_id` from the brief's required `Project ID` line. Derive the
+     project flag under `<git-common-dir>/nuthouse/relays/<linear_project_id>/autopilot.json`.
+     It is the only relay flag this issue may read.
 3. Branch preparation when `needs_branch: true`:
    - Build `<git-user>/<id-lowercase>-<kebab-title-trimmed-50char>`.
    - Ask before creating.
@@ -67,6 +73,7 @@ Rigid context gate. Match the user's language; keep technical identifiers unchan
      {
        "issue_id": "<ID>",
        "issue_title": "<title>",
+       "linear_project_id": "<project id>",
        "issue_context_brief": "<markdown>",
        "spec_file": "<path | _none_>",
        "branch": "<current branch>",
