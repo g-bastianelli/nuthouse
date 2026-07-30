@@ -100,6 +100,15 @@
         "sha": "29c99848558b84cd28ad57233e174b1021231400"
       },
       "category": "productivity"
+    },
+    {
+      "name": "hermes-tweet",
+      "source": {
+        "source": "github",
+        "repo": "Xquik-dev/hermes-tweet",
+        "sha": "df95485bfcf5e114d0c73543339528e374b3dd8f"
+      },
+      "category": "productivity"
     }
   ]
 }
