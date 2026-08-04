@@ -1,55 +1,68 @@
 ---
 name: hono-pipeline
-description: Layered backend pipeline discipline for Hono + typed-RPC monorepos — contract → error union → pure service → unwrap → thin router. Applies when working on Hono backend code.
+description: Implementation discipline for Hono with a typed RPC/contract stack — discover local conventions, then move contract → resource error → pure service Result → exhaustive unwrap → thin router → wiring.
 user-invocable: false
 paths: ["**/*.ts"]
 ---
 
 # subroutine — Hono pipeline discipline
 
-Applies only when working on Hono backend code (routes, RPC procedures,
-services, domain libs, contracts packages) — ignore it for frontend files. The
-backend discipline (back-of-stack), for a Hono + typed-RPC monorepo. Builds on
-the `result-pattern`, `validation`, and `type-safety` discipline skills. The
-repo's `apps/*/api/AGENTS.md` wins on exact paths, RPC lib, and auth — read it
-first; this is the layered pipeline that holds.
+Apply this only to Hono backend/contracts/domain code. First read the scoped
+`AGENTS.md` and one complete neighboring resource; reuse its stack and commands.
 
-## The layers (a new procedure moves through all of them, in order)
+## Implement the whole vertical slice
 
-1. **Contract** — the typed input/output schema (Zod) + declared error codes,
-   in the contracts package. Single source of truth for the wire shape.
-2. **Error union** — a discriminated `{Resource}Error` (`code` + variant fields)
-   in the domain lib. See the `result-pattern` discipline skill.
-3. **Service** — framework-pure domain logic in the domain lib. Returns
-   `Promise<Result<T, {Resource}Error>>`. **No `hono` / RPC / HTTP imports.**
-   Threads `tenantId` / auth context explicitly through its signature — no
-   implicit globals, no DI container.
-4. **Unwrap** — one `_unwrap.ts` per resource translates `Result.error` to the
-   transport error via `ts-pattern` `.match().exhaustive()` and throws it.
-5. **Router/handler** — thin Hono/RPC handler: validate input (contract schema),
-   call the service, `unwrap` the result, return the value. No business logic.
-6. **Wiring** — mount the new resource/router in the app entry only when adding a
-   new resource folder; an existing resource needs no wiring edit.
+1. **Contract** — input/output schemas plus every transport error code.
+2. **Resource error** — discriminated variants for expected failures.
+3. **Service** — framework-pure `Promise<Result<T, ResourceError>>`; pass
+   tenant/auth values explicitly.
+4. **Unwrap** — exhaustive translation to framework errors.
+5. **Router** — contract validation → service → unwrap → return.
+6. **Wiring** — mount a new resource/domain only; an existing router is wired.
 
-## Domain libs stay pure
+```ts
+// contract.ts
+export const ordersContract = oc.router({
+	get: oc.route({ method: "GET", path: "/orders/{id}" })
+		.input(z.object({ id: z.uuid() }))
+		.output(OrderSchema)
+		.errors({ NOT_FOUND: { data: z.object({ orderId: z.uuid() }) } }),
+});
 
-- No `hono`, RPC-server, or HTTP imports in domain/service code.
-- Subpath exports per resource via `package.json#exports`.
-- DB access via the repo's tenant-scoped accessor; map driver errors (unique /
-  FK violations) to error-union variants, don't leak raw DB errors.
+// errors.ts + service.ts
+export type OrdersError = { code: "NOT_FOUND"; orderId: string };
+export function createOrdersService(tenantId: string) {
+	return {
+		async get(id: string): Promise<Result<Order, OrdersError>> {
+			const order = await findOrder(tenantId, id);
+			return order ? ok(order) : err({ code: "NOT_FOUND", orderId: id });
+		},
+	};
+}
 
-## Auth / context
+// _unwrap.ts + router.ts
+export const ordersRouter = {
+	get: os.orders.get.handler(async ({ input, context }) =>
+		unwrap(await createOrdersService(context.tenantId).get(input.id)),
+};
+```
 
-- Auth context (`user`, `tenantId`) is read at the edge (middleware) and **passed
-  explicitly** into service calls. Keep signatures honest.
-- Token-acquisition / session routes that must run _before_ auth are plain Hono
-  routes, not RPC procedures — check the repo's convention for where they live.
+The omitted `unwrap` follows `result-pattern`; its payload must match the
+contract's `.errors()` schema exactly.
 
-## The discipline
+## Preserve layer boundaries
 
-- Business outcomes are `Result` variants, never thrown. Only the unwrap (and
-  infra failures) throw.
-- A new error variant updates **contract `.errors()` + error union + unwrap
-  mapping** together; `.exhaustive()` makes a forgotten mapping a compile error.
-- Validate at the boundary with the contract's Zod schema; downstream code trusts
-  the parsed type.
+- Keep Hono/RPC/HTTP imports out of domain/service code.
+- Read auth/session at the edge; pass only required values into services.
+- Prefer resource subpath imports; broad barrels can load a whole context.
+- Follow the repo's persistence slices. Do not add a generic repository layer;
+  isolate a store only for a complex transactional aggregate.
+- Keep token/session acquisition, webhooks, and health probes as plain Hono
+  routes when they sit outside the authenticated RPC pipeline.
+
+## Verify the chain
+
+- Test service behavior and every expected error. Test serialization/auth at the
+  router edge only when repo policy permits it.
+- Typecheck contract, domain, and API together. Exhaustiveness catches
+  union/unwrap drift; explicitly compare unwrap codes with contract errors.

@@ -27,10 +27,12 @@ deterministically, during both implementation and review:
 | `SubagentStart` | `review`                 | A code-review subagent starts blind to the parent's skills — this injects the disciplines so the reviewer can flag violations.      |
 | `SessionStart`  | `startup\|resume`        | In a TypeScript repo, injects a one-line-per-discipline digest so the spine is present before the first edit.                       |
 
-Bodies are packed under the runtime's 10 000-char `additionalContext` budget:
-when several disciplines match one file, the universal rules go in full and the
-lowest-priority overflow degrades to a one-line summary. The `SKILL.md` files
-remain the single source of truth — edit them, and the hook delivers the change.
+Bodies use focused, reusable examples and are packed under the runtime's 10 000-
+char `additionalContext` budget. A normal backend `.ts` or component `.tsx`
+receives every relevant discipline in full. When a cross-stack hook or review
+matches too many, the lowest-priority overflow degrades to a one-line summary.
+The `SKILL.md` files remain the single source of truth — edit them, and the hook
+delivers the change.
 
 ## Discipline (the six rule sets)
 

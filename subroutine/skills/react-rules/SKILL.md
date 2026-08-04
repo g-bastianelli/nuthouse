@@ -1,98 +1,76 @@
 ---
 name: react-rules
-description: React component discipline — one component per file, folder mirrors the JSX tree, IDs-only props, state hierarchy. Applies when working on React components and hooks.
+description: React implementation discipline — one component per file, folders mirror JSX ownership, children receive stable IDs/primitives, state lives at the highest durable layer, and styling ownership stays explicit.
 user-invocable: false
 paths: ["**/*.tsx", "**/use*.ts", "**/hooks/**/*.ts"]
 ---
 
-# subroutine — React rules discipline
+# subroutine — React discipline
 
-Applies to React component and hook files (front-of-stack), battle-tested across
-React codebases. The repo's `apps/*/AGENTS.md` wins on stack specifics
-(router, forms lib, design system, i18n) — read it first; this is the structural
-discipline that holds regardless.
+Apply this to React components and hooks. Read the scoped `AGENTS.md` first for
+the router, data layer, form library, design system, i18n, and testing policy.
 
-## Rule 1 — One component per file
+## Make the file tree express the render tree
 
-Exactly one React component definition per file. No second "private" component
-(`const Row = ...`, `function Header() {}`) in the same file. Non-component
-helpers (constants, types, small pure functions) are fine. Need another
-component → new sibling file or folder.
+- Define exactly one React component per file using a named `function`.
+- A leaf is one file. When it gains children/support code, turn it into a folder
+  whose `index.tsx` exports the parent and only composes layout.
+- Put shared-by-siblings code at their lowest common ancestor. Keep nesting
+  shallow and colocate private hooks/types with their owner.
 
-## Rule 2 — Folder structure mirrors the JSX tree
-
-If `A` renders `B`, `C`, `D`, then `A/` contains `B`, `C`, `D` as files or
-subfolders.
-
-- **Single file** (default): a leaf with no sub-components → `Parent/Name.tsx`.
-- **Folder with `index.tsx`**: has sub-components or colocated files
-  (`hooks.ts`, `types.ts`) → `Name/index.tsx` exports one component named `Name`.
-- `index.tsx` is **layout-only** — composition with flex/grid, no data fetching,
-  no business logic.
-- Colocate support code next to the component; a hook used by multiple files gets
-  its own `useXxx.ts` (never exported from `index.tsx`).
-- Shared-by-siblings components live at the lowest common ancestor, not a global
-  `components/`. Keep depth ≤ 2–3 levels.
-
-## Rule 3 — Props are IDs and primitives, never domain objects
-
-```tsx
-<ContactRoleSelect contact={contact} />            // ✗
-<ContactRoleSelect dealId={dealId} contactId={id} /> // ✓
+```text
+MembersTable/
+├── index.tsx          # renders MemberRow; layout only
+├── MemberRow.tsx      # renders RoleBadge and RowActions
+├── RoleBadge.tsx
+├── RowActions.tsx
+└── useMember.ts
 ```
 
-Each child fetches what it needs via the data layer (same cache, no extra
-request). Components stay ~30–80 lines, own their logic, return `null` when they
-have nothing to show (the parent never checks on the child's behalf). Non-trivial
-logic → a colocated `useComponentName.ts`.
+## Pass identity; let children own their data
 
-## Rule 4 — Shared data via a select hook
+Prefer IDs and primitives over domain objects. A child selects what it needs
+from the repository's cached data layer, owns its loading/empty behavior, and
+returns `null` when it has nothing to render.
 
-When siblings need the same entity, a colocated `use<Entity>.ts` selects from an
-already-loaded query (adapt to the project's data layer). The data layer
-deduplicates — no extra network call.
+```tsx
+type Props = { memberId: string; className?: string };
 
-## Rule 5 — Splitting a large component
+export function MemberRow({ memberId, className }: Props) {
+  const member = useMember(memberId);
+  if (!member) return null;
+  return <li className={cn("flex items-center", className)}>{member.email}</li>;
+}
+```
 
-Beyond ~80 lines or several distinct blocks: turn the file into a **folder with
-`index.tsx` (layout-only) and children inside** — never leave children flat next
-to the original file. Each child takes IDs, fetches its own data.
+When siblings need the same entity, share a colocated selector hook over the
+same query/cache rather than threading the object through the tree. Route-aware
+code owns URL reads/writes and passes values plus callbacks into route-agnostic
+libraries. Keep selectors subscribed to cache updates; do not replace a query
+hook with a one-time cache snapshot.
 
-## Styling
+## Put state at the highest durable layer
 
-- **Parent owns placement** (margin, position, width, gap, layout); **child owns
-  internal styling** (typography, color, border, internal padding).
-- Every component accepts `className` and merges it onto its root (`cn`/`clsx`).
-- Prefer design-system components and tokens over raw HTML/values. Never raw
-  `<input>`/`<select>`/`<textarea>` when a DS component exists.
-- Switch variant styles inline at the call site with `clsx` object syntax — no
-  top-level `XXX_VARIANT` maps or `Record<Kind, string>` registries.
+1. Server state → query/data library; never mirror fetched data in `useState`.
+2. Shareable/refresh-persistent view state → typed URL search params.
+3. Low-frequency session/DI → one-purpose Context plus a dedicated hook.
+4. Ephemeral unsaved UI → local `useState`.
 
-## State (highest applicable wins)
+Avoid `useEffect` for data fetching. If an effect is truly synchronizing with
+an external system, keep dependencies complete and comment the reason.
 
-1. Server state → the data-fetching library (TanStack Query / SWR…). Never store
-   fetched data in global state.
-2. URL state → typed router search params for shareable, bookmarkable, or
-   refresh-persistent view state (filters, sort, paging, query, tabs, selection,
-   deep-linkable modal). The URL is the source of truth; use `replace` for
-   high-frequency updates. Hash is only for client-only anchors/state; never put
-   secrets, PII, or large blobs in the URL.
-3. Global session → Context only for low-frequency, non-shareable DI (auth,
-   current user, theme, locale), never as a broad state store.
-4. Local UI → `useState` for ephemeral, non-shareable state (hover, focus, a
-   dropdown that should not deep-link).
+## Keep styling and accessibility owned
 
-## Hooks & a11y
+- Parent owns placement (grid/flex, gap, width, margin); child owns its root,
+  typography, color, border, and internal padding.
+- Accept `className` and merge it onto the root. Prefer design-system components
+  and tokens over raw controls and magic values.
+- Switch variants at the call site with `clsx`/`cn` conditionals; do not create
+  top-level class lookup registries.
+- Associate labels and controls with stable unique IDs and preserve keyboard,
+  focus, and semantic behavior supplied by the design system.
 
-- If the project uses the React Compiler, **do not** hand-write `useMemo` /
-  `useCallback` / `React.memo` — the compiler inserts memoization. Otherwise use
-  them only when performance requires it.
-- Avoid `useEffect` for async data; prefer the data layer. If used, comment why.
-- Every `<label>` has `htmlFor`; every form control has a unique `id`. Prefer DS
-  form components.
-
-## Testing
-
-Follow the repo's policy. Many frontend repos run **no component unit tests**
-(only isolated pure utils) — check `AGENTS.md` before adding or keeping
-`*.test.tsx`.
+If React Compiler is enabled, do not add `useMemo`, `useCallback`, or
+`React.memo`; otherwise add memoization only after measuring a real need. Follow
+the repository's test policy—do not invent component tests in a codebase that
+deliberately tests only extracted pure logic.

@@ -60,8 +60,8 @@ test("discoverSkills finds all six real subroutine skills, priority-ordered", ()
     "type-safety",
     "validation",
     "code-organisation",
-    "result-pattern",
     "react-rules",
+    "result-pattern",
     "hono-pipeline",
   ]);
   for (const s of skills) {
@@ -94,14 +94,13 @@ test("matchSkills: a .tsx pulls react-rules but not the .ts-only domain skills",
   expect(names).not.toContain("hono-pipeline");
 });
 
-test("buildDisciplinePayload stays under the additionalContext cap for a backend .ts", () => {
+test("a backend .ts packs every relevant discipline in full under the hook budget", () => {
   const skills = discoverSkills(SKILLS_DIR);
   const matched = matchSkills(skills, "/repo/src/service.ts");
-  const payload = buildDisciplinePayload(matched);
+  const payload = buildDisciplinePayload(matched, { capChars: 9748 });
   expect(payload.length).toBeLessThan(ADDITIONAL_CONTEXT_CAP);
-  // Universal rules are present in full; lowest-priority overflow degrades to a summary.
-  expect(payload).toContain("### type-safety");
-  expect(payload).toContain("also binding (summary only");
+  for (const skill of matched) expect(payload).toContain(`### ${skill.name}\n`);
+  expect(payload).not.toContain("also binding");
 });
 
 test("buildDisciplinePayload over ALL skills (review) stays under the cap", () => {
@@ -173,6 +172,13 @@ test("a .tsx packs react-rules as a full body under a realistic hook budget", ()
   const payload = buildDisciplinePayload(matched, { capChars: 9748 });
   expect(payload).toContain("### react-rules");
   expect(payload).not.toContain("also binding");
+});
+
+test("a React hook .ts keeps react-rules in full when backend fallbacks overflow", () => {
+  const matched = matchSkills(discoverSkills(SKILLS_DIR), "/repo/src/hooks/useMember.ts");
+  const payload = buildDisciplinePayload(matched, { capChars: 9748 });
+  expect(payload).toContain("### react-rules\n");
+  expect(payload).toContain("also binding");
 });
 
 test("partitionBySession marks skills seen across calls within a session", () => {

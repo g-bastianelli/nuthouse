@@ -1,37 +1,42 @@
 ---
 name: validation
-description: Validation discipline for all TypeScript work — Zod as the single validation library, parse at trust boundaries, types inferred from schemas. Applies whenever editing or creating TypeScript files.
+description: Validation discipline for TypeScript — one schema source of truth, parse data once at each trust boundary, and derive static types from schemas. Applies whenever editing or creating TypeScript files.
 user-invocable: false
 paths: ["**/*.ts", "**/*.tsx"]
 ---
 
 # subroutine — validation discipline
 
-Applies to every TypeScript file that touches data crossing a trust boundary.
-Zod is the single validation library across front, back, and libs. The repo's
-`AGENTS.md` wins if it names a different one — read it first.
+Use the repository's validation library; default to Zod when none is specified.
+The nearest `AGENTS.md` wins.
 
-## Rules
+## One boundary, one parse
 
-- **HTTP / RPC inputs** (body, query, params): declare the schema inline in the
-  route/procedure definition. Validate there, not deep in the service.
-- **External data** (third-party API responses, JWT payloads, file contents):
-  `Schema.parse(raw)` at the boundary. **Never** hand-roll `typeof` checks for
-  data crossing a trust boundary.
-- **Types follow schemas**: `type Foo = z.infer<typeof FooSchema>`. Never
-  redeclare a type that a schema already describes.
-- **Shared schemas** (used by ≥2 packages) live in the repo's shared types
-  package, not duplicated.
-- **String-literal value sets** pair with the type-safety discipline:
-  ```ts
-  export const PROTOCOLS = ["opcua", "mqtt", "modbus_tcp"] as const;
-  export const ProtocolSchema = z.enum(PROTOCOLS);
-  export type Protocol = (typeof PROTOCOLS)[number];
-  ```
+- Declare HTTP/RPC body, query, and path schemas in the route or contract.
+- Parse third-party responses, decoded tokens, environment input, and file
+  contents immediately after reading them. Do not pass raw `unknown` deeper.
+- Use `parse` when invalid data violates a boundary invariant. Use `safeParse`
+  when invalid input is an expected outcome that must become a typed error.
 
-## The discipline
+```ts
+export const ProfileSchema = z.object({
+  id: z.uuid(),
+  displayName: z.string().min(1),
+});
+export type Profile = z.infer<typeof ProfileSchema>;
 
-- Parse, don't validate-then-trust: after `Schema.parse`, the value is typed and
-  safe — no casts needed downstream.
-- One schema is the source of truth for both the runtime check and the static
-  type. If you're writing a type and a schema for the same shape, you've drifted.
+export async function fetchProfile(response: Response): Promise<Profile> {
+  const raw: unknown = await response.json();
+  return ProfileSchema.parse(raw);
+}
+```
+
+## Keep one source of truth
+
+- Infer types with `z.infer<typeof Schema>`; never maintain a parallel
+  hand-written interface for the same shape.
+- Reuse the parsed value downstream; do not revalidate inside the service.
+- Move a schema to the repository's shared contract/types package only when at
+  least two packages consume the same wire shape. Otherwise colocate it.
+- Do not replace schema parsing with hand-written property/`typeof` checks for
+  structured external data.

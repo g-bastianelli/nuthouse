@@ -1,80 +1,74 @@
 ---
 name: result-pattern
-description: Result/error discipline for domain and service logic — business outcomes return `Result<T,E>`, never throw; one unwrap at the transport boundary. Applies when working on backend/domain TypeScript code.
+description: Result/error discipline for backend domain and service code — expected outcomes return Result variants, infrastructure failures stay exceptional, and one exhaustive unwrap translates at the transport edge.
 user-invocable: false
 paths: ["**/*.ts"]
 ---
 
 # subroutine — Result / error discipline
 
-Applies to domain/service logic and transport boundaries (backend services,
-domain libs, RPC/HTTP handlers) — not React UI code. How success and failure
-travel through the code: domain/business logic **returns errors, never throws
-them**; the throw happens once, at the transport boundary. The repo's own
-`AGENTS.md` wins if it defines a different shape — read it first.
+Apply this to backend domain/services and transport handlers, not frontend code.
+Use the repository's existing `Result` helpers and error taxonomy; the nearest
+`AGENTS.md` wins.
 
-## The Result type
+## Separate expected outcomes from exceptions
+
+- Return `Result<T, ResourceError>` for expected business outcomes: not found,
+  forbidden, validation, or conflict.
+- Do not throw those outcomes or catch them as exceptions.
+- Let unexpected infrastructure/programmer failures throw to the global error
+  handler. Catch only when recognizing a specific driver failure and mapping it
+  to a declared domain variant; rethrow everything else.
 
 ```ts
-export type Result<T, E> = { ok: true; value: T } | { ok: false; error: E };
-export function ok<T>(value: T): Result<T, never> {
-  return { ok: true, value };
-}
-export function err<E>(error: E): Result<never, E> {
-  return { ok: false, error };
+export type OrdersError =
+  | { code: "NOT_FOUND"; orderId: string }
+  | { code: "CONFLICT"; reason: "duplicate-reference" };
+
+export async function createOrder(input: CreateOrder): Promise<Result<Order, OrdersError>> {
+  try {
+    return ok(await insertOrder(input));
+  } catch (cause) {
+    if (isUniqueViolation(cause)) {
+      return err({ code: "CONFLICT", reason: "duplicate-reference" });
+    }
+    throw cause;
+  }
 }
 ```
 
-If the repo already exports a `Result`/`ok`/`err` (e.g. from a shared types
-package), **use the repo's** — never redeclare it.
+## Keep errors local and propagation explicit
 
-## Where each layer lives
+- Define one discriminated error union per resource/slice, with `code` and only
+  the fields required to explain or translate that variant.
+- Propagate a failed dependency result immediately; do not unwrap and rewrap it.
+- Keep domain code free of Hono/RPC/HTTP imports.
 
-1. **Domain / service layer** — framework-pure (no HTTP, no router imports).
-   Returns `Promise<Result<T, ResourceError>>`. Propagates failures by returning
-   the `err(...)`, never by throwing a business error.
-   ```ts
-   async function listGateways(): Promise<Result<Gateway[], GatewaysError>> {
-     const resolved = resolveTenantDb();
-     if (!resolved.ok) return resolved; // propagate, don't throw
-     return ok(await resolved.value.query.gateways.findMany());
-   }
-   ```
-2. **Error type** — a **discriminated union per resource**, `code` + variant
-   fields:
-   ```ts
-   type GatewaysError =
-     | { code: "NOT_FOUND"; resource: "tenant" | "gateway" }
-     | { code: "VALIDATION"; field: string; reason: string }
-     | { code: "CONFLICT"; reason: string };
-   ```
-3. **Unwrap at the boundary** — one place translates `Result.error` to a
-   transport error and throws it, via `ts-pattern` `.exhaustive()` so a new error
-   variant can't be forgotten:
-   ```ts
-   function unwrap<T>(result: Result<T, GatewaysError>): T {
-     if (result.ok) return result.value;
-     return match(result.error)
-       .with({ code: "NOT_FOUND" }, (e) => {
-         throw new XError("NOT_FOUND", e);
-       })
-       .with({ code: "VALIDATION" }, (e) => {
-         throw new XError("BAD_REQUEST", e);
-       })
-       .with({ code: "CONFLICT" }, (e) => {
-         throw new XError("CONFLICT", e);
-       })
-       .exhaustive();
-   }
-   ```
-4. **Handler** — thin: call the service, `unwrap` the result, return the value.
-   Let the unwrap's throw bubble to the framework's global error handler.
+```ts
+const tenant = resolveTenant(tenantId);
+if (!tenant.ok) return tenant;
+return ok(await listOrders(tenant.value));
+```
 
-## The discipline
+## Unwrap once at the transport boundary
 
-- A new error variant moves **three files together**: the error union, the
-  unwrap mapping (`.exhaustive()` forces it), and the transport contract's
-  declared error codes. Drift is caught at compile time.
-- Never `try/catch` a business outcome — model it as a `Result` variant.
-- Infrastructure failures (DB down, S3 timeout) may throw and be caught by the
-  global handler as a 500 — they are not domain errors.
+Translate every domain variant to the framework error in one resource-local
+function. Exhaustive matching makes a newly added variant fail compilation
+until transport behavior is declared.
+
+```ts
+export function unwrap<T>(result: Result<T, OrdersError>): T {
+  if (result.ok) return result.value;
+  return match(result.error)
+    .with({ code: "NOT_FOUND" }, (e) => {
+      throw new TransportError("NOT_FOUND", { orderId: e.orderId });
+    })
+    .with({ code: "CONFLICT" }, (e) => {
+      throw new TransportError("CONFLICT", { reason: e.reason });
+    })
+    .exhaustive();
+}
+```
+
+A new error variant moves three artifacts together: the error union, this
+unwrap mapping, and the transport contract's declared error codes.
