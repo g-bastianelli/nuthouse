@@ -20,11 +20,12 @@ the router, data layer, form library, design system, i18n, and testing policy.
 
 ```text
 MembersTable/
-├── index.tsx          # renders MemberRow; layout only
-├── MemberRow.tsx      # renders RoleBadge and RowActions
-├── RoleBadge.tsx
-├── RowActions.tsx
-└── useMember.ts
+├── index.tsx
+└── MemberRow/
+    ├── index.tsx
+    ├── RoleBadge.tsx
+    ├── RowActions.tsx
+    └── useMember.ts
 ```
 
 ## Pass identity; let children own their data

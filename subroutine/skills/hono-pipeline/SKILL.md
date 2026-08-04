@@ -23,27 +23,29 @@ Apply this only to Hono backend/contracts/domain code. First read the scoped
 ```ts
 // contract.ts
 export const ordersContract = oc.router({
-	get: oc.route({ method: "GET", path: "/orders/{id}" })
-		.input(z.object({ id: z.uuid() }))
-		.output(OrderSchema)
-		.errors({ NOT_FOUND: { data: z.object({ orderId: z.uuid() }) } }),
+  get: oc
+    .route({ method: "GET", path: "/orders/{id}" })
+    .input(z.object({ id: z.uuid() }))
+    .output(OrderSchema)
+    .errors({ NOT_FOUND: { data: z.object({ orderId: z.uuid() }) } }),
 });
 
 // errors.ts + service.ts
 export type OrdersError = { code: "NOT_FOUND"; orderId: string };
 export function createOrdersService(tenantId: string) {
-	return {
-		async get(id: string): Promise<Result<Order, OrdersError>> {
-			const order = await findOrder(tenantId, id);
-			return order ? ok(order) : err({ code: "NOT_FOUND", orderId: id });
-		},
-	};
+  return {
+    async get(id: string): Promise<Result<Order, OrdersError>> {
+      const order = await findOrder(tenantId, id);
+      return order ? ok(order) : err({ code: "NOT_FOUND", orderId: id });
+    },
+  };
 }
 
 // _unwrap.ts + router.ts
 export const ordersRouter = {
-	get: os.orders.get.handler(async ({ input, context }) =>
-		unwrap(await createOrdersService(context.tenantId).get(input.id)),
+  get: os.orders.get.handler(async ({ input, context }) =>
+    unwrap(await createOrdersService(context.tenantId).get(input.id)),
+  ),
 };
 ```
 

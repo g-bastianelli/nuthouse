@@ -91,9 +91,46 @@ test("inject-on-edit dedups within a session: full bodies first, reminder on rep
   }
 });
 
+test("inject-on-edit keeps a summarized discipline fresh for the next matching edit", () => {
+  const memo = fs.mkdtempSync(path.join(os.tmpdir(), "subroutine-e2e-"));
+  const env = { SUBROUTINE_MEMO_DIR: memo };
+  const session_id = "e2e-overflow";
+  try {
+    const testEdit = runHook(
+      "inject-on-edit.mjs",
+      { tool_input: { file_path: "/repo/src/orders/service.test.ts" }, session_id },
+      env,
+    );
+    const testContext = testEdit.hookSpecificOutput.additionalContext;
+    expect(testContext).toContain("`hono-pipeline` —");
+    expect(testContext).not.toContain("### hono-pipeline\n");
+
+    const serviceEdit = runHook(
+      "inject-on-edit.mjs",
+      { tool_input: { file_path: "/repo/src/orders/service.ts" }, session_id },
+      env,
+    );
+    expect(serviceEdit.hookSpecificOutput.additionalContext).toContain("### hono-pipeline\n");
+  } finally {
+    fs.rmSync(memo, { recursive: true, force: true });
+  }
+});
+
 test("inject-on-edit packs a .tsx edit's react-rules as a full body", () => {
   const res = runHook("inject-on-edit.mjs", { tool_input: { file_path: "/repo/src/Button.tsx" } });
   expect(res.hookSpecificOutput.additionalContext).toContain("### react-rules");
+});
+
+test("inject-on-edit packs focused testing and state-machine disciplines in full", () => {
+  const testRes = runHook("inject-on-edit.mjs", {
+    tool_input: { file_path: "/repo/src/orders/service.test.ts" },
+  });
+  expect(testRes.hookSpecificOutput.additionalContext).toContain("### testing-discipline");
+
+  const machineRes = runHook("inject-on-edit.mjs", {
+    tool_input: { file_path: "/repo/src/jobs/state-machine.ts" },
+  });
+  expect(machineRes.hookSpecificOutput.additionalContext).toContain("### state-machine");
 });
 
 test("inject-digest emits a SessionStart digest inside a TS repo", () => {

@@ -7,6 +7,7 @@ import {
   buildDisciplinePayload,
   buildInjection,
   discoverSkills,
+  markSkillsSeen,
   matchSkills,
   parseSkill,
   partitionBySession,
@@ -53,7 +54,7 @@ test("parseSkill returns null without frontmatter", () => {
   expect(parseSkill("no frontmatter here")).toBeNull();
 });
 
-test("discoverSkills finds all six real subroutine skills, priority-ordered", () => {
+test("discoverSkills finds all eight real subroutine skills, priority-ordered", () => {
   const skills = discoverSkills(SKILLS_DIR);
   const names = skills.map((s) => s.name);
   expect(names).toEqual([
@@ -61,6 +62,8 @@ test("discoverSkills finds all six real subroutine skills, priority-ordered", ()
     "validation",
     "code-organisation",
     "react-rules",
+    "testing-discipline",
+    "state-machine",
     "result-pattern",
     "hono-pipeline",
   ]);
@@ -92,6 +95,23 @@ test("matchSkills: a .tsx pulls react-rules but not the .ts-only domain skills",
   expect(names).toContain("react-rules");
   expect(names).not.toContain("result-pattern");
   expect(names).not.toContain("hono-pipeline");
+});
+
+test("matchSkills: tests and state machines pull their focused disciplines", () => {
+  const skills = discoverSkills(SKILLS_DIR);
+  const testNames = matchSkills(skills, "/repo/src/orders/service.test.ts").map((s) => s.name);
+  expect(testNames).toContain("testing-discipline");
+  expect(testNames).not.toContain("state-machine");
+
+  const machineNames = matchSkills(skills, "/repo/src/jobs/state-machine.ts").map((s) => s.name);
+  expect(machineNames).toContain("state-machine");
+  expect(machineNames).not.toContain("testing-discipline");
+
+  const machineTestNames = matchSkills(skills, "/repo/src/jobs/state-machine.test.ts").map(
+    (s) => s.name,
+  );
+  expect(machineTestNames).toContain("testing-discipline");
+  expect(machineTestNames).toContain("state-machine");
 });
 
 test("a backend .ts packs every relevant discipline in full under the hook budget", () => {
@@ -181,13 +201,28 @@ test("a React hook .ts keeps react-rules in full when backend fallbacks overflow
   expect(payload).toContain("also binding");
 });
 
-test("partitionBySession marks skills seen across calls within a session", () => {
+test("focused test and state-machine disciplines stay full under the hook budget", () => {
+  const skills = discoverSkills(SKILLS_DIR);
+  for (const [file, expected] of [
+    ["/repo/src/orders/service.test.ts", ["testing-discipline"]],
+    ["/repo/src/jobs/state-machine.ts", ["state-machine"]],
+    ["/repo/src/jobs/state-machine.test.ts", ["testing-discipline", "state-machine"]],
+    ["/repo/src/Members.test.tsx", ["react-rules", "testing-discipline"]],
+  ]) {
+    const payload = buildDisciplinePayload(matchSkills(skills, file), { capChars: 9748 });
+    for (const name of expected) expect(payload).toContain(`### ${name}\n`);
+    expect(payload.length).toBeLessThanOrEqual(9400);
+  }
+});
+
+test("partitionBySession reports markers written after full delivery", () => {
   const dir = tmpMemo();
   const skills = discoverSkills(SKILLS_DIR);
   try {
     const first = partitionBySession(skills, "sess-1", dir);
     expect(first.fresh.length).toBe(skills.length);
     expect(first.seen.length).toBe(0);
+    markSkillsSeen(skills, "sess-1", dir);
     const second = partitionBySession(skills, "sess-1", dir);
     expect(second.fresh.length).toBe(0);
     expect(second.seen.length).toBe(skills.length);
@@ -222,6 +257,41 @@ test("buildInjection: full bodies first time, reminder on repeat, both under the
   }
 });
 
+test("buildInjection leaves summarized overflow fresh for a later full injection", () => {
+  const dir = tmpMemo();
+  const skills = discoverSkills(SKILLS_DIR);
+  const wrap = (b) => `<system-reminder>x:\n${b}</system-reminder>`;
+  try {
+    const testEdit = buildInjection(
+      matchSkills(skills, "/repo/src/orders/service.test.ts"),
+      "overflow-session",
+      wrap,
+      { memoDir: dir },
+    );
+    expect(testEdit).toContain("`hono-pipeline` —");
+    expect(testEdit).not.toContain("### hono-pipeline\n");
+
+    const serviceEdit = buildInjection(
+      matchSkills(skills, "/repo/src/orders/service.ts"),
+      "overflow-session",
+      wrap,
+      { memoDir: dir },
+    );
+    expect(serviceEdit).toContain("### hono-pipeline\n");
+
+    const repeatedServiceEdit = buildInjection(
+      matchSkills(skills, "/repo/src/orders/service.ts"),
+      "overflow-session",
+      wrap,
+      { memoDir: dir },
+    );
+    expect(repeatedServiceEdit).toContain("`hono-pipeline`");
+    expect(repeatedServiceEdit).not.toContain("### hono-pipeline\n");
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("buildInjection guarantees the wrapped string stays under RUNTIME_CAP even with a fat envelope", () => {
   const skills = discoverSkills(SKILLS_DIR);
   const wrap = (b) => `<system-reminder>${"PADDING ".repeat(30)}\n${b}</system-reminder>`;
@@ -251,7 +321,7 @@ test("sweepStaleMarkers reaps markers older than the TTL, keeps recent ones", ()
   }
 });
 
-test("partitionBySession sweeps stale markers when it writes fresh ones", () => {
+test("markSkillsSeen sweeps stale markers when it writes markers", () => {
   const dir = tmpMemo();
   try {
     fs.mkdirSync(dir, { recursive: true });
@@ -259,8 +329,7 @@ test("partitionBySession sweeps stale markers when it writes fresh ones", () => 
     fs.writeFileSync(ancient, "");
     const old = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000);
     fs.utimesSync(ancient, old, old);
-    // fresh skills → triggers the write+sweep path
-    partitionBySession(discoverSkills(SKILLS_DIR), "sweep-sess", dir);
+    markSkillsSeen(discoverSkills(SKILLS_DIR), "sweep-sess", dir);
     expect(fs.existsSync(ancient)).toBe(false);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
@@ -271,7 +340,8 @@ test("partitionBySession does NOT scan/write on a pure repeat (dedup path stays 
   const dir = tmpMemo();
   try {
     const skills = discoverSkills(SKILLS_DIR);
-    partitionBySession(skills, "repeat-sess", dir); // first: writes markers
+    const initial = partitionBySession(skills, "repeat-sess", dir);
+    markSkillsSeen(initial.fresh, "repeat-sess", dir);
     // Drop a stale marker AFTER the first write; a pure repeat must not sweep it.
     const ancient = path.join(dir, "ancient");
     fs.writeFileSync(ancient, "");

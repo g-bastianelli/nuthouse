@@ -18,6 +18,8 @@ const PRIORITY = [
   "validation",
   "code-organisation",
   "react-rules",
+  "testing-discipline",
+  "state-machine",
   "result-pattern",
   "hono-pipeline",
 ];
@@ -158,19 +160,25 @@ function assemblePayload(full, overflow) {
  * ASSEMBLED output (bodies + overflow summary) would exceed `capChars`, the
  * lowest-priority skills degrade to a one-line summary. Because the summary is
  * counted, the returned string is guaranteed <= capChars — except the degenerate
- * case where even an all-summary list overruns, which the six-skill set never
+ * case where even an all-summary list overruns, which this discipline set never
  * hits. Demotion is a strict priority suffix: if a skill overflows, every
  * lower-priority one does too.
  */
-export function buildDisciplinePayload(skills, { capChars = DEFAULT_CAP } = {}) {
-  if (!skills.length) return "";
+function packDisciplinePayload(skills, { capChars = DEFAULT_CAP } = {}) {
+  if (!skills.length) return { payload: "", full: [], overflow: [] };
   const full = [...skills];
   const overflow = [];
   for (;;) {
     const out = assemblePayload(full, overflow);
-    if (out.length <= capChars || full.length === 0) return out;
+    if (out.length <= capChars || full.length === 0) {
+      return { payload: out, full, overflow };
+    }
     overflow.unshift(full.pop());
   }
+}
+
+export function buildDisciplinePayload(skills, opts) {
+  return packDisciplinePayload(skills, opts).payload;
 }
 
 /** Compact one-line-per-skill digest for SessionStart. */
@@ -209,11 +217,10 @@ export function sweepStaleMarkers(memoDir, ttlMs = MEMO_TTL_MS, now = Date.now()
 
 /**
  * Split `skills` into the ones not yet injected this session (`fresh`) and the
- * ones already injected (`seen`), then mark every matched skill as seen. Keyed
- * by `sessionId` so each discipline body is delivered in full at most once per
- * session. With no `sessionId` (e.g. review subagents, which start blind to the
- * parent transcript), everything is `fresh`. Best-effort: any fs error treats
- * the skill as fresh and never throws.
+ * ones already injected (`seen`). Marking happens only after budget packing,
+ * because a summarized overflow discipline has not yet been delivered in full.
+ * With no `sessionId` (e.g. review subagents, which start blind to the parent
+ * transcript), everything is `fresh`. Any fs error treats the skill as fresh.
  */
 export function partitionBySession(skills, sessionId, memoDir = MEMO_DIR) {
   if (!sessionId) return { fresh: skills, seen: [] };
@@ -228,20 +235,23 @@ export function partitionBySession(skills, sessionId, memoDir = MEMO_DIR) {
     }
     (exists ? seen : fresh).push(s);
   }
-  // Only write (and sweep) when there is something new — so the per-edit dedup
-  // path does pure existsSync checks, no disk writes or directory scans.
-  if (fresh.length) {
-    try {
-      fs.mkdirSync(memoDir, { recursive: true });
-      sweepStaleMarkers(memoDir);
-      for (const s of fresh) {
-        try {
-          fs.writeFileSync(markerPath(memoDir, sessionId, s.name), "");
-        } catch {}
-      }
-    } catch {}
-  }
   return { fresh, seen };
+}
+
+/** Mark only skill bodies that were actually emitted in full. Best-effort. */
+export function markSkillsSeen(skills, sessionId, memoDir = MEMO_DIR) {
+  if (!sessionId || !skills.length) return;
+  try {
+    fs.mkdirSync(memoDir, { recursive: true });
+    sweepStaleMarkers(memoDir);
+    for (const s of skills) {
+      try {
+        fs.writeFileSync(markerPath(memoDir, sessionId, s.name), "");
+      } catch {}
+    }
+  } catch {
+    // A memo failure must never block discipline delivery.
+  }
 }
 
 /**
@@ -261,7 +271,10 @@ export function buildInjection(skills, sessionId, wrap, opts = {}) {
     : "";
   const overhead = wrap("").length;
   const budget = Math.max(0, cap - margin - overhead - seenLine.length - 2);
-  const freshPayload = fresh.length ? buildDisciplinePayload(fresh, { capChars: budget }) : "";
-  const core = [freshPayload, seenLine].filter(Boolean).join("\n\n");
-  return core ? wrap(core) : "";
+  const packed = packDisciplinePayload(fresh, { capChars: budget });
+  const core = [packed.payload, seenLine].filter(Boolean).join("\n\n");
+  if (!core) return "";
+  const injection = wrap(core);
+  markSkillsSeen(packed.full, sessionId, memoDir);
+  return injection;
 }
