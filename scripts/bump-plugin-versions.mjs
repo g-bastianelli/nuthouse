@@ -4,7 +4,7 @@
 // invisible to existing installs: Claude Code keys the plugin cache by
 // version (`cache/<marketplace>/<plugin>/<version>/`), so update and even
 // reinstall reuse the stale directory. See _adr/0004.
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -50,8 +50,34 @@ export function planBumps(manifest, { isChanged, readCurrentVersion, readPinnedV
   return plan;
 }
 
-function git(command) {
-  return execSync(command, { encoding: "utf8" }).trim();
+function git(args, execute = execFileSync) {
+  return execute("git", args, { encoding: "utf8" }).trim();
+}
+
+export function isPluginChanged(pluginPath, ref, pinnedSha, execute = execFileSync) {
+  if (git(["status", "--porcelain", "--", `${pluginPath}/`], execute) !== "") {
+    return true;
+  }
+  const latestSha = git(
+    ["log", "-1", "--format=%H", "--end-of-options", ref, "--", `${pluginPath}/`],
+    execute,
+  );
+  return latestSha !== pinnedSha;
+}
+
+export function readPinnedPluginVersion(pluginPath, sha, execute = execFileSync) {
+  if (!sha) {
+    return null;
+  }
+  try {
+    const manifest = git(
+      ["show", "--end-of-options", `${sha}:${pluginPath}/.claude-plugin/plugin.json`],
+      execute,
+    );
+    return JSON.parse(manifest).version;
+  } catch {
+    return null;
+  }
 }
 
 function main() {
@@ -60,26 +86,12 @@ function main() {
   const manifest = JSON.parse(readFileSync(MARKETPLACE_PATH, "utf8"));
 
   const plan = planBumps(manifest, {
-    isChanged: (path, sha) => {
-      if (git(`git status --porcelain -- ${path}/`) !== "") {
-        return true;
-      }
-      return git(`git log -1 --format=%H ${ref} -- ${path}/`) !== sha;
-    },
+    isChanged: (path, sha) => isPluginChanged(path, ref, sha),
     readCurrentVersion: (path) => {
       const json = JSON.parse(readFileSync(`${path}/.claude-plugin/plugin.json`, "utf8"));
       return json.version;
     },
-    readPinnedVersion: (path, sha) => {
-      if (!sha) {
-        return null;
-      }
-      try {
-        return JSON.parse(git(`git show ${sha}:${path}/.claude-plugin/plugin.json`)).version;
-      } catch {
-        return null;
-      }
-    },
+    readPinnedVersion: (path, sha) => readPinnedPluginVersion(path, sha),
   });
 
   if (plan.length === 0) {
