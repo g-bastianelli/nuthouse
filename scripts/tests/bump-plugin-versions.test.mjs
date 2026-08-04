@@ -1,5 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { bumpPatch, decideBump, planBumps } from "../bump-plugin-versions.mjs";
+import {
+  bumpPatch,
+  decideBump,
+  isPluginChanged,
+  planBumps,
+  readPinnedPluginVersion,
+} from "../bump-plugin-versions.mjs";
 
 describe("bumpPatch", () => {
   test("bumps the patch segment", () => {
@@ -84,5 +90,62 @@ describe("planBumps", () => {
       readPinnedVersion: () => "1.0.0",
     });
     expect(plan).toEqual([]);
+  });
+});
+
+describe("Git reads", () => {
+  test("passes refs and paths to Git as literal arguments", () => {
+    const calls = [];
+    const execute = (command, args, options) => {
+      calls.push({ command, args, options });
+      return calls.length === 1 ? "" : `${"a".repeat(40)}\n`;
+    };
+
+    expect(
+      isPluginChanged("plugin; touch path-pwned", "main; touch ref-pwned", "a".repeat(40), execute),
+    ).toBe(false);
+    expect(calls).toEqual([
+      {
+        command: "git",
+        args: ["status", "--porcelain", "--", "plugin; touch path-pwned/"],
+        options: { encoding: "utf8" },
+      },
+      {
+        command: "git",
+        args: [
+          "log",
+          "-1",
+          "--format=%H",
+          "--end-of-options",
+          "main; touch ref-pwned",
+          "--",
+          "plugin; touch path-pwned/",
+        ],
+        options: { encoding: "utf8" },
+      },
+    ]);
+  });
+
+  test("passes revision paths to Git as one literal argument", () => {
+    const calls = [];
+    const execute = (command, args, options) => {
+      calls.push({ command, args, options });
+      return '{"version":"1.2.3"}\n';
+    };
+
+    expect(readPinnedPluginVersion("plugin; touch path-pwned", "a".repeat(40), execute)).toBe(
+      "1.2.3",
+    );
+    expect(calls).toEqual([
+      {
+        command: "git",
+        args: [
+          "show",
+          "--end-of-options",
+          `${"a".repeat(40)}:plugin; touch path-pwned/.claude-plugin/plugin.json`,
+        ],
+        options: { encoding: "utf8" },
+      },
+    ]);
   });
 });
