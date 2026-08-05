@@ -2,7 +2,7 @@
 name: create-milestone
 description: Use to add a single Milestone to an existing Linear Project (standalone add-on) or to resume a partially-committed create-project cascade. Reads chain-state to detect resume mode and pick the next milestone whose `id` is still null. Drafts via milestone-drafter when needed, clarifies, previews, creates on approval, updates chain state.
 effort: high
-allowed-tools: Read, Glob, Grep, Write
+allowed-tools: Read, Glob, Grep, Write, Agent, mcp__claude_ai_Linear__list_projects, mcp__claude_ai_Linear__save_milestone
 ---
 
 # linear-devotee:create-milestone
@@ -25,7 +25,7 @@ Rigid runbook. Match the user's language; keep technical identifiers unchanged.
 3. Gather context:
    - **Resume**: project + team come from chain-state. Pick the first `drafts.milestones[]` entry with `id == null`; if none, exit `nothing-to-do`. The entry already has a `client_ref`, `name`, `scope`, and optional `target_date` drafted by `create-project`. Skip the drafter dispatch in step 4 — the draft is already in chain-state.
    - **Chained (legacy)**: use project fields and next uncreated `drafts.milestones[]`; exit `nothing-to-do` if all created.
-   - **Standalone**: fetch active projects, ask user to pick, then ask for one-sentence milestone hint.
+   - **Standalone**: fetch active projects with `list_projects`, ask user to pick, then ask for one-sentence milestone hint.
 4. Draft:
    - **Resume mode skips this step.** The chain-state entry IS the draft.
    - Otherwise dispatch `linear-devotee:milestone-drafter` with:

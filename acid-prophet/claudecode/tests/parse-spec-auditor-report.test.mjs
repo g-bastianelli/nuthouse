@@ -143,6 +143,7 @@ const reportWithGates = `# spec-auditor report — /abs/spec.md
 - simplicity: pass
 - anti-abstraction: fail
 - acceptance-defined: pass
+- acceptance-traceable: pass
 - clarifications-resolved: pass
 - constitution: n/a
 - handoff-eligible: no
@@ -166,6 +167,7 @@ const reportAllPass = `# spec-auditor report — /abs/spec.md
 - simplicity: pass
 - anti-abstraction: pass
 - acceptance-defined: pass
+- acceptance-traceable: pass
 - clarifications-resolved: pass
 - constitution: n/a
 - handoff-eligible: yes
@@ -189,6 +191,7 @@ test("parses Gates section with mixed pass/fail/na", () => {
     simplicity: "pass",
     "anti-abstraction": "fail",
     "acceptance-defined": "pass",
+    "acceptance-traceable": "pass",
     "clarifications-resolved": "pass",
     constitution: "n/a",
   });
@@ -218,6 +221,7 @@ test("derives handoff-eligible from gates when handoff-eligible line is missing"
 - simplicity: pass
 - anti-abstraction: pass
 - acceptance-defined: fail
+- acceptance-traceable: fail
 - clarifications-resolved: pass
 - constitution: n/a
 

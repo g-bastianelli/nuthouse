@@ -91,9 +91,9 @@ The user wants to write a constitution for a project — typically before the fi
    - Ask: `ratify (y) | revise (r) | abandon (a)`. Wait.
    - `revise` → return to step 4 on the article the user names; re-draft; ask again.
    - `abandon` → exit with no file written.
-7. Write + commit:
+7. Write + optional commit:
    - Save to `${PROJECT_ROOT}/docs/acid-prophet/constitution.md`. Overwrite only if the user chose `(x)` or `(r)` at step 1; otherwise this is a first write.
-   - Commit: `git add docs/acid-prophet/constitution.md && git commit -m "docs(acid-prophet): ratify constitution v<N>"` where `<N>` is the new version. Skip commit if not in a git repo; warn. Never use `--no-verify`.
+   - Ask exactly: `Commit the artifact? (y / no)`. On `y`, run `git add docs/acid-prophet/constitution.md && git commit -m "docs(acid-prophet): ratify constitution v<N>"` where `<N>` is the new version. On `no`, leave the ratified constitution uncommitted and continue. Never use `--no-verify`.
 8. Wire-up notice (single message):
    - Tell the user: the next `audit-spec`, `write-spec` step 7, and `check-drift` invocations will read the constitution and gate accordingly. No other action required.
 

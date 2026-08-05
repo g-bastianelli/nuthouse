@@ -26,6 +26,7 @@ PROJECT_ID: <UUID>
 MILESTONE_ID: <UUID or "_none_">
 PARENT_DRAFT: <abs path to a chain-state JSON file with the parent's drafted issues, or "_none_">
 ISSUE_HINT: <short freeform text from the user, or "_none_">
+SOURCE_ACCEPTANCE_IDS: <comma-separated AC-### ids from the source spec/project register, or "_none_">
 PROJECT_ROOT: <abs path to the git repo>
 ```
 
@@ -33,6 +34,8 @@ PROJECT_ROOT: <abs path to the git repo>
 - `MILESTONE_ID` is set when the issue must attach to a specific milestone of the project. Linear constraint: the milestone must belong to the same project as `PROJECT_ID`.
 - `PARENT_DRAFT` is set when chained from `linear-devotee:create-milestone` or `create-project`; it points to `${CLAUDE_PLUGIN_DATA}/chain-<session>.json`. Read it to recover the issue title and any partial fields the parent skill drafted.
 - `ISSUE_HINT` is set when invoked standalone with a freeform "create one issue that does X" prompt.
+- `SOURCE_ACCEPTANCE_IDS` is authoritative when a source spec or project Acceptance register exists.
+  Preserve those ids exactly and do not create issue-local ids in that mode.
 - `PROJECT_ROOT` is used to resolve any path tokens in the hint or parent draft.
 
 ## Mission (in order)
@@ -116,7 +119,8 @@ Return **only** this markdown, under 500 words. Never invent content. If a field
 
 **Acceptance criteria** (verifiable)
 
-- <bullet>
+- [AC-001] WHEN <trigger>, THE SYSTEM SHALL <observable behavior> <!-- source-backed -->
+- [AC-L001] WHEN <trigger>, THE SYSTEM SHALL <observable behavior> <!-- standalone only -->
 - (or _unclear_)
 
 **Non-goals** / out of scope
@@ -143,3 +147,9 @@ Return **only** this markdown, under 500 words. Never invent content. If a field
 - **Voice = neutral.** No devotional/worship talk in the brief itself; the calling skill (`linear-devotee:create-issue`) wraps your output in voice. You stay clean and structured.
 - **Always validate the milestone-project link.** If the milestone belongs to a different project, refuse to draft and surface that as the top question.
 - **Detect title collisions.** If the suggested title matches an existing issue title in the project, surface it as a question — let the user confirm or rename.
+- **Acceptance namespaces never overlap.** `AC-###` belongs exclusively to a source spec or approved
+  project Acceptance register. When `SOURCE_ACCEPTANCE_IDS != _none_`, use only those supplied ids,
+  preserve them exactly, reject duplicates or unknown ids, and surface any uncovered behavior as a
+  request to amend the source; never generate an id in that mode. When no source register exists,
+  number approved issue-local criteria from `AC-L001` in EARS form. Never renumber or reuse either
+  kind of id during revision.

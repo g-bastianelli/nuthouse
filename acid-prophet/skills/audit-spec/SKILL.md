@@ -37,7 +37,7 @@ Rigid audit gate. Match the user's language; keep technical identifiers unchange
    (s) stop
    ```
    Disable `(l)` if any of the following hold: `linear-project` frontmatter is not `_none_`, or the parsed report's `handoffEligible` is `false` (any gate failed or any BLOCKER remains). When `(l)` is disabled, print the disabling reason in plain text under the menu — quote the first failing gate or BLOCKER from the report.
-   - `(a)`: apply each `autoFixes` entry via `apply-frontmatter-patch.mjs`. Commit: `git commit -m "docs(acid-prophet): spec-auditor auto-fixes"`. Never `--no-verify`. If no fixes: inform and return to menu.
+   - `(a)`: apply each `autoFixes` entry via `apply-frontmatter-patch.mjs`, except `spec-version`: reject and surface any `spec-version` entry instead of applying it. Commit: `git commit -m "docs(acid-prophet): spec-auditor auto-fixes"`. Never `--no-verify`. If no applicable fixes: inform and return to menu.
    - `(o)`: print absolute spec path.
    - `(l)`: invoke `linear-devotee:create-project` with spec path.
    - `(s)`: try `warden:voice` per the voice cadence with `SUMMARY: audit complete, user stopped`, then exit.
