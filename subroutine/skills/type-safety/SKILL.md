@@ -1,52 +1,64 @@
 ---
 name: type-safety
-description: Type-safety discipline for all TypeScript work — no `any`/`as`/`!`, string-literal unions over enums, exhaustive matching. Applies whenever editing or creating TypeScript files.
+description: Type-safety discipline for all TypeScript work — prove unknown values, avoid any/as/non-null assertions, prefer inference and exhaustive unions. Applies whenever editing or creating TypeScript files.
 user-invocable: false
 paths: ["**/*.ts", "**/*.tsx"]
 ---
 
 # subroutine — type-safety discipline
 
-Applies to every TypeScript file touched, React or Hono, front or back. The
-collar. The repo's own `AGENTS.md` overrides this file when it states something
-stricter or different — read it first. Otherwise, this is the discipline.
+Apply this to every TypeScript file. Read the nearest `AGENTS.md` first; the
+repo wins when it defines a stricter or different convention.
 
-## Non-negotiable
+## Prove types; do not silence the checker
 
-- **No `any`.** Use `unknown` + narrowing. If a third-party type is `any`, wrap
-  it and narrow at the boundary.
-- **No `as T` assertions.** Use type guards, discriminated unions, or schema
-  parsing (`Schema.parse`) to _prove_ the type instead of asserting it.
-- **No `!` non-null assertions.** Use optional chaining, explicit null checks, or
-  a local narrowed variable.
-- These three are typically enforced by the linter (oxlint/eslint). Treat a lint
-  error here as a design smell, not a nuisance to silence.
+- Never use `any`, `as T`, or non-null `!`. Narrow `unknown`, parse structured
+  external data with the repo's schema library, and handle absence explicitly.
+- Do not add lint disables to bypass these rules. A difficult type usually
+  exposes a missing boundary or an imprecise model.
+- `as const` is allowed for literals. Use `satisfies` when checking an object's
+  shape without widening its inferred values.
 
-## Inference & annotation
+```ts
+const config = {
+  mode: "strict",
+  retries: 3,
+} satisfies WorkerConfig;
 
-- **Maximize inference.** Annotate only at public API boundaries (exported
-  function signatures, lib entry points). Let internal code infer.
-- Prefer `as const` for literal types and value sets.
+const first = rows[0];
+if (!first) return err({ code: "NOT_FOUND" });
+return ok(first);
+```
 
-## Unions & value sets
+## Let inference work
 
-- **String literal unions over `enum`. Never use TS `enum`.**
-  ```ts
-  type Role = "platform_admin" | "admin" | "operator"; // ✓
-  ```
-- For a named, symbol-accessible value set, prefer an **object-as-const** over an
-  array-as-const (safer renames, IDE symbol access):
-  ```ts
-  export const DEPLOY_STATUS = { idle: "idle", running: "running" } as const; // ✓
-  type DeployStatus = (typeof DEPLOY_STATUS)[keyof typeof DEPLOY_STATUS];
-  ```
-- **Discriminated unions with >2 variants → `ts-pattern` `.match().exhaustive()`.**
-  The `.exhaustive()` makes a missing variant a _compile_ error, not a runtime
-  surprise. Tie off every union this way.
+- Annotate exported API signatures and intentional boundaries; let local
+  variables and callbacks infer.
+- Derive types from their source (`z.infer`, `Awaited<ReturnType<...>>`, indexed
+  access) instead of redeclaring the same shape.
 
-## Database value sets
+## Model finite states explicitly
 
-- Never use Postgres `ENUM` / Drizzle `pgEnum`. Model as
-  `text('col').$type<'a' | 'b'>()` and validate with Zod at the boundary —
-  `ALTER TYPE` is painful and irreversible-ish. (Applies when the repo uses
-  Drizzle/Postgres; skip otherwise.)
+- Prefer string-literal unions to TypeScript `enum`.
+- Expose named value sets as object-as-const when callers need symbolic access.
+- Match discriminated unions with more than two variants using `ts-pattern`
+  `.exhaustive()`.
+
+```ts
+export const JOB_STATUS = {
+  idle: "idle",
+  running: "running",
+  failed: "failed",
+} as const;
+export type JobStatus = (typeof JOB_STATUS)[keyof typeof JOB_STATUS];
+
+const label = match(status)
+  .with("idle", () => "Idle")
+  .with("running", () => "Running")
+  .with("failed", () => "Failed")
+  .exhaustive();
+```
+
+When using Drizzle/Postgres, prefer a typed text column plus boundary validation
+to `pgEnum`; database enum migrations make removal and renaming unnecessarily
+rigid. Skip this rule when the repository deliberately standardizes otherwise.

@@ -1,7 +1,7 @@
 {
   "name": "subroutine",
-  "version": "2.1.1",
-  "description": "Ambient implementation discipline for TypeScript monorepos — a PostToolUse/SubagentStart/SessionStart hook deterministically injects type-safety, Result/unwrap, Zod validation, code-organisation, React, and Hono-pipeline rules whenever a matching file is edited or reviewed. The SKILL.md files hold the rules; the hook delivers them, so the discipline rides along even when model-driven skill invocation wouldn't. No workflows, no commands. Defers to the repo's own AGENTS.md. Cross-runtime (Claude Code + Codex).",
+  "version": "2.1.2",
+  "description": "Ambient implementation discipline for TypeScript monorepos — a PostToolUse/SubagentStart/SessionStart hook deterministically injects type-safety, Result/unwrap, Zod validation, code-organisation, React, testing, state-machine, and Hono-pipeline rules whenever a matching file is edited or reviewed. The SKILL.md files hold the rules; the hook delivers them, so the discipline rides along even when model-driven skill invocation wouldn't. No workflows, no commands. Defers to the repo's own AGENTS.md. Cross-runtime (Claude Code + Codex).",
   "author": {
     "name": "g-bastianelli"
   },
@@ -10,14 +10,16 @@
   "interface": {
     "displayName": "Subroutine",
     "shortDescription": "Ambient TypeScript discipline — knowledge skills that bind every edit to strict rules",
-    "longDescription": "Subroutine is pure ambient discipline: a hook injects the rules as context the moment a matching file is edited or reviewed — type-safety (no any/as/!, ts-pattern exhaustive), the Result/ok/err pattern with boundary unwrapping, Zod validation, named-export code organisation, React component structure, and the layered Hono pipeline. The SKILL.md files hold the rules; the hook is the deterministic delivery channel, so the discipline rides along even when model-driven skill invocation wouldn't. It runs no workflows and answers no commands; the repo's own AGENTS.md always wins over its rules.",
+    "longDescription": "Subroutine is pure ambient discipline: a hook injects the rules as context the moment a matching file is edited or reviewed — type-safety (no any/as/!, ts-pattern exhaustive), the Result/ok/err pattern with boundary unwrapping, Zod validation, named-export code organisation, React component structure, behavior-first testing, explicit state machines, and the layered Hono pipeline. The SKILL.md files hold the rules; the hook is the deterministic delivery channel, so the discipline rides along even when model-driven skill invocation wouldn't. It runs no workflows and answers no commands; the repo's own AGENTS.md always wins over its rules.",
     "developerName": "g-bastianelli",
     "category": "Productivity",
     "capabilities": ["Read"],
     "websiteURL": "https://github.com/g-bastianelli/nuthouse",
     "defaultPrompt": [
       "Implement this React component — subroutine's ambient discipline keeps it type-safe.",
-      "Add this Hono procedure — subroutine's ambient discipline enforces the Result/unwrap pipeline."
+      "Add this Hono procedure — subroutine's ambient discipline enforces the Result/unwrap pipeline.",
+      "Write a regression test that proves the behavior and preserves unexpected failures.",
+      "Model this lifecycle as a pure, exhaustive TypeScript state machine."
     ],
     "logo": "./assets/banner.png"
   }

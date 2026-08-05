@@ -1,54 +1,48 @@
 ---
 name: code-organisation
-description: Code-organisation discipline for all TypeScript work — named exports only, declarative index.ts, one-file-one-responsibility, reuse before writing. Applies whenever editing or creating TypeScript files.
+description: Code-organisation discipline for TypeScript — named exports, declarative entry points, one responsibility per file, explicit package boundaries, and reuse before writing. Applies whenever editing or creating TypeScript files.
 user-invocable: false
 paths: ["**/*.ts", "**/*.tsx"]
 ---
 
 # subroutine — code-organisation discipline
 
-Applies to every TypeScript file created or reshaped: how files, exports, and
-modules are shaped. The repo's `AGENTS.md` wins on any specific — read it first.
+Apply this to every TypeScript module. Read the nearest `AGENTS.md` first.
 
-## Exports
+## Shape modules around responsibilities
 
-- **Named exports only.** No default exports (exception: tool config files that
-  require them — `vite.config.ts`, `drizzle.config.ts`).
-- A library's public API is declared via `package.json#exports`, **not** a barrel
-  `index.ts` that re-exports everything.
+- Use named exports. Allow a default export only when a tool config requires it.
+- Give each file one reason to change and a specific name (`partition.ts`,
+  `gateway-service.ts`), never a `utils.ts`/`helpers.ts` dumping ground.
+- Split a feature into resource folders once it owns multiple resources. Keep
+  tests and private support code beside the responsibility they cover.
 
-## `index.ts` is a boundary, not a home for logic
+```text
+orders/
+├── errors.ts
+├── service.ts
+├── service.test.ts
+└── index.ts
+```
 
-- Allowed in `index.ts`: named re-exports, declarative composition
-  (`export const router = oc.router({...})`).
-- **Forbidden** in `index.ts`: `if`/`switch`/`try`/`for`, I/O, side effects on
-  module load, business logic. If you're writing logic there, it belongs in a
-  named file.
+## Keep entry points declarative
 
-## Files
+Use `index.ts` for named re-exports or declarative composition only:
 
-- **One file, one responsibility.** Name files after what they contain
-  (`partition.ts`, `gateway-service.ts`) — never `utils.ts` / `helpers.ts` /
-  `misc.ts` dumping grounds.
-- Under a feature/domain folder, split into one subfolder per resource as soon as
-  there are ≥2 resources — not one dense file.
+```ts
+export { createOrdersService } from "./service.js";
+export type { OrdersError } from "./errors.js";
+```
 
-## Functions
+Move branching, loops, I/O, side effects, and business logic into named files.
+Declare a library's public subpaths in `package.json#exports`; do not create a
+barrel that exposes every internal module.
 
-- **Top-level functions**: `function` declarations (readable stack traces,
-  hoisting).
-- **Callbacks / inline expressions**: arrow functions.
-- **React components**: named `function` declarations.
+## Preserve readable code and boundaries
 
-## Libraries (monorepo)
-
-- Many small, autonomous libs each covering one precise concern — never a
-  catch-all `libs/utils` or `libs/shared` dumping ground.
-- Respect runtime/layer boundaries the repo declares (e.g. `frontend ↛ backend`,
-  `shared` stays agnostic). In a moon repo these are often enforced by tags and
-  fail the build if violated.
-
-## Reuse before writing
-
-- Before writing any helper, grep the repo's shared libs for an existing
-  equivalent. Never reimplement what a shared package already exports.
+- Use `function` declarations for top-level functions and React components;
+  use arrows for callbacks and inline expressions.
+- Prefer small autonomous libraries with explicit runtime/layer direction.
+  Never hide ownership in catch-all `shared` or `utils` packages.
+- Before adding a helper, search the repository and its shared packages for an
+  existing equivalent. Reuse the established abstraction and import path.
