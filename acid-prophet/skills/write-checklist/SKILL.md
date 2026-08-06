@@ -40,15 +40,16 @@ The user has a spec under `docs/acid-prophet/specs/` and wants a concrete valida
    - Otherwise, scan `docs/acid-prophet/specs/`. Match by current branch's Linear identifier in the body, then by closest filename slug, then ask if still ambiguous.
    - Abort if zero candidates.
 3. Pre-flight gate:
-   - Read the spec. If frontmatter `status` is not one of `ratified | implementing | approved`, surface to user: `spec is still <status>, checklist may shift. continue (y) | stop (s)?`. Default to stop on no answer.
+   - Read the spec. If frontmatter `status` is not one of `ratified | approved | ready | implementing`, surface to user: `spec is still <status>, checklist may shift. continue (y) | stop (s)?`. Default to stop on no answer.
    - Grep for unresolved `[NEEDS CLARIFICATION:` markers. If any exist, warn: `<N> unresolved clarification markers — checklist will inherit gaps. continue (y) | stop (s)?`. Default to stop.
 4. Extract sources:
-   - Pull every bullet from sections starting with `Acceptance`, `Constraints`, `Non-goals`, `Error handling`, `Testing approach`. Capture verbatim with section + line number.
+   - Scope Acceptance extraction to the section headed exactly `Acceptance` (case-insensitive), stopping at the next heading of the same or higher level; exclude `Acceptance history`. Pull every bullet from that active section and from sections starting with `Constraints`, `Non-goals`, `Error handling`, `Testing approach`. Capture verbatim with section + line number.
    - Pull every EARS-conformant criterion separately (`WHEN ...` / `IF ...` → `THE SYSTEM SHALL ...`). These become the highest-priority checks.
+   - Preserve the leading `AC-###` id exactly. Missing or duplicate ids block generation; run `acid-prophet:audit-spec` to repair the source rather than inventing checklist-local ids.
 5. Draft the checklist (one message, full output):
    - One `- [ ]` per Acceptance criterion (EARS first). Format:
      ```markdown
-     - [ ] **<3-word handle>** — <verbatim quote of the AC>
+     - [ ] **[AC-001] <3-word handle>** — <verbatim quote of the AC after its id>
            how to verify: <one concrete check: command, UI step, manual observation>
            source: <section>:<line>
      ```
@@ -61,7 +62,7 @@ The user has a spec under `docs/acid-prophet/specs/` and wants a concrete valida
    - `edit` → ask which item; revise; re-print; ask again.
    - `regenerate` → return to step 5.
    - `abandon` → exit, no file written.
-7. Write + commit:
+7. Write + optional commit:
    - Slug derivation: use the spec filename minus the `YYYY-MM-DD-` date prefix.
    - Save to `${PROJECT_ROOT}/docs/acid-prophet/checklists/<slug>.md` with frontmatter:
      ```yaml
@@ -69,10 +70,11 @@ The user has a spec under `docs/acid-prophet/specs/` and wants a concrete valida
      id: <slug>
      spec: <relative path to spec>
      status: open
+     acceptance-ids: [AC-001, AC-002]
      generated-at: <today ISO>
      ---
      ```
-   - Commit: `git add docs/acid-prophet/checklists/<slug>.md && git commit -m "docs(acid-prophet): checklist for <slug>"`. Never use `--no-verify`.
+   - Ask exactly: `Commit the artifact? (y / no)`. On `y`, run `git add docs/acid-prophet/checklists/<slug>.md && git commit -m "docs(acid-prophet): checklist for <slug>"`. On `no`, leave the accepted checklist uncommitted and continue. Never use `--no-verify`.
 8. Hand-off menu:
    ```
    (p) post PR comment → gh pr comment --body "<rendered checklist>"
@@ -91,6 +93,7 @@ acid-prophet:write-checklist report
   Spec:        <spec path>
   Checklist:   ${PROJECT_ROOT}/docs/acid-prophet/checklists/<slug>.md
   Items:       <N acceptance · N constraint · N non-goal>
+  AC coverage: <N>/<N>
   Open markers: <N unresolved [NEEDS CLARIFICATION] | none>
   PR comment:  <posted | skipped | gh unavailable | no PR>
   Branch:      <p | o | s>
@@ -99,6 +102,7 @@ acid-prophet:write-checklist report
 ## Never
 
 - Invent a verification step the spec doesn't support — emit `[NEEDS CLARIFICATION: ...]` instead.
+- Renumber or synthesize an `AC-###` id outside the source spec.
 - Mutate the source spec.
 - Post a PR comment without explicit user choice of `(p)`.
 - Run `git push`, `git rebase`, or `git commit --amend`.

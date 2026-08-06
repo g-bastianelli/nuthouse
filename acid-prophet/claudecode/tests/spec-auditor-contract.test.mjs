@@ -15,3 +15,9 @@ test("spec-auditor treats pre-handoff _none_ frontmatter as valid", () => {
   expect(auditorPrompt).toContain("do not emit a BLOCKER for those values");
   expect(auditorPrompt).toContain("do not let them affect `handoff-eligible`");
 });
+
+test("spec-auditor gates stable acceptance identifiers for downstream traceability", () => {
+  expect(auditorPrompt).toContain("acceptance-traceable");
+  expect(auditorPrompt).toContain("`[AC-###]`");
+  expect(auditorPrompt).toContain("unique");
+});

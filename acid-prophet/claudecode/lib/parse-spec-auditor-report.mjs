@@ -15,6 +15,7 @@ const KNOWN_GATES = new Set([
   "simplicity",
   "anti-abstraction",
   "acceptance-defined",
+  "acceptance-traceable",
   "clarifications-resolved",
   "constitution",
 ]);

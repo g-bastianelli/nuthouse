@@ -43,10 +43,11 @@ Rigid planning gate. Match the user's language; keep technical identifiers uncha
      2. Spec body contains exact issue id.
      3. Body or filename matches project slug/name.
    - Ask if multiple candidates; use `_none_` if none.
-4. Draft the six plan sections, then write the artifact yourself with `Write`:
+4. Draft the seven plan sections, then write the artifact yourself with `Write`:
    - **Context** — 1–3 sentences linking issue + spec.
    - **Files** — bulleted paths + one-line role each.
-   - **Steps** — atomic verifiable actions as `- [ ]` checkboxes; each step is one edit + an inline verify command when possible.
+   - **Acceptance traceability** — extract the issue's source `AC-###` and issue-local `AC-L###` ids and map each one to concrete plan steps plus verification evidence. Preserve both namespaces exactly; if the issue has no ids, use `_unclear_` and let the auditor block instead of inventing ids.
+   - **Steps** — dependency-ordered, atomic actions as `- [ ]` checkboxes; each step is one edit plus an inline verify command and `covers: <AC-### / AC-L### list | foundation>`.
    - **Verify** — project-level commands (test / lint / typecheck) run after all Steps.
    - **Risks** — uncertainty surfaced for the auditor.
    - **Out of scope** — negative oracle preventing implementing-agent drift.
@@ -60,6 +61,7 @@ Rigid planning gate. Match the user's language; keep technical identifiers uncha
    spec: <SPEC_FILE | _none_>
    status: draft
    plan-version: 1
+   acceptance-ids: [AC-001, AC-L001]
    validated-at: _none_
    spec-synced-at: _none_
    ---
@@ -74,9 +76,14 @@ Rigid planning gate. Match the user's language; keep technical identifiers uncha
 
    <FILES>
 
+   ## Acceptance traceability
+
+   - `AC-001` → steps 2, 3 · verify: <command or observation>
+   - `AC-L001` → step 4 · verify: <command or observation>
+
    ## Steps
 
-   <STEPS>
+   <STEPS — each checkbox includes an indented `verify:` line and `covers: AC-### | AC-L### | foundation` line>
 
    ## Verify
 

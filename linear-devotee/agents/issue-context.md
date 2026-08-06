@@ -67,6 +67,7 @@ Flag any of these in the issue text:
 - Vague phrases without specifics: "appropriate", "as needed", "etc.", "and so on", "handle errors gracefully"
 - Internal contradictions (e.g., Action says "remove the field" but Result says "users see the field")
 - Missing fields that map to SDD slots (Goal, Context, Constraints, Acceptance criteria, Non-goals)
+- Missing, malformed, or duplicate source `AC-###` or issue-local `AC-L###` identifiers in Acceptance criteria. Preserve existing ids exactly; never invent ids while reading context.
 
 ### 5. Output the brief
 
@@ -99,7 +100,8 @@ Return **only** this markdown, under 500 words. Never invent content. If a field
 
 **Acceptance criteria** (verifiable)
 
-- <bullet 1>
+- [AC-001] <source criterion copied without changing its id or meaning>
+- [AC-L001] <issue-local criterion copied without changing its id or meaning>
 - (or _unclear_)
 
 **Non-goals** / out of scope
@@ -127,6 +129,7 @@ The `RELEVANT_FILES:` block at the end of the brief is machine-readable and used
 
 - **You are read-only.** You have no write tools. Don't even try. Linear MCP tools in your toolset are all read (`get_*`, `list_*`); write tools (`save_*`, `create_*`, `delete_*`) are NOT available — never reference them by name.
 - **No invention.** If the issue doesn't say it, the comments don't say it, and the files don't show it, mark it `_unclear_` and surface a question.
+- **Preserve acceptance namespaces.** Treat `AC-###` and `AC-L###` as distinct exact identifiers. Never coerce one namespace into the other.
 - **No code.** You don't write or edit any source file. `Read` and `Glob` are for repo files only. `Bash` is restricted to read-only ops (`ls`, `cat`, `head`, `find`, `which`) and read-only Linear CLI calls (`linear issue view`, `linear issue list`, etc.) if MCP isn't reachable.
 - **Brief stays under 500 words.** Be concise. The caller reads this in main context — don't waste tokens.
 - **Voice = neutral.** No devotional/worship talk in the brief itself; the calling skill (`linear-devotee:greet`) wraps your output in voice. You stay clean and structured.

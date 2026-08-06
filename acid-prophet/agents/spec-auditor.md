@@ -43,14 +43,15 @@ MODE: report-only | auto-fix-trivial
 
 ### 2. SDD-strict checks
 
-- **Frontmatter** — verify the spec begins with a YAML frontmatter block (`---` ... `---`). Parse it. Required keys, all present and non-empty: `id`, `status`, `linear-project`, `verified-by`, `last-reviewed`. The sentinel value `_none_` is valid and non-empty for `linear-project` and `verified-by` during draft / pre-handoff specs; do not emit a BLOCKER for those values and do not let them affect `handoff-eligible`. If the block is missing or unparseable: BLOCKER `[frontmatter] file has no valid frontmatter block`. Continue all subsequent checks regardless. Per-key gaps emit BLOCKER `[frontmatter:<key>] missing` and an Auto-fix candidate.
-- **Required sections** — match by heading prefix, case-insensitive. Required: `Problem`, `Solution`, `Architecture`, `Components`, `Error handling`, `Testing`, `Non-goals`. Variants like `Components / data flow` or `Testing approach` match. Each missing section: BLOCKER `[section:<name>] missing`.
-- **EARS syntax** — only if a section starting with `Acceptance` is present. Each bullet under it must match `WHEN <trigger>, THE SYSTEM SHALL <behavior>` or `IF <condition>, THE SYSTEM SHALL <behavior>` (case-insensitive). Each non-conforming bullet: WARNING `[ears:<line>] non-EARS phrasing`.
+- **Frontmatter** — verify the spec begins with a YAML frontmatter block (`---` ... `---`). Parse it. Required keys, all present and non-empty: `id`, `status`, `spec-version`, `linear-project`, `verified-by`, `last-reviewed`. `spec-version` must be a base-10 integer ≥ 1; a missing or invalid value is a BLOCKER `[frontmatter:spec-version] missing` or `[frontmatter:spec-version] must be a positive integer` and must never silently default. Never emit an Auto-fix candidate for `spec-version`; choosing an initial version is an explicit migration decision. The sentinel value `_none_` is valid and non-empty for `linear-project` and `verified-by` during draft / pre-handoff specs; do not emit a BLOCKER for those values and do not let them affect `handoff-eligible`. If the block is missing or unparseable: BLOCKER `[frontmatter] file has no valid frontmatter block`. Continue all subsequent checks regardless. Per-key gaps other than `spec-version` emit BLOCKER `[frontmatter:<key>] missing` and an Auto-fix candidate.
+- **Required sections** — match by heading prefix, case-insensitive. Required: `Problem`, `Solution`, `Architecture`, `Components`, `Error handling`, `Acceptance history`, `Testing`, `Non-goals`. Variants like `Components / data flow` or `Testing approach` match. Each missing section: BLOCKER `[section:<name>] missing`. The active `Acceptance` section remains enforced by the `acceptance-defined` gate.
+- **EARS syntax** — inspect only the section headed exactly `Acceptance` (case-insensitive), stopping at the next heading of the same or higher level; do not treat `Acceptance history` as active criteria. Each bullet under it must match `[AC-###] WHEN <trigger>, THE SYSTEM SHALL <behavior>` or `[AC-###] IF <condition>, THE SYSTEM SHALL <behavior>` (case-insensitive after the id). Each non-conforming active bullet: WARNING `[ears:<line>] non-EARS phrasing`.
+- **Retirement history** — under the exact `Acceptance history` heading, allow `- None.` or records matching exactly `- [AC-###] retired YYYY-MM-DD — WHEN|IF <former condition>, THE SYSTEM SHALL <former behavior> — reason: <non-empty reason>`. Malformed records are BLOCKER `[acceptance-history:<line>] malformed retirement record`. Retired ids must be unique in history and disjoint from active ids; duplicates or reuse are BLOCKER `[acceptance-history:<id>] duplicate or active id reuse`.
 
 ### 3. Reality check
 
-- **CLAUDE.md** — `Read PROJECT_ROOT/CLAUDE.md`. If absent: emit single INFO `[reality-check] no CLAUDE.md found, conventions check skipped` and skip this sub-step. If present: scan for explicit policies (e.g. "no npm deps", "ESM only", "no `--no-verify`") and flag spec statements that contradict them as BLOCKER `[stack:<policy>] spec contradicts <quote from CLAUDE.md>`.
-- **package.json** — `Read PROJECT_ROOT/package.json`. If absent: emit INFO `[reality-check] no package.json found, stack check skipped`. If present: extract declared dependencies and the package manager version. Flag spec proposals that add dependencies forbidden by CLAUDE.md as BLOCKER `[stack:dependencies] spec proposes <dep>, CLAUDE.md forbids new deps`. Flag stack contradictions (e.g. spec mentions Vue in a React project) as BLOCKER `[stack:framework] <quote>`.
+- **Repository instructions** — `Read PROJECT_ROOT/AGENTS.md` and `PROJECT_ROOT/CLAUDE.md` when present. If both are absent: emit single INFO `[reality-check] no AGENTS.md or CLAUDE.md found, conventions check skipped`. Scan every present file for explicit policies (e.g. "no npm deps", "ESM only", "no `--no-verify`") and flag spec statements that contradict them as BLOCKER `[stack:<policy>] spec contradicts <quote from instruction file>`. When both files apply and conflict, surface a BLOCKER rather than choosing silently.
+- **package.json** — `Read PROJECT_ROOT/package.json`. If absent: emit INFO `[reality-check] no package.json found, stack check skipped`. If present: extract declared dependencies and the package manager version. Flag spec proposals that add dependencies forbidden by repository instructions as BLOCKER `[stack:dependencies] spec proposes <dep>, instructions forbid new deps`. Flag stack contradictions (e.g. spec mentions Vue in a React project) as BLOCKER `[stack:framework] <quote>`.
 - **Referenced file paths** — scan the spec body for path-like tokens (backticked spans matching `[a-zA-Z0-9_./-]+\.[a-z0-9]{1,5}`, or unquoted absolute/relative paths in component descriptions). For each unique path: `Glob` from `PROJECT_ROOT`. If missing: WARNING `[reality-check:files] referenced file not found: <path>` (could be new code, could be a typo — caller decides).
 
 ### 4. Narrative checks
@@ -71,7 +72,8 @@ Run these gates in order. Each gate emits one entry in the `## Gates` output sec
 
 - **simplicity** — count architecturally independent subsystems described in `Solution` + `Architecture`. If > 2, `fail`: spec proposes >2 independent subsystems, consider decomposing. If 1–2, `pass`. If neither section parseable, `n/a`.
 - **anti-abstraction** — scan `Architecture` and `Components` for newly introduced wrappers/facades/factories/adapters. For each one, the spec must name **at least 2 distinct consumers** (callers, components, integration points). If any abstraction has fewer than 2 named consumers, `fail` with the offending abstraction name. If none introduced, `pass`. Heuristic — keyword scan for `wrapper`, `facade`, `factory`, `adapter`, `proxy`, `manager` followed by enumeration of consumers.
-- **acceptance-defined** — spec must contain a section starting with `Acceptance` with at least one EARS-conformant bullet (matches `WHEN ...` or `IF ...`). If absent or zero conformant bullets, `fail`. Otherwise `pass`.
+- **acceptance-defined** — spec must contain a section headed exactly `Acceptance` (case-insensitive), distinct from `Acceptance history`, with at least one EARS-conformant bullet (matches `[AC-###] WHEN ...` or `[AC-###] IF ...`). If absent or zero conformant bullets, `fail`. Otherwise `pass`.
+- **acceptance-traceable** — every active Acceptance bullet must begin with a stable id matching exactly `[AC-###]`; active ids must be unique. Parse `Acceptance history` with the retirement grammar above and require retired ids to be unique and disjoint from active ids. Missing, malformed, duplicate, or reused ids → `fail` with the offending lines. If the active Acceptance section is absent, `n/a` because `acceptance-defined` already fails. This gate is the source of truth for downstream spec → plan → issue → verification joins.
 - **clarifications-resolved** — number of unresolved `[NEEDS CLARIFICATION:` markers anywhere in the body. Zero → `pass`. ≥1 → `fail` with the count.
 - **constitution** — `Read PROJECT_ROOT/docs/acid-prophet/constitution.md`. If absent, `n/a`. If present, parse `## Articles` (one article per H3 heading) and for each article evaluate whether the spec satisfies the article's stated requirement. Treat each article as an additional gate: `pass` if the spec demonstrates compliance or the article is irrelevant, `fail` if the spec contradicts the article. Emit one BLOCKER per failing article `[gate:constitution:<article-slug>] <reason>`.
 
@@ -83,7 +85,7 @@ Each finding is one of:
 - **WARNING** — ambiguity, scope concern, missing referenced file, EARS violation, internal contradiction. The spec needs a human decision.
 - **INFO** — style, placeholders that can be auto-resolved, reality-check skipped notices.
 
-For every BLOCKER or INFO that has a deterministic fix (frontmatter key missing, empty required section), emit an Auto-fix candidate line.
+For every BLOCKER or INFO that has a deterministic fix (frontmatter key missing, empty required section), emit an Auto-fix candidate line, except for `spec-version`. Missing or invalid `spec-version` is always report-only and requires the explicit migration decision above.
 
 ### 7. Output the report
 
@@ -100,6 +102,7 @@ Return exactly this structure:
 - simplicity: <pass | fail | n/a>
 - anti-abstraction: <pass | fail | n/a>
 - acceptance-defined: <pass | fail | n/a>
+- acceptance-traceable: <pass | fail | n/a>
 - clarifications-resolved: <pass | fail | n/a>
 - constitution: <pass | fail | n/a>
 - handoff-eligible: <yes | no>

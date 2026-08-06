@@ -45,7 +45,9 @@ RELEVANT_FILES:
    - the Acid Prophet spec when present,
    - project-level plan context when provided.
 5. Detect whether the plan changes product scope, architecture, constraints, non-goals, acceptance behavior, or observable user behavior compared with the spec.
-6. Detect blockers: contradictions, missing decisions, test strategy gaps for stated acceptance criteria, or plan steps that cannot be traced to either the issue or spec.
+6. Build an exact acceptance identifier set from source `AC-###` ids in the spec and both source `AC-###` plus issue-local `AC-L###` ids in the issue-context brief. Keep the namespaces distinct; equal numeric suffixes never imply equal meaning. When the same source `AC-###` appears in both spec and issue, require the issue criterion text to be an exact copy of the active source criterion; different text under the same id is a BLOCKER, never a merged criterion. Verify every known id appears in `## Acceptance traceability`, maps to at least one concrete step, and names verification evidence. Any missing or unknown id is an uncovered acceptance identifier and a BLOCKER.
+7. Verify every implementation step carries `covers: <known AC-### or AC-L###>` or `covers: foundation`. Foundation steps must explain which later acceptance work they enable. A plan with an untraceable step needs changes.
+8. Detect all other blockers: contradictions, missing decisions, test strategy gaps for stated acceptance criteria, or plan steps that cannot be traced to either the issue or spec.
 
 ## Output
 
