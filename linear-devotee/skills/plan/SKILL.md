@@ -8,6 +8,9 @@ allowed-tools: Read, Glob, Write, Agent, Bash(git rev-parse:*), Bash(cat:*), mcp
 
 # linear-devotee:plan
 
+> Agent resolution: Before any subagent dispatch, read
+> `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md`; select the active runtime name and follow its spawn rule.
+
 Rigid planning gate. Match the user's language; keep technical identifiers unchanged.
 
 > Voice cadence: at every user-visible workflow transition, try to dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Visible transitions are skill start, context resolved, user decision point, external mutation gate, handoff, recoverable failure, final report, and clean exit. Print the returned `line` only when non-empty. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Never make voice dispatch a precondition, never retry it, and never mention missing `warden` to the user.
@@ -29,7 +32,8 @@ Rigid planning gate. Match the user's language; keep technical identifiers uncha
    - Verify Linear access when greet context must be rebuilt or project-id fallback is needed.
 2. Load context:
    - Prefer `${CLAUDE_PLUGIN_DATA}/greet-<ISSUE_ID>.json` (the `## Context` dir listing shows whether it exists).
-   - If missing, dispatch `linear-devotee:issue-context` with issue id, git root, `NEEDS_STATUS_METADATA: true`.
+   - If missing, dispatch the logical `linear-devotee:issue-context` agent with issue id,
+     git root, `NEEDS_STATUS_METADATA: true`.
    - Do not fetch full Linear context in main context unless delegation fails.
    - Extract `linear_project_id` from the greet context or issue-context brief. If it is
      missing or `_unclear_`, fetch the current issue with `mcp__claude_ai_Linear__get_issue`
@@ -103,7 +107,7 @@ Rigid planning gate. Match the user's language; keep technical identifiers uncha
 
 5. Audit:
    - Session store: if `$CLAUDE_SESSION_ID` is set, read `<PROJECT_ROOT>/.claude/nuthouse/sessions/${CLAUDE_SESSION_ID}.json`. When `relevant_files` exists, run `git rev-parse HEAD` and inject it into the plan-auditor prompt only when `_meta._shas.relevant_files` exactly equals that SHA. On a missing/mismatched SHA, omit `RELEVANT_FILES` and report the cache as stale. Skip this lookup when `$ARGUMENTS` contains `--fresh`.
-   - Dispatch `linear-devotee:plan-auditor` with:
+   - Dispatch the logical `linear-devotee:plan-auditor` agent with:
 
      ```
      PROJECT_ROOT: <git root>

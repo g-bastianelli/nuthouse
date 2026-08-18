@@ -76,6 +76,16 @@ Canonical layout for cross-runtime plugins:
 
 Root skills read the plugin persona with `../../persona.md`. Skill frontmatter names are local (`name: write-spec`), not plugin-qualified; the runtime exposes them as `<plugin>:<skill>`. New scaffolding must not create duplicate runtime skill trees under `<plugin>/codex/` or `<plugin>/claudecode/skills/`.
 
+Claude agent definitions under `<plugin>/agents/*.md` are canonical. Their generated
+Codex equivalents live in the repository-level `.codex/agents/*.toml` and use namespaced
+names such as `linear_devotee__issue_context`. Shared skills refer only to the logical id
+`<plugin>:<agent>` and resolve it through the generated
+`<plugin>/shared/agent-runtime-map.md`; never duplicate a runtime-specific Codex name in a
+skill. Run `bun run sync:codex-agents` after any agent or dispatch edit,
+`bun run check:codex-agents` in verification, and `bun run plan:codex-agents` before
+`bun run install:codex-agents` when refreshing the personal `~/.codex/agents/` registry.
+Never hand-edit generated TOML agents or runtime maps.
+
 ## Stack & tooling
 
 - **Runtime hooks/scripts**: Node.js, **ESM** (`import` / `export`). **`.mjs`** extension is mandatory for hooks and tests (zero ambiguity for Node, no `package.json` needed in the plugin, plugin is self-contained regardless of install context). `saucy-status` stays on CJS for historical reasons. Every new plugin ships ESM `.mjs`. Reference: `linear-devotee/claudecode/hooks/*.mjs`; Codex discovers plugin hooks through `<plugin>/hooks/hooks.json`, which may point at shared runtime scripts.
@@ -93,6 +103,7 @@ Root skills read the plugin persona with `../../persona.md`. Skill frontmatter n
 bunx bun test <plugin>/                    # all plugin tests pass
 (cd .claude/hooks/tests && bunx bun test)  # persona-roulette tests pass
 bun run test:meta                          # frontmatter model/effort values valid
+bun run check:codex-agents                 # generated Codex agents match canonical Claude agents
 bun run lint                                # lint clean
 bun run fmt:check                           # format clean
 node -e "JSON.parse(require('node:fs').readFileSync('.claude-plugin/marketplace.json', 'utf8'))"  # Claude Code marketplace JSON valid

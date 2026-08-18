@@ -4,10 +4,13 @@ description: Use automatically when the user wants a researched, fact-checked, o
 argument-hint: [research-question]
 model: sonnet
 effort: high
-allowed-tools: WebSearch, WebFetch, Agent
+allowed-tools: WebSearch, WebFetch, Read, Agent
 ---
 
 # research
+
+> Agent resolution: Before any subagent dispatch, read
+> `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md`; select the active runtime name and follow its spawn rule.
 
 ## Voice
 
@@ -83,8 +86,8 @@ Collect all results and URLs.
 ## Step 3 — Fetch + summarize (parallel source-fetcher dispatch)
 
 For each promising source URL from Step 2 (cap at ~8 sources per run), dispatch the
-`lore-hound:source-fetcher` agent **in parallel** — issue all `Agent` calls in a single
-message, do not fetch sequentially.
+logical `lore-hound:source-fetcher` agent **in parallel** — issue all agent calls in one
+batch, do not fetch sequentially.
 
 Each `source-fetcher` call:
 
@@ -99,8 +102,8 @@ re-reason over the cached claims instead of re-fetching.
 ## Step 4 — Adversarial verification (parallel claim-verifier dispatch)
 
 Select the **key claims** that matter for the answer (cap at ~10 claims per run — prioritize
-the load-bearing ones, skip trivia). Dispatch the `lore-hound:claim-verifier` agent **in
-parallel** — all `Agent` calls in a single message.
+the load-bearing ones, skip trivia). Dispatch the logical `lore-hound:claim-verifier` agent
+**in parallel** — all agent calls in one batch.
 
 Each `claim-verifier` call:
 
@@ -131,10 +134,9 @@ Print the report. Exit.
 
 ## Subagent dispatch
 
-This skill dispatches two dedicated subagents. Both are invoked via the `Agent` tool with
-`subagent_type`; the structured payload goes in the `prompt`, and each agent returns its
-result as structured text (JSON) in its final message — parse it from there. To run them
-concurrently, issue all `Agent` calls for a step in a single message.
+This skill dispatches two dedicated logical agents. The structured payload goes in the
+prompt, and each agent returns JSON in its final message. Dispatch each step as one
+concurrent batch; use the runtime's native delegation mechanism.
 
 ### `lore-hound:source-fetcher` (Step 3)
 

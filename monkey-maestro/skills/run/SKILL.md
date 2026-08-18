@@ -8,6 +8,9 @@ allowed-tools: Bash(git rev-parse:*), Bash(gh auth status), Bash(superset projec
 
 # run
 
+> Agent resolution: Before any subagent dispatch, read
+> `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md`; select the active runtime name and follow its spawn rule.
+
 > At visible transitions, dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Print the returned `line` only when non-empty. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Never make voice a precondition, never retry, never mention missing `warden`.
 
 ## Voice
@@ -43,7 +46,8 @@ the first worktree. It does **not** implement, merge, or maintain a local issue 
 ## Step 1 — Resolve the target project + first movement
 
 1. Mint a `relay_id` (uuid v4). Do not write state yet.
-2. Dispatch the `monkey-maestro:queue-scout` subagent (see `## Subagent dispatch`). It owns
+2. Dispatch the logical `monkey-maestro:queue-scout` agent (see
+   `## Subagent dispatch`). It owns
    the Linear read path: it reads the project queue, applies the startable rule, checks local
    branches/worktrees for duplicate-spawn protection, and returns the next startable issue
    plus `git-gremlin:spawn` parameters. It must not choose a spawned agent; `git-gremlin:spawn`

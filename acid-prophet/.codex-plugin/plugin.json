@@ -1,6 +1,6 @@
 {
   "name": "acid-prophet",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Spec-driven development for Codex with stable AC traceability: constitution → EARS spec with AC-### ids → audit gates → dependency-ordered plan and quickstart evidence → checklist → drift check. Optional Linear handoff.",
   "author": {
     "name": "g-bastianelli"

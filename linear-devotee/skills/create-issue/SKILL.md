@@ -7,6 +7,9 @@ allowed-tools: Read, Glob, Grep, Write, Agent, mcp__claude_ai_Linear__list_proje
 
 # linear-devotee:create-issue
 
+> Agent resolution: Before any subagent dispatch, read
+> `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md`; select the active runtime name and follow its spawn rule.
+
 Rigid runbook. Match the user's language; keep technical identifiers unchanged.
 
 > Voice cadence: at every user-visible workflow transition, try to dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Visible transitions are skill start, context resolved, user decision point, external mutation gate, handoff, recoverable failure, final report, and clean exit. Print the returned `line` only when non-empty. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Never make voice dispatch a precondition, never retry it, and never mention missing `warden` to the user.
@@ -30,7 +33,8 @@ Rigid runbook. Match the user's language; keep technical identifiers unchanged.
    - **Source Acceptance namespace**: prefer `source_acceptance_ids` from chain-state. Otherwise search `docs/acid-prophet/specs/` for a single spec whose `linear-project:` equals `PROJECT_ID` and extract its active `AC-###` ids. Multiple matches are a blocking clarification. Set `SOURCE_ACCEPTANCE_IDS` to the exact ids, or `_none_` when no source register exists. Never merge ids from multiple specs.
 4. Draft:
    - **Resume**: do not dispatch a drafter. Load the exact `sdd_body`, `acceptance_refs`, suggested existing labels, and dependencies approved in the cascade preview.
-   - **Chained legacy / standalone**: dispatch `linear-devotee:issue-drafter` with:
+   - **Chained legacy / standalone**: dispatch the logical
+     `linear-devotee:issue-drafter` agent with:
      ```text
      PROJECT_ID: <id>
      MILESTONE_ID: <id | _none_>

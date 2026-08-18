@@ -10,6 +10,9 @@ allowed-tools: Read, Bash(scw config get:*), Bash(scw account project list:*), B
 
 # observe-platform
 
+> Agent resolution: Before any subagent dispatch, read
+> `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md`; select the active runtime name and follow its spawn rule.
+
 ## Voice
 
 Read `../../persona.md` at the start of this skill. That persona is
@@ -23,6 +26,9 @@ Keep scope rules in this section; do not add a separate `## Persona scope`
 section.
 
 This skill is **rigid** — execute steps in order.
+
+Run this workflow in the logical `stack-golem:platform-scout` agent so logs and metrics stay
+out of the main context. If already executing inside that agent, continue inline.
 
 ## Language
 

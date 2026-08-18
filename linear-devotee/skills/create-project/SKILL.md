@@ -9,6 +9,9 @@ allowed-tools: Read, Glob, Grep, Bash, Write, Agent, mcp__claude_ai_Linear__list
 
 # linear-devotee:create-project
 
+> Agent resolution: Before any subagent dispatch, read
+> `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md`; select the active runtime name and follow its spawn rule.
+
 Rigid runbook. Match the user's language; keep technical identifiers unchanged.
 
 > Voice cadence: at every user-visible workflow transition, try to dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Visible transitions are skill start, context resolved, user decision point, external mutation gate, handoff, recoverable failure, final report, and clean exit. Print the returned `line` only when non-empty. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Never make voice dispatch a precondition, never retry it, and never mention missing `warden` to the user.
@@ -50,7 +53,7 @@ Rigid runbook. Match the user's language; keep technical identifiers unchanged.
 
 5. Draft project + decomposition:
    - If session store was read in step 0 and `relevant_files` is present, include it in the prompt.
-   - Dispatch `linear-devotee:project-drafter` with:
+   - Dispatch the logical `linear-devotee:project-drafter` agent with:
      ```text
      SPEC_FILE: <abs path | _none_>
      PLAN_FILE: <abs path | _none_>

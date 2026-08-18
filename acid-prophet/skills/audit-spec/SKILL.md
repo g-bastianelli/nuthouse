@@ -10,6 +10,9 @@ disallowed-tools: Write, Edit, NotebookEdit
 
 # acid-prophet:audit-spec
 
+> Agent resolution: Before any subagent dispatch, read
+> `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md`; select the active runtime name and follow its spawn rule.
+
 Rigid audit gate. Match the user's language; keep technical identifiers unchanged.
 
 > Voice cadence: at every user-visible workflow transition, try to dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Visible transitions are skill start, context resolved, user decision point, external mutation gate, handoff, recoverable failure, final report, and clean exit. Print the returned `line` only when non-empty. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Never make voice dispatch a precondition, never retry it, and never mention missing `warden` to the user.
@@ -21,7 +24,7 @@ Rigid audit gate. Match the user's language; keep technical identifiers unchange
    - Verify git repo: `git rev-parse --show-toplevel`. Capture as `PROJECT_ROOT`. Abort if not in a repo.
    - Resolve the spec path: if `$ARGUMENTS` contains a spec path, use it; otherwise ask. Resolve to absolute path; verify file exists (abort if not).
    - Warn if spec lives outside `<PROJECT_ROOT>/docs/acid-prophet/specs/`, but continue.
-2. Dispatch spec-auditor:
+2. Dispatch the logical `acid-prophet:spec-auditor` agent:
    ```
    Agent({ subagent_type: 'acid-prophet:spec-auditor', prompt: `SPEC_PATH: <abs path>\nPROJECT_ROOT: <root>\nMODE: report-only` })
    ```

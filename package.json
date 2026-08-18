@@ -13,6 +13,11 @@
     "test:meta": "cd .claude/tests && bun test",
     "bump:shas": "node scripts/bump-marketplace-shas.mjs",
     "bump:versions": "node scripts/bump-plugin-versions.mjs",
+    "sync:codex-agents": "node scripts/sync-codex-agents.mjs",
+    "plan:codex-agents": "node scripts/sync-codex-agents.mjs --install --dry-run",
+    "install:codex-agents": "node scripts/sync-codex-agents.mjs --install",
+    "check:codex-agents": "node scripts/sync-codex-agents.mjs --check",
+    "check:installed-codex-agents": "node scripts/sync-codex-agents.mjs --install --check",
     "test:scripts": "bun test scripts/tests"
   },
   "devDependencies": {

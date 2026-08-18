@@ -1,6 +1,6 @@
 {
   "name": "warden",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Centralized voice control for nuthouse plugins in Codex: decorative persona-line dispatch plus a global on/off toggle.",
   "author": {
     "name": "g-bastianelli"

@@ -9,6 +9,9 @@ allowed-tools: Read, Glob, Grep, Bash, Agent
 
 # acid-prophet:write-spec
 
+> Agent resolution: Before any subagent dispatch, read
+> `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md`; select the active runtime name and follow its spawn rule.
+
 Rigid spec-writing gate. Match the user's language; keep technical identifiers unchanged.
 
 ## Voice
@@ -51,7 +54,7 @@ Read `../../persona.md` at the start of this skill. That persona is canonical fo
    - Frontmatter required: `id: <slug>`, `status: draft`, `spec-version: 1`, `linear-project: _none_`, `verified-by: _none_`, `last-reviewed: <today ISO>`.
    - Do not commit the draft. The only commit choice comes after the auditor and user ratification gates.
 7. Spec-auditor pass:
-   - Dispatch `acid-prophet:spec-auditor`:
+   - Dispatch the logical `acid-prophet:spec-auditor` agent:
      ```
      SPEC_PATH: <absolute path>
      PROJECT_ROOT: <git root>

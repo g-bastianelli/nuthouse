@@ -7,6 +7,9 @@ allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git b
 
 # git-gremlin:commit
 
+> Agent resolution: Before any subagent dispatch, read
+> `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md`; select the active runtime name and follow its spawn rule.
+
 Commit intent is the approval gate. Match the user's language; keep technical identifiers unchanged.
 
 > Voice cadence: at every user-visible workflow transition, try to dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Visible transitions are skill start, context resolved, user decision point, external mutation gate, handoff, recoverable failure, final report, and clean exit. Print the returned `line` only when non-empty. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Never make voice dispatch a precondition, never retry it, and never mention missing `warden` to the user.
@@ -43,12 +46,12 @@ is printed, revert to the session default voice immediately.
    - If dirty files exist and the user explicitly asked to commit all/everything or stage changes — or autopilot is on (the relay commits the whole movement) — run `git add -A`, then re-check staged files.
    - If staged files are still empty, abort with a clear message asking the user to stage files or say they want all changes staged.
 2. Draft commit message:
-   - Dispatch `git-gremlin:commit-drafter` with the staged diff as input.
+   - Dispatch the logical `git-gremlin:commit-drafter` agent with the staged diff as input.
    - Receive `{ message: string, files: string[] }`.
    - If the user asked only to draft, suggest, write, or review a commit message, display the proposed message and stop.
    - Otherwise, treat the user's commit request as explicit approval for this staged commit and continue immediately.
 3. Execute commit:
-   - Re-dispatch `git-gremlin:commit-drafter` with `action: execute`.
+   - Re-dispatch the same agent with `action: execute`.
    - Receive `{ hash: string }`.
 4. Report:
    - Return result.
@@ -73,7 +76,8 @@ git-gremlin:commit report
 
 ## Subagent dispatch (Step 2)
 
-This skill dispatches the `git-gremlin:commit-drafter` subagent. Run `/scaffold-agent` to scaffold it.
+This skill dispatches the logical `git-gremlin:commit-drafter` agent. Its canonical
+definition is `git-gremlin/agents/commit-drafter.md`.
 
 ```
 Agent({

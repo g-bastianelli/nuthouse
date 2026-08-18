@@ -157,7 +157,8 @@ If `<PLUGIN>/shared/<CONTRACT_NAME>.md` does not yet exist, remind the user in t
 
 ## Step 2 — Generation
 
-Write `<PLUGIN>/agents/<AGENT>.md` (use the Write tool).
+Write `<PLUGIN>/agents/<AGENT>.md` (use the Write tool). This Markdown file remains the
+single canonical definition for both runtimes.
 
 **Template source:** Before generating the agent file, read `_templates/agent/AGENT.md`.
 This is the source of truth for agent file structure. Substitute:
@@ -328,8 +329,9 @@ scaffold-agent report
   Tools:         <comma-separated list>
   Input format:  <one-line summary>
   Output format: <SDD | structured report | custom>
-  File written:  <PLUGIN>/agents/<AGENT>.md
-  Next step:     wire the agent into a skill via the `Agent` tool — `subagent_type: '<PLUGIN>:<AGENT>'`
+  Claude source: <PLUGIN>/agents/<AGENT>.md
+  Codex port:    .codex/agents/<PLUGIN_UNDERSCORED>__<AGENT_UNDERSCORED>.toml
+  Next step:     wire the logical agent id `<PLUGIN>:<AGENT>` into the calling skill
 ```
 
 End with a voice exit line.
@@ -349,6 +351,20 @@ End with a voice exit line.
 6. **Never overwrite** an existing agent file. Read first; if it
    exists, abort or ask.
 7. **No external workflow/tool dependency** in the generated agent.
+
+After writing the canonical Markdown agent, run `bun run sync:codex-agents`. This creates
+or refreshes the project-scoped TOML port at
+`.codex/agents/<plugin_underscored>__<agent_underscored>.toml`. Never edit that TOML by
+hand and never copy the generated runtime name into a shared skill. Skills dispatch only
+the logical `<plugin>:<agent>` id and read
+`${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md` before delegation. The sync command
+generates that runtime map from canonical agent references.
+If the new agent runs commands that write build/cache output or require outbound command
+network access, update the capability matrix in `scripts/sync-codex-agents.mjs` and its
+parity tests; read-only remains the default.
+Run `bun run plan:codex-agents` before `bun run install:codex-agents`, and install only
+when the user asks to refresh their personal `~/.codex/agents/` directory. The installer
+must refuse unmanaged conflicts rather than overwrite them.
 
 ## Anti-patterns to detect and refuse
 

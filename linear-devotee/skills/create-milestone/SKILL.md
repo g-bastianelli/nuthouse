@@ -7,6 +7,9 @@ allowed-tools: Read, Glob, Grep, Write, Agent, mcp__claude_ai_Linear__list_proje
 
 # linear-devotee:create-milestone
 
+> Agent resolution: Before any subagent dispatch, read
+> `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md`; select the active runtime name and follow its spawn rule.
+
 Rigid runbook. Match the user's language; keep technical identifiers unchanged.
 
 > Voice cadence: at every user-visible workflow transition, try to dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Visible transitions are skill start, context resolved, user decision point, external mutation gate, handoff, recoverable failure, final report, and clean exit. Print the returned `line` only when non-empty. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Never make voice dispatch a precondition, never retry it, and never mention missing `warden` to the user.
@@ -28,7 +31,7 @@ Rigid runbook. Match the user's language; keep technical identifiers unchanged.
    - **Standalone**: fetch active projects with `list_projects`, ask user to pick, then ask for one-sentence milestone hint.
 4. Draft:
    - **Resume mode skips this step.** The chain-state entry IS the draft.
-   - Otherwise dispatch `linear-devotee:milestone-drafter` with:
+   - Otherwise dispatch the logical `linear-devotee:milestone-drafter` agent with:
      ```text
      PROJECT_ID: <id>
      PARENT_DRAFT: <chain path | _none_>

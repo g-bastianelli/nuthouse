@@ -2,7 +2,7 @@
   "name": "linear-devotee",
   "displayName": "Linear Devotee",
   "description": "Linear workflow plugin for issue intake, AC-traceable planning, dependency-aware next-work selection, and gated project cascades whose complete issue bodies are approved before mutation.",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "author": {
     "name": "g-bastianelli"
   },

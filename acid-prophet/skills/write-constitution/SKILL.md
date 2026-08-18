@@ -9,6 +9,9 @@ disallowed-tools: Edit, NotebookEdit
 
 # write-constitution
 
+> Agent resolution: Before any subagent dispatch, read
+> `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md`; select the active runtime name and follow its spawn rule.
+
 Rigid governance gate. Match the user's language; keep technical identifiers unchanged.
 
 ## Voice

@@ -1,6 +1,6 @@
 {
   "name": "linear-devotee",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Linear orchestration for Codex with complete AC-traceable issue packets, dependency-aware ready-work selection, validated implementation plans, and explicit mutation gates.",
   "author": {
     "name": "g-bastianelli"

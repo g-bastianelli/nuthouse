@@ -7,6 +7,9 @@ allowed-tools: Bash(git log:*), Bash(git branch:*), Bash(git diff:*), Bash(git r
 
 # git-gremlin:pr
 
+> Agent resolution: Before any subagent dispatch, read
+> `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md`; select the active runtime name and follow its spawn rule.
+
 Rigid approval gate. Match the user's language; keep technical identifiers unchanged.
 
 > Voice cadence: at every user-visible workflow transition, try to dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Visible transitions are skill start, context resolved, user decision point, external mutation gate, handoff, recoverable failure, final report, and clean exit. Print the returned `line` only when non-empty. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Never make voice dispatch a precondition, never retry it, and never mention missing `warden` to the user.
@@ -41,11 +44,12 @@ is printed, revert to the session default voice immediately.
    - Infer base branch: `gh repo view --json defaultBranchRef` or fallback `main`.
    - Verify commits exist ahead of base: the `Commits vs main` snapshot in `## Context` covers the common case; re-run `git log <base>...HEAD --oneline` when the base is not `main` or the snapshot is empty. Abort if no commits exist ahead of base.
 2. Draft PR title and description:
-   - Dispatch `git-gremlin:pr-drafter` with branch + log + diff vs base as input.
+   - Dispatch the logical `git-gremlin:pr-drafter` agent with branch + log + diff vs base
+     as input.
    - Receive `{ title: string, body: string, base: string }`.
    - In autopilot: treat the drafted title/body as approved — print them for the record and proceed directly to step 3 without waiting. Otherwise: display the proposed title and description to the user and wait for confirmation or edit request.
 3. Create PR:
-   - On confirmation: re-dispatch `git-gremlin:pr-drafter` with `action: execute`.
+   - On confirmation: re-dispatch the same agent with `action: execute`.
    - Receive `{ url: string }`.
    - On rejection: offer to regenerate or cancel. Never create PR silently.
 4. Report and hand off:
@@ -72,7 +76,8 @@ git-gremlin:pr report
 
 ## Subagent dispatch (Step 2)
 
-This skill dispatches the `git-gremlin:pr-drafter` subagent. Run `/scaffold-agent` to scaffold it.
+This skill dispatches the logical `git-gremlin:pr-drafter` agent. Its canonical definition
+is `git-gremlin/agents/pr-drafter.md`.
 
 ```
 Agent({

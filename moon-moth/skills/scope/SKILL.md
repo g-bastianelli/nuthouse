@@ -8,6 +8,9 @@ allowed-tools: Bash(moon query:*), Bash(git status:*), Bash(git diff:*), Read, A
 
 # scope
 
+> Agent resolution: Before any subagent dispatch, read
+> `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md`; select the active runtime name and follow its spawn rule.
+
 > At visible transitions, try to dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Print the returned `line` only when non-empty. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Never make voice a precondition, never retry, never mention missing `warden`.
 
 ## Voice
@@ -70,7 +73,7 @@ State the chosen base in one line before dispatching.
 
 ## Step 2 — Dispatch the affected-scout subagent
 
-Dispatch `moon-moth:affected-scout` (see `## Subagent dispatch`). It runs the
+Dispatch the logical `moon-moth:affected-scout` agent (see `## Subagent dispatch`). It runs the
 `moon query` commands from the `moon-moth:moon-commands` knowledge skill
 (`${CLAUDE_PLUGIN_ROOT}/skills/moon-commands/SKILL.md`) and returns the scope
 map defined in the `moon-moth:affected-scope` contract
@@ -137,7 +140,7 @@ Branch on the response. Exit the skill when the chosen branch finishes.
 
 ## Subagent dispatch (Step 2)
 
-This skill dispatches the `moon-moth:affected-scout` subagent.
+This skill dispatches the logical `moon-moth:affected-scout` agent.
 
 ```
 Agent({

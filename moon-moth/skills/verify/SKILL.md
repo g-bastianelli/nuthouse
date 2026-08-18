@@ -7,6 +7,9 @@ allowed-tools: Bash(moon run:*), Bash(moon query:*), Bash(git diff:*), Bash(git 
 
 # verify
 
+> Agent resolution: Before any subagent dispatch, read
+> `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md`; select the active runtime name and follow its spawn rule.
+
 > At visible transitions, try to dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Print the returned `line` only when non-empty. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Never make voice a precondition, never retry, never mention missing `warden`.
 > Autopilot scope: resolve the current branch's Linear issue and project before Steps 3–4. Take the **autopilot branch** only when that project's `<git-common-dir>/nuthouse/relays/<project-id>/autopilot.json` is active, unexpired, and embeds the same project id; otherwise behave interactively. A flag from another Linear project in this repo never applies.
 
@@ -46,7 +49,7 @@ exists — and refuses to call the flight clean on assertion alone.
 
 ## Step 1 — Run the affected checks (evidence)
 
-Dispatch `moon-moth:verify-runner` (see `## Subagent dispatch`). It executes the
+Dispatch the logical `moon-moth:verify-runner` agent (see `## Subagent dispatch`). It executes the
 affected tasks via the commands in the `moon-moth:moon-commands` knowledge
 skill (`${CLAUDE_PLUGIN_ROOT}/skills/moon-commands/SKILL.md`) — typically:
 

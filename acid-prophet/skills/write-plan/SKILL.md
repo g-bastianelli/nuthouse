@@ -9,6 +9,9 @@ allowed-tools: Read, Glob, Grep, Bash, Agent
 
 # write-plan
 
+> Agent resolution: Before any subagent dispatch, read
+> `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md`; select the active runtime name and follow its spawn rule.
+
 Rigid planning gate. Match the user's language; keep technical identifiers unchanged.
 
 ## Voice
@@ -41,7 +44,14 @@ The user has an approved spec under `docs/acid-prophet/specs/` and wants to lock
    - Read the spec frontmatter. If `status` is not one of `ratified | approved | ready | implementing`, ask: `spec status is <X>; plan may shift. continue (y) | stop (s)?`. Default to stop.
    - Require `spec-version` to parse as a base-10 integer ≥ 1. Abort to `acid-prophet:audit-spec` when it is missing or invalid; never substitute a default version.
    - Grep for unresolved `[NEEDS CLARIFICATION:` markers in the spec. If any exist, list them and ask `<N> unresolved markers — plan will inherit gaps. continue (y) | stop (s)?`. Default to stop.
-   - Dispatch `acid-prophet:spec-auditor` in `MODE: report-only` and capture its complete output as `RAW_REPORT`. Import and execute `parseSpecAuditorReport(RAW_REPORT)` from `${CLAUDE_PLUGIN_ROOT}/claudecode/lib/parse-spec-auditor-report.mjs`; do not interpret the markdown by hand. Require the parsed `handoffEligible === true` plus `gates["acceptance-traceable"] === "pass"`. Abort planning on null parser output, missing/duplicate ids, or any failed gate; send the user to `acid-prophet:audit-spec` instead of inheriting a broken source.
+   - Dispatch the logical `acid-prophet:spec-auditor` agent in `MODE: report-only` and
+     capture its complete output as `RAW_REPORT`. Import and execute
+     `parseSpecAuditorReport(RAW_REPORT)` from
+     `${CLAUDE_PLUGIN_ROOT}/claudecode/lib/parse-spec-auditor-report.mjs`; do not interpret
+     the markdown by hand. Require the parsed `handoffEligible === true` plus
+     `gates["acceptance-traceable"] === "pass"`. Abort planning on null parser output,
+     missing/duplicate ids, or any failed gate; send the user to `acid-prophet:audit-spec`
+     instead of inheriting a broken source.
    - Scope Acceptance extraction to the section headed exactly `Acceptance` (case-insensitive), stopping at the next heading of the same or higher level; exclude `Acceptance history`. Extract every id matching `AC-###` from that active section into `SOURCE_AC_IDS` only after the audit passes.
    - Read `${PROJECT_ROOT}/docs/acid-prophet/constitution.md` if present. Articles become design constraints for every step below.
 4. Explore the codebase (read-only):
