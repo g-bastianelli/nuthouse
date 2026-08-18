@@ -10,7 +10,7 @@ It turns Linear issues and specs into SDD-shaped context, acceptance-traceable i
 
 | Skill                             | Purpose                                                                                                                  |
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `linear-devotee:greet`            | Detect a Linear issue, load context, optionally prepare branch/status, then hand off to planning                         |
+| `linear-devotee:greet`            | Detect a fresh Linear issue when context is absent, optionally prepare branch/status, then hand off to planning          |
 | `linear-devotee:plan`             | Write and validate an implementation plan, detect spec drift, and sync accepted drift after approval                     |
 | `linear-devotee:next-issue`       | Recommend the next startable issue in the same Linear project after an issue is finished                                 |
 | `linear-devotee:create-project`   | Draft complete `AC-###`-traceable issue packets + dependency graph, preview them, then create the cascade after one gate |

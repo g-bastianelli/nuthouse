@@ -105,7 +105,7 @@ test("detects identifier from feature branch and outputs additionalContext", () 
       branch) echo "g-bastianelli/eng-247-foo" ;;
     esac
   `);
-  const res = runHook({ session_id: "sess-2" });
+  const res = runHook({ session_id: "sess-2", source: "startup" });
   expect(res.status).toBe(0);
   const out = JSON.parse(res.stdout);
   expect(out.hookSpecificOutput.hookEventName).toBe("SessionStart");
@@ -116,6 +116,52 @@ test("detects identifier from feature branch and outputs additionalContext", () 
   expect(state.awaiting_prompt).toBe(false);
   expectRootDataUnused();
 });
+
+for (const source of ["resume", "compact"]) {
+  test(`${source} preserves existing Linear context and exits silently`, () => {
+    stubGit(`
+      case "$1" in
+        rev-parse) exit 0 ;;
+        branch) echo "g-bastianelli/eng-247-foo" ;;
+      esac
+    `);
+    const existingState = {
+      greeted: true,
+      awaiting_prompt: false,
+      issue: "ENG-247",
+      issue_context_brief: "# ENG-247\nAlready resolved",
+    };
+    const sessionId = `sess-${source}`;
+    fs.writeFileSync(path.join(tmpData, `state-${sessionId}.json`), JSON.stringify(existingState));
+
+    const res = runHook({ session_id: sessionId, source });
+
+    expect(res.status).toBe(0);
+    expect(res.stdout).toBe("");
+    const state = JSON.parse(
+      fs.readFileSync(path.join(tmpData, `state-${sessionId}.json`), "utf8"),
+    );
+    expect(state).toEqual(existingState);
+    expectRootDataUnused();
+  });
+
+  test(`${source} without prior state exits silently without creating greet state`, () => {
+    stubGit(`
+      case "$1" in
+        rev-parse) exit 0 ;;
+        branch) echo "g-bastianelli/eng-247-foo" ;;
+      esac
+    `);
+    const sessionId = `sess-${source}-empty`;
+
+    const res = runHook({ session_id: sessionId, source });
+
+    expect(res.status).toBe(0);
+    expect(res.stdout).toBe("");
+    expect(fs.existsSync(path.join(tmpData, `state-${sessionId}.json`))).toBe(false);
+    expectRootDataUnused();
+  });
+}
 
 test("on main branch with no id, marks needs_branch and awaiting_prompt", () => {
   stubGit(`

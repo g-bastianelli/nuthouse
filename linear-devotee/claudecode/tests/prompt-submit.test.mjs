@@ -110,19 +110,20 @@ test("detects identifier in first prompt and outputs additionalContext", () => {
   expectRootDataUnused();
 });
 
-test("first prompt without identifier closes the awaiting_prompt window", () => {
+test("first prompt without identifier closes greet detection on a default branch", () => {
   writeStateFile("sess-3", {
     greeted: false,
     awaiting_prompt: true,
     issue: null,
-    current_branch: "feature/foo",
-    needs_branch: false,
+    current_branch: "staging",
+    needs_branch: true,
   });
   const res = runHook({ session_id: "sess-3", prompt: "how do I run the tests?" });
   expect(res.status).toBe(0);
   expect(res.stdout).toBe("");
   const state = JSON.parse(fs.readFileSync(path.join(tmpData, "state-sess-3.json"), "utf8"));
   expect(state.awaiting_prompt).toBe(false);
+  expect(state.greeted).toBe(true);
   expect(state.issue).toBeNull();
   expectRootDataUnused();
 });

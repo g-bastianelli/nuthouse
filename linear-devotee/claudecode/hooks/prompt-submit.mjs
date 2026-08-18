@@ -27,6 +27,7 @@ const issue = extractIssueId(prompt || "");
 
 const updated = {
   ...state,
+  greeted: issue ? (state.greeted ?? false) : true,
   awaiting_prompt: false,
   issue: issue ?? state.issue ?? null,
   source: issue ? "prompt" : state.source,

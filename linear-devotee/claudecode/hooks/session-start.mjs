@@ -36,8 +36,13 @@ function inGitRepo() {
   }
 }
 
-const { session_id } = readStdinJson();
+const { session_id, source } = readStdinJson();
 if (!session_id) process.exit(0);
+
+// Resumed and compacted sessions already carry their conversation context. Re-running
+// detection here would overwrite greeted state and turn an existing issue brief into a
+// fresh greet trigger.
+if (source === "resume" || source === "compact") process.exit(0);
 
 runtime.cleanupSessionState("state", 7);
 

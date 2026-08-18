@@ -1,6 +1,6 @@
 ---
 name: greet
-description: Use immediately at session start when a Linear issue identifier is detected from branch or first prompt. Delegates issue context to issue-context, optionally prepares branch/status, resolves source spec, writes greet context, then hands off to plan. Never writes implementation code.
+description: Use only at fresh session start when a Linear issue identifier is detected from the current branch or explicitly provided in the user's first prompt, and no Linear issue context is already available. Never use on resume or compaction, from an existing conversation summary, or on main/master/staging without an issue identifier. Delegates issue context to issue-context, optionally prepares branch/status, resolves source spec, writes greet context, then hands off to plan. Never writes implementation code.
 argument-hint: "[issue-id] [--fresh]"
 model: haiku
 allowed-tools: Read, Glob, Agent, Bash(git branch --show-current), Bash(git rev-parse:*), Bash(cat:*)
@@ -12,6 +12,8 @@ allowed-tools: Read, Glob, Agent, Bash(git branch --show-current), Bash(git rev-
 > `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md`; select the active runtime name and follow its spawn rule.
 
 Rigid context gate. Match the user's language; keep technical identifiers unchanged.
+
+> Silent gate: Run workflow step 1 before any voice dispatch or user-visible output. If the gate closes, exit silently.
 
 > Voice cadence: at every user-visible workflow transition, try to dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Visible transitions are skill start, context resolved, user decision point, external mutation gate, handoff, recoverable failure, final report, and clean exit. Print the returned `line` only when non-empty. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Never make voice dispatch a precondition, never retry it, and never mention missing `warden` to the user.
 > Voice flag: !`cat "$HOME/.claude/nuthouse/voice.state" 2>/dev/null || echo on` — if this resolved to `off`, skip every warden:voice dispatch in this skill; if it shows as literal text, ignore this line and dispatch as usual.
@@ -26,12 +28,16 @@ Rigid context gate. Match the user's language; keep technical identifiers unchan
 
 ## Workflow
 
-1. Preconditions:
+1. Silent trigger gate and preconditions:
+   - Accept a trigger only from `$ARGUMENTS`, the current branch on a fresh startup, or the user's current first prompt. Never extract a fresh trigger from a resumed/compacted conversation, an injected summary, prior turns, or an existing context brief.
+   - Treat Linear context as already available when the session state says `greeted: true`, contains a non-empty `issue_context_brief`, or the conversation includes a summary/brief with the issue's goal and working context. Exit silently; do not dispatch voice, fetch Linear, print a report, or hand off.
+   - On `main`, `master`, or `staging`, require an issue identifier in `$ARGUMENTS` or the user's current first prompt. The branch alone is never a trigger.
+   - If none of the accepted fresh sources contains an issue identifier, exit silently.
    - Verify Linear access with `ToolSearch` query `linear`.
    - Verify git repo (the `Branch` line in `## Context` shows `not a git repo` when outside one).
    - If `$ARGUMENTS` contains a Linear issue id (e.g. `ABC-123`), use it as `issue`.
    - Use the `Session state` JSON from `## Context`; extract `issue` (unless already set from `$ARGUMENTS`), `current_branch`, `needs_branch`. If it shows `no state`, treat the state file as absent and rely on `$ARGUMENTS`/the user prompt for the issue id.
-   - Stop if `greeted: true` or no issue id.
+   - Stop silently if `greeted: true` or no issue id.
    - Autopilot guard: after Linear resolves the issue project, read only the matching
      project flag. Do **not** read any `relay-<relay_id>.json` file. The relay has no
      local issue queue; Linear is the authority. Continue unless the session state already
@@ -96,7 +102,7 @@ Rigid context gate. Match the user's language; keep technical identifiers unchan
      Deep-merge (do not replace the whole file if other keys exist). If `$CLAUDE_SESSION_ID` is absent or store write fails, continue silently.
 7. Handoff:
    - Auto-chain to `plan` on the happy path. Print `linear-devotee:plan <ISSUE_ID>` and continue immediately — do not ask the user for confirmation. The user's only validation point is the plan's own `Validate this plan? (y / edit / stop)` gate.
-   - On error paths (no issue id, brief skipped, branch refused, status flip blocked), stop instead of chaining and report the reason.
+   - On error paths after the silent gate (brief skipped, branch refused, status flip blocked), stop instead of chaining and report the reason. A closed silent gate returns before this step without a report.
    - Do not draft a plan or offer code.
 
 ## Final Report
