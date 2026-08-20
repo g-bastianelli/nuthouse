@@ -8,14 +8,14 @@ Ambient implementation discipline for TypeScript monorepos. The subroutine
 doesn't speak, doesn't decide, doesn't run workflows — it _silently obeys_.
 Install it and a hook binds the discipline to your work: type-safety, the
 Result/unwrap pattern, Zod validation, named-export code organisation, React
-component structure, behavioral testing, explicit state machines, and the
+component structure, form codecs and submit discipline, behavioral testing, explicit state machines, and the
 layered Hono pipeline. No commands to invoke, no orchestration — the agent does
 the work, the collar holds it to the rules. The stricter your rules, the happier
 it is. The repo's own `AGENTS.md` always wins over the plugin's discipline.
 
 ## How it binds
 
-The discipline lives in eight `SKILL.md` files, but it is **delivered by a hook**,
+The discipline lives in nine `SKILL.md` files, but it is **delivered by a hook**,
 not by hoping the model invokes a skill. Model-driven skill invocation is
 unreliable for passive knowledge, and subagents don't inherit the parent
 session's skills at all — so a hook is the only mechanism that loads the rules
@@ -34,24 +34,27 @@ matches too many, the lowest-priority overflow degrades to a one-line summary.
 The `SKILL.md` files remain the single source of truth — edit them, and the hook
 delivers the change.
 
-## Discipline (the eight rule sets)
+## Discipline (the nine rule sets)
 
 Each discipline matches files by its `paths` globs:
 
-| Skill                | Paths                                        | Discipline                                                                               |
-| -------------------- | -------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `type-safety`        | `**/*.ts`, `**/*.tsx`                        | No `any`/`as`/`!`, string-literal unions over `enum`, `ts-pattern` `.exhaustive()`       |
-| `validation`         | `**/*.ts`, `**/*.tsx`                        | Zod as the sole validation library, `z.infer`, parse at trust boundaries                 |
-| `code-organisation`  | `**/*.ts`, `**/*.tsx`                        | Named exports, declarative `index.ts`, one-file-one-responsibility, reuse before writing |
-| `react-rules`        | `**/*.tsx`, `**/use*.ts`, `**/hooks/**/*.ts` | One component per file, folder mirrors JSX ownership, identity props, state hierarchy    |
-| `testing-discipline` | `**/*.test.ts(x)`, `**/*.spec.ts(x)`         | Behavior-first tests, boundary doubles, typed failures, preserved infrastructure throws  |
-| `state-machine`      | state-machine/lifecycle/workflow/reducer TS  | Illegal states unrepresentable, pure exhaustive transitions, replay and concurrency      |
-| `result-pattern`     | `**/*.ts` (backend/domain code)              | `Result<T,E>` / `ok` / `err`, return-don't-throw, one unwrap at the transport boundary   |
-| `hono-pipeline`      | `**/*.ts` (Hono backend code)                | Contract → error union → pure service (`Result`) → unwrap → thin router                  |
+| Skill                | Paths                                               | Discipline                                                                                     |
+| -------------------- | --------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `type-safety`        | `**/*.ts`, `**/*.tsx`                               | No `any`/`as`/`!`, string-literal unions over `enum`, `ts-pattern` `.exhaustive()`             |
+| `validation`         | `**/*.ts`, `**/*.tsx`                               | Zod as the sole validation library, `z.infer`, parse at trust boundaries                       |
+| `code-organisation`  | `**/*.ts`, `**/*.tsx`                               | Named exports, declarative `index.ts`, one-file-one-responsibility, reuse before writing       |
+| `form-rules`         | `**/*Form*.ts(x)`, `**/*Form*/**`, `**/*Fields.tsx` | Schema-owned codecs, distinct input/output types, blank-seeded required fields, ungated submit |
+| `react-rules`        | `**/*.tsx`, `**/use*.ts`, `**/hooks/**/*.ts`        | One component per file, folder mirrors JSX ownership, identity props, state hierarchy          |
+| `testing-discipline` | `**/*.test.ts(x)`, `**/*.spec.ts(x)`                | Behavior-first tests, boundary doubles, typed failures, preserved infrastructure throws        |
+| `state-machine`      | state-machine/lifecycle/workflow/reducer TS         | Illegal states unrepresentable, pure exhaustive transitions, replay and concurrency            |
+| `result-pattern`     | `**/*.ts` (backend/domain code)                     | `Result<T,E>` / `ok` / `err`, return-don't-throw, one unwrap at the transport boundary         |
+| `hono-pipeline`      | `**/*.ts` (Hono backend code)                       | Contract → error union → pure service (`Result`) → unwrap → thin router                        |
 
-`testing-discipline` and `state-machine` use narrow filename globs. By contrast,
-`result-pattern` and `hono-pipeline` match all `.ts` files because domain-lib
-layouts are repo-specific; each body scopes itself to backend/domain code.
+`form-rules`, `testing-discipline` and `state-machine` use narrow filename globs
+— `form-rules` also matches inside a `*Form*/` folder, because the react-rules
+layout puts the `useForm` call in its `index.tsx`. By contrast, `result-pattern`
+and `hono-pipeline` match all `.ts` files because domain-lib layouts are
+repo-specific; each body scopes itself to backend/domain code.
 
 ## Install
 

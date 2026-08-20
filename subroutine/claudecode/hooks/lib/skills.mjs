@@ -9,14 +9,16 @@ import os from "node:os";
 import path from "node:path";
 import { matchGlob } from "./glob.mjs";
 
-// Injection priority: universal rules first, then React (so `use*.ts` hooks do
-// not lose their applicable discipline), then backend-specific rules. When the
-// bodies exceed the budget, a lowest-priority suffix degrades to summaries.
-// Unknown skills sort last, alphabetically.
+// Injection priority: universal rules first, then the narrow file-scoped ones
+// (a skill that only matches forms is the reason this file was opened, and it
+// would not be re-delivered by the next edit), then React, then backend rules.
+// When the bodies exceed the budget, a lowest-priority suffix degrades to
+// summaries. Unknown skills sort last, alphabetically.
 const PRIORITY = [
   "type-safety",
   "validation",
   "code-organisation",
+  "form-rules",
   "react-rules",
   "testing-discipline",
   "state-machine",

@@ -54,13 +54,14 @@ test("parseSkill returns null without frontmatter", () => {
   expect(parseSkill("no frontmatter here")).toBeNull();
 });
 
-test("discoverSkills finds all eight real subroutine skills, priority-ordered", () => {
+test("discoverSkills finds all nine real subroutine skills, priority-ordered", () => {
   const skills = discoverSkills(SKILLS_DIR);
   const names = skills.map((s) => s.name);
   expect(names).toEqual([
     "type-safety",
     "validation",
     "code-organisation",
+    "form-rules",
     "react-rules",
     "testing-discipline",
     "state-machine",
@@ -144,7 +145,9 @@ test("buildDigest is one compact line per skill", () => {
   const lines = digest.split("\n");
   expect(lines.length).toBe(skills.length);
   expect(lines[0]).toContain("`type-safety`");
-  expect(digest.length).toBeLessThan(2000);
+  // One COMPACT line per skill: bound the per-line average, not the total, so
+  // adding a discipline can never fail this on its own.
+  expect(digest.length / lines.length).toBeLessThan(260);
 });
 
 test("empty skill set yields empty payload", () => {
@@ -192,6 +195,32 @@ test("a .tsx packs react-rules as a full body under a realistic hook budget", ()
   const payload = buildDisciplinePayload(matched, { capChars: 9748 });
   expect(payload).toContain("### react-rules");
   expect(payload).not.toContain("also binding");
+});
+
+test("a form file keeps form-rules in full under a realistic hook budget", () => {
+  const skills = discoverSkills(SKILLS_DIR);
+  for (const file of [
+    "/repo/src/members/MemberForm.tsx",
+    "/repo/src/members/MemberForm/index.tsx",
+    "/repo/src/members/MemberForm/schema.ts",
+    "/repo/src/members/MemberFields.tsx",
+  ]) {
+    const payload = buildDisciplinePayload(matchSkills(skills, file), { capChars: 9748 });
+    expect(payload).toContain("### form-rules\n");
+    expect(payload.length).toBeLessThanOrEqual(9748);
+  }
+});
+
+test("form-rules stays off files that only look like forms", () => {
+  const skills = discoverSkills(SKILLS_DIR);
+  for (const file of [
+    "/repo/packages/db/src/schema.ts",
+    "/repo/src/members/MembersTable/MemberRow/RowActions.tsx",
+    "/repo/src/components/ui/Dialog.tsx",
+    "/repo/src/orders/OrderDrawer.tsx",
+  ]) {
+    expect(matchSkills(skills, file).map((s) => s.name)).not.toContain("form-rules");
+  }
 });
 
 test("a React hook .ts keeps react-rules in full when backend fallbacks overflow", () => {
