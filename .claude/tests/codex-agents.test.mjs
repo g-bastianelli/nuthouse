@@ -78,6 +78,13 @@ describe("Codex agent parity", () => {
     expect(render("stack-golem:platform-scout")).toContain(
       "sandbox_workspace_write.network_access = true",
     );
+    expect(render("monkey-maestro:runtime-inspector")).toContain(
+      "sandbox_workspace_write.network_access = true",
+    );
+    expect(render("monkey-maestro:project-snapshot-loader")).toContain(
+      'sandbox_mode = "read-only"',
+    );
+    expect(render("linear-devotee:project-graph-loader")).toContain('sandbox_mode = "read-only"');
     expect(render("lore-hound:source-fetcher")).toContain('sandbox_mode = "read-only"');
   });
 

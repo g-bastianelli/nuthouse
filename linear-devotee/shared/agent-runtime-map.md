@@ -5,14 +5,15 @@
 Resolve every logical agent id through this table before delegation. Select the exact name
 for the active runtime.
 
-| Logical id                         | Claude Code                        | Codex                               |
-| ---------------------------------- | ---------------------------------- | ----------------------------------- |
-| `linear-devotee:issue-context`     | `linear-devotee:issue-context`     | `linear_devotee__issue_context`     |
-| `linear-devotee:issue-drafter`     | `linear-devotee:issue-drafter`     | `linear_devotee__issue_drafter`     |
-| `linear-devotee:milestone-drafter` | `linear-devotee:milestone-drafter` | `linear_devotee__milestone_drafter` |
-| `linear-devotee:plan-auditor`      | `linear-devotee:plan-auditor`      | `linear_devotee__plan_auditor`      |
-| `linear-devotee:project-drafter`   | `linear-devotee:project-drafter`   | `linear_devotee__project_drafter`   |
-| `warden:voice`                     | `warden:voice`                     | `warden__voice`                     |
+| Logical id                            | Claude Code                           | Codex                                  |
+| ------------------------------------- | ------------------------------------- | -------------------------------------- |
+| `linear-devotee:issue-context`        | `linear-devotee:issue-context`        | `linear_devotee__issue_context`        |
+| `linear-devotee:issue-drafter`        | `linear-devotee:issue-drafter`        | `linear_devotee__issue_drafter`        |
+| `linear-devotee:milestone-drafter`    | `linear-devotee:milestone-drafter`    | `linear_devotee__milestone_drafter`    |
+| `linear-devotee:plan-auditor`         | `linear-devotee:plan-auditor`         | `linear_devotee__plan_auditor`         |
+| `linear-devotee:project-drafter`      | `linear-devotee:project-drafter`      | `linear_devotee__project_drafter`      |
+| `linear-devotee:project-graph-loader` | `linear-devotee:project-graph-loader` | `linear_devotee__project_graph_loader` |
+| `warden:voice`                        | `warden:voice`                        | `warden__voice`                        |
 
 On Codex, spawn a typed custom agent with isolated task-local context. Never use a
 full-history fork. Pass only the input contract required by the delegated task.

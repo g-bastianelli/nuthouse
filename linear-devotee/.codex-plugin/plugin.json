@@ -1,7 +1,7 @@
 {
   "name": "linear-devotee",
-  "version": "1.0.7",
-  "description": "Linear orchestration for Codex with complete AC-traceable issue packets, dependency-aware ready-work selection, validated implementation plans, and explicit mutation gates.",
+  "version": "1.0.8",
+  "description": "Linear orchestration for Codex with complete AC-traceable issue packets, exact verified dependency graphs, validated implementation plans, and explicit mutation gates.",
   "author": {
     "name": "g-bastianelli"
   },
@@ -10,7 +10,7 @@
   "interface": {
     "displayName": "Linear Devotee",
     "shortDescription": "Plan and create Linear work from Codex",
-    "longDescription": "Linear Devotee bundles Codex skills for detecting Linear issues, producing SDD briefs, setting work in progress, planning implementation with exhaustive AC coverage, recommending the next dependency-ready issue, and creating Linear project cascades. Complete issue bodies, stable AC references, and blockers are previewed before one approval gate; no issue content is generated during mutation. Linear writes stay behind explicit confirmation except the documented In Progress flip during greet.",
+    "longDescription": "Linear Devotee bundles Codex skills for detecting Linear issues, producing SDD briefs, setting work in progress, planning implementation with exhaustive AC coverage, recommending the next dependency-ready issue, and creating Linear project cascades. Complete issue bodies and a canonical dependency DAG are hash-bound to one approval, replayed recoverably, then reloaded and compared exactly before the project is marked verified. Linear writes stay behind explicit confirmation except the documented In Progress flip during greet.",
     "developerName": "g-bastianelli",
     "category": "Developer Tools",
     "capabilities": ["Read", "Write"],

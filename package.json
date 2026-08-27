@@ -18,6 +18,7 @@
     "install:codex-agents": "node scripts/sync-codex-agents.mjs --install",
     "check:codex-agents": "node scripts/sync-codex-agents.mjs --check",
     "check:installed-codex-agents": "node scripts/sync-codex-agents.mjs --install --check",
+    "check:workflow": "node scripts/check-workflow-migration.mjs",
     "test:scripts": "bun test scripts/tests"
   },
   "devDependencies": {

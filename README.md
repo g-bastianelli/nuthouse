@@ -16,18 +16,18 @@
 
 ## Plugins
 
-| Plugin                             | Runtime             | Purpose                                                                                                  |
-| ---------------------------------- | ------------------- | -------------------------------------------------------------------------------------------------------- |
-| [subroutine](./subroutine)         | Claude Code + Codex | Ambient TS discipline knowledge skills that activate on matching files                                   |
-| [linear-devotee](./linear-devotee) | Claude Code + Codex | Linear issue intake, planning, and gated project/milestone/issue creation                                |
-| [acid-prophet](./acid-prophet)     | Claude Code + Codex | Spec writing, spec audit, and PR/spec drift checks                                                       |
-| [warden](./warden)                 | Claude Code + Codex | Shared persona-line dispatcher and global voice toggle                                                   |
-| [git-gremlin](./git-gremlin)       | Claude Code + Codex | Commit and PR drafting with scoped mutation gates                                                        |
-| [saucy-status](./saucy-status)     | Claude Code         | Statusline and prompt-time fun messages                                                                  |
-| [lore-hound](./lore-hound)         | Claude Code + Codex | Source-hunting research harness: fan-out search → fetch → verify → cite                                  |
-| [stack-golem](./stack-golem)       | Claude Code + Codex | Notom-stack ops & debug — Scaleway, observability, local dev, Insomnia                                   |
-| [moon-moth](./moon-moth)           | Claude Code + Codex | Moon-aware dev loop — scope to affected projects, implement TDD-first, verify                            |
-| [monkey-maestro](./monkey-maestro) | Claude Code + Codex | Autopilot relay — conducts Linear issues through the pipeline, one worktree per issue, gated on your nod |
+| Plugin                             | Runtime             | Purpose                                                                                              |
+| ---------------------------------- | ------------------- | ---------------------------------------------------------------------------------------------------- |
+| [subroutine](./subroutine)         | Claude Code + Codex | Ambient TS discipline knowledge skills that activate on matching files                               |
+| [linear-devotee](./linear-devotee) | Claude Code + Codex | Linear issue intake, planning, hash-bound mutation cascades, and exact post-write graph verification |
+| [acid-prophet](./acid-prophet)     | Claude Code + Codex | Spec writing, spec audit, and PR/spec drift checks                                                   |
+| [warden](./warden)                 | Claude Code + Codex | Shared persona-line dispatcher and global voice toggle                                               |
+| [git-gremlin](./git-gremlin)       | Claude Code + Codex | Contextual review plus commit and PR drafting with scoped mutation gates                             |
+| [saucy-status](./saucy-status)     | Claude Code         | Statusline and prompt-time fun messages                                                              |
+| [lore-hound](./lore-hound)         | Claude Code + Codex | Source-hunting research harness: fan-out search → fetch → verify → cite                              |
+| [stack-golem](./stack-golem)       | Claude Code + Codex | Notom-stack ops & debug — Scaleway, observability, local dev, Insomnia                               |
+| [moon-moth](./moon-moth)           | Claude Code + Codex | Moon-aware dev loop — scope to affected projects, implement TDD-first, verify                        |
+| [monkey-maestro](./monkey-maestro) | Claude Code + Codex | One-shot Linear project reconciliation into bounded, reconstructable Superset executions             |
 
 ## Install
 
@@ -72,6 +72,7 @@ Skills and agents live at the plugin root. Do not create duplicate runtime copie
 bun install
 bun test
 bun run test:meta
+bun run check:workflow
 bun run lint
 bun run fmt:check
 ```

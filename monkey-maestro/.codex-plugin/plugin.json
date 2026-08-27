@@ -1,7 +1,7 @@
 {
   "name": "monkey-maestro",
-  "version": "1.0.8",
-  "description": "Deranged maestro that conducts your Linear backlog through the build pipeline — one worktree per issue, your applause between movements.",
+  "version": "1.0.9",
+  "description": "Project execution reconciler for verified Linear dependency graphs with durable control, bounded concurrent Superset dispatch, and runtime reconstruction.",
   "author": {
     "name": "g-bastianelli"
   },
@@ -9,14 +9,17 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Monkey Maestro",
-    "shortDescription": "Conducts your Linear backlog through the build pipeline, one worktree per issue.",
+    "shortDescription": "Reconcile verified Linear projects into bounded Superset executions",
+    "longDescription": "Monkey Maestro activates one verified Linear project with a durable versioned control record, then performs explicit one-shot reconciliations. Each pass reloads Linear, GitHub, and Superset, reconstructs workspaces by exact Linear taskId, respects dependency eligibility and concurrency, and dispatches through task-linked Superset workspaces without a private queue or polling loop.",
     "developerName": "g-bastianelli",
     "category": "Productivity",
     "capabilities": ["Read", "Write"],
     "websiteURL": "https://github.com/g-bastianelli/nuthouse",
     "defaultPrompt": [
-      "Use Monkey Maestro to run my Linear backlog through the build pipeline.",
-      "Use Monkey Maestro to start the autopilot relay on the next issue."
+      "Use Monkey Maestro to start project execution for this verified Linear project.",
+      "Use Monkey Maestro to reconcile this Linear project once.",
+      "Use Monkey Maestro to spawn one task-linked Superset workspace.",
+      "Use Monkey Maestro to stop future project dispatches without terminating active work."
     ],
     "logo": "./assets/banner.png"
   }

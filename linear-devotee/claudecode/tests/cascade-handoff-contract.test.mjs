@@ -32,6 +32,14 @@ test("create-project no longer advertises an automatic greet handoff", () => {
   expect(skill).not.toContain("Then print `linear-devotee:greet <identifier>` and continue");
 });
 
+test("only a verified graph receipt can hand off to Maestro", () => {
+  const skill = readSkill("linear-devotee/skills/create-project/SKILL.md");
+  expect(skill).toContain("nuthouse:project-graph-receipt");
+  expect(skill).toContain("Graph verification:");
+  expect(skill).toContain("monkey-maestro:start");
+  expect(skill).toContain("only when `graph_receipt.verified === true`");
+});
+
 test("next-issue recommends without mutating Linear or auto-chaining", () => {
   const skill = readSkill("linear-devotee/skills/next-issue/SKILL.md");
   expect(skill).toContain("Recommended next issue:");

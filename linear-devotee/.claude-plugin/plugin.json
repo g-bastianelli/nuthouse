@@ -1,8 +1,8 @@
 {
   "name": "linear-devotee",
   "displayName": "Linear Devotee",
-  "description": "Linear workflow plugin for issue intake, AC-traceable planning, dependency-aware next-work selection, and gated project cascades whose complete issue bodies are approved before mutation.",
-  "version": "1.0.7",
+  "description": "Linear workflow plugin for issue intake, AC-traceable planning, dependency-aware next-work selection, and exact verified project graph creation.",
+  "version": "1.0.8",
   "author": {
     "name": "g-bastianelli"
   },
@@ -14,6 +14,7 @@
     "./agents/issue-drafter.md",
     "./agents/milestone-drafter.md",
     "./agents/plan-auditor.md",
-    "./agents/project-drafter.md"
+    "./agents/project-drafter.md",
+    "./agents/project-graph-loader.md"
   ]
 }

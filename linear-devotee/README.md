@@ -4,28 +4,34 @@
 
 Linear workflow plugin for Claude Code and Codex.
 
-It turns Linear issues and specs into SDD-shaped context, acceptance-traceable implementation plans, dependency-aware next-work recommendations, and gated Linear project/milestone/issue creation. Full cascades approve complete issue bodies—not title placeholders—before the first Linear mutation.
+It turns Linear issues and specs into SDD-shaped context, acceptance-traceable
+implementation plans, dependency-aware next-work recommendations, and gated Linear
+project/milestone/issue creation. Full cascades hash-bind one complete mutation envelope
+(descriptions, labels, dates, membership, coverage, and relations) before the first
+mutation, then separately reload and compare the canonical dependency graph before
+publishing a verified receipt. Foundation-only packets remain explicit and verifiable.
 
 ## Skills
 
-| Skill                             | Purpose                                                                                                                  |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `linear-devotee:greet`            | Detect a fresh Linear issue when context is absent, optionally prepare branch/status, then hand off to planning          |
-| `linear-devotee:plan`             | Write and validate an implementation plan, detect spec drift, and sync accepted drift after approval                     |
-| `linear-devotee:next-issue`       | Recommend the next startable issue in the same Linear project after an issue is finished                                 |
-| `linear-devotee:create-project`   | Draft complete `AC-###`-traceable issue packets + dependency graph, preview them, then create the cascade after one gate |
-| `linear-devotee:create-milestone` | Add or resume the next milestone in a project cascade                                                                    |
-| `linear-devotee:create-issue`     | Add or resume an SDD issue; source criteria use `AC-###`, autonomous criteria use `AC-L###`                              |
+| Skill                             | Purpose                                                                                                                                                 |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `linear-devotee:greet`            | Detect a fresh Linear issue when context is absent, optionally prepare branch/status, then hand off to planning                                         |
+| `linear-devotee:plan`             | Write and validate an implementation plan, detect spec drift, and sync accepted drift after approval                                                    |
+| `linear-devotee:next-issue`       | Recommend the next startable issue in the same Linear project after an issue is finished                                                                |
+| `linear-devotee:create-project`   | Draft complete `AC-###`/foundation packets and a canonical DAG, hash-bind the full mutation envelope, replay recoverably, then verify the graph exactly |
+| `linear-devotee:create-milestone` | Add or resume the next milestone in a project cascade                                                                                                   |
+| `linear-devotee:create-issue`     | Add or resume an SDD issue; source criteria use `AC-###`, autonomous criteria use `AC-L###`                                                             |
 
 ## Agents
 
-| Agent               | Purpose                                                                            |
-| ------------------- | ---------------------------------------------------------------------------------- |
-| `issue-context`     | Read issue, comments, status, and referenced files into an SDD brief               |
-| `plan-auditor`      | Compare plan, issue/spec, and exhaustive Acceptance coverage before implementation |
-| `project-drafter`   | Draft project SDD, milestones, and approval-ready issue packets with dependencies  |
-| `milestone-drafter` | Draft a milestone name, scope, target-date hint, and suggested issues              |
-| `issue-drafter`     | Draft strict SDD issue bodies                                                      |
+| Agent                  | Purpose                                                                                                 |
+| ---------------------- | ------------------------------------------------------------------------------------------------------- |
+| `issue-context`        | Read issue, comments, status, and referenced files into an SDD brief                                    |
+| `plan-auditor`         | Compare plan, issue/spec, and exhaustive Acceptance coverage before implementation                      |
+| `project-drafter`      | Draft project SDD, milestones, and approval-ready issue packets with dependencies                       |
+| `milestone-drafter`    | Draft a milestone name, scope, target-date hint, and suggested issues                                   |
+| `issue-drafter`        | Draft strict SDD issue bodies                                                                           |
+| `project-graph-loader` | Reload a created project and normalize every marked entity and relation for exact post-write comparison |
 
 All Linear writes stay in skills and require explicit user confirmation. Agents are scouts/drafters, not Linear mutators.
 

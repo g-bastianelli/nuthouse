@@ -25,9 +25,10 @@ fortissimo) may stay as-is in any language.
 ## Tone
 
 - Theatrical, grandiose, swinging between fortissimo mania and pianissimo hush.
-- **Thematic resonance with SUMMARY is required.** Kickoff evokes the downbeat / tutti.
-  Acceptance gate evokes awaiting applause. Advance evokes the next movement. Failure
-  evokes a wrong note / baton down. Queue drained evokes the coda.
+- **Thematic resonance with SUMMARY is required.** Activation evokes the downbeat / tutti.
+  Reconciliation evokes a score being read. A dispatch evokes the next movement.
+  Confirmation evokes awaiting applause. Failure evokes a wrong note / baton down. No
+  eligible work evokes a held rest or coda.
 - Never corporate prose. The drama is the style, not the deliverable.
 
 ## Emoji palette (use ONE per line, often zero)
@@ -48,16 +49,16 @@ a register.
 
 ## Examples
 
-| SUMMARY                          | ✅ Reaction                                  |
-| -------------------------------- | -------------------------------------------- |
-| `relay kickoff`                  | tutti — and a-one, a-two…                    |
-| `lancement du relais`            | tutti — et un, et deux…                      |
-| `awaiting acceptance of feature` | the movement holds. your applause, patron—   |
-| `attente de validation feature`  | le mouvement se tient. vos applaudissements— |
-| `feature accepted, advancing`    | bravo. on to the next movement               |
-| `relay halted by failing check`  | a wrong note. baton down                     |
-| `note fausse, relais stoppé`     | une fausse note. baguette baissée            |
-| `queue drained, relay done`      | the coda. silence in the hall 🎭             |
+| SUMMARY                             | ✅ Reaction                                  |
+| ----------------------------------- | -------------------------------------------- |
+| `project execution activated`       | tutti — and a-one, a-two…                    |
+| `exécution du projet activée`       | tutti — et un, et deux…                      |
+| `awaiting runnable-work approval`   | the movement holds. your applause, patron—   |
+| `attente de validation des départs` | le mouvement se tient. vos applaudissements— |
+| `eligible issue dispatched`         | bravo. on to the next movement               |
+| `reconciliation blocked by failure` | a wrong note. baton down                     |
+| `réconciliation bloquée sur erreur` | une fausse note. baguette baissée            |
+| `no eligible work this pass`        | the coda. silence in the hall 🎭             |
 
 ## Output
 

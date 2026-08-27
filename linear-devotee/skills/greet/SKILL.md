@@ -17,7 +17,6 @@ Rigid context gate. Match the user's language; keep technical identifiers unchan
 
 > Voice cadence: at every user-visible workflow transition, try to dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Visible transitions are skill start, context resolved, user decision point, external mutation gate, handoff, recoverable failure, final report, and clean exit. Print the returned `line` only when non-empty. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Never make voice dispatch a precondition, never retry it, and never mention missing `warden` to the user.
 > Voice flag: !`cat "$HOME/.claude/nuthouse/voice.state" 2>/dev/null || echo on` — if this resolved to `off`, skip every warden:voice dispatch in this skill; if it shows as literal text, ignore this line and dispatch as usual.
-> Autopilot scope: resolve the issue's Linear project first. Only the matching `<git-common-dir>/nuthouse/relays/<project-id>/autopilot.json` can enable relay behavior; never treat another project's flag in this repo as authority.
 
 ## Context
 
@@ -38,10 +37,6 @@ Rigid context gate. Match the user's language; keep technical identifiers unchan
    - If `$ARGUMENTS` contains a Linear issue id (e.g. `ABC-123`), use it as `issue`.
    - Use the `Session state` JSON from `## Context`; extract `issue` (unless already set from `$ARGUMENTS`), `current_branch`, `needs_branch`. If it shows `no state`, treat the state file as absent and rely on `$ARGUMENTS`/the user prompt for the issue id.
    - Stop silently if `greeted: true` or no issue id.
-   - Autopilot guard: after Linear resolves the issue project, read only the matching
-     project flag. Do **not** read any `relay-<relay_id>.json` file. The relay has no
-     local issue queue; Linear is the authority. Continue unless the session state already
-     says `greeted: true` or Linear later reports the issue is completed/canceled.
    - Do not fetch full issue context in main context.
 2. Delegate context:
    - Dispatch the logical `linear-devotee:issue-context` agent with:
@@ -52,11 +47,10 @@ Rigid context gate. Match the user's language; keep technical identifiers unchan
      ```
    - Present the returned SDD brief unchanged.
    - If issue does not exist, mark `greeted: true`, report `Brief: skipped`, and stop.
-   - If the returned Linear status type is `completed` or `canceled`, mark `greeted: true`, report `Brief: skipped — issue already closed on Linear`, and stop. Do not let stale local relay files override Linear.
-   - Extract `linear_project_id` from the brief's required `Project ID` line. Derive the
-     project flag under `<git-common-dir>/nuthouse/relays/<linear_project_id>/autopilot.json`.
-     It is the only relay flag this issue may read.
+   - If the returned Linear status type is `completed` or `canceled`, mark `greeted: true`, report `Brief: skipped — issue already closed on Linear`, and stop.
+   - Extract `linear_project_id` from the brief's required `Project ID` line for spec and plan traceability only. Do not read Maestro control; greet owns issue bootstrap regardless of how the workspace was launched.
 3. Branch preparation when `needs_branch: true`:
+   - In a Superset-managed project/worktree, never create a branch in place. Stop and route the user to `monkey-maestro:spawn`; a Maestro-spawned task workspace already has its provider branch and should normally arrive with `needs_branch: false`.
    - Build `<git-user>/<id-lowercase>-<kebab-title-trimmed-50char>`.
    - Ask before creating.
    - If dirty, ask stash or abort branch creation.
@@ -67,6 +61,7 @@ Rigid context gate. Match the user's language; keep technical identifiers unchan
    - Use `issue-context` status metadata.
    - If status type is not `started`, update Linear with the returned started `stateId`.
    - This flip is authorized by greet; no extra confirmation.
+   - Greet is the sole owner of this transition. Monkey Maestro, Git Gremlin, and Moon Moth must never perform it.
 5. Resolve Acid Prophet spec:
    - Search `<PROJECT_ROOT>/docs/acid-prophet/specs/`.
    - Choose only unambiguous matches, priority:

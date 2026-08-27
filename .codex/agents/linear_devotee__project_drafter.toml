@@ -151,6 +151,11 @@ Return **only** the markdown shape below. Keep the project brief under 800 words
 
 Produce every issue in dependency order. `draft-key` is stable within this draft and is the only value used by `depends-on` before Linear ids exist. Every source Acceptance id must appear in at least one `covers:` line. A genuinely enabling issue may use `covers: foundation`, but then `foundation-reason` is mandatory. Do not create catch-all issues that cover unrelated criteria.
 
+Normalize every dependency as `dependentRef -> blockerRef`: the issue packet owning the
+`depends-on` line is the dependent and each referenced draft key is a blocker. Both ends
+must resolve to issue packets in the same project packet. Never emit `from`/`to`,
+`blocks`, or an inferred reverse relation; the caller hashes this exact direction.
+
 ### <issue title>
 
 - draft-key: I-001
@@ -198,6 +203,7 @@ Repeat the packet for `I-002`, `I-003`, and so on. If the input lacks a stable A
   packets, dropped criteria, or oversized catch-all issues.
 - **Approval-ready output.** Issue packets are the exact future Linear descriptions, not placeholders to be expanded after user approval.
 - **Traceability is exhaustive.** Cover every source `AC-###` at least once; reject unknown ids, missing coverage, duplicate draft keys, missing dependencies, and cycles.
+- **One graph boundary.** Every dependency target must be another issue in the same project packet; cross-project references are blocking `_unclear_` values, never external edges.
 - **Voice = neutral.** No devotional/worship talk in the brief itself; the calling skill (`linear-devotee:create-project`) wraps your output in voice. You stay clean and structured.
 - **Never hardcode status names.** Always sample the workspace by fetching all projects and surface `statusId`s as a map. The workspace owns its named statuses.
 '''

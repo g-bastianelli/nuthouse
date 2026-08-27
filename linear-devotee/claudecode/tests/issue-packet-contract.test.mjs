@@ -16,6 +16,8 @@ test("project drafter emits complete traceable issue packets", () => {
   expect(agent).toContain("covers: AC-001");
   expect(agent).toContain("depends-on:");
   expect(agent).toContain("**Acceptance criteria**");
+  expect(agent).toContain("dependentRef -> blockerRef");
+  expect(agent).toContain("same project packet");
 });
 
 test("create-project approves full issue bodies before Linear mutation", () => {
@@ -26,6 +28,55 @@ test("create-project approves full issue bodies before Linear mutation", () => {
   expect(skill).toContain("pre-approved `sdd_body`");
   expect(skill).toContain("every source `AC-###` is covered");
   expect(skill).not.toContain("Dispatch `linear-devotee:issue-drafter` with:");
+  expect(skill).toContain("normalized_graph");
+  expect(skill).toContain("payload_hash");
+  expect(skill).toContain("approved_payload_hash");
+  expect(skill).toContain("mutation_envelope");
+  expect(skill).toContain("validate-envelope");
+  expect(skill).toContain("graph_hash");
+  expect(skill).toContain(
+    "project `clientRef`, `name`, full marked `description`, `teamIds`, `statusId`",
+  );
+});
+
+test("foundation-only packets remain representable through authoritative reload", () => {
+  const skill = read("linear-devotee/skills/create-project/SKILL.md");
+  const loader = read("linear-devotee/agents/project-graph-loader.md");
+
+  expect(skill).toContain("acceptanceIds: []");
+  expect(skill).toContain("foundationReason");
+  expect(skill).toContain("nuthouse-foundation-reason");
+  expect(loader).toContain("base64url-decode");
+  expect(loader).toContain("foundationReason");
+});
+
+test("create-project verifies the exact graph after every write is confirmed", () => {
+  const skill = read("linear-devotee/skills/create-project/SKILL.md");
+
+  expect(skill).toContain("project-graph.mjs validate");
+  expect(skill).toContain("linear-devotee:project-graph-loader");
+  expect(skill).toContain("project-graph.mjs compare");
+  expect(skill).toContain('"verified": false');
+  expect(skill).toContain("refuse Maestro activation");
+});
+
+test("cascade mutation never drops an unresolved approved dependency", () => {
+  const createProject = read("linear-devotee/skills/create-project/SKILL.md");
+  expect(createProject).toContain('last_error: "dependency_reference_unresolved"');
+  expect(createProject).toContain("never drop, guess, or defer an approved dependency silently");
+  expect(createProject).not.toContain("drop unresolved refs with a warning");
+});
+
+test("cascade resume confirms stable mutation markers before retrying", () => {
+  for (const skillPath of [
+    "linear-devotee/skills/create-project/SKILL.md",
+    "linear-devotee/skills/create-issue/SKILL.md",
+    "linear-devotee/skills/create-milestone/SKILL.md",
+  ]) {
+    const skill = read(skillPath);
+    expect(skill, skillPath).toContain("nuthouse-client-ref");
+    expect(skill, skillPath).toContain("confirmed_operations");
+  }
 });
 
 test("plan auditor rejects missing acceptance coverage", () => {
@@ -102,7 +153,7 @@ test("label ids are resolved before approval and persisted for replay", () => {
 
   expect(createProject).toContain("pre-approval `LABEL_MAP`");
   expect(createProject).toContain('"label_ids": ["<pre-approved label id>"]');
-  expect(createProject).toContain("persisted `label_ids` as `labelIds`");
+  expect(createProject).toContain("envelope issue's exact `labelIds`");
   expect(createIssue).toContain("immutable `LABEL_MAP`");
   expect(createIssue).toContain("replay persisted `label_ids`");
 });

@@ -2,7 +2,7 @@
 name: create-milestone
 description: Use to add a single Milestone to an existing Linear Project (standalone add-on) or to resume a partially-committed create-project cascade. Reads chain-state to detect resume mode and pick the next milestone whose `id` is still null. Drafts via milestone-drafter when needed, clarifies, previews, creates on approval, updates chain state.
 effort: high
-allowed-tools: Read, Glob, Grep, Write, Agent, mcp__claude_ai_Linear__list_projects, mcp__claude_ai_Linear__save_milestone
+allowed-tools: Read, Glob, Grep, Bash(node:*), Write, Agent, mcp__claude_ai_Linear__list_projects, mcp__claude_ai_Linear__save_milestone
 ---
 
 # linear-devotee:create-milestone
@@ -25,8 +25,9 @@ Rigid runbook. Match the user's language; keep technical identifiers unchanged.
    - **Resume**: chain-state exists with `phase: "partial_failure"`, `project.id != null`, and at least one `drafts.milestones[].id == null`.
    - **Chained**: chain-state exists with `project.id != null` and `phase` is `committing` or absent legacy value (pre-resume schema).
    - **Standalone**: no chain-state, or `phase: "committed" | "cancelled"`.
+   - Before any resume retry, require `mutation_envelope`, `approved_payload_hash`, `graph_hash`, `normalized_graph`, the milestone's approved `<!-- nuthouse-client-ref: <client_ref> -->` marker, and `confirmed_operations`. Dispatch `linear-devotee:project-graph-loader`, merge exact marker confirmations, and stop `resume_state_unknown` when the reload is incomplete. Never retry from `id == null` or a title match alone.
 3. Gather context:
-   - **Resume**: project + team come from chain-state. Pick the first `drafts.milestones[]` entry with `id == null`; if none, exit `nothing-to-do`. The entry already has a `client_ref`, `name`, `scope`, and optional `target_date` drafted by `create-project`. Skip the drafter dispatch in step 4 — the draft is already in chain-state.
+   - **Resume**: project + team come from chain-state. Pick the first `drafts.milestones[]` entry whose `milestone:<client_ref>` is absent from `confirmed_operations`; if none, exit `nothing-to-do`. The entry already has a `client_ref`, `name`, `scope`, `nuthouse-client-ref` marker, and optional `target_date` drafted by `create-project`. Skip the drafter dispatch in step 4 — the draft is already in chain-state.
    - **Chained (legacy)**: use project fields and next uncreated `drafts.milestones[]`; exit `nothing-to-do` if all created.
    - **Standalone**: fetch active projects with `list_projects`, ask user to pick, then ask for one-sentence milestone hint.
 4. Draft:
@@ -44,13 +45,13 @@ Rigid runbook. Match the user's language; keep technical identifiers unchanged.
    - Patch draft until clean or user ships as-is.
    - Resume mode usually has no `_unclear_` left (the user validated at create-project's preview gate); skip if clean.
 6. Preview and approve:
-   - Print full patched draft.
+   - In standalone/chained mode, mint a stable `client_ref` and append `<!-- nuthouse-client-ref: <client_ref> -->` to the exact milestone description. Print the full patched draft including that marker.
    - Ask `Create this milestone? (y / edit / cancel)`.
    - Continue only on `y`.
 7. Create Linear milestone:
-   - `name`, `projectId`, `description` excluding suggested issues/open decisions/questions.
-   - `targetDate` only if suggested and confirmed.
-   - On API error, surface verbatim and stop with `linear_error`.
+   - In resume mode, run `project-graph.mjs validate-envelope` and require its `payloadHash` to equal `approved_payload_hash`, its `graphHash` to equal `graph_hash`, and its canonical graph to equal `normalized_graph` before mutation.
+   - In resume mode, locate exactly one same-ref milestone in that validated envelope and replay only its exact `name`, resolved `projectId`, `description`, and nullable `targetDate`; duplicated draft fields cannot override it. In standalone/chained mode, use the exact approved marked description and confirmed target date.
+   - On success, persist `milestone:<client_ref>` plus the returned id in `confirmed_operations` before continuing. On timeout or API error, surface verbatim and stop with `linear_error`; the next resume reloads the exact marker before retrying.
 8. Update chain state:
    - **Resume mode**: update the matched `drafts.milestones[]` entry **in place** (key on `client_ref`). Set `id`, `url`. Do **not** append a new entry. If all `drafts.milestones[]` now have an `id` and all `drafts.issues[]` are also done, set `phase: "committed"`; otherwise leave `phase: "partial_failure"` so the next resume call continues.
    - **Chained / standalone (legacy)**: parse suggested issues into `{ idx, title, blocked_by }`; drop invalid blocked indices with warning. Append:
@@ -88,4 +89,5 @@ linear-devotee:create-milestone report
 - Mutate Linear without explicit approval.
 - Attach a milestone to the wrong project.
 - Retry failed Linear writes blindly.
+- Retry or resume a cascade entity without the approved `nuthouse-client-ref` marker and `confirmed_operations` reload.
 - Run `git push`, `git commit`, or `git rebase`.

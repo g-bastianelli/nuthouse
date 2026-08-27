@@ -5,11 +5,11 @@
 Resolve every logical agent id through this table before delegation. Select the exact name
 for the active runtime.
 
-| Logical id                   | Claude Code                  | Codex                         |
-| ---------------------------- | ---------------------------- | ----------------------------- |
-| `git-gremlin:reviewer`       | `git-gremlin:reviewer`       | `git_gremlin__reviewer`       |
-| `monkey-maestro:queue-scout` | `monkey-maestro:queue-scout` | `monkey_maestro__queue_scout` |
-| `warden:voice`               | `warden:voice`               | `warden__voice`               |
+| Logical id                               | Claude Code                              | Codex                                     |
+| ---------------------------------------- | ---------------------------------------- | ----------------------------------------- |
+| `monkey-maestro:project-snapshot-loader` | `monkey-maestro:project-snapshot-loader` | `monkey_maestro__project_snapshot_loader` |
+| `monkey-maestro:runtime-inspector`       | `monkey-maestro:runtime-inspector`       | `monkey_maestro__runtime_inspector`       |
+| `warden:voice`                           | `warden:voice`                           | `warden__voice`                           |
 
 On Codex, spawn a typed custom agent with isolated task-local context. Never use a
 full-history fork. Pass only the input contract required by the delegated task.
