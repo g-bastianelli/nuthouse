@@ -1,8 +1,8 @@
 ---
 id: adaptive-cross-runtime-workflows
-status: ratified
+status: ready
 spec-version: 1
-linear-project: _none_
+linear-project: abe01c47-8cd9-4c7a-a993-b64493fa9203
 verified-by: spec-auditor
 last-reviewed: 2026-08-26
 ---
