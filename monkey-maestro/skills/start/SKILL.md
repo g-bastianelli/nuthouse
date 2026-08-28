@@ -1,9 +1,9 @@
 ---
 name: start
-description: Use when the user wants to activate Monkey Maestro for a verified Linear project — "active Maestro", "start project execution", "configure project concurrency", or "conduct this project". Writes one versioned Linear control record after a single approval; it does not reconcile, poll, schedule, or spawn work.
+description: Use when the user wants to activate Monkey Maestro for a verified Linear project — "active Maestro", "start project execution", "configure project concurrency", or "conduct this project". Writes one versioned Linear control record after a single approval, then immediately runs one reconciliation pass so eligible work appears in Superset. It never polls or schedules work.
 argument-hint: "<linear-project-id>"
 effort: high
-allowed-tools: Bash(git rev-parse:*), Bash(gh repo view:*), Bash(superset --version), Bash(superset status:*), Bash(superset hosts list:*), Bash(superset projects list:*), Bash(node:*), Read, Write, Agent, mcp__claude_ai_Linear__save_comment
+allowed-tools: Bash(git rev-parse:*), Bash(gh repo view:*), Bash(superset --version), Bash(superset status:*), Bash(superset hosts list:*), Bash(superset projects list:*), Bash(superset workspaces list:*), Bash(superset workspaces create:*), Bash(superset workspaces get:*), Bash(superset terminals list:*), Bash(superset agents create:*), Bash(node:*), Bash(mktemp:*), Bash(rm:*), Read, Write, Agent, mcp__claude_ai_Linear__get_issue, mcp__claude_ai_Linear__save_comment
 ---
 
 # start
@@ -29,9 +29,10 @@ their original form.
 
 ## When you're invoked
 
-The user wants to authorize project-level execution once. Read
+The user wants to authorize and begin project-level execution once. Read
 `${CLAUDE_PLUGIN_ROOT}/shared/project-execution-contract.md` before proceeding. This
-skill only persists control; `monkey-maestro:reconcile` is the sole project dispatcher.
+skill persists control, then invokes one exact `monkey-maestro:reconcile` pass after its
+activation lock is released. `reconcile` remains the sole project dispatcher.
 
 ## Step 0 — Preconditions
 
@@ -44,11 +45,12 @@ skill only persists control; `monkey-maestro:reconcile` is the sole project disp
    exact `nuthouse:project-graph-receipt` with `verified: true`, a SHA-256 graph hash, and
    a complete `decisionBaseline`. Missing, malformed, duplicate, or unverified receipts
    stop with `graph_unverified`.
-4. If the latest valid control is already active, report `already-active` with its run,
-   host, agent, and concurrency; do not replace it. An inactive control may be restarted
-   only through the approval below and gets a new `runId`. Retain that latest inactive
-   control as the restart authority; do not fall back to the original graph receipt's
-   baseline.
+4. If the latest valid control is already active, retain it unchanged, report
+   `already-active` with its run, host, agent, and concurrency, skip Steps 1–3, and
+   continue to the initial reconciliation in Step 4. An inactive control may be
+   restarted only through the approval below and gets a new `runId`. Retain that latest
+   inactive control as the restart authority; do not fall back to the original graph
+   receipt's baseline.
 
 ## Step 1 — Resolve the activation policy
 
@@ -80,7 +82,7 @@ Activate Maestro for this Linear project? (y / edit / cancel)
 On `edit`, change requested inputs, rebuild the entire record, and show the new hashes.
 On `cancel`, stop without mutation. Only `y` authorizes the one project-comment write.
 
-## Step 3 — Persist control and exit
+## Step 3 — Persist control
 
 1. After approval, require the current `superset status --json` host to equal the chosen
    target host. Acquire the project lock through `scripts/project-lock.mjs acquire` with
@@ -93,10 +95,30 @@ On `cancel`, stop without mutation. Only `y` authorizes the one project-comment 
 3. Re-read the comment through the snapshot loader and require the same `runId`,
    `decisionHash`, and revision before reporting active.
 4. Release the exact lock token through `scripts/project-lock.mjs release` in `finally`
-   on every outcome, then exit. Do not call
-   `reconcile`, create a workspace, launch an agent, start a loop, or
-   create an automation. A user-configured Superset automation may later invoke the exact
-   same `monkey-maestro:reconcile <project-id>` workflow.
+   on every outcome. A failed activation exits after release. A verified active control
+   continues to Step 4 only after release; never transfer or reuse the activation lock
+   token as reconciliation authority.
+
+## Step 4 — Run the initial reconciliation
+
+1. Require the activation lock to have been released and the exact control to be
+   verified active. This also applies to the unchanged control from the `already-active`
+   path.
+2. Invoke `monkey-maestro:reconcile <project-id>` exactly once. Use the installed skill
+   workflow directly. If the runtime cannot nest a skill call, read
+   `${CLAUDE_PLUGIN_ROOT}/skills/reconcile/SKILL.md` and execute that exact workflow in
+   this context; do not implement an abbreviated start-only dispatcher.
+3. Do not request a second activation gate or a per-issue gate. The active control is
+   the project authorization. Preserve `reconcile`'s exceptional confirmation only when
+   fresh Linear changes create a newly runnable expansion outside the approved decision
+   baseline.
+4. Capture and surface the complete reconciliation result. A held reconciliation lock,
+   unavailable provider, no eligible work, exhausted capacity, or partial result does
+   not roll back the durable active control and must not be retried in this invocation.
+5. Exit after that single pass. Do not poll, recurse, schedule another pass, or create an
+   automation. Later manual invocations, known workflow transitions, or a
+   user-configured Superset automation use the same
+   `monkey-maestro:reconcile <project-id>` workflow.
 
 ## Subagent dispatch
 
@@ -122,9 +144,11 @@ monkey-maestro:start report
   Concurrency:   <N>/10 (default 4 when omitted)
   Decision hash: <sha256:...>
   Revision:      <N>
-  Lock:          acquired then released | held | failed
-  Dispatches:    0 — reconcile was not invoked
-  Next:          monkey-maestro:reconcile <project id> | stopped (<reason>)
+  Activation:    written | already-active | failed
+  Start lock:    acquired then released | skipped | held | failed
+  Initial reconcile: completed | no-op | held | failed | not-run
+  Dispatches:    <N from initial reconcile | 0>
+  Next:          explicit monkey-maestro:reconcile <project id> | stopped (<reason>)
 ```
 
 ## Never
@@ -132,7 +156,9 @@ monkey-maestro:start report
 - Activate an unverified or ambiguous project graph.
 - Accept concurrency outside 1–10.
 - Mutate Linear without the single activation approval.
-- Spawn, poll, schedule, reconcile, or invoke `superset-orchestrate` from this skill.
+- Dispatch directly from `start` or run reconciliation before the activation lock is released.
+- Ask a second activation or per-issue gate during the initial reconciliation.
+- Poll, recurse, schedule, create an automation, or invoke `superset-orchestrate`.
 - Store control in a local file or migrate a legacy relay flag.
 - Hold a project lock across the activation confirmation gate.
 - Run `git commit`, `git push`, `git rebase`, or any destructive Superset action.

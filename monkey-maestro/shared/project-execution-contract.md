@@ -108,8 +108,11 @@ status.
 
 ## Fresh-state and failure rules
 
-- `reconcile` runs only on explicit invocation (manual, known workflow transition, or a
-  user-configured Superset automation). `start` creates no workspace or background loop.
+- `reconcile` runs only on explicit invocation (manual, the successful `start`
+  transition, another known workflow transition, or a user-configured Superset
+  automation). After its control is verified active and its activation lock is released,
+  `start` invokes exactly one full reconciliation pass. It never dispatches directly,
+  keeps no background loop, and does not schedule another pass.
 - Acquire the target-host lock before the authoritative full reload. A held lock exits
   without external mutation. A stale candidate needs explicit recovery after runtime
   inspection proves the owner terminal absent.

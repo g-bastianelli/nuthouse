@@ -58,7 +58,7 @@
 ## Integration points
 
 - `linear-devotee:create-project` emits a hash-bound verified graph receipt; `monkey-maestro:start` refuses any project without one.
-- `monkey-maestro:start` creates the versioned project control comment consumed by `reconcile`, `spawn`, and `stop`.
+- `monkey-maestro:start` creates the versioned project control comment, releases its activation lock, and invokes one initial `reconcile` pass; the record remains the authority consumed by `reconcile`, `spawn`, and `stop`.
 - `monkey-maestro:reconcile` combines the snapshot-loader and runtime-inspector outputs, feeds them to the pure resolver, and invokes `monkey-maestro:spawn` only for authorized dispatches.
 - `monkey-maestro:spawn` creates the Superset workspace first, verifies its `taskId`, launches the agent second, records partial or verified execution identity, then lets `linear-devotee:greet` claim the issue.
 - The moved branch guard points manual in-place branch creation to standalone `monkey-maestro:spawn`.

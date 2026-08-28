@@ -23,7 +23,7 @@ test("new Maestro skills follow the canonical root skill structure", () => {
   }
 });
 
-test("start persists versioned policy but creates no execution", () => {
+test("start persists versioned policy then runs one initial reconciliation", () => {
   const skill = read("monkey-maestro/skills/start/SKILL.md");
   expect(skill).toContain("nuthouse:project-graph-receipt");
   expect(skill).toContain("verified: true");
@@ -33,10 +33,18 @@ test("start persists versioned policy but creates no execution", () => {
   expect(skill).toContain("exitedExecutionIssueIds");
   expect(skill).toMatch(/latest\s+inactive control's exact `decisionBaseline`/);
   expect(skill).toContain("scripts/records.mjs build-control");
-  expect(skill).toContain("Dispatches:    0 — reconcile was not invoked");
-  expect(skill).toMatch(/Do not call\s+`reconcile`/);
   expect(skill).toContain("Acquire the project lock");
   expect(skill).toContain("scripts/project-lock.mjs release");
+  expect(skill).toContain("## Step 4 — Run the initial reconciliation");
+  expect(skill).toContain("Invoke `monkey-maestro:reconcile <project-id>` exactly once");
+  expect(skill).toContain("activation lock to have been released");
+  expect(skill).toContain("Do not request a second activation gate or a per-issue gate");
+  expect(skill).toContain("Bash(superset workspaces create:*)");
+  expect(skill).toContain("Bash(mktemp:*)");
+  expect(skill).toContain("already-active");
+  expect(skill).toContain("Initial reconcile");
+  expect(skill).not.toContain("Dispatches:    0 — reconcile was not invoked");
+  expect(skill).not.toMatch(/Do not call\s+`reconcile`/);
   expect(skill).not.toContain("superset automations create");
 });
 

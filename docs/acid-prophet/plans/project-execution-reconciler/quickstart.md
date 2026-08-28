@@ -14,11 +14,11 @@
 2. Approve the displayed hash, simulate an interrupted cascade, resume it, then compare the reloaded Linear snapshot with the approved payload.
    observe: only unconfirmed operations retry; an exact graph becomes verified and any missing, extra, or reversed relation produces an unverified receipt that blocks activation.
    covers: AC-004, AC-005, AC-006, AC-007
-3. Run `monkey-maestro:start` against the verified project without specifying concurrency, then inspect the Linear project control comment.
-   observe: the versioned record contains the run, repository, Superset project, host, default agent, decision/graph hashes, revision, and `maxConcurrency: 4`; a value above ten is rejected.
+3. Run `monkey-maestro:start` against the verified project without specifying concurrency, then inspect the Linear control comment and Superset runtime.
+   observe: the versioned record contains the run, repository, Superset project, host, default agent, decision/graph hashes, revision, and `maxConcurrency: 4`; a value above ten is rejected; after releasing the activation lock, one complete reconciliation pass dispatches eligible work without a second ordinary gate.
    covers: AC-008, AC-009, AC-010
-4. Do not invoke reconciliation, then invoke it through the same entry point manually and from a user-configured Superset automation fixture.
-   observe: no workspace appears before invocation; both explicit invocations use the same workflow.
+4. After the initial pass exits, do not invoke reconciliation again, then invoke it manually and from a user-configured Superset automation fixture.
+   observe: no additional workspace appears without another invocation; both later invocations use the same workflow.
    covers: AC-013, AC-014
 5. Hold the project lock in one fixture and start two reconciliations; release it and run again with fresh Linear, GitHub, and Superset snapshots.
    observe: the second run exits without mutation while locked; the unlocked run reads all providers before resolving.
