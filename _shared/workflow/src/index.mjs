@@ -2,11 +2,14 @@ export {
   PROJECT_INTENTS,
   WORKFLOW_CLASSIFICATIONS,
   classifyWorkflow,
+  collectLinearIssueEvidence,
   collectLinearIssueIds,
+  extractLinearIssueCandidates,
   extractLinearIssueIds,
   isProjectIntent,
   isWorkflowClassification,
   normalizeLinearIssueId,
+  normalizeLinearTeamKeys,
 } from "./classification.mjs";
 
 export {

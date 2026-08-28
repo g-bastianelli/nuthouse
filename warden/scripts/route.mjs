@@ -67,7 +67,9 @@ function targetFor(workflow, issueIdentifiers) {
   }
 }
 
-function ambiguityDiagnostics(projectIntent, issueIdentifiers) {
+function ambiguityDiagnostics(projectIntent, evidence) {
+  const { issueIds, linearTeamKeysUnavailable, unresolvedBareIssueIds } = evidence;
+
   if (projectIntent === "ambiguous") {
     return [
       blockedDiagnostic(
@@ -78,7 +80,7 @@ function ambiguityDiagnostics(projectIntent, issueIdentifiers) {
     ];
   }
 
-  if (projectIntent === "explicit" && issueIdentifiers.length > 0) {
+  if (projectIntent === "explicit" && issueIds.length > 0) {
     return [
       blockedDiagnostic(
         "incompatible-workflow-signals",
@@ -88,12 +90,22 @@ function ambiguityDiagnostics(projectIntent, issueIdentifiers) {
     ];
   }
 
-  if (issueIdentifiers.length > 1) {
+  if (issueIds.length > 1) {
     return [
       blockedDiagnostic(
         "multiple-linear-issue-identifiers",
         "$.issueIdentifiers",
         "Multiple distinct Linear issue identifiers prevent deterministic issue delivery.",
+      ),
+    ];
+  }
+
+  if (linearTeamKeysUnavailable && unresolvedBareIssueIds.length > 0) {
+    return [
+      blockedDiagnostic(
+        "linear-team-keys-unavailable",
+        "$.linearTeamKeys",
+        "Linear team metadata is unavailable, so bare issue candidates cannot be validated.",
       ),
     ];
   }
@@ -119,10 +131,14 @@ export function runRoute(taskOrInput, injected = {}) {
     typeof input.branch === "string"
       ? input.branch
       : discoverCurrentBranch(input.cwd ?? process.cwd());
-  const issueIdentifiers = workflowBundle.collectLinearIssueIds({
+  const classificationInput = {
+    projectIntent: input.projectIntent,
     request: input.task,
     branch,
-  });
+    linearTeamKeys: input.linearTeamKeys,
+  };
+  const evidence = workflowBundle.collectLinearIssueEvidence(classificationInput);
+  const issueIdentifiers = evidence.issueIds;
 
   if (!workflowBundle.isProjectIntent(input.projectIntent)) {
     return routeResult("ambiguous", input.projectIntent, issueIdentifiers, null, [
@@ -134,11 +150,7 @@ export function runRoute(taskOrInput, injected = {}) {
     ]);
   }
 
-  const classification = workflowBundle.classifyWorkflow({
-    projectIntent: input.projectIntent,
-    request: input.task,
-    branch,
-  });
+  const classification = workflowBundle.classifyWorkflow(classificationInput);
   if (!workflowBundle.isWorkflowClassification(classification)) {
     throw new TypeError(`Workflow bundle returned an invalid classification: ${classification}.`);
   }
@@ -148,27 +160,99 @@ export function runRoute(taskOrInput, injected = {}) {
     input.projectIntent,
     issueIdentifiers,
     targetFor(classification, issueIdentifiers),
-    classification === "ambiguous"
-      ? ambiguityDiagnostics(input.projectIntent, issueIdentifiers)
-      : [],
+    classification === "ambiguous" ? ambiguityDiagnostics(input.projectIntent, evidence) : [],
   );
 }
 
 export function parseRouteArguments(args) {
-  const separator = args.indexOf("--");
-  const options = separator === -1 ? args : args.slice(0, separator);
-  const taskArguments = separator === -1 ? [] : args.slice(separator + 1);
+  let projectIntent;
+  let readsTaskFromStdin = false;
+  let teamKeyMode = "unspecified";
+  const linearTeamKeys = [];
 
-  if (options.length !== 2 || options[0] !== "--project-intent") {
+  for (let index = 0; index < args.length; index += 1) {
+    const argument = args[index];
+    if (argument === "--project-intent") {
+      if (projectIntent !== undefined || index + 1 >= args.length) {
+        throw new TypeError("Expected exactly one --project-intent <value> option.");
+      }
+      projectIntent = args[index + 1];
+      index += 1;
+      continue;
+    }
+
+    if (argument === "--linear-team-key") {
+      if ((teamKeyMode !== "unspecified" && teamKeyMode !== "keys") || index + 1 >= args.length) {
+        throw new TypeError(
+          "Expected team-key options, --linear-team-keys-empty, or --linear-team-keys-unavailable, never more than one mode.",
+        );
+      }
+      teamKeyMode = "keys";
+      linearTeamKeys.push(args[index + 1]);
+      index += 1;
+      continue;
+    }
+
+    if (argument === "--linear-team-keys-empty") {
+      if (teamKeyMode !== "unspecified") {
+        throw new TypeError(
+          "Expected team-key options, --linear-team-keys-empty, or --linear-team-keys-unavailable, never more than one mode.",
+        );
+      }
+      teamKeyMode = "empty";
+      continue;
+    }
+
+    if (argument === "--linear-team-keys-unavailable") {
+      if (teamKeyMode !== "unspecified") {
+        throw new TypeError(
+          "Expected team-key options, --linear-team-keys-empty, or --linear-team-keys-unavailable, never more than one mode.",
+        );
+      }
+      teamKeyMode = "unavailable";
+      continue;
+    }
+
+    if (argument === "--stdin") {
+      if (readsTaskFromStdin) throw new TypeError("Expected exactly one --stdin option.");
+      readsTaskFromStdin = true;
+      continue;
+    }
+
+    throw new TypeError(`Unknown route option: ${JSON.stringify(argument)}.`);
+  }
+
+  if (projectIntent === undefined) {
+    throw new TypeError("Missing --project-intent <explicit|absent|ambiguous>.");
+  }
+  if (!readsTaskFromStdin) {
+    throw new TypeError("Task input must be provided through --stdin.");
+  }
+  if (teamKeyMode === "unspecified") {
     throw new TypeError(
-      "Expected --project-intent <explicit|absent|ambiguous> before the task separator.",
+      "Pass --linear-team-key, --linear-team-keys-empty, or --linear-team-keys-unavailable.",
     );
   }
 
+  const normalizedTeamKeys =
+    teamKeyMode === "unavailable"
+      ? null
+      : installedWorkflow.normalizeLinearTeamKeys(linearTeamKeys);
+  if (teamKeyMode !== "unavailable" && normalizedTeamKeys === null) {
+    throw new TypeError("Every --linear-team-key value must be canonical.");
+  }
+
   return {
-    projectIntent: options[1],
-    task: taskArguments.join(" "),
+    projectIntent,
+    linearTeamKeys: normalizedTeamKeys,
   };
+}
+
+export async function readTaskFromStdin(stream = process.stdin) {
+  stream.setEncoding?.("utf8");
+  let task = "";
+  for await (const chunk of stream) task += chunk;
+  return task;
 }
 
 function unexpectedRouteResult(error, projectIntent = "") {
@@ -182,12 +266,13 @@ function unexpectedRouteResult(error, projectIntent = "") {
   ]);
 }
 
-function main() {
+async function main() {
   let parsed;
   let result;
   try {
     parsed = parseRouteArguments(process.argv.slice(2));
-    result = runRoute(parsed);
+    const task = await readTaskFromStdin();
+    result = runRoute({ ...parsed, task });
   } catch (error) {
     result = unexpectedRouteResult(error, parsed?.projectIntent ?? "");
   }
@@ -197,4 +282,4 @@ function main() {
 }
 
 const invokedPath = process.argv[1] ? pathToFileURL(path.resolve(process.argv[1])).href : "";
-if (import.meta.url === invokedPath) main();
+if (import.meta.url === invokedPath) await main();

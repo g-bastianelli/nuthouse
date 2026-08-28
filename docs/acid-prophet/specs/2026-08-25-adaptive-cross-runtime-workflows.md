@@ -45,7 +45,7 @@ The canonical development source lives in the tracked repository-only directory 
 
 `_shared/workflow/` is never installed into a user project and is never a runtime import. Each plugin release is tested from its own `git-subdir` installation boundary. A generated bundle records the canonical source hash, and `[new] check:workflow` fails while any participating bundle is stale.
 
-The canonical kernel contains schema, policy, pure resolution modules, generation tooling, and fixtures. Runtime adapters may gather Claude Code- or Codex-specific inputs, but they pass normalized inputs to the same policy functions. Explicit Linear-project intent is normalized independently of the user's language as `explicit`, `absent`, or `ambiguous`; the pure classifier never embeds a natural-language phrase dictionary.
+The canonical kernel contains schema, policy, pure resolution modules, generation tooling, and fixtures. Runtime adapters may gather Claude Code- or Codex-specific inputs, but they pass normalized inputs to the same policy functions. Explicit Linear-project intent is normalized independently of the user's language as `explicit`, `absent`, or `ambiguous`; the pure classifier never embeds a natural-language phrase dictionary. Syntactic issue candidates become valid bare Linear identifiers only when their team key appears in exact read-only provider metadata supplied by the adapter. An available empty team list is distinct from unavailable metadata. A structurally explicit `linear.app/<workspace>/issue/<identifier>` URL, including its remaining path, query, and fragment, is one evidence span valid without team metadata; unavailable metadata plus a separate bare candidate remains `ambiguous` rather than guessing.
 
 ### Configuration stack
 
@@ -122,21 +122,22 @@ Each plugin can enter this flow directly using its local generated bundle. The d
 
 Errors are explicit and conservative:
 
-| Condition                                  | Required behavior                                                |
-| ------------------------------------------ | ---------------------------------------------------------------- |
-| Incompatible workflow signals              | Return `ambiguous`; perform no mutation                          |
-| Invalid personal configuration             | Report the source and field; fall back to core `standard`        |
-| Invalid repository configuration           | Report the exact field; block before mutation                    |
-| Expired or malformed worktree override     | Exclude it, report why, and continue from repository policy      |
-| Potentially critical unresolved risk       | Select `strict` with `unresolved-risk`                           |
-| Missing manifest                           | Resolve locally using the embedded kernel                        |
-| Expired, corrupt, or out-of-scope manifest | Reject it and attempt at most one authoritative local resolution |
-| Policy hash mismatch                       | Block with a runtime-drift error                                 |
-| Concurrent stale state write               | Reject with `workflow-state-conflict`                            |
-| Missing Claude Code hook                   | Continue through explicit skill resolution                       |
-| Missing Warden                             | Domain skill resolves locally                                    |
-| Missing specialized verifier               | Use a documented native path or block completion                 |
-| Missing immutable gate                     | Block progress                                                   |
+| Condition                                    | Required behavior                                                |
+| -------------------------------------------- | ---------------------------------------------------------------- |
+| Incompatible workflow signals                | Return `ambiguous`; perform no mutation                          |
+| Unavailable Linear teams with bare candidate | Return `ambiguous`; never invoke issue delivery                  |
+| Invalid personal configuration               | Report the source and field; fall back to core `standard`        |
+| Invalid repository configuration             | Report the exact field; block before mutation                    |
+| Expired or malformed worktree override       | Exclude it, report why, and continue from repository policy      |
+| Potentially critical unresolved risk         | Select `strict` with `unresolved-risk`                           |
+| Missing manifest                             | Resolve locally using the embedded kernel                        |
+| Expired, corrupt, or out-of-scope manifest   | Reject it and attempt at most one authoritative local resolution |
+| Policy hash mismatch                         | Block with a runtime-drift error                                 |
+| Concurrent stale state write                 | Reject with `workflow-state-conflict`                            |
+| Missing Claude Code hook                     | Continue through explicit skill resolution                       |
+| Missing Warden                               | Domain skill resolves locally                                    |
+| Missing specialized verifier                 | Use a documented native path or block completion                 |
+| Missing immutable gate                       | Block progress                                                   |
 
 Diagnostics identify the source, invalid field or evidence, requested and effective profile, applied fallback or blocker, and policy hash. The system never offers `force quick`; correcting or removing the authoritative risk evidence is the only way to lower the floor.
 
@@ -198,7 +199,7 @@ Manifests contain no complete prompt, source code, secrets, Linear issue body, o
 
 ### Kernel fixtures
 
-Table-driven tests cover workflow classification (AC-001–AC-004), configuration precedence and worktree lifetime (AC-005–AC-012), every risk category and immutable gate (AC-013–AC-018), and normalized manifest output. Tests assert structured decisions rather than decorative prose.
+Table-driven tests cover workflow classification (AC-001–AC-004), canonical one-character team keys, provider-validated bare identifiers, explicit Linear URLs with slug/query/fragment isolation, generic repository/standards tokens, available empty and unavailable team metadata, configuration precedence and worktree lifetime (AC-005–AC-012), every risk category and immutable gate (AC-013–AC-018), and normalized manifest output. Tests assert structured decisions rather than decorative prose.
 
 ### Manifest and state contracts
 

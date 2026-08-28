@@ -24,7 +24,7 @@ It classifies normalized task signals, manages a temporary rigor preference for 
 
 `warden:mode` is a thin client over Warden's install-local workflow bundle. Its temporary override is isolated by Git worktree, expires within 24 hours, and never edits personal or repository configuration.
 
-`warden:route` is a thin, read-only client over the same local bundle. The skill normalizes explicit Linear-project intent in the user's language; the kernel combines that signal with syntactic Linear issue identifiers and returns `project-creation`, `issue-delivery`, `direct-task`, or `ambiguous`. Targets are descriptors only: Warden never invokes them or mutates domain artifacts.
+`warden:route` is a thin, read-only client over the same local bundle. The skill normalizes explicit Linear-project intent in the user's language and loads exact team keys through Linear's read-only team API, preserving the distinction between an available empty team list and unavailable metadata. The kernel accepts a bare issue candidate only for one of those known keys; an entire `linear.app/.../issue/...` URL is explicit evidence, while unavailable team metadata plus a bare candidate blocks as `ambiguous`. Task text reaches the client through non-interpolating stdin, so shell syntax stays inert. Targets are descriptors only: Warden never invokes them or mutates domain artifacts.
 
 Callers may try `warden:voice` at user-visible workflow transitions only: skill start, context resolved, user decision point, external mutation gate, handoff, recoverable failure, final report, and clean exit.
 

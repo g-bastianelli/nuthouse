@@ -3,11 +3,14 @@ import {
   PROJECT_INTENTS,
   WORKFLOW_CLASSIFICATIONS,
   classifyWorkflow,
+  collectLinearIssueEvidence,
   collectLinearIssueIds,
+  extractLinearIssueCandidates,
   extractLinearIssueIds,
   isProjectIntent,
   isWorkflowClassification,
   normalizeLinearIssueId,
+  normalizeLinearTeamKeys,
 } from "../src/index.mjs";
 
 describe("workflow classification contract", () => {
@@ -48,43 +51,164 @@ describe("workflow classification contract", () => {
 });
 
 describe("Linear issue identifier normalization", () => {
-  test("normalizes exact identifiers and rejects malformed values", () => {
+  test("normalizes canonical identifiers, including one-character team keys", () => {
     expect(normalizeLinearIssueId("not-548")).toBe("NOT-548");
     expect(normalizeLinearIssueId("  Team42-7  ")).toBe("TEAM42-7");
+    expect(normalizeLinearIssueId("A-1")).toBe("A-1");
 
-    for (const value of [undefined, null, "A-1", "TEAM-", "TEAM-ABC", "TEAM_123"]) {
+    for (const value of [undefined, null, "AC-001", "TEAM-0", "TEAM-", "TEAM-ABC", "TEAM_123"]) {
       expect(normalizeLinearIssueId(value)).toBeNull();
     }
   });
 
-  test("extracts lowercase, branch, and Linear URL identifiers in occurrence order", () => {
-    expect(extractLinearIssueIds("Deliver not-548, then review ENG42-7.")).toEqual([
+  test("normalizes available team keys and represents unavailable metadata as null", () => {
+    expect(normalizeLinearTeamKeys(["not", "A", "NOT"])).toEqual(["NOT", "A"]);
+    expect(normalizeLinearTeamKeys(null)).toBeNull();
+    expect(normalizeLinearTeamKeys(undefined)).toBeNull();
+    expect(() => normalizeLinearTeamKeys(["NOT-548"])).toThrow(TypeError);
+  });
+
+  test("extracts canonical syntactic candidates without claiming they are Linear IDs", () => {
+    expect(extractLinearIssueCandidates("Deliver not-548, then review ENG42-7.")).toEqual([
       "NOT-548",
       "ENG42-7",
     ]);
-    expect(extractLinearIssueIds("gbastianelli/ops-9-fix-routing")).toEqual(["OPS-9"]);
-    expect(
-      extractLinearIssueIds("https://linear.app/nuthouse/issue/not-548/routing-kernel"),
-    ).toEqual(["NOT-548"]);
-    expect(extractLinearIssueIds(undefined)).toEqual([]);
+    expect(extractLinearIssueCandidates("A-1 AC-001 ISO-8601 RFC-3339")).toEqual([
+      "A-1",
+      "ISO-8601",
+      "RFC-3339",
+    ]);
+    expect(extractLinearIssueCandidates(undefined)).toEqual([]);
   });
 
-  test("deduplicates request and branch evidence case-insensitively", () => {
+  test("validates bare candidates against known teams and ignores unknown teams", () => {
+    expect(
+      collectLinearIssueEvidence({
+        request: "Implement A-1 while converting ISO-8601 to RFC-3339.",
+        branch: "main",
+        linearTeamKeys: ["A"],
+      }),
+    ).toEqual({
+      issueIds: ["A-1"],
+      unresolvedBareIssueIds: [],
+      linearTeamKeysUnavailable: false,
+    });
+  });
+
+  test("deduplicates validated request and branch evidence case-insensitively", () => {
     expect(
       collectLinearIssueIds({
         request: "Work on not-548, then NOT-548 again.",
         branch: "gbastianelli/not-548-routing",
+        linearTeamKeys: ["NOT"],
       }),
     ).toEqual(["NOT-548"]);
   });
 
-  test("preserves deterministic request-before-branch order for distinct identifiers", () => {
+  test("preserves request-before-branch order for distinct validated identifiers", () => {
     expect(
       collectLinearIssueIds({
         request: "Compare not-548 with ENG-42.",
         branch: "gbastianelli/eng-42-and-ops-7",
+        linearTeamKeys: ["NOT", "ENG", "OPS"],
       }),
     ).toEqual(["NOT-548", "ENG-42", "OPS-7"]);
+  });
+
+  test("validates explicit Linear URLs when team metadata is unavailable", () => {
+    const input = {
+      request: "Handle https://linear.app/nuthouse/issue/not-548/fix-ac-1?related=ops-7#rfc-3339",
+      branch: "main",
+      linearTeamKeys: null,
+    };
+
+    expect(extractLinearIssueIds(input.request, { linearTeamKeys: null })).toEqual(["NOT-548"]);
+    expect(collectLinearIssueEvidence(input)).toEqual({
+      issueIds: ["NOT-548"],
+      unresolvedBareIssueIds: [],
+      linearTeamKeysUnavailable: true,
+    });
+  });
+
+  test("does not rescan an explicit Linear URL slug, query, or fragment as bare evidence", () => {
+    expect(
+      collectLinearIssueEvidence({
+        request: "Handle https://linear.app/nuthouse/issue/not-548/fix-ac-1?related=ops-7#rfc-3339",
+        branch: "main",
+        linearTeamKeys: ["NOT", "AC", "OPS", "RFC"],
+      }),
+    ).toEqual({
+      issueIds: ["NOT-548"],
+      unresolvedBareIssueIds: [],
+      linearTeamKeysUnavailable: false,
+    });
+  });
+
+  test("keeps balanced URL punctuation and apostrophes inside explicit evidence spans", () => {
+    const urls = [
+      "https://linear.app/nuthouse/issue/not-548/slug-(ops-7)",
+      "https://linear.app/nuthouse/issue/not-548?context=(ops-7)&owner=o'connor-7",
+      "https://linear.app/nuthouse/issue/not-548#note=(ops-7)-o'connor-7",
+    ];
+
+    for (const linearTeamKeys of [null, ["NOT", "OPS", "CONNOR"]]) {
+      for (const request of urls) {
+        expect(collectLinearIssueEvidence({ request, branch: "main", linearTeamKeys })).toEqual({
+          issueIds: ["NOT-548"],
+          unresolvedBareIssueIds: [],
+          linearTeamKeysUnavailable: linearTeamKeys === null,
+        });
+      }
+    }
+  });
+
+  test("keeps adjacent Markdown and autolink Linear URLs as distinct evidence", () => {
+    const requests = [
+      "[first](https://linear.app/nuthouse/issue/not-548/fix-ac-1)[second](https://linear.app/nuthouse/issue/ops-7/fix-rfc-3339)",
+      "<https://linear.app/nuthouse/issue/not-548/fix-ac-1><https://linear.app/nuthouse/issue/ops-7/fix-rfc-3339>",
+    ];
+
+    for (const request of requests) {
+      expect(collectLinearIssueEvidence({ request, branch: "main", linearTeamKeys: null })).toEqual(
+        {
+          issueIds: ["NOT-548", "OPS-7"],
+          unresolvedBareIssueIds: [],
+          linearTeamKeysUnavailable: true,
+        },
+      );
+      expect(
+        classifyWorkflow({
+          projectIntent: "absent",
+          request,
+          branch: "main",
+          linearTeamKeys: null,
+        }),
+      ).toBe("ambiguous");
+    }
+  });
+
+  test("does not let an explicit URL hide bare evidence after a prose delimiter", () => {
+    expect(
+      collectLinearIssueIds({
+        request: "https://linear.app/nuthouse/issue/not-548/fix-ac-1,OPS-7",
+        branch: "main",
+        linearTeamKeys: ["NOT", "AC", "OPS"],
+      }),
+    ).toEqual(["NOT-548", "OPS-7"]);
+  });
+
+  test("exposes unresolved bare candidates when team metadata is unavailable", () => {
+    expect(
+      collectLinearIssueEvidence({
+        request: "Work on NOT-548",
+        branch: "gbastianelli/a-1-follow-up",
+        linearTeamKeys: null,
+      }),
+    ).toEqual({
+      issueIds: [],
+      unresolvedBareIssueIds: ["NOT-548", "A-1"],
+      linearTeamKeysUnavailable: true,
+    });
   });
 });
 
@@ -116,7 +240,12 @@ describe("deterministic workflow classification", () => {
   const issueDeliveryInputs = [
     {
       name: "request-only evidence",
-      input: { projectIntent: "absent", request: "Please deliver not-548", branch: "main" },
+      input: {
+        projectIntent: "absent",
+        request: "Please deliver not-548",
+        branch: "main",
+        linearTeamKeys: ["NOT"],
+      },
     },
     {
       name: "branch-only evidence",
@@ -124,6 +253,7 @@ describe("deterministic workflow classification", () => {
         projectIntent: "absent",
         request: "Please deliver the routing change",
         branch: "gbastianelli/not-548-routing",
+        linearTeamKeys: ["NOT"],
       },
     },
     {
@@ -132,6 +262,7 @@ describe("deterministic workflow classification", () => {
         projectIntent: "absent",
         request: "Handle https://linear.app/nuthouse/issue/not-548/routing-kernel",
         branch: "main",
+        linearTeamKeys: null,
       },
     },
     {
@@ -140,6 +271,7 @@ describe("deterministic workflow classification", () => {
         projectIntent: "absent",
         request: "Work on NOT-548",
         branch: "gbastianelli/not-548-routing",
+        linearTeamKeys: ["NOT"],
       },
     },
   ];
@@ -160,6 +292,39 @@ describe("deterministic workflow classification", () => {
     ).toBe("direct-task");
   });
 
+  test("ignores canonical unknown-team tokens when team metadata is available", () => {
+    expect(
+      classifyWorkflow({
+        projectIntent: "absent",
+        request: "Convert ISO-8601 to RFC-3339 and document AC-001.",
+        branch: "main",
+        linearTeamKeys: ["NOT"],
+      }),
+    ).toBe("direct-task");
+  });
+
+  test("classifies a known one-character team issue as issue delivery", () => {
+    expect(
+      classifyWorkflow({
+        projectIntent: "absent",
+        request: "Deliver A-1",
+        branch: "main",
+        linearTeamKeys: ["A"],
+      }),
+    ).toBe("issue-delivery");
+  });
+
+  test("returns ambiguous for bare issue evidence when team metadata is unavailable", () => {
+    expect(
+      classifyWorkflow({
+        projectIntent: "absent",
+        request: "Deliver NOT-548",
+        branch: "main",
+        linearTeamKeys: null,
+      }),
+    ).toBe("ambiguous");
+  });
+
   const ambiguousInputs = [
     {
       name: "uncertain project intent",
@@ -171,6 +336,7 @@ describe("deterministic workflow classification", () => {
         projectIntent: "explicit",
         request: "Use NOT-548 as context",
         branch: "main",
+        linearTeamKeys: ["NOT"],
       },
     },
     {
@@ -179,6 +345,7 @@ describe("deterministic workflow classification", () => {
         projectIntent: "absent",
         request: "Deliver NOT-548 and OPS-7",
         branch: "main",
+        linearTeamKeys: ["NOT", "OPS"],
       },
     },
     {
@@ -187,6 +354,7 @@ describe("deterministic workflow classification", () => {
         projectIntent: "absent",
         request: "Deliver NOT-548",
         branch: "gbastianelli/ops-7-other-work",
+        linearTeamKeys: ["NOT", "OPS"],
       },
     },
   ];
@@ -202,6 +370,7 @@ describe("deterministic workflow classification", () => {
       projectIntent: "absent",
       request: "Deliver not-548",
       branch: "gbastianelli/not-548-routing",
+      linearTeamKeys: Object.freeze(["NOT"]),
     });
     const before = structuredClone(input);
 

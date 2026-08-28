@@ -63,6 +63,18 @@ describe("warden:route skill contract", () => {
     expect(ROUTE_SKILL).toContain("Do not fall back to repository-only `_shared` files");
   });
 
+  test("passes task text through non-interpolating stdin and validates Linear team keys", () => {
+    expect(ROUTE_SKILL).toContain("list_teams");
+    expect(ROUTE_SKILL).toContain("--linear-team-key");
+    expect(ROUTE_SKILL).toContain("--linear-team-keys-empty");
+    expect(ROUTE_SKILL).toContain("--linear-team-keys-unavailable");
+    expect(ROUTE_SKILL).toContain("--stdin");
+    expect(ROUTE_SKILL).toContain("single-quoted heredoc delimiter");
+    expect(ROUTE_SKILL).toContain("does not occur as an exact line");
+    expect(ROUTE_SKILL).toContain("Never place the task in the command line");
+    expect(ROUTE_SKILL).not.toContain('-- "$ARGUMENTS"');
+  });
+
   test("reports the kernel classification and closed target contract", () => {
     for (const field of [
       "Workflow",
