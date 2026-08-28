@@ -15,6 +15,8 @@ const OVERRIDE_FIELDS = new Set([
   "expiresAt",
 ]);
 const WORKTREE_ID_PATTERN = /^[a-f0-9]{64}$/;
+const WORKTREE_LOCK_SCHEMA_VERSION = 1;
+const WORKTREE_LOCK_STALE_MS = 30_000;
 const WORKTREE_LOCK_WAIT_TIMEOUT_MS = 5_000;
 const WORKTREE_LOCK_RETRY_INTERVAL_MS = 10;
 const WORKTREE_LOCK_SLEEP_STATE = new Int32Array(new SharedArrayBuffer(4));
@@ -93,16 +95,119 @@ function atomicWriteJson(filePath, value) {
   }
 }
 
+function parseWorktreeLockOwner(contents) {
+  try {
+    const parsed = JSON.parse(contents);
+    if (
+      isRecord(parsed) &&
+      parsed.schemaVersion === WORKTREE_LOCK_SCHEMA_VERSION &&
+      Number.isInteger(parsed.pid) &&
+      parsed.pid > 0 &&
+      typeof parsed.token === "string" &&
+      parsed.token.length > 0
+    ) {
+      return {
+        pid: parsed.pid,
+        token: parsed.token,
+        createdAt: parseCanonicalTimestamp(parsed.createdAt),
+      };
+    }
+  } catch {}
+
+  const legacy = contents.match(/^(\d+):([^\n]+)\n?$/);
+  if (!legacy) return null;
+  const pid = Number(legacy[1]);
+  if (!Number.isSafeInteger(pid) || pid <= 0) return null;
+  return { pid, token: legacy[2], createdAt: null };
+}
+
+function readWorktreeLock(lockPath) {
+  try {
+    const contents = fs.readFileSync(lockPath, "utf8");
+    const stat = fs.statSync(lockPath);
+    return {
+      contents,
+      device: stat.dev,
+      inode: stat.ino,
+      modifiedAt: stat.mtimeMs,
+      owner: parseWorktreeLockOwner(contents),
+    };
+  } catch (error) {
+    if (error?.code === "ENOENT") return null;
+    throw error;
+  }
+}
+
+function sameWorktreeLock(left, right) {
+  if (!left || !right) return false;
+  if (left.owner?.token && right.owner?.token) {
+    return left.owner.token === right.owner.token;
+  }
+  return (
+    left.device === right.device && left.inode === right.inode && left.contents === right.contents
+  );
+}
+
+function processIsAlive(pid) {
+  if (pid === process.pid) return true;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return error?.code !== "ESRCH";
+  }
+}
+
+function worktreeLockIsAbandoned(lock, now = Date.now()) {
+  if (!lock) return false;
+  const createdAt = lock.owner?.createdAt ?? lock.modifiedAt;
+  const leaseExpired = Number.isFinite(createdAt) && now - createdAt >= WORKTREE_LOCK_STALE_MS;
+  const ownerExited = lock.owner !== null && !processIsAlive(lock.owner.pid);
+  return ownerExited || leaseExpired;
+}
+
+function recoverAbandonedWorktreeLock(lockPath, observedLock) {
+  const currentLock = readWorktreeLock(lockPath);
+  if (!sameWorktreeLock(observedLock, currentLock) || !worktreeLockIsAbandoned(currentLock)) {
+    return false;
+  }
+
+  try {
+    fs.unlinkSync(lockPath);
+    return true;
+  } catch (error) {
+    if (error?.code === "ENOENT") return true;
+    throw error;
+  }
+}
+
+function releaseWorktreeLock(lockPath, lockToken) {
+  const currentLock = readWorktreeLock(lockPath);
+  if (currentLock?.owner?.token !== lockToken) {
+    throw new WorktreeOverrideLockError("Worktree override lock ownership was lost.", {
+      code: "worktree-override-lock-lost",
+      lockPath,
+    });
+  }
+  fs.unlinkSync(lockPath);
+}
+
 function withWorktreeOverrideLock(gitContext, operation) {
   const overridePath = getWorktreeOverridePath(gitContext);
   const lockPath = `${overridePath}.lock`;
-  const lockToken = `${process.pid}:${randomUUID()}\n`;
+  const lockToken = randomUUID();
+  const lockOwner = {
+    schemaVersion: WORKTREE_LOCK_SCHEMA_VERSION,
+    pid: process.pid,
+    createdAt: new Date().toISOString(),
+    token: lockToken,
+  };
   const deadline = Date.now() + WORKTREE_LOCK_WAIT_TIMEOUT_MS;
 
   fs.mkdirSync(path.dirname(lockPath), { recursive: true, mode: 0o700 });
   while (true) {
     try {
-      fs.writeFileSync(lockPath, lockToken, {
+      fs.writeFileSync(lockPath, `${JSON.stringify(lockOwner)}\n`, {
         encoding: "utf8",
         flag: "wx",
         mode: 0o600,
@@ -110,12 +215,18 @@ function withWorktreeOverrideLock(gitContext, operation) {
       break;
     } catch (error) {
       if (error?.code !== "EEXIST") throw error;
+      const observedLock = readWorktreeLock(lockPath);
+      if (
+        worktreeLockIsAbandoned(observedLock) &&
+        recoverAbandonedWorktreeLock(lockPath, observedLock)
+      ) {
+        continue;
+      }
       if (Date.now() >= deadline) {
-        const timeout = new Error(`Timed out waiting for the worktree override lock: ${lockPath}.`);
-        timeout.name = "WorktreeOverrideLockError";
-        timeout.code = "worktree-override-lock-timeout";
-        timeout.path = lockPath;
-        throw timeout;
+        throw new WorktreeOverrideLockError(
+          `Timed out waiting for the worktree override lock: ${lockPath}.`,
+          { code: "worktree-override-lock-timeout", lockPath },
+        );
       }
       Atomics.wait(WORKTREE_LOCK_SLEEP_STATE, 0, 0, WORKTREE_LOCK_RETRY_INTERVAL_MS);
     }
@@ -124,7 +235,7 @@ function withWorktreeOverrideLock(gitContext, operation) {
   try {
     return operation();
   } finally {
-    fs.unlinkSync(lockPath);
+    releaseWorktreeLock(lockPath, lockToken);
   }
 }
 
@@ -158,6 +269,15 @@ export class WorktreeOverrideValidationError extends Error {
       diagnostics: this.diagnostics,
       blocked: this.blocked,
     };
+  }
+}
+
+export class WorktreeOverrideLockError extends Error {
+  constructor(message, { code, lockPath }) {
+    super(message);
+    this.name = "WorktreeOverrideLockError";
+    this.code = code;
+    this.path = lockPath;
   }
 }
 

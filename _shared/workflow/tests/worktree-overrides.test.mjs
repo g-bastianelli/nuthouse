@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { execFileSync, spawn } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
@@ -402,6 +402,50 @@ describe("worktree override persistence", () => {
     expect(writerWasSerialized).toBe(true);
     expect(readWorktreeOverride(mainContext, { now: freshAt }).override?.profile).toBe("strict");
     expect(fs.existsSync(`${overridePath}.lock`)).toBe(false);
+  });
+
+  test("recovers a lock abandoned by an exited owner", () => {
+    writeWorktreeOverride(mainContext, "quick", { now: START_TIME });
+    const overridePath = getWorktreeOverridePath(mainContext);
+    const lockPath = `${overridePath}.lock`;
+    const exited = spawnSync(process.execPath, ["-e", ""]);
+    expect(exited.status).toBe(0);
+    fs.writeFileSync(
+      lockPath,
+      `${JSON.stringify({
+        schemaVersion: 1,
+        pid: exited.pid,
+        createdAt: new Date().toISOString(),
+        token: "exited-owner",
+      })}\n`,
+      "utf8",
+    );
+
+    const replacement = writeWorktreeOverride(mainContext, "strict", { now: START_TIME });
+
+    expect(replacement.profile).toBe("strict");
+    expect(readWorktreeOverride(mainContext, { now: START_TIME }).override).toEqual(replacement);
+    expect(fs.existsSync(lockPath)).toBe(false);
+  });
+
+  test("recovers an expired lock lease even when its pid was reused", () => {
+    writeWorktreeOverride(mainContext, "quick", { now: START_TIME });
+    const overridePath = getWorktreeOverridePath(mainContext);
+    const lockPath = `${overridePath}.lock`;
+    fs.writeFileSync(
+      lockPath,
+      `${JSON.stringify({
+        schemaVersion: 1,
+        pid: process.pid,
+        createdAt: new Date(Date.now() - 60_000).toISOString(),
+        token: "expired-owner",
+      })}\n`,
+      "utf8",
+    );
+
+    expect(resetWorktreeOverride(mainContext)).toBe(true);
+    expect(fs.existsSync(overridePath)).toBe(false);
+    expect(fs.existsSync(lockPath)).toBe(false);
   });
 
   test("excludes but preserves malformed state for diagnosis", () => {

@@ -243,6 +243,73 @@ export class RepositoryConfigurationError extends WorkflowConfigurationError {
   }
 }
 
+export function extendConfigurationResolution(configuration, options = {}) {
+  if (
+    !isRecord(configuration) ||
+    !isWorkflowProfile(configuration.requestedProfile) ||
+    !Array.isArray(configuration.configurationSources) ||
+    !Array.isArray(configuration.diagnostics)
+  ) {
+    throw new TypeError(
+      "extendConfigurationResolution requires a resolved workflow configuration.",
+    );
+  }
+
+  const {
+    worktreeOverride,
+    worktreeOverridePath,
+    invocationProfile,
+    diagnostics: inheritedDiagnostics = [],
+  } = options;
+  const configurationSources = [...configuration.configurationSources];
+  const diagnostics = [...configuration.diagnostics, ...inheritedDiagnostics];
+  let requestedProfile = configuration.requestedProfile;
+
+  if (worktreeOverride !== undefined && worktreeOverride !== null) {
+    if (isRecord(worktreeOverride) && isWorkflowProfile(worktreeOverride.profile)) {
+      requestedProfile = worktreeOverride.profile;
+      configurationSources.push(
+        sourceEntry("worktree", worktreeOverride.profile, worktreeOverridePath),
+      );
+    } else {
+      diagnostics.push({
+        code: "invalid-worktree-profile",
+        source: "worktree",
+        field: "$.profile",
+        severity: "warning",
+        fallback: "repository",
+        message: `Expected one of ${WORKFLOW_PROFILES.join(", ")} at $.profile.`,
+      });
+    }
+  }
+
+  if (invocationProfile !== undefined) {
+    if (!isWorkflowProfile(invocationProfile)) {
+      const diagnostic = invalidProfileDiagnostic(
+        "invocation",
+        "$.invocationProfile",
+        invocationProfile,
+      );
+      throw new WorkflowConfigurationError("Invalid invocation workflow profile.", {
+        code: diagnostic.code,
+        source: diagnostic.source,
+        field: diagnostic.field,
+        diagnostics: [diagnostic],
+        blocked: true,
+      });
+    }
+    requestedProfile = invocationProfile;
+    configurationSources.push(sourceEntry("invocation", invocationProfile));
+  }
+
+  return {
+    requestedProfile,
+    configurationSources,
+    diagnostics,
+    blocked: configuration.blocked === true,
+  };
+}
+
 export function resolveConfiguration(options = {}) {
   const {
     personalConfigPath,
@@ -296,49 +363,10 @@ export function resolveConfiguration(options = {}) {
     }
   }
 
-  if (worktreeOverride !== undefined && worktreeOverride !== null) {
-    if (isRecord(worktreeOverride) && isWorkflowProfile(worktreeOverride.profile)) {
-      requestedProfile = worktreeOverride.profile;
-      configurationSources.push(
-        sourceEntry("worktree", worktreeOverride.profile, worktreeOverridePath),
-      );
-    } else {
-      diagnostics.push({
-        code: "invalid-worktree-profile",
-        source: "worktree",
-        field: "$.profile",
-        severity: "warning",
-        fallback: "repository",
-        message: `Expected one of ${WORKFLOW_PROFILES.join(", ")} at $.profile.`,
-      });
-    }
-  }
-
-  if (invocationProfile !== undefined) {
-    if (!isWorkflowProfile(invocationProfile)) {
-      const diagnostic = invalidProfileDiagnostic(
-        "invocation",
-        "$.invocationProfile",
-        invocationProfile,
-      );
-      throw new WorkflowConfigurationError("Invalid invocation workflow profile.", {
-        code: diagnostic.code,
-        source: diagnostic.source,
-        field: diagnostic.field,
-        diagnostics: [diagnostic],
-        blocked: true,
-      });
-    }
-    requestedProfile = invocationProfile;
-    configurationSources.push(sourceEntry("invocation", invocationProfile));
-  }
-
-  return {
-    requestedProfile,
-    configurationSources,
-    diagnostics,
-    blocked: false,
-  };
+  return extendConfigurationResolution(
+    { requestedProfile, configurationSources, diagnostics, blocked: false },
+    { worktreeOverride, worktreeOverridePath, invocationProfile },
+  );
 }
 
 export function buildModeStatus(configuration, policyProjection = {}) {

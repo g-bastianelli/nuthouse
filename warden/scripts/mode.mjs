@@ -122,10 +122,15 @@ function repositoryConfigPathFor(input, context) {
   return path.join(worktreeRoot, ".nuthouse", "workflow.json");
 }
 
-async function resolveConfiguration(workflow, paths, worktreeOverride, diagnostics = []) {
+async function resolveConfiguration(workflow, paths) {
   return workflow.resolveConfiguration({
     personalConfigPath: paths.personalConfigPath,
     repositoryConfigPath: paths.repositoryConfigPath,
+  });
+}
+
+async function extendConfiguration(workflow, configuration, paths, worktreeOverride, diagnostics) {
+  return workflow.extendConfigurationResolution(configuration, {
     worktreeOverride,
     worktreeOverridePath: paths.worktreeOverridePath,
     diagnostics,
@@ -185,7 +190,7 @@ export async function runMode(actionOrInput, injected = {}) {
 
   try {
     // Repository validation must finish before a profile write or expiry cleanup.
-    await resolveConfiguration(workflow, paths);
+    const validatedConfiguration = await resolveConfiguration(workflow, paths);
 
     let override;
     let diagnostics = [];
@@ -203,7 +208,13 @@ export async function runMode(actionOrInput, injected = {}) {
       diagnostics = result.diagnostics ?? [];
     }
 
-    const configuration = await resolveConfiguration(workflow, paths, override, diagnostics);
+    const configuration = await extendConfiguration(
+      workflow,
+      validatedConfiguration,
+      paths,
+      override,
+      diagnostics,
+    );
     return modeResult(
       input.action,
       await statusFor(workflow, configuration),

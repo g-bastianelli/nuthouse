@@ -7,6 +7,7 @@ import {
   WORKFLOW_CONFIGURATION_SCHEMA_VERSION,
   WORKFLOW_PROFILES,
   buildModeStatus,
+  extendConfigurationResolution,
   loadWorkflowConfiguration,
   resolveConfiguration,
   validateWorkflowConfiguration,
@@ -196,6 +197,43 @@ describe("configuration resolution", () => {
     });
 
     expect(resolveConfiguration({ repositoryConfigPath }).requestedProfile).toBe("quick");
+  });
+
+  test("extends a validated snapshot without rereading configuration files", () => {
+    const repositoryConfigPath = writeJson("repository.json", {
+      schemaVersion: 1,
+      defaultProfile: "quick",
+    });
+    const validated = resolveConfiguration({ repositoryConfigPath });
+    const validatedBefore = structuredClone(validated);
+    fs.writeFileSync(repositoryConfigPath, "{ now invalid", "utf8");
+    const overridePath = path.join(temporaryDirectory, "override.json");
+    const expiredDiagnostic = {
+      code: "expired-worktree-override",
+      source: "worktree",
+      field: "$.expiresAt",
+      severity: "warning",
+      fallback: "repository",
+      message: "The worktree override has expired.",
+    };
+
+    const result = extendConfigurationResolution(validated, {
+      worktreeOverride: { profile: "strict" },
+      worktreeOverridePath: overridePath,
+      diagnostics: [expiredDiagnostic],
+    });
+
+    expect(result).toEqual({
+      requestedProfile: "strict",
+      configurationSources: [
+        { source: "core", profile: "standard" },
+        { source: "repository", profile: "quick", path: repositoryConfigPath },
+        { source: "worktree", profile: "strict", path: overridePath },
+      ],
+      diagnostics: [expiredDiagnostic],
+      blocked: false,
+    });
+    expect(validated).toEqual(validatedBefore);
   });
 
   test("warns and falls back from invalid personal configuration before valid later layers (AC-050)", () => {

@@ -5,7 +5,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, test } from "bun:test";
 
-import { discoverGitContext, getWorktreeOverridePath } from "../lib/workflow/index.mjs";
+import * as installedWorkflow from "../lib/workflow/index.mjs";
 import {
   getDefaultPersonalConfigPath,
   normalizeModeInput,
@@ -13,6 +13,7 @@ import {
   WORKTREE_OVERRIDE_DURATION_MS,
 } from "../scripts/mode.mjs";
 
+const { discoverGitContext, getWorktreeOverridePath } = installedWorkflow;
 const MODE_SCRIPT = path.resolve(import.meta.dir, "..", "scripts", "mode.mjs");
 const STATUS_FIELDS = [
   "requestedProfile",
@@ -259,6 +260,75 @@ describe("warden mode adapter", () => {
     expect(fs.readFileSync(primaryOverridePath, "utf8")).toBe(primaryBefore);
     expect(fs.readFileSync(siblingOverridePath, "utf8")).toBe(siblingBefore);
     expect(fs.readFileSync(repositoryConfigPath(repo.primary), "utf8")).toBe(repositoryBefore);
+  });
+
+  test("reports a profile write from its validated snapshot when repository state changes", async () => {
+    const repo = makeRepository();
+    const repositoryPath = repositoryConfigPath(repo.primary);
+    writeConfig(repositoryPath, { schemaVersion: 1, defaultProfile: "quick" });
+    let resolutionCount = 0;
+    const workflow = {
+      ...installedWorkflow,
+      resolveConfiguration(options) {
+        const resolution = installedWorkflow.resolveConfiguration(options);
+        resolutionCount += 1;
+        if (resolutionCount === 1) {
+          writeConfig(repositoryPath, { schemaVersion: 1, defaultProfile: "turbo" });
+        }
+        return resolution;
+      },
+    };
+
+    const result = await runMode("strict", {
+      ...optionsFor(repo.primary, repo.homeDirectory, "2026-08-28T12:30:00.000Z"),
+      workflow,
+    });
+
+    expect(resolutionCount).toBe(1);
+    expect(result.status.blocked).toBe(false);
+    expect(result.status.requestedProfile).toBe("strict");
+    expect(result.status.configurationSources.map(({ source }) => source)).toEqual([
+      "core",
+      "repository",
+      "worktree",
+    ]);
+    expect(result.override?.profile).toBe("strict");
+  });
+
+  test("reports expiry cleanup from its validated snapshot when repository state changes", async () => {
+    const repo = makeRepository();
+    const createdAt = new Date("2026-08-28T12:45:00.000Z");
+    const expiresAt = new Date(createdAt.getTime() + WORKTREE_OVERRIDE_DURATION_MS);
+    const repositoryPath = repositoryConfigPath(repo.primary);
+    const context = discoverGitContext(repo.primary);
+    const overridePath = getWorktreeOverridePath(context);
+    await runMode("quick", optionsFor(repo.primary, repo.homeDirectory, createdAt));
+    let resolutionCount = 0;
+    const workflow = {
+      ...installedWorkflow,
+      resolveConfiguration(options) {
+        const resolution = installedWorkflow.resolveConfiguration(options);
+        resolutionCount += 1;
+        if (resolutionCount === 1) {
+          writeConfig(repositoryPath, { schemaVersion: 1, defaultProfile: "turbo" });
+        }
+        return resolution;
+      },
+    };
+
+    const result = await runMode("status", {
+      ...optionsFor(repo.primary, repo.homeDirectory, expiresAt),
+      workflow,
+    });
+
+    expect(resolutionCount).toBe(1);
+    expect(result.status.blocked).toBe(false);
+    expect(result.status.requestedProfile).toBe("standard");
+    expect(result.status.diagnostics).toContainEqual(
+      expect.objectContaining({ code: "expired-worktree-override" }),
+    );
+    expect(result.override).toBeNull();
+    expect(fs.existsSync(overridePath)).toBe(false);
   });
 
   test("reports invalid personal configuration and continues from core plus valid repo layers (AC-050)", async () => {
