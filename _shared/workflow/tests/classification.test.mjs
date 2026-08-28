@@ -187,10 +187,24 @@ describe("Linear issue identifier normalization", () => {
     }
   });
 
-  test("does not let an explicit URL hide bare evidence after a prose delimiter", () => {
+  test("keeps URL sub-delimiters and their candidates inside explicit evidence", () => {
+    expect(
+      collectLinearIssueEvidence({
+        request: "https://linear.app/nuthouse/issue/not-548/view?related=ops-7,eng-8;next=rfc-3339",
+        branch: "main",
+        linearTeamKeys: null,
+      }),
+    ).toEqual({
+      issueIds: ["NOT-548"],
+      unresolvedBareIssueIds: [],
+      linearTeamKeysUnavailable: true,
+    });
+  });
+
+  test("detects bare evidence separated from an explicit URL by whitespace", () => {
     expect(
       collectLinearIssueIds({
-        request: "https://linear.app/nuthouse/issue/not-548/fix-ac-1,OPS-7",
+        request: "https://linear.app/nuthouse/issue/not-548/fix-ac-1, OPS-7",
         branch: "main",
         linearTeamKeys: ["NOT", "AC", "OPS"],
       }),

@@ -22,8 +22,6 @@ const LINEAR_URL_BALANCED_DELIMITERS = new Map([
 ]);
 const LINEAR_URL_CLOSING_DELIMITERS = new Set(LINEAR_URL_BALANCED_DELIMITERS.values());
 const LINEAR_URL_HARD_TERMINATORS = new Set(["<", ">", '"', "`", "\\"]);
-const LINEAR_URL_PROSE_DELIMITERS = new Set([",", ";"]);
-const LINEAR_ISSUE_CANDIDATE_AT_START_PATTERN = /^[A-Za-z][A-Za-z0-9]*-[1-9][0-9]*(?![A-Za-z0-9])/;
 const WHITESPACE_PATTERN = /\s/u;
 
 function isRecord(value) {
@@ -65,13 +63,6 @@ function explicitLinearUrlEndIndex(value, prefixEndIndex) {
       closingDelimiterStack.pop();
       endIndex += 1;
       continue;
-    }
-
-    if (
-      LINEAR_URL_PROSE_DELIMITERS.has(character) &&
-      LINEAR_ISSUE_CANDIDATE_AT_START_PATTERN.test(value.slice(endIndex + 1))
-    ) {
-      break;
     }
 
     endIndex += 1;
