@@ -4,7 +4,7 @@ status: ready
 spec-version: 1
 linear-project: abe01c47-8cd9-4c7a-a993-b64493fa9203
 verified-by: spec-auditor
-last-reviewed: 2026-08-26
+last-reviewed: 2026-08-28
 ---
 
 # Adaptive cross-runtime workflow kernel
@@ -45,7 +45,7 @@ The canonical development source lives in the tracked repository-only directory 
 
 `_shared/workflow/` is never installed into a user project and is never a runtime import. Each plugin release is tested from its own `git-subdir` installation boundary. A generated bundle records the canonical source hash, and `[new] check:workflow` fails while any participating bundle is stale.
 
-The canonical kernel contains schema, policy, pure resolution modules, generation tooling, and fixtures. Runtime adapters may gather Claude Code- or Codex-specific inputs, but they pass normalized inputs to the same policy functions.
+The canonical kernel contains schema, policy, pure resolution modules, generation tooling, and fixtures. Runtime adapters may gather Claude Code- or Codex-specific inputs, but they pass normalized inputs to the same policy functions. Explicit Linear-project intent is normalized independently of the user's language as `explicit`, `absent`, or `ambiguous`; the pure classifier never embeds a natural-language phrase dictionary.
 
 ### Configuration stack
 
@@ -146,7 +146,7 @@ Manifests contain no complete prompt, source code, secrets, Linear issue body, o
 
 ### Classification and profile resolution
 
-- [AC-001] WHEN a request explicitly asks to create un projet Linear, THE SYSTEM SHALL classify the workflow as `project-creation`.
+- [AC-001] WHEN a normalized request explicitly signals Linear project creation in any user language, THE SYSTEM SHALL classify the workflow as `project-creation`.
 - [AC-002] WHEN a request or branch contains a valid Linear issue identifier, THE SYSTEM SHALL classify the workflow as `issue-delivery`.
 - [AC-003] WHEN no project or issue Linear applies, THE SYSTEM SHALL classify the workflow as `direct-task`.
 - [AC-004] IF incompatible workflow signals remain after deterministic classification, THE SYSTEM SHALL return `ambiguous` without performing a mutation.

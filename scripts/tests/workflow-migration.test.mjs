@@ -12,6 +12,7 @@ describe("workflow migration gate", () => {
   test("builds byte-identical Warden workflow mirrors", () => {
     const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "nuthouse-workflow-build-"));
     const files = new Map([
+      ["classification.mjs", Buffer.from("export const workflow = 'direct-task';\n")],
       ["configuration.mjs", Buffer.from("export const profile = 'standard';\r\n")],
       ["worktree-overrides.mjs", Buffer.from("export const lifetime = 24;\n")],
       ["index.mjs", Buffer.from("export * from './configuration.mjs';\n")],
@@ -86,6 +87,45 @@ describe("workflow migration gate", () => {
 
       expect(checkWorkflowMigration(fixture)).toContain(
         "stale workflow mirror warden/lib/workflow/configuration.mjs (differs from _shared/workflow/src/configuration.mjs)",
+      );
+    } finally {
+      fs.rmSync(fixture, { recursive: true, force: true });
+    }
+  });
+
+  test("reports a missing Warden classifier mirror", () => {
+    const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "nuthouse-workflow-gate-"));
+    try {
+      fs.mkdirSync(path.join(fixture, "_shared", "workflow", "src"), { recursive: true });
+      fs.writeFileSync(
+        path.join(fixture, "_shared", "workflow", "src", "classification.mjs"),
+        "export const workflow = 'direct-task';\n",
+      );
+
+      expect(checkWorkflowMigration(fixture)).toContain(
+        "missing required warden/lib/workflow/classification.mjs",
+      );
+    } finally {
+      fs.rmSync(fixture, { recursive: true, force: true });
+    }
+  });
+
+  test("reports a stale Warden classifier mirror", () => {
+    const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "nuthouse-workflow-gate-"));
+    try {
+      fs.mkdirSync(path.join(fixture, "_shared", "workflow", "src"), { recursive: true });
+      fs.mkdirSync(path.join(fixture, "warden", "lib", "workflow"), { recursive: true });
+      fs.writeFileSync(
+        path.join(fixture, "_shared", "workflow", "src", "classification.mjs"),
+        "export const workflow = 'direct-task';\n",
+      );
+      fs.writeFileSync(
+        path.join(fixture, "warden", "lib", "workflow", "classification.mjs"),
+        "export const workflow = 'ambiguous';\n",
+      );
+
+      expect(checkWorkflowMigration(fixture)).toContain(
+        "stale workflow mirror warden/lib/workflow/classification.mjs (differs from _shared/workflow/src/classification.mjs)",
       );
     } finally {
       fs.rmSync(fixture, { recursive: true, force: true });

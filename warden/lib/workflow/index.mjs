@@ -1,4 +1,15 @@
 export {
+  PROJECT_INTENTS,
+  WORKFLOW_CLASSIFICATIONS,
+  classifyWorkflow,
+  collectLinearIssueIds,
+  extractLinearIssueIds,
+  isProjectIntent,
+  isWorkflowClassification,
+  normalizeLinearIssueId,
+} from "./classification.mjs";
+
+export {
   RepositoryConfigurationError,
   WORKFLOW_CONFIGURATION_SCHEMA_VERSION,
   WORKFLOW_PROFILES,
