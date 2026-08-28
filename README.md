@@ -21,7 +21,7 @@
 | [subroutine](./subroutine)         | Claude Code + Codex | Ambient TS discipline knowledge skills that activate on matching files                               |
 | [linear-devotee](./linear-devotee) | Claude Code + Codex | Linear issue intake, planning, hash-bound mutation cascades, and exact post-write graph verification |
 | [acid-prophet](./acid-prophet)     | Claude Code + Codex | Spec writing, spec audit, and PR/spec drift checks                                                   |
-| [warden](./warden)                 | Claude Code + Codex | Shared persona-line dispatcher and global voice toggle                                               |
+| [warden](./warden)                 | Claude Code + Codex | Worktree workflow-mode controls, persona-line dispatcher, and global voice toggle                    |
 | [git-gremlin](./git-gremlin)       | Claude Code + Codex | Contextual review plus commit and PR drafting with scoped mutation gates                             |
 | [saucy-status](./saucy-status)     | Claude Code         | Statusline and prompt-time fun messages                                                              |
 | [lore-hound](./lore-hound)         | Claude Code + Codex | Source-hunting research harness: fan-out search → fetch → verify → cite                              |

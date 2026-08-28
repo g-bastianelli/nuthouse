@@ -2,7 +2,15 @@ import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
+const WORKFLOW_MIRRORS = ["configuration.mjs", "worktree-overrides.mjs", "index.mjs"].map(
+  (filename) => ({
+    source: `_shared/workflow/src/${filename}`,
+    mirror: `warden/lib/workflow/${filename}`,
+  }),
+);
+
 const REQUIRED_PATHS = [
+  ...WORKFLOW_MIRRORS.flatMap(({ source, mirror }) => [source, mirror]),
   "linear-devotee/agents/project-graph-loader.md",
   "linear-devotee/lib/project-graph.mjs",
   "linear-devotee/scripts/project-graph.mjs",
@@ -119,6 +127,15 @@ export function checkWorkflowMigration(repoRoot) {
       problems.push(`legacy path remains ${filename}`);
   }
 
+  for (const { source, mirror } of WORKFLOW_MIRRORS) {
+    const sourcePath = path.join(repoRoot, source);
+    const mirrorPath = path.join(repoRoot, mirror);
+    if (!fs.existsSync(sourcePath) || !fs.existsSync(mirrorPath)) continue;
+    if (!fs.readFileSync(sourcePath).equals(fs.readFileSync(mirrorPath))) {
+      problems.push(`stale workflow mirror ${mirror} (differs from ${source})`);
+    }
+  }
+
   for (const filename of sourceFiles(repoRoot)) {
     const body = fs.readFileSync(path.join(repoRoot, filename), "utf8");
     for (const [label, pattern] of LEGACY_PATTERNS) {
@@ -183,7 +200,7 @@ export function checkWorkflowMigration(repoRoot) {
     problems.push("linear-devotee:greet does not declare sole In Progress ownership");
   }
 
-  for (const plugin of ["git-gremlin", "linear-devotee", "monkey-maestro", "moon-moth"]) {
+  for (const plugin of ["git-gremlin", "linear-devotee", "monkey-maestro", "moon-moth", "warden"]) {
     checkManifestPair(repoRoot, plugin, problems);
   }
 
