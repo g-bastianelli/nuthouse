@@ -89,8 +89,15 @@ test("snapshot and runtime agents are explicitly read-only", () => {
   expect(snapshot).toContain("project-snapshot-loader");
   expect(snapshot).toContain("human author");
   expect(snapshot).toContain("status.type");
+  expect(snapshot).toContain("canonical issue identity is Linear's exact `identifier`");
+  expect(snapshot).toContain('"id": "<same exact Linear identifier>"');
+  expect(snapshot).not.toContain('"id": "<Linear UUID>"');
   expect(snapshot).not.toContain("mcp__claude_ai_Linear__save_");
   expect(runtime).toContain("superset workspaces list");
+  expect(runtime).toContain("superset tasks get");
+  expect(runtime).toContain('"issueId": "TEAM-123"');
+  expect(runtime).toContain("never assume a `NOT-`");
+  expect(runtime).toContain('"taskId": "<Superset task UUID>"');
   expect(runtime).toContain("superset terminals list");
   expect(runtime).toContain("gh pr list");
   expect(runtime).toContain("Never run `superset workspaces create|delete`");

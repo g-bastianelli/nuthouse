@@ -18,9 +18,11 @@ GitHub. You do **not** create, start, stop, delete, or modify anything, **ever**
 ```text
 TARGET_HOST_ID: <Superset machine id>
 SUPERSET_PROJECT_ID: <Superset project id>
+LINEAR_PROJECT_ID: <Linear project id>
 REPOSITORY: <owner/name>
 RUN_ID: <Maestro run id>
-ISSUE_IDS: <comma-separated Linear UUIDs>
+MANAGED_ISSUE_IDS: <comma-separated exact current Linear identifiers>
+OWNED_ISSUE_IDS: <comma-separated exact Linear identifiers including durable runtimes>
 ```
 
 Read `${CLAUDE_PLUGIN_ROOT}/shared/project-execution-contract.md` first.
@@ -30,16 +32,26 @@ Read `${CLAUDE_PLUGIN_ROOT}/shared/project-execution-contract.md` first.
 1. Run `superset status --json`, `superset hosts list --json`, and `superset projects
 list --host <TARGET_HOST_ID> --json`. Verify the configured host/project exactly; do
    not substitute the local host or a name match when ids differ.
-2. Run `superset workspaces list --host <TARGET_HOST_ID> --project
+2. For each unique `OWNED_ISSUE_IDS` identifier, run
+   `superset tasks get <identifier> --json`.
+   Require exactly one non-empty task `id`, `externalProvider === "linear"`,
+   and `externalKey === identifier`. For every `MANAGED_ISSUE_IDS` entry, also require
+   `externalProjectId` equal to the Linear project being reconciled. An owned-only issue
+   may have moved projects; retain its exact binding for runtime ownership but never make
+   it managed or dispatchable. Preserve the exact Superset `task.id` as `taskId`; never substitute
+   `externalId` (the Linear transport UUID) or the identifier. Require `deletedAt` to be
+   null and `syncError` to be null/absent. A missing, deleted, stale, or mismatched task
+   is an issue-scoped required unknown.
+3. Run `superset workspaces list --host <TARGET_HOST_ID> --project
 <SUPERSET_PROJECT_ID> --json`. For every workspace, preserve id, projectId, hostId,
    branch, name, and `taskId`. Run `superset workspaces get <id> --host
 <TARGET_HOST_ID> --json` when required fields are absent.
-3. For every task-linked workspace, run `superset terminals list --workspace <id>
+4. For every task-linked workspace, run `superset terminals list --workspace <id>
 --host <TARGET_HOST_ID> --json`. Normalize the provider's `sessions[]` entries to
    `{id: terminalId, exited, exitCode, attached, title, ...known agent/session fields}`.
    Preserve every terminal and its explicit live/exited state. Zero and multiple
    terminals are facts, not errors to hide; never assume the first terminal is the agent.
-4. Run read-only `gh pr list --repo <REPOSITORY> --state all --json
+5. Run read-only `gh pr list --repo <REPOSITORY> --state all --json
 number,url,state,isDraft,mergedAt,headRefName` and correlate only by exact recorded
    branch. PR state is report-only; it never marks Linear work complete.
 
@@ -52,10 +64,21 @@ Return strict JSON only:
   "schemaVersion": 1,
   "providers": { "github": "ready", "superset": "ready" },
   "currentHostId": "<id>",
+  "taskBindings": [
+    {
+      "issueId": "TEAM-123",
+      "taskId": "<Superset task UUID>",
+      "externalProvider": "linear",
+      "externalKey": "TEAM-123",
+      "externalId": "<Linear transport UUID>",
+      "externalProjectId": "<Linear project id>",
+      "managed": true
+    }
+  ],
   "workspaces": [
     {
       "id": "<id>",
-      "taskId": "<Linear UUID or null>",
+      "taskId": "<Superset task UUID or null>",
       "hostId": "<id>",
       "projectId": "<id>",
       "branch": "<branch>",
@@ -68,12 +91,17 @@ Return strict JSON only:
 ```
 
 Return a provider as `unavailable` when its command fails. Use `partial` and stable
-`unknown` entries when only specific fields/resources cannot be normalized.
+`{code, issueId?, field?, requiredForDecision, detail}` unknown entries when only
+specific fields/resources cannot be normalized. Task-binding failures are scoped to the
+input issue; a workspace-list or host/project failure that cannot be scoped is required
+and unscoped. Optional presentation metadata uses `requiredForDecision: false`.
 
 ## Hard rules
 
-- Bash is read-only: only `superset status|hosts list|projects list|workspaces list|get|terminals list`, `gh pr list`, and harmless parsing commands.
+- Bash is read-only: only `superset status|hosts list|projects list|tasks get|workspaces list|get|terminals list`, `gh pr list`, and harmless parsing commands.
 - Never run `superset workspaces create|delete`, `superset agents create`, `gh pr create|merge`, or git mutation.
 - Never infer a `taskId` from branch text or an issue id from a PR title.
+- Treat every Linear identifier as an opaque team-owned key; never assume a `NOT-`
+  prefix or apply a local identifier regex.
 - Return all conflicts and unknowns; never choose among ambiguous resources.
 - Output strict JSON only, deterministic arrays, and no persona prose.

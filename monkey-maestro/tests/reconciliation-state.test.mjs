@@ -8,6 +8,7 @@ function issue(id, order, overrides = {}) {
   return {
     id,
     identifier: `PROJ-${order}`,
+    taskId: id,
     projectId: "project-1",
     order,
     statusType: "unstarted",
@@ -89,6 +90,10 @@ describe("capacity and deterministic dispatch", () => {
           issueIds: ["active-1", "active-2", "active-3", "active-4", "candidate"],
           edges: [],
         },
+        taskBindings: [1, 2, 3, 4].map((number) => ({
+          issueId: `active-${number}`,
+          taskId: `active-${number}`,
+        })),
         workspaces,
       }),
     );
@@ -97,6 +102,87 @@ describe("capacity and deterministic dispatch", () => {
     expect(decision.availableSlots).toBe(0);
     expect(decision.dispatch).toEqual([]);
     expect(decision.active).toHaveLength(4);
+  });
+
+  test("correlates a Linear identifier through its distinct Superset task id", () => {
+    const decision = resolveReconciliation(
+      input({
+        issues: [
+          issue("OPS-7", 1, { identifier: "OPS-7", taskId: "task-ops-7" }),
+          issue("ENG-42", 2, { identifier: "ENG-42", taskId: "task-eng-42" }),
+        ],
+        baseline: { issueIds: ["OPS-7", "ENG-42"], edges: [] },
+        workspaces: [
+          {
+            id: "workspace-547",
+            taskId: "task-ops-7",
+            hostId: "host-1",
+            terminals: [{ id: "terminal-547" }],
+            claimed: true,
+          },
+        ],
+        executionRecords: [
+          {
+            issueId: "OPS-7",
+            taskId: "task-ops-7",
+            workspaceId: "workspace-547",
+            terminalId: "terminal-547",
+            outcome: "verified",
+          },
+        ],
+      }),
+    );
+
+    expect(decision.active).toEqual([
+      {
+        issueId: "OPS-7",
+        taskId: "task-ops-7",
+        workspaceId: "workspace-547",
+        terminalId: "terminal-547",
+        managed: true,
+      },
+    ]);
+    expect(decision.dispatch).toMatchObject([{ issueId: "ENG-42", taskId: "task-eng-42" }]);
+  });
+
+  test("does not dispatch an issue whose Superset task binding is unknown", () => {
+    const decision = resolveReconciliation(
+      input({
+        issues: [issue("OPS-7", 1, { identifier: "OPS-7", taskId: undefined })],
+        baseline: { issueIds: ["OPS-7"], edges: [] },
+      }),
+    );
+
+    expect(decision.dispatch).toEqual([]);
+    expect(decision.inspect).toEqual([
+      { issueId: "OPS-7", resourceIds: [], reason: "TASK_BINDING_UNKNOWN" },
+    ]);
+  });
+
+  test("quarantines a duplicate task binding while independent work remains dispatchable", () => {
+    const decision = resolveReconciliation(
+      input({
+        issues: [
+          issue("OPS-7", 1, { taskId: "task-shared" }),
+          issue("ENG-42", 2, { taskId: "task-shared" }),
+          issue("WEB-3", 3, { taskId: "task-web-3" }),
+        ],
+        baseline: { issueIds: ["OPS-7", "ENG-42", "WEB-3"], edges: [] },
+        workspaces: [
+          {
+            id: "workspace-shared",
+            taskId: "task-shared",
+            hostId: "host-1",
+            terminals: [{ id: "terminal-shared" }],
+          },
+        ],
+      }),
+    );
+
+    expect(ids(decision.inspect)).toEqual(["ENG-42", "OPS-7"]);
+    expect(decision.active).toHaveLength(1);
+    expect(decision.availableSlots).toBe(3);
+    expect(decision.dispatch).toMatchObject([{ issueId: "WEB-3", taskId: "task-web-3" }]);
   });
 });
 
@@ -407,6 +493,44 @@ describe("Linear evolution", () => {
 });
 
 describe("runtime reconstruction", () => {
+  test("keeps a changed task binding guarded without double-counting its live runtime", () => {
+    const decision = resolveReconciliation(
+      input({
+        issues: [issue("OPS-7", 1, { taskId: "task-current" })],
+        baseline: { issueIds: ["OPS-7"], edges: [] },
+        workspaces: [
+          {
+            id: "workspace-old",
+            taskId: "task-recorded",
+            hostId: "host-1",
+            terminals: [{ id: "terminal-old" }],
+          },
+        ],
+        executionRecords: [
+          {
+            issueId: "OPS-7",
+            taskId: "task-recorded",
+            runId: "run-1",
+            workspaceId: "workspace-old",
+            terminalId: "terminal-old",
+            outcome: "verified",
+          },
+        ],
+      }),
+    );
+
+    expect(decision.dispatch).toEqual([]);
+    expect(decision.active).toHaveLength(1);
+    expect(decision.active[0]).toMatchObject({ issueId: "OPS-7", taskId: "task-recorded" });
+    expect(decision.inspect).toEqual([
+      {
+        issueId: "OPS-7",
+        resourceIds: ["task-current", "task-recorded"],
+        reason: "TASK_BINDING_MISMATCH",
+      },
+    ]);
+  });
+
   test("repairs one exact runtime match instead of redispatching", () => {
     const decision = resolveReconciliation(
       input({
@@ -425,7 +549,12 @@ describe("runtime reconstruction", () => {
     );
     expect(decision.dispatch).toEqual([]);
     expect(decision.repair).toEqual([
-      { issueId: "issue-1", workspaceId: "workspace-1", terminalId: "terminal-1" },
+      {
+        issueId: "issue-1",
+        taskId: "issue-1",
+        workspaceId: "workspace-1",
+        terminalId: "terminal-1",
+      },
     ]);
   });
 
@@ -462,6 +591,7 @@ describe("runtime reconstruction", () => {
     expect(decision.active).toEqual([
       {
         issueId: "issue-1",
+        taskId: "issue-1",
         workspaceId: "workspace-1",
         terminalId: "terminal-agent",
         managed: true,
@@ -505,7 +635,12 @@ describe("runtime reconstruction", () => {
 
     expect(decision.inspect).toEqual([]);
     expect(decision.repair).toEqual([
-      { issueId: "issue-1", workspaceId: "workspace-1", terminalId: "terminal-agent" },
+      {
+        issueId: "issue-1",
+        taskId: "issue-1",
+        workspaceId: "workspace-1",
+        terminalId: "terminal-agent",
+      },
     ]);
     expect(decision.active[0].terminalId).toBe("terminal-agent");
   });
@@ -732,6 +867,58 @@ describe("runtime reconstruction", () => {
   });
 });
 
+describe("Superset partial observations", () => {
+  test("blocks only an issue whose required task binding is unknown", () => {
+    const decision = resolveReconciliation(
+      input({
+        providers: { linear: "ready", github: "ready", superset: "partial" },
+        issues: [
+          issue("OPS-7", 1, { taskId: undefined }),
+          issue("ENG-42", 2, { taskId: "task-eng-42" }),
+        ],
+        baseline: { issueIds: ["OPS-7", "ENG-42"], edges: [] },
+        runtimeUnknown: [
+          {
+            code: "TASK_BINDING_UNAVAILABLE",
+            issueId: "OPS-7",
+            requiredForDecision: true,
+          },
+        ],
+      }),
+    );
+
+    expect(decision.globalReasons).toEqual([]);
+    expect(decision.dispatch).toMatchObject([{ issueId: "ENG-42", taskId: "task-eng-42" }]);
+  });
+
+  test("allows a partial response whose runtime unknown is optional", () => {
+    const decision = resolveReconciliation(
+      input({
+        providers: { linear: "ready", github: "ready", superset: "partial" },
+        issues: [issue("ENG-42", 1, { taskId: "task-eng-42" })],
+        baseline: { issueIds: ["ENG-42"], edges: [] },
+        runtimeUnknown: [{ code: "TASK_LABEL_UNKNOWN", requiredForDecision: false }],
+      }),
+    );
+
+    expect(ids(decision.dispatch)).toEqual(["ENG-42"]);
+  });
+
+  test("stops dispatch for an unscoped required runtime unknown", () => {
+    const decision = resolveReconciliation(
+      input({
+        providers: { linear: "ready", github: "ready", superset: "partial" },
+        issues: [issue("ENG-42", 1, { taskId: "task-eng-42" })],
+        baseline: { issueIds: ["ENG-42"], edges: [] },
+        runtimeUnknown: [{ code: "WORKSPACE_LIST_PARTIAL", requiredForDecision: true }],
+      }),
+    );
+
+    expect(decision.dispatch).toEqual([]);
+    expect(decision.globalReasons).toEqual(["SUPERSET_REQUIRED_DATA_UNKNOWN"]);
+  });
+});
+
 describe("safe global stops", () => {
   test("provider unavailability prevents dispatch but preserves active work", () => {
     const decision = resolveReconciliation(
@@ -739,6 +926,7 @@ describe("safe global stops", () => {
         providers: { linear: "unavailable", github: "ready", superset: "ready" },
         issues: [issue("candidate", 1)],
         baseline: { issueIds: ["active", "candidate"], edges: [] },
+        taskBindings: [{ issueId: "active", taskId: "active" }],
         workspaces: [
           {
             id: "workspace-active",
@@ -759,6 +947,7 @@ describe("safe global stops", () => {
     const base = input({
       issues: [issue("candidate", 1)],
       baseline: { issueIds: ["active", "candidate"], edges: [] },
+      taskBindings: [{ issueId: "active", taskId: "active" }],
       workspaces: [
         {
           id: "workspace-active",

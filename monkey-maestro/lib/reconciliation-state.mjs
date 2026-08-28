@@ -232,15 +232,24 @@ function runtimeState(input, issueById) {
   const currentRecords = records.filter(
     (record) => !runId || !record?.runId || String(record.runId) === runId,
   );
-  const ownedTaskIds = new Set([
-    ...issueById.keys(),
-    ...array(input.baseline?.issueIds).map(String),
-    ...array(input.control?.executionIssueIds).map(String),
-    ...records
-      .map((record) => record?.issueId)
-      .filter(Boolean)
-      .map(String),
-  ]);
+  const issueIdsByTask = new Map();
+  const taskIdsByIssue = new Map();
+  const registerTaskBinding = (issueIdValue, taskIdValue) => {
+    if (!issueIdValue || !taskIdValue) return;
+    const issueId = String(issueIdValue);
+    const taskId = String(taskIdValue);
+    if (!issueIdsByTask.has(taskId)) issueIdsByTask.set(taskId, new Set());
+    issueIdsByTask.get(taskId).add(issueId);
+    if (!taskIdsByIssue.has(issueId)) taskIdsByIssue.set(issueId, new Set());
+    taskIdsByIssue.get(issueId).add(taskId);
+  };
+  for (const issue of issueById.values()) registerTaskBinding(issue.id, issue.taskId);
+  for (const binding of array(input.taskBindings)) {
+    registerTaskBinding(binding?.issueId, binding?.taskId);
+  }
+  for (const record of records) registerTaskBinding(record?.issueId, record?.taskId);
+
+  const ownedTaskIds = new Set(issueIdsByTask.keys());
   const workspaces = array(input.workspaces)
     .filter((workspace) => workspace?.id && workspace?.taskId)
     .map((workspace) => ({
@@ -272,6 +281,32 @@ function runtimeState(input, issueById) {
   const repair = [];
   const guardedIssueIds = new Set();
 
+  for (const issue of issueById.values()) {
+    if (!issue.taskId) {
+      guardedIssueIds.add(issue.id);
+      inspect.push({ issueId: issue.id, resourceIds: [], reason: "TASK_BINDING_UNKNOWN" });
+      continue;
+    }
+    const taskOwners = issueIdsByTask.get(issue.taskId) ?? new Set();
+    if (taskOwners.size > 1) {
+      for (const issueId of taskOwners) guardedIssueIds.add(issueId);
+      inspect.push({
+        issueId: issue.id,
+        resourceIds: [issue.taskId],
+        reason: "TASK_BINDING_AMBIGUOUS",
+      });
+    }
+    const recordedTaskIds = taskIdsByIssue.get(issue.id) ?? new Set();
+    if ([...recordedTaskIds].some((taskId) => taskId !== issue.taskId)) {
+      guardedIssueIds.add(issue.id);
+      inspect.push({
+        issueId: issue.id,
+        resourceIds: [...recordedTaskIds].sort(),
+        reason: "TASK_BINDING_MISMATCH",
+      });
+    }
+  }
+
   for (const record of records) {
     if (!record?.issueId) continue;
     const issueId = String(record.issueId);
@@ -289,23 +324,30 @@ function runtimeState(input, issueById) {
     const taskId = workspace.taskId;
     if (!workspacesByTask.has(taskId)) workspacesByTask.set(taskId, []);
     workspacesByTask.get(taskId).push(workspace);
+    const ownerIds = [...(issueIdsByTask.get(taskId) ?? [])].sort();
+    const issueId = ownerIds[0];
     const correlationRecords =
-      currentRecordsByIssue.get(taskId) ?? recordsByIssue.get(taskId) ?? [];
+      currentRecordsByIssue.get(issueId) ?? recordsByIssue.get(issueId) ?? [];
     const selectedTerminal = selectedExecutionTerminal(workspace, correlationRecords);
     if (!consumesCapacity(workspace, correlationRecords)) {
-      if (selectedTerminal?.exited === true) confirmedExitedIssueIds.add(taskId);
+      if (selectedTerminal?.exited === true && ownerIds.length === 1) {
+        confirmedExitedIssueIds.add(issueId);
+      }
       continue;
     }
     active.push({
-      issueId: taskId,
+      issueId,
+      taskId,
       workspaceId: workspace.id,
       ...(selectedTerminal ? { terminalId: selectedTerminal.id } : {}),
-      managed: issueById.has(taskId),
+      managed: ownerIds.length === 1 && issueById.has(issueId),
+      ...(ownerIds.length > 1 ? { bindingAmbiguous: true } : {}),
     });
   }
 
   for (const issue of issueById.values()) {
-    const matches = workspacesByTask.get(issue.id) ?? [];
+    if (!issue.taskId) continue;
+    const matches = workspacesByTask.get(issue.taskId) ?? [];
     const issueRecords = currentRecordsByIssue.get(issue.id) ?? [];
     const historicalRecords = recordsByIssue.get(issue.id) ?? [];
     if (matches.length > 1) {
@@ -319,6 +361,11 @@ function runtimeState(input, issueById) {
     }
     if (matches.length === 0) {
       const durableRecords = historicalRecords.filter(recordNeedsRuntimeProof);
+      const hasHistoricalRuntime = durableRecords.some(
+        (record) =>
+          record?.taskId && (workspacesByTask.get(String(record.taskId)) ?? []).length > 0,
+      );
+      if (hasHistoricalRuntime) continue;
       if (durableRecords.length > 0 || controlExecutionIssueIds.has(issue.id)) {
         guardedIssueIds.add(issue.id);
         const resourceIds = unique(
@@ -394,6 +441,7 @@ function runtimeState(input, issueById) {
     } else if (issueRecords.length === 0) {
       repair.push({
         issueId: issue.id,
+        taskId: issue.taskId,
         workspaceId: workspace.id,
         terminalId: historicalTerminalIds[0] ?? terminals[0].id,
       });
@@ -430,7 +478,11 @@ function runtimeState(input, issueById) {
       .map((record) => String(record.issueId)),
   ]);
   for (const issueId of durableMissingIssueIds) {
-    if (issueById.has(issueId) || (workspacesByTask.get(issueId) ?? []).length > 0) continue;
+    const knownTaskIds = taskIdsByIssue.get(issueId) ?? new Set();
+    const hasRuntime = [...knownTaskIds].some(
+      (taskId) => (workspacesByTask.get(taskId) ?? []).length > 0,
+    );
+    if (issueById.has(issueId) || hasRuntime) continue;
     const issueRecords = recordsByIssue.get(issueId) ?? [];
     const newestRecord = issueRecords.at(-1);
     inspect.push({
@@ -445,6 +497,7 @@ function runtimeState(input, issueById) {
     });
     active.push({
       issueId,
+      ...(newestRecord?.taskId ? { taskId: String(newestRecord.taskId) } : {}),
       workspaceId: newestRecord?.workspaceId
         ? String(newestRecord.workspaceId)
         : `missing:${issueId}`,
@@ -516,6 +569,10 @@ export function resolveReconciliation(input) {
     .map((issue) => ({
       ...issue,
       id: String(issue.id),
+      taskId:
+        typeof issue.taskId === "string" && issue.taskId.trim().length > 0
+          ? issue.taskId.trim()
+          : undefined,
       blockers: array(issue.blockers).map(String),
     }))
     .sort(compareIssue);
@@ -569,10 +626,9 @@ export function resolveReconciliation(input) {
   if (!new Set(["ready", "partial"]).has(providers.linear)) {
     decision.globalReasons.push("LINEAR_UNAVAILABLE");
   }
-  for (const provider of ["github", "superset"]) {
-    if (providers[provider] !== "ready") {
-      decision.globalReasons.push(`${provider.toUpperCase()}_UNAVAILABLE`);
-    }
+  if (providers.github !== "ready") decision.globalReasons.push("GITHUB_UNAVAILABLE");
+  if (!new Set(["ready", "partial"]).has(providers.superset)) {
+    decision.globalReasons.push("SUPERSET_UNAVAILABLE");
   }
 
   const allLinearUnknown = array(input.linearUnknown ?? input.unknown);
@@ -595,6 +651,22 @@ export function resolveReconciliation(input) {
   }
   if (linearUnknown.some((entry) => !entry?.issueId)) {
     decision.globalReasons.push("LINEAR_REQUIRED_DATA_UNKNOWN");
+  }
+
+  const allRuntimeUnknown = array(input.runtimeUnknown);
+  const runtimeUnknown = allRuntimeUnknown.filter((entry) => entry?.requiredForDecision !== false);
+  const scopedRuntimeUnknownIssueIds = new Set(
+    runtimeUnknown
+      .map((entry) => entry?.issueId)
+      .filter(Boolean)
+      .map(String),
+  );
+  for (const issueId of scopedRuntimeUnknownIssueIds) runtime.guardedIssueIds.add(issueId);
+  if (providers.superset === "partial" && allRuntimeUnknown.length === 0) {
+    decision.globalReasons.push("SUPERSET_PARTIAL_UNSCOPED");
+  }
+  if (runtimeUnknown.some((entry) => !entry?.issueId)) {
+    decision.globalReasons.push("SUPERSET_REQUIRED_DATA_UNKNOWN");
   }
   if (decision.globalReasons.length > 0) return decision;
 
@@ -647,7 +719,7 @@ export function resolveReconciliation(input) {
   );
   decision.dispatch = candidates.slice(0, decision.availableSlots).map((issue) => ({
     issueId: issue.id,
-    taskId: issue.id,
+    taskId: issue.taskId,
     order: issue.order,
     eligibility: dispatchEligibility(issue, issueById, waivers),
   }));

@@ -3,7 +3,7 @@ name: spawn
 description: Use when Monkey Maestro must dispatch one Linear issue into a task-linked Superset workspace, or when the branch guard redirects an attempted in-place branch creation. Project-authorized mode inherits active control and needs no per-issue gate; standalone mode shows one explicit mutation gate. Captures workspaceId and terminalId and records partial/degraded outcomes without duplication.
 argument-hint: "<linear-issue-id> [--manual]"
 effort: high
-allowed-tools: Bash(superset --version), Bash(superset status:*), Bash(superset hosts list:*), Bash(superset projects list:*), Bash(superset workspaces list:*), Bash(superset workspaces create:*), Bash(superset workspaces get:*), Bash(superset terminals list:*), Bash(superset agents create:*), Bash(node:*), Read, Write, Agent, mcp__claude_ai_Linear__get_issue, mcp__claude_ai_Linear__save_comment
+allowed-tools: Bash(superset --version), Bash(superset status:*), Bash(superset hosts list:*), Bash(superset projects list:*), Bash(superset tasks get:*), Bash(superset workspaces list:*), Bash(superset workspaces create:*), Bash(superset workspaces get:*), Bash(superset terminals list:*), Bash(superset agents create:*), Bash(node:*), Read, Write, Agent, mcp__claude_ai_Linear__get_issue, mcp__claude_ai_Linear__save_comment
 ---
 
 # spawn
@@ -33,15 +33,20 @@ one issue dispatch. It never creates a branch in place and never changes Linear 
 
 ## Step 0 — Resolve the issue and authorization
 
-1. Require one exact Linear issue id/identifier. Fetch it with relations and capture its
-   UUID `issue.id`, identifier, title, project id, and provider branch name. The Superset
-   `taskId` is always the Linear UUID, never the identifier or inferred branch token.
+1. Require one exact Linear issue identifier. Fetch it with relations and capture its
+   exact `identifier`, title, project id, and provider branch name. The fetched
+   connector `id` may be an identifier or transport UUID and is not the Maestro identity.
+   Run `superset tasks get <identifier> --json`; require a non-empty task `id`,
+   `externalProvider === "linear"`, `externalKey === identifier`, and
+   `externalProjectId === issue.projectId`. The `taskId` is always the returned Superset
+   `task.id`, never a Linear UUID, identifier, or inferred branch token.
 2. Determine authorization from the invocation packet:
    - **Project mode** requires the complete output of `records.mjs
 build-authorization`: `{kind: "project", projectId, runId, revision, decisionHash,
-lockToken, issueId, eligibility, authorizationHash}` from `reconcile`. First run
-     `records.mjs validate-authorization` and require the argument/fetched `issue.id` to
-     equal its hash-bound `issueId`. Dispatch `monkey-maestro:project-snapshot-loader` in
+lockToken, issueId, taskId, eligibility, authorizationHash}` from `reconcile`. First run
+     `records.mjs validate-authorization` and require the argument/fetched identifier to
+     equal its hash-bound `issueId` and the validated task binding to equal its hash-bound
+     `taskId`. Dispatch `monkey-maestro:project-snapshot-loader` in
      `full`; require the latest control active and every control field equal, the issue
      still present exactly once in that project, its status and blocker fields known,
      and all exact waiver evidence still valid. Rebuild the authorization with those
@@ -60,7 +65,7 @@ lockToken, issueId, eligibility, authorizationHash}` from `reconcile`. First run
 ## Step 1 — Duplicate and mutation gate
 
 1. Run `superset workspaces list --host <host> --project <project> --json` and group exact
-   `taskId === issue.id` matches.
+   `taskId === task.id` matches.
    - Multiple: return `ambiguous` with every workspace id; create nothing.
    - One: inspect `workspaces get` and `terminals list`, return `existing`/`partial`, and
      create nothing. Project mode may repair a missing execution comment under its active
@@ -89,10 +94,11 @@ lockToken, issueId, eligibility, authorizationHash}` from `reconcile`. First run
 
 4. Immediately after standalone confirmation, acquire
    `${CLAUDE_PLUGIN_DATA}/locks` with `scripts/project-lock.mjs acquire`, using the issue's
-   Linear project id as `projectId` (or the exact `manual:<issue.id>` scope when it has no
+   Linear project id as `projectId` (or the exact `manual:<identifier>` scope when it has no
    project) and `standaloneRunId` as `runId`. Under that lock, refetch the issue with
-   relations, re-read its current project control, and rerun the exact `taskId` workspace
-   query. Any moved/canceled/non-startable issue, newly active Maestro control, changed
+   relations, re-resolve `superset tasks get <identifier> --json`, re-read its current
+   project control, and rerun the exact `taskId` workspace query. Any moved,
+   canceled/non-startable issue, changed task binding, newly active Maestro control, changed
    host/project choice, or one/multiple runtime match invalidates the approval and stops
    without mutation. Release this exact token in `finally`.
 5. In project mode, immediately before creation, re-inspect the held lock and control,
@@ -107,7 +113,7 @@ lockToken, issueId, eligibility, authorizationHash}` from `reconcile`. First run
 
    ```text
    superset workspaces create --host <hostId> --project <supersetProjectId> \
-     --name <name> --task <issue.id> --json
+     --name <name> --task <taskId> --json
    ```
 
    Do not pass `--agent`; verification must precede agent launch.
@@ -151,7 +157,7 @@ the current workspace; the new agent owns the issue after greet.
 
 ```text
 monkey-maestro:spawn report
-  Issue:          <identifier> (<issue UUID>)
+  Issue/task:     <identifier> / <Superset task UUID>
   Authorization:  project <runId> + <authorizationHash> | standalone <standaloneRunId> confirmed
   Outcome:        verified | partial | existing | ambiguous | failed | degraded
   Host/project:   <hostId> / <supersetProjectId>

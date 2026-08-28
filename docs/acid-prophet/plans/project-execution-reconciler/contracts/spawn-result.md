@@ -38,7 +38,7 @@ type SpawnResult = {
 ## Invariants
 
 - Project authorization exactly matches the active control revision/hash and held lock token; otherwise explicit manual approval is required, enforced by the skill mutation gate.
-- Workspace creation always carries the exact Linear `taskId`; enforced by post-create inspection.
+- Workspace creation always carries the internal Superset `task.id` whose exact Linear `externalKey` equals `issueId`; enforced by task lookup and post-create inspection.
 - Agent creation occurs only after one exact workspace is verified; enforced by the ordered workflow.
 - Spawn never changes Linear status; enforced by static ownership tests.
 

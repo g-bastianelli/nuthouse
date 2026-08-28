@@ -52,7 +52,7 @@
 - Read-heavy external discovery belongs in read-only agents; the coordinating skill owns user gates and external mutation.
 - Status names are dynamic provider metadata; workflow decisions normalize status types instead of hard-coding labels.
 - Linear comments are the durable audit ledger. Local files may coordinate a single run but cannot become project memory.
-- Superset execution uses workspace creation with a Linear `taskId`, followed by agent creation and terminal verification.
+- Linear graph/control identity uses the exact opaque team issue identifier; Superset execution resolves that key to Superset's internal `task.id`, uses it as workspace `taskId`, then performs agent creation and terminal verification.
 - Plugin releases require matching patch-version bumps in Claude and Codex manifests.
 
 ## Integration points

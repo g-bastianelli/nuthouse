@@ -40,6 +40,8 @@ type MaestroControlRecord = {
 - `active: false` prevents dispatch but never implies runtime termination; enforced by reconciliation decisions.
 - `executionIssueIds` is a sorted, unique ownership index for capacity-consuming runtime
   work that left the project; it never grants eligibility.
+- Every issue id in the control and decision baseline is Linear's exact opaque team
+  identifier; no prefix or UUID shape is assumed.
 - The record is stored as a versioned Linear project comment, not local state; enforced by the shared execution contract and workflow gate.
 
 ## Errors

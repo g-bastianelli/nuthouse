@@ -39,7 +39,7 @@
     observe: the added issue enters the next snapshot; the moved issue stops being managed without termination; normalized fields continue, and only unknowable decisions block with no new dispatch during outage.
     covers: AC-030, AC-031, AC-032, AC-033
 11. Dispatch one eligible issue through authorized reconciliation.
-    observe: exactly one workspace is created on the configured host with the Linear `taskId`, the configured agent launches, workspace/terminal identities are recorded in a versioned issue comment, and no per-issue approval is requested.
+    observe: the exact opaque Linear identifier resolves to one Superset task, exactly one workspace is created on the configured host with that internal Superset `taskId`, the configured agent launches, both identities plus workspace/terminal identities are recorded in a versioned issue comment, and no per-issue approval is requested.
     covers: AC-034, AC-035, AC-036, AC-037
 12. Invoke `monkey-maestro:spawn` manually, deny then grant its mutation gate, and simulate agent launch failure plus an existing unclaimed workspace.
     observe: denial creates nothing; approval dispatches once; failure records a partial workspace without duplication; existing unclaimed work is inspected; only `linear-devotee:greet` can set `In Progress`.

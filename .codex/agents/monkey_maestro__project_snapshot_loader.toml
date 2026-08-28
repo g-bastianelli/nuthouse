@@ -35,8 +35,14 @@ Read the record and provider rules in
 2. In `full`, list every project issue with pagination. Fetch issue details with
    relations when blockers are not complete in the list response. Load team status
    metadata and normalize by `status.type`, never by display name. Preserve Linear's
-   milestone/order/sort fields and derive one stable numeric order with issue id as the
-   final tie-break.
+   milestone/order/sort fields and derive one stable numeric order with the identifier as
+   the final tie-break. The canonical issue identity is Linear's exact `identifier`
+   (for example `TEAM-123`), not a transport UUID. Treat the returned value as opaque:
+   never assume a `NOT-` prefix or validate it with a locally invented regex. Set both normalized `id` and
+   `identifier` to that exact value. If an adapter collapses them into one returned `id`,
+   accept that exact issue key only when project list/get or the verified receipt
+   corroborates it. A missing UUID alone is never unknown. If no exact issue key can be
+   established, mark only that issue identity required-and-unknown; never synthesize it.
 3. For control-baseline, `executionIssueIds`, and `exitedExecutionIssueIds` that are no longer in the project, fetch
    the exact issue only to recover execution comments across runs; mark them unmanaged and never
    put them back into `issues` or `currentBaseline`. Fetch comments for every current
@@ -51,6 +57,9 @@ Read the record and provider rules in
    control edges. Invalid self/unknown/cyclic observations remain in issue `blockers` for
    quarantine but are never declared safe. Preserve every unnormalizable field in
    `unknown`; never fill it from a title, comment prose, or GitHub state.
+   Normalize every relation endpoint to the related issue's exact Linear identifier.
+   When a relation exposes only an adapter id, resolve the related issue read-only; an
+   unresolved endpoint is issue-scoped unknown, not a guessed UUID or identifier.
 
 ## Output
 
@@ -70,7 +79,7 @@ Return strict JSON only:
   "control": null,
   "issues": [
     {
-      "id": "<Linear UUID>",
+      "id": "<same exact Linear identifier>",
       "identifier": "TEAM-123",
       "projectId": "<project id>",
       "title": "<fresh title>",
@@ -79,7 +88,7 @@ Return strict JSON only:
       "assigneeId": "<id or null>",
       "statusType": "unstarted | started | completed | canceled | backlog | triage | unknown",
       "dataState": "known | unknown",
-      "blockers": ["<Linear UUID>"]
+      "blockers": ["<exact Linear identifier>"]
     }
   ],
   "waivers": [
@@ -108,6 +117,8 @@ issue decisions.
 - Read-only tools only; never reference a `save_*`, create, update, or delete action.
 - Follow pagination to exhaustion and keep the project boundary exact.
 - Use normalized status types; never hard-code `Todo`, `In Progress`, or `Done`.
+- Use exact Linear identifiers throughout normalized issue/edge/control namespaces. Never
+  require a provider UUID and never mark `ISSUE_UUID_UNAVAILABLE`.
 - Canceled is not completed. GitHub evidence is outside this agent and never satisfies an edge.
 - Output strict JSON only, deterministic arrays, no persona prose, and no invented field.
 '''

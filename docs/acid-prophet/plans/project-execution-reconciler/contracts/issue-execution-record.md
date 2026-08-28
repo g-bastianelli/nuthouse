@@ -29,7 +29,7 @@ type IssueExecutionRecord = {
 
 ## Invariants
 
-- `taskId` equals the exact Linear `issueId` and is the primary runtime identity; enforced by the record parser, spawn verification, and reconciliation fixtures.
+- `issueId` is Linear's exact opaque team identifier and `taskId` is the distinct internal Superset task UUID returned by an exact task lookup; spawn verifies their provider binding before mutation and reconciliation fixtures prove correlation without equality.
 - `verified` requires both `workspaceId` and `terminalId`; enforced by the record parser.
 - `partial` preserves a created workspace and forbids an automatic duplicate; enforced by resolver actions.
 - A missing Linear comment never invalidates an existing verified runtime; enforced by repair decisions.

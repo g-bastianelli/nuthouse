@@ -20,6 +20,24 @@ Use `scripts/records.mjs` for control, execution, and waiver parsing/serializati
 unknown schema, malformed field, duplicate highest control revision, decision-hash
 mismatch, or missing verified graph receipt is unknown authority and blocks mutation.
 
+Two exact identity namespaces are used and must never be conflated:
+
+- `issueId` is Linear's canonical issue `identifier` (for example `TEAM-123`). Treat it
+  as an opaque, team-dependent value: never hard-code `NOT-`, another prefix, or a local
+  identifier regex. Graph
+  receipts, control baselines, blockers, waivers, resolver entries, and execution records
+  all use this value. A connector's generic `id` may be a transport UUID or may be the
+  identifier; its shape is not an authority and a missing Linear UUID is not an error.
+- `taskId` is Superset's internal task UUID. Resolve it read-only with `superset tasks get
+<issueId> --json` and require a non-empty `task.id`, `externalProvider === "linear"`,
+  and `externalKey === issueId`; a managed issue also requires the expected
+  `externalProjectId`. A workspace stores this `task.id`, not the Linear identifier or
+  Linear transport UUID.
+
+Never derive either identity from a title, branch, URL, or UUID shape. If the exact
+Linear identifier or Superset task binding is unavailable, the affected dispatch is
+unknown and must not mutate.
+
 The control's `decisionBaseline` contains sorted Linear issue ids and exact
 `dependentIssueId -> blockerIssueId` edges. `decisionHash` is the SHA-256 of that
 canonical baseline. `start` initializes it from the verified graph receipt on first
@@ -59,7 +77,8 @@ this project authorization to `spawn`:
   "revision": 3,
   "decisionHash": "sha256:<hash>",
   "lockToken": "<ephemeral token>",
-  "issueId": "<Linear UUID>",
+  "issueId": "TEAM-123",
+  "taskId": "<Superset task UUID>",
   "eligibility": "<canonical fresh status/blocker/waiver evidence>",
   "authorizationHash": "sha256:<hash>"
 }
@@ -84,11 +103,11 @@ that approval. No lock is held across an unbounded human wait.
 Every dispatch runs on the one configured host and follows this order:
 
 1. `superset workspaces list --host <host> --project <project> --json`; group exact
-   `taskId === <Linear issue UUID>` matches.
+   `taskId === <validated Superset task UUID>` matches.
 2. Zero matches may proceed. One match is reconstructed/inspected. Multiple matches are
    ambiguous and block only that issue.
 3. `superset workspaces create --host <host> --project <project> --name <name> --task
-<Linear issue UUID> --json` with no agent flag.
+<validated Superset task UUID> --json` with no agent flag.
 4. `superset workspaces get <workspaceId> --host <host> --json`; require exact host,
    project, and taskId.
 5. Snapshot terminals, then run `superset agents create --workspace <workspaceId>
@@ -124,8 +143,9 @@ status.
   terminal with `exited: true` releases its slot; partial or unknown runtime state keeps
   its slot conservatively. Extra shell/dev terminals never make a recorded agent
   ambiguous when its exact `terminalId` still exists.
-- Provider unavailability or unknown required data allows no new dispatch. Preserve and
-  report existing executions.
+- Provider unavailability or unscoped unknown required data allows no new dispatch.
+  Issue-scoped runtime/Linear unknowns block only affected decisions, and optional
+  unknowns do not poison known components. Preserve and report existing executions.
 - Metadata and status updates are fresh values. Optional unknown fields do not make a
   scoped partial response globally unavailable. Acyclic dependency additions are safe.
   Removed/reversed edges and new startable issues require confirmation before affected

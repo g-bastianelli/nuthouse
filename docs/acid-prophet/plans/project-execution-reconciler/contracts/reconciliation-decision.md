@@ -11,12 +11,13 @@ type ReconciliationDecision = {
   availableSlots: number;
   active: Array<{
     issueId: string;
+    taskId?: string;
     workspaceId: string;
     terminalId?: string;
     managed: boolean;
   }>;
   dispatch: Array<{ issueId: string; taskId: string; order: number }>;
-  repair: Array<{ issueId: string; workspaceId: string; terminalId?: string }>;
+  repair: Array<{ issueId: string; taskId: string; workspaceId: string; terminalId?: string }>;
   inspect: Array<{ issueId: string; resourceIds: string[]; reason: string }>;
   quarantined: Array<{ issueId: string; reasons: string[] }>;
   confirmations: Array<{ issueId: string; reason: string }>;
@@ -38,6 +39,7 @@ type ReconciliationDecision = {
 - Capacity includes only owned live task executions; unlinked/foreign workspaces and an
   exact recorded agent terminal with `exited: true` do not consume a slot.
 - Dispatch order is the normalized Linear order with a stable id tie-break; enforced by sorting tests.
+- Every dispatch binds an opaque Linear `issueId` to a distinct exact Superset `taskId`; missing or ambiguous bindings are inspected and never dispatched.
 - Invalid nodes plus descendants are quarantined while disconnected valid components remain resolvable; enforced by component fixtures.
 - Unknown required provider state produces no dispatch for the affected decision; enforced by normalization fixtures.
 

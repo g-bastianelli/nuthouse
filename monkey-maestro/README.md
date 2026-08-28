@@ -16,6 +16,11 @@ records execution identities back in Linear, and exits. The default concurrency 
 and the hard maximum is ten. Missing durable runtimes keep a slot until an explicit
 terminal-exit tombstone proves they are gone.
 
+Maestro bridges two different identities: Linear graph state uses the exact opaque issue
+identifier returned by the issue's team (for example `ENG-42`), while Superset workspace
+ownership uses the internal `task.id` returned by `superset tasks get ENG-42 --json`.
+Neither a team prefix nor a Linear transport UUID is hard-coded.
+
 ## Skills
 
 | Skill                      | What it does                                                                                                    |

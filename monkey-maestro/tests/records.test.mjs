@@ -131,11 +131,11 @@ describe("execution and waiver records", () => {
 
   test("accepts a partial execution without a terminal", () => {
     const record = buildExecutionRecord({
-      issueId: "issue-1",
+      issueId: "OPS-7",
       runId: "run-1",
       outcome: "partial",
       workspaceId: "workspace-1",
-      taskId: "issue-1",
+      taskId: "b62203f2-ed5c-4fea-870a-78ae217fc388",
       branch: "user/issue-1",
       agent: "codex",
       hostId: "host-1",
@@ -145,20 +145,20 @@ describe("execution and waiver records", () => {
     expect(parseExecutionRecord(serializeRecord(record))).toEqual(record);
   });
 
-  test("requires the runtime taskId to equal the exact Linear issue id", () => {
+  test("requires a non-empty Superset task id without conflating it with the Linear identifier", () => {
     expect(() =>
       buildExecutionRecord({
-        issueId: "issue-1",
+        issueId: "OPS-7",
         runId: "run-1",
         outcome: "partial",
         workspaceId: "workspace-1",
-        taskId: "PROJ-1",
+        taskId: "",
         branch: "user/issue-1",
         agent: "codex",
         hostId: "host-1",
         recordedAt: "2026-08-27T10:00:00.000Z",
       }),
-    ).toThrow("taskId must equal");
+    ).toThrow("taskId must be a non-empty string");
   });
 
   test("parses an exact non-revoked blocker waiver", () => {
@@ -207,6 +207,7 @@ describe("dispatch authorization", () => {
     decisionHash: `sha256:${"c".repeat(64)}`,
     lockToken: "lock-1",
     issueId: "issue-2",
+    taskId: "task-2",
     eligibility: {
       issueId: "issue-2",
       projectId: "project-1",
@@ -225,6 +226,7 @@ describe("dispatch authorization", () => {
       (value) => (value.projectId = "other-project"),
       (value) => (value.revision = 4),
       (value) => (value.lockToken = "lock-2"),
+      (value) => (value.taskId = "task-other"),
       (value) => (value.eligibility.statusType = "canceled"),
       (value) => (value.eligibility.blockers[0].statusType = "started"),
     ]) {

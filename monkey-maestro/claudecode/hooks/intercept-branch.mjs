@@ -41,7 +41,7 @@ const reason = [
   "",
   `Do NOT run \`${command}\` in this workspace.`,
   "Invoke the `monkey-maestro:spawn` skill for the Linear issue/task instead.",
-  `Pass \`${branch}\` only as the requested branch hint; spawn resolves the exact Linear UUID,`,
+  `Pass \`${branch}\` only as the requested branch hint; spawn resolves the exact Linear identifier and Superset task,`,
   "checks existing taskId mappings, creates the workspace first, then launches its agent.",
   "",
   "The standalone spawn workflow shows its own mutation gate. If this issue belongs to an",

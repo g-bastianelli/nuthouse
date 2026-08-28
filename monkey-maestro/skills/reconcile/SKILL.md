@@ -51,7 +51,8 @@ resolver is evidence for its decision, not a scheduler deciding whether to wake 
 
 ## Step 1 — Reload all authority under lock
 
-Dispatch both read-only agents with fresh inputs (parallel when the runtime permits):
+Dispatch the Linear loader first, because its fresh managed/owned identifier sets are the
+authority for Superset task resolution:
 
 ```text
 Agent({
@@ -60,22 +61,31 @@ Agent({
   prompt: `PROJECT_ID: <project id>
 MODE: full`,
 })
+```
 
+Build `MANAGED_ISSUE_IDS` from the returned `issues[].id`. Build
+`OWNED_ISSUE_IDS` as the sorted union of those ids, control baseline ids,
+`executionIssueIds`, and every valid execution record `issueId`. Then dispatch:
+
+```text
 Agent({
   subagent_type: 'monkey-maestro:runtime-inspector',
   description: 'reload Superset and GitHub execution truth',
   prompt: `TARGET_HOST_ID: <control.targetHostId>
 SUPERSET_PROJECT_ID: <control.supersetProjectId>
+LINEAR_PROJECT_ID: <control.projectId>
 REPOSITORY: <control.repository>
 RUN_ID: <control.runId>
-ISSUE_IDS: <fresh comma-separated Linear UUIDs>`,
+MANAGED_ISSUE_IDS: <fresh comma-separated exact Linear identifiers>
+OWNED_ISSUE_IDS: <fresh comma-separated exact Linear identifiers>`,
 })
 ```
 
 Require the reloaded control to match the pre-lock run/revision/decision hash and remain
 active. Linear unavailable, GitHub/Superset unavailable, unknown control/host/project,
-or changed authority permits no dispatch. `partial` issue fields block only decisions
-that require them.
+or changed authority permits no dispatch. A provider `partial` result must carry stable
+`unknown` entries: issue-scoped required unknowns block only those issues, optional
+unknowns do not poison known decisions, and an unscoped required unknown blocks mutation.
 
 ## Step 2 — Reconstruct and resolve
 
@@ -88,6 +98,15 @@ that require them.
    task-linked executions whose recorded agent terminal is live (or whose partial state
    cannot prove it exited); main workspaces, foreign task ids, and confirmed exited agent
    terminals do not consume Maestro concurrency.
+   Join every managed Linear `issue.id` to exactly one runtime `taskBindings[].issueId`
+   and copy its validated Superset UUID to `issue.taskId`. The Linear side remains the
+   exact opaque, team-dependent identifier (`TEAM-123`); the runtime side remains
+   `task.id`. Never hard-code a team prefix. A missing,
+   mismatched, or duplicate binding is required unknown for that issue and cannot fall
+   back to a Linear UUID, branch, or title.
+   Pass the full `taskBindings` array plus `linearUnknown: linearSnapshot.unknown` and
+   `runtimeUnknown: runtimeSnapshot.unknown` to the resolver; never merge the two unknown
+   namespaces or drop optional/required flags.
 2. Write one ephemeral JSON packet and run
    `node ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-state.mjs <packet>`. The resolver:
    - counts owned live task executions against capacity and never duplicates a `taskId`;
@@ -139,13 +158,14 @@ partial entries are reported, never guessed or relaunched.
 
 For each resolver `dispatch` in order, first run `records.mjs build-authorization` with
 the persisted control's project/run/revision/decision hash, the held lock token, the
-dispatch issue id, and that dispatch entry's fresh `eligibility` evidence. The helper
-must accept the issue as startable with every blocker completed or exactly waived. Then
+dispatch issue id, its validated Superset task id, and that dispatch entry's fresh
+`eligibility` evidence. The helper must accept the issue as startable with every blocker
+completed or exactly waived. Then
 invoke `monkey-maestro:spawn` with its complete output:
 
 ```json
 {
-  "issueId": "<Linear UUID>",
+  "issueId": "TEAM-123",
   "authorization": {
     "kind": "project",
     "projectId": "<project id>",
@@ -153,9 +173,10 @@ invoke `monkey-maestro:spawn` with its complete output:
     "revision": "<persisted revision>",
     "decisionHash": "<persisted hash>",
     "lockToken": "<held token>",
-    "issueId": "<same Linear UUID>",
+    "issueId": "TEAM-123",
+    "taskId": "<Superset task UUID>",
     "eligibility": {
-      "issueId": "<same Linear UUID>",
+      "issueId": "TEAM-123",
       "projectId": "<project id>",
       "statusType": "<fresh startable type>",
       "blockers": []

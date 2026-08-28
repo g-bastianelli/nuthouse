@@ -167,6 +167,7 @@ function canonicalDispatchAuthorization(value) {
     decisionHash: hash(authorization.decisionHash, "decisionHash"),
     lockToken: string(authorization.lockToken, "lockToken"),
     issueId: string(authorization.issueId, "issueId"),
+    taskId: string(authorization.taskId, "taskId"),
     eligibility: canonicalizeDispatchEligibility(authorization.eligibility),
   };
   if (
@@ -332,9 +333,6 @@ export function validateExecutionRecord(value) {
   if (record.detail !== undefined) normalized.detail = string(record.detail, "detail");
   if ((record.outcome === "verified" || record.outcome === "repaired") && !normalized.terminalId) {
     fail("INVALID_RECORD", `${record.outcome} execution requires terminalId`);
-  }
-  if (normalized.taskId !== normalized.issueId) {
-    fail("TASK_ID_MISMATCH", "taskId must equal the exact Linear issue id");
   }
   return normalized;
 }

@@ -5,9 +5,12 @@ import path from "node:path";
 const ROOT = path.resolve(import.meta.dir, "..", "..");
 const spawn = fs.readFileSync(path.join(ROOT, "monkey-maestro/skills/spawn/SKILL.md"), "utf8");
 
-test("spawn uses an exact Linear UUID taskId and checks duplicates before mutation", () => {
-  expect(spawn).toContain("`taskId` is always the Linear UUID");
-  expect(spawn).toContain("taskId === issue.id");
+test("spawn resolves an exact Superset task binding and checks duplicates before mutation", () => {
+  expect(spawn).toContain("superset tasks get <identifier> --json");
+  expect(spawn).toMatch(/`taskId` is always the returned Superset\s+`task\.id`/);
+  expect(spawn).toContain("taskId === task.id");
+  expect(spawn).toContain("externalKey === identifier");
+  expect(spawn).not.toContain("`taskId` is always the Linear UUID");
   expect(spawn).toContain("Multiple: return `ambiguous`");
   expect(spawn).toContain("One: inspect");
   expect(spawn).toContain("Zero: continue");
@@ -38,7 +41,7 @@ test("authorization has one standalone gate and no project per-issue gate", () =
 test("standalone authorization survives the human wait without racing ownership", () => {
   expect(spawn).toContain("standaloneRunId");
   expect(spawn).toContain("Immediately after standalone confirmation, acquire");
-  expect(spawn).toContain("re-read its current project control");
+  expect(spawn).toMatch(/re-read its current\s+project control/);
   expect(spawn).toMatch(/rerun the exact `taskId` workspace\s+query/);
   expect(spawn).toContain("Standalone mode is read-only for this orphaned-runtime path");
 });
@@ -48,6 +51,7 @@ test("project authorization is scoped to fresh issue eligibility", () => {
   expect(spawn).toContain("still present exactly once in that project");
   expect(spawn).toContain("status and blocker fields known");
   expect(spawn).toMatch(/same\s+`authorizationHash`/);
+  expect(spawn).toMatch(/hash-bound\s+`taskId`/);
 });
 
 test("partial and degraded executions are durable and never auto-deleted", () => {
