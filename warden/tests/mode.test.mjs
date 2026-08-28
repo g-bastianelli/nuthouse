@@ -232,7 +232,7 @@ describe("warden mode adapter", () => {
     expect(fs.readFileSync(overridePath, "utf8")).toBe(overrideBefore);
   });
 
-  test("reset remains a scoped recovery action when repository configuration is invalid", async () => {
+  test("blocks reset before mutation when repository configuration is invalid (AC-049)", async () => {
     const repo = makeRepository({ sibling: true });
     const now = "2026-08-28T12:00:00.000Z";
     const primaryContext = discoverGitContext(repo.primary);
@@ -247,6 +247,7 @@ describe("warden mode adapter", () => {
       defaultProfile: "turbo",
     });
     const repositoryBefore = fs.readFileSync(repositoryConfigPath(repo.primary), "utf8");
+    const primaryBefore = fs.readFileSync(primaryOverridePath, "utf8");
     const siblingBefore = fs.readFileSync(siblingOverridePath, "utf8");
 
     const result = await runMode("reset", optionsFor(repo.primary, repo.homeDirectory, now));
@@ -254,8 +255,8 @@ describe("warden mode adapter", () => {
 
     expect(diagnostic.source).toBe("repository");
     expect(diagnostic.field).toBe("$.defaultProfile");
-    expect(result.override).toEqual({ path: primaryOverridePath, removed: true });
-    expect(fs.existsSync(primaryOverridePath)).toBe(false);
+    expect(result.override).toBeNull();
+    expect(fs.readFileSync(primaryOverridePath, "utf8")).toBe(primaryBefore);
     expect(fs.readFileSync(siblingOverridePath, "utf8")).toBe(siblingBefore);
     expect(fs.readFileSync(repositoryConfigPath(repo.primary), "utf8")).toBe(repositoryBefore);
   });

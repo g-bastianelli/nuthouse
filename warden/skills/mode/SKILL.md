@@ -43,7 +43,7 @@ Use this skill for an explicit `warden:mode` invocation or a request to set, ins
 
 4. Report the result:
    - For `quick`, `standard`, or `strict`, state the current-worktree override path and expiry, then include the resolved mode status.
-   - For `reset`, state whether the current-worktree override was removed, then include the resolved mode status. A repository blocker after reset does not undo the reset.
+   - For `reset`, state whether the current-worktree override was removed, then include the resolved mode status. Validate repository configuration first; a blocker leaves the override unchanged.
    - For `status`, make no preference mutation and include every field below.
 
 ## Final Report

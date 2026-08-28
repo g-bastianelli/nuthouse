@@ -170,16 +170,14 @@ export async function runMode(actionOrInput, injected = {}) {
   };
 
   if (input.action === "reset") {
-    const overridePath = paths.worktreeOverridePath;
-    const removed = await workflow.resetWorktreeOverride(context);
-    const override = { path: overridePath, removed };
-
     try {
       const configuration = await resolveConfiguration(workflow, paths);
+      const removed = await workflow.resetWorktreeOverride(context);
+      const override = { path: paths.worktreeOverridePath, removed };
       return modeResult(input.action, await statusFor(workflow, configuration), override);
     } catch (error) {
       if (isRepositoryConfigurationError(error, workflow)) {
-        return modeResult(input.action, repositoryErrorStatus(error), override);
+        return modeResult(input.action, repositoryErrorStatus(error));
       }
       throw error;
     }
