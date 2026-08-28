@@ -1,6 +1,6 @@
 {
   "name": "monkey-maestro",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "description": "Project execution reconciler for verified Linear dependency graphs with durable control, bounded concurrent Superset dispatch, and runtime reconstruction.",
   "author": {
     "name": "g-bastianelli"
