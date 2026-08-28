@@ -1,5 +1,12 @@
 name: Validate
 
+# Mirrors notom-platform's PR check: a superseded push cancels its own
+# in-flight run. The group key already isolates push runs (one group per sha,
+# never contended), so cancellation only ever applies to a PR's own reruns.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
 on:
   pull_request:
   push:
