@@ -28,6 +28,7 @@ function input(overrides = {}) {
       active: true,
       maxConcurrency: 4,
       targetHostId: "host-1",
+      supersetProjectId: "superset-project-1",
     },
     providers: { linear: "ready", github: "ready", superset: "ready" },
     issues: [],
@@ -757,6 +758,315 @@ describe("runtime reconstruction", () => {
       managed: true,
     });
     expect(decision.availableSlots).toBe(3);
+  });
+
+  test("a deleted workspace releases capacity after its managed issue completes", () => {
+    const decision = resolveReconciliation(
+      input({
+        control: {
+          ...input().control,
+          maxConcurrency: 1,
+          executionIssueIds: ["done"],
+        },
+        issues: [
+          issue("done", 1, { statusType: "completed" }),
+          issue("next", 2, { blockers: ["done"] }),
+        ],
+        baseline: {
+          issueIds: ["done", "next"],
+          edges: [{ dependentIssueId: "next", blockerIssueId: "done" }],
+        },
+        workspaceInventory: {
+          complete: true,
+          hostId: "host-1",
+          projectId: "superset-project-1",
+          workspaceIds: [],
+        },
+        executionRecords: [
+          {
+            issueId: "done",
+            taskId: "done",
+            runId: "run-1",
+            workspaceId: "workspace-deleted",
+            terminalId: "terminal-deleted",
+            hostId: "host-1",
+            outcome: "verified",
+          },
+        ],
+      }),
+    );
+
+    expect(decision.active).toEqual([]);
+    expect(decision.inspect).toEqual([]);
+    expect(decision.confirmedExitedIssueIds).toEqual(["done"]);
+    expect(decision.availableSlots).toBe(1);
+    expect(ids(decision.dispatch)).toEqual(["next"]);
+  });
+
+  test("a deleted workspace stays guarded when Superset is not fully authoritative", () => {
+    const decision = resolveReconciliation(
+      input({
+        control: {
+          ...input().control,
+          maxConcurrency: 1,
+          executionIssueIds: ["done"],
+        },
+        providers: { linear: "ready", github: "ready", superset: "partial" },
+        issues: [
+          issue("done", 1, { statusType: "completed" }),
+          issue("next", 2, { blockers: ["done"] }),
+        ],
+        baseline: {
+          issueIds: ["done", "next"],
+          edges: [{ dependentIssueId: "next", blockerIssueId: "done" }],
+        },
+        workspaceInventory: {
+          complete: true,
+          hostId: "host-1",
+          projectId: "superset-project-1",
+          workspaceIds: [],
+        },
+        executionRecords: [
+          {
+            issueId: "done",
+            taskId: "done",
+            runId: "run-1",
+            workspaceId: "workspace-unknown",
+            terminalId: "terminal-unknown",
+            hostId: "host-1",
+            outcome: "verified",
+          },
+        ],
+        runtimeUnknown: [
+          {
+            code: "WORKSPACE_LIST_PARTIAL",
+            issueId: "done",
+            requiredForDecision: true,
+          },
+        ],
+      }),
+    );
+
+    expect(decision.confirmedExitedIssueIds).toEqual([]);
+    expect(decision.active).toMatchObject([{ issueId: "done", runtimeMissing: true }]);
+    expect(decision.availableSlots).toBe(0);
+    expect(decision.dispatch).toEqual([]);
+  });
+
+  test("a terminal issue stays guarded without a same-scope workspace inventory", () => {
+    const decision = resolveReconciliation(
+      input({
+        control: {
+          ...input().control,
+          maxConcurrency: 1,
+          executionIssueIds: ["done"],
+        },
+        issues: [
+          issue("done", 1, { statusType: "completed" }),
+          issue("next", 2, { blockers: ["done"] }),
+        ],
+        baseline: {
+          issueIds: ["done", "next"],
+          edges: [{ dependentIssueId: "next", blockerIssueId: "done" }],
+        },
+        workspaces: undefined,
+        executionRecords: [
+          {
+            issueId: "done",
+            taskId: "done",
+            runId: "run-1",
+            workspaceId: "workspace-unobserved",
+            terminalId: "terminal-unobserved",
+            hostId: "host-1",
+            outcome: "verified",
+          },
+        ],
+      }),
+    );
+
+    expect(decision.confirmedExitedIssueIds).toEqual([]);
+    expect(decision.active).toMatchObject([{ issueId: "done", runtimeMissing: true }]);
+    expect(decision.availableSlots).toBe(0);
+    expect(decision.dispatch).toEqual([]);
+  });
+
+  test("a recorded workspace observed under another task stays guarded", () => {
+    const decision = resolveReconciliation(
+      input({
+        control: {
+          ...input().control,
+          maxConcurrency: 1,
+          executionIssueIds: ["done"],
+        },
+        issues: [
+          issue("done", 1, { statusType: "completed" }),
+          issue("next", 2, { blockers: ["done"] }),
+        ],
+        baseline: {
+          issueIds: ["done", "next"],
+          edges: [{ dependentIssueId: "next", blockerIssueId: "done" }],
+        },
+        workspaceInventory: {
+          complete: true,
+          hostId: "host-1",
+          projectId: "superset-project-1",
+          workspaceIds: ["workspace-recorded"],
+        },
+        workspaces: [
+          {
+            id: "workspace-recorded",
+            taskId: "foreign-task",
+            hostId: "host-1",
+            projectId: "superset-project-1",
+            terminals: [{ id: "terminal-live", exited: false }],
+          },
+        ],
+        executionRecords: [
+          {
+            issueId: "done",
+            taskId: "done",
+            runId: "run-1",
+            workspaceId: "workspace-recorded",
+            terminalId: "terminal-recorded",
+            hostId: "host-1",
+            outcome: "verified",
+          },
+        ],
+      }),
+    );
+
+    expect(decision.confirmedExitedIssueIds).toEqual([]);
+    expect(decision.active).toMatchObject([{ issueId: "done", runtimeMissing: true }]);
+    expect(decision.availableSlots).toBe(0);
+    expect(decision.dispatch).toEqual([]);
+  });
+
+  test("a filtered workspace array cannot prove a recorded workspace was deleted", () => {
+    const decision = resolveReconciliation(
+      input({
+        control: {
+          ...input().control,
+          maxConcurrency: 1,
+          executionIssueIds: ["done"],
+        },
+        issues: [
+          issue("done", 1, { statusType: "completed" }),
+          issue("next", 2, { blockers: ["done"] }),
+        ],
+        baseline: {
+          issueIds: ["done", "next"],
+          edges: [{ dependentIssueId: "next", blockerIssueId: "done" }],
+        },
+        workspaceInventory: {
+          complete: true,
+          hostId: "host-1",
+          projectId: "superset-project-1",
+          workspaceIds: ["workspace-filtered"],
+        },
+        workspaces: [],
+        executionRecords: [
+          {
+            issueId: "done",
+            taskId: "done",
+            runId: "run-1",
+            workspaceId: "workspace-filtered",
+            terminalId: "terminal-filtered",
+            hostId: "host-1",
+            outcome: "verified",
+          },
+        ],
+      }),
+    );
+
+    expect(decision.confirmedExitedIssueIds).toEqual([]);
+    expect(decision.active).toMatchObject([{ issueId: "done", runtimeMissing: true }]);
+    expect(decision.availableSlots).toBe(0);
+    expect(decision.dispatch).toEqual([]);
+  });
+
+  test("a workspace inventory for another host or project cannot prove deletion", () => {
+    const decision = resolveReconciliation(
+      input({
+        control: {
+          ...input().control,
+          maxConcurrency: 1,
+          executionIssueIds: ["done"],
+        },
+        issues: [
+          issue("done", 1, { statusType: "completed" }),
+          issue("next", 2, { blockers: ["done"] }),
+        ],
+        baseline: {
+          issueIds: ["done", "next"],
+          edges: [{ dependentIssueId: "next", blockerIssueId: "done" }],
+        },
+        workspaceInventory: {
+          complete: true,
+          hostId: "host-2",
+          projectId: "superset-project-2",
+          workspaceIds: [],
+        },
+        executionRecords: [
+          {
+            issueId: "done",
+            taskId: "done",
+            runId: "run-1",
+            workspaceId: "workspace-other-scope",
+            terminalId: "terminal-other-scope",
+            hostId: "host-1",
+            outcome: "verified",
+          },
+        ],
+      }),
+    );
+
+    expect(decision.confirmedExitedIssueIds).toEqual([]);
+    expect(decision.active).toMatchObject([{ issueId: "done", runtimeMissing: true }]);
+    expect(decision.availableSlots).toBe(0);
+    expect(decision.dispatch).toEqual([]);
+  });
+
+  test("a terminal execution from an earlier run stays guarded after restart", () => {
+    const decision = resolveReconciliation(
+      input({
+        control: {
+          ...input().control,
+          runId: "run-2",
+          maxConcurrency: 1,
+          executionIssueIds: ["done"],
+        },
+        issues: [
+          issue("done", 1, { statusType: "completed" }),
+          issue("next", 2, { blockers: ["done"] }),
+        ],
+        baseline: {
+          issueIds: ["done", "next"],
+          edges: [{ dependentIssueId: "next", blockerIssueId: "done" }],
+        },
+        workspaceInventory: {
+          complete: true,
+          hostId: "host-1",
+          projectId: "superset-project-1",
+          workspaceIds: [],
+        },
+        executionRecords: [
+          {
+            issueId: "done",
+            taskId: "done",
+            runId: "run-1",
+            workspaceId: "workspace-previous-run",
+            terminalId: "terminal-previous-run",
+            hostId: "host-1",
+            outcome: "verified",
+          },
+        ],
+      }),
+    );
+
+    expect(decision.confirmedExitedIssueIds).toEqual([]);
+    expect(decision.active).toMatchObject([{ issueId: "done", runtimeMissing: true }]);
+    expect(decision.availableSlots).toBe(0);
+    expect(decision.dispatch).toEqual([]);
   });
 
   test("a previous-run missing execution consumes capacity after restart", () => {

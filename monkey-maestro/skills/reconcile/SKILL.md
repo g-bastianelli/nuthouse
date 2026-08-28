@@ -97,16 +97,24 @@ unknowns do not poison known decisions, and an unscoped required unknown blocks 
    Preserve every terminal's normalized `exited` state. Capacity counts only owned,
    task-linked executions whose recorded agent terminal is live (or whose partial state
    cannot prove it exited); main workspaces, foreign task ids, and confirmed exited agent
-   terminals do not consume Maestro concurrency.
+   terminals do not consume Maestro concurrency. A missing workspace confirms exit only
+   when Superset returned a complete `ready` workspace inventory for the control's exact
+   host/project, its declared `workspaceIds` equal the full unfiltered workspace array,
+   the issue remains managed with a known terminal Linear status, and every durable
+   record belongs to the active run with the exact task, host, and an absent recorded
+   `workspaceId`. Partial/filtered provider state, scope or task uncertainty, earlier-run
+   records, and moved issues stay guarded and capacity-consuming.
    Join every managed Linear `issue.id` to exactly one runtime `taskBindings[].issueId`
    and copy its validated Superset UUID to `issue.taskId`. The Linear side remains the
    exact opaque, team-dependent identifier (`TEAM-123`); the runtime side remains
    `task.id`. Never hard-code a team prefix. A missing,
    mismatched, or duplicate binding is required unknown for that issue and cannot fall
    back to a Linear UUID, branch, or title.
-   Pass the full `taskBindings` array plus `linearUnknown: linearSnapshot.unknown` and
-   `runtimeUnknown: runtimeSnapshot.unknown` to the resolver; never merge the two unknown
-   namespaces or drop optional/required flags.
+   Pass the full `taskBindings` array, `workspaceInventory`, and the full unfiltered
+   `workspaces` array plus `linearUnknown: linearSnapshot.unknown` and
+   `runtimeUnknown: runtimeSnapshot.unknown` to the resolver. Never reconstruct the
+   completeness marker, filter the workspace array, merge the two unknown namespaces,
+   or drop optional/required flags.
 2. Write one ephemeral JSON packet and run
    `node ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-state.mjs <packet>`. The resolver:
    - counts owned live task executions against capacity and never duplicates a `taskId`;
@@ -139,7 +147,8 @@ this decision's dispatch ids. If any set or baseline differs, build the next con
 `records.mjs build-control`, preserving policy, replacing the changed baseline/decision
 hash, replacing `executionIssueIds`, and updating the timestamp. Moved issues remain in
 that execution index only while their runtime still consumes capacity. An old execution
-record stops guarding only when its id has this explicit confirmed-exited tombstone.
+record stops guarding only when its id has this explicit confirmed-exited tombstone,
+including the narrowly proven terminal-issue workspace-deletion case from Step 2.
 Update the
 existing project comment and reload it. A failed or ambiguous
 write stops every new dispatch; otherwise subsequent runs can classify future Linear

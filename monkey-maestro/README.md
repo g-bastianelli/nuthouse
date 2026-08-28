@@ -14,7 +14,11 @@ Linear, GitHub, and Superset, reconstructs existing executions by the exact Line
 `taskId`, validates dependency eligibility, fills the approved concurrency capacity,
 records execution identities back in Linear, and exits. The default concurrency is four
 and the hard maximum is ten. Missing durable runtimes keep a slot until an explicit
-terminal-exit tombstone proves they are gone.
+terminal-exit tombstone proves they are gone. When a finished/canceled managed issue's
+recorded workspace has been deleted, a complete same-host/project Superset inventory
+whose exact unfiltered workspace-id set omits that current-run record proves the exit and
+writes the tombstone automatically; partial, filtered, cross-scope, or ambiguous
+observations stay guarded.
 
 Maestro bridges two different identities: Linear graph state uses the exact opaque issue
 identifier returned by the issue's team (for example `ENG-42`), while Superset workspace

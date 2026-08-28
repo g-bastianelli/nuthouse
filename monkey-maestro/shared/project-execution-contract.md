@@ -56,11 +56,19 @@ memory.
 The control also keeps sorted `executionIssueIds` for task-linked executions that still
 consume capacity after their issue leaves the Linear project. Reconciliation rebuilds
 this set from fresh live runtime state and removes an id only after the recorded agent
-terminal is confirmed exited. A durable/control-owned execution whose workspace is
-missing remains guarded and consumes one slot until that proof exists. The companion
-`exitedExecutionIssueIds` set is the explicit durable tombstone for that proof; active
-and exited sets may never overlap, and a new dispatch removes its old tombstone. These
-are ownership indexes, not a queue and not eligibility state.
+terminal is confirmed exited. A deleted workspace is also terminal proof only when the
+issue is still managed with a known terminal Linear status, every durable execution
+record belongs to the active run and has the exact current task, host, and workspace id,
+and an authoritative Superset `ready` inventory covers the control's exact host/project.
+That inventory carries a complete sorted `workspaceIds` set equal to the full unfiltered
+workspace array, and every recorded workspace id must be absent from it. This is the
+normal post-completion cleanup convention. A missing/filtered/partial inventory,
+different host/project, earlier-run record, observed workspace under a mismatched task,
+unknown status, task ambiguity, or issue that left the project remains guarded and
+consumes one slot. The companion `exitedExecutionIssueIds` set is the explicit durable
+tombstone for either proof; active and exited sets may never overlap, and a new dispatch
+removes its old tombstone. These are ownership indexes, not a queue and not eligibility
+state.
 
 A waiver is valid only when the exact dependent/blocker ids match, all fields parse, it
 is not revoked, and Linear attributes the comment to an explicit human. A canceled

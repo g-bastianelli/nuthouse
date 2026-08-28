@@ -228,6 +228,9 @@ function consumesCapacity(workspace, issueRecords) {
 
 function runtimeState(input, issueById) {
   const runId = input.control?.runId && String(input.control.runId);
+  const targetHostId = input.control?.targetHostId && String(input.control.targetHostId);
+  const supersetProjectId =
+    input.control?.supersetProjectId && String(input.control.supersetProjectId);
   const records = array(input.executionRecords);
   const currentRecords = records.filter(
     (record) => !runId || !record?.runId || String(record.runId) === runId,
@@ -249,8 +252,48 @@ function runtimeState(input, issueById) {
   }
   for (const record of records) registerTaskBinding(record?.issueId, record?.taskId);
 
+  const rawWorkspaces = Array.isArray(input.workspaces) ? input.workspaces : undefined;
+  const rawWorkspaceIds = rawWorkspaces?.map((workspace) =>
+    workspace?.id ? String(workspace.id) : undefined,
+  );
+  const inventoryWorkspaceIds = Array.isArray(input.workspaceInventory?.workspaceIds)
+    ? input.workspaceInventory.workspaceIds.map((workspaceId) =>
+        workspaceId ? String(workspaceId) : undefined,
+      )
+    : undefined;
+  const sortedRawWorkspaceIds = rawWorkspaceIds?.filter(Boolean).sort();
+  const sortedInventoryWorkspaceIds = inventoryWorkspaceIds?.filter(Boolean).sort();
+  const exactInventoryIds =
+    rawWorkspaceIds !== undefined &&
+    inventoryWorkspaceIds !== undefined &&
+    sortedRawWorkspaceIds.length === rawWorkspaceIds.length &&
+    sortedInventoryWorkspaceIds.length === inventoryWorkspaceIds.length &&
+    new Set(sortedRawWorkspaceIds).size === sortedRawWorkspaceIds.length &&
+    new Set(sortedInventoryWorkspaceIds).size === sortedInventoryWorkspaceIds.length &&
+    sortedRawWorkspaceIds.length === sortedInventoryWorkspaceIds.length &&
+    sortedRawWorkspaceIds.every(
+      (workspaceId, index) => workspaceId === sortedInventoryWorkspaceIds[index],
+    );
+  const completeWorkspaceInventory =
+    input.providers?.superset === "ready" &&
+    rawWorkspaces !== undefined &&
+    input.workspaceInventory?.complete === true &&
+    targetHostId &&
+    supersetProjectId &&
+    String(input.workspaceInventory.hostId) === targetHostId &&
+    String(input.workspaceInventory.projectId) === supersetProjectId &&
+    exactInventoryIds &&
+    rawWorkspaces.every(
+      (workspace) =>
+        workspace?.id &&
+        workspace?.hostId &&
+        String(workspace.hostId) === targetHostId &&
+        workspace?.projectId &&
+        String(workspace.projectId) === supersetProjectId,
+    );
+  const observedWorkspaceIds = new Set(sortedRawWorkspaceIds ?? []);
   const ownedTaskIds = new Set(issueIdsByTask.keys());
-  const workspaces = array(input.workspaces)
+  const workspaces = array(rawWorkspaces)
     .filter((workspace) => workspace?.id && workspace?.taskId)
     .map((workspace) => ({
       ...workspace,
@@ -360,6 +403,29 @@ function runtimeState(input, issueById) {
       continue;
     }
     if (matches.length === 0) {
+      const deletedTerminalExecution =
+        completeWorkspaceInventory &&
+        TERMINAL_STATUS_TYPES.has(normalizedStatus(issue)) &&
+        !guardedIssueIds.has(issue.id) &&
+        historicalRecords.length > 0 &&
+        historicalRecords.every(
+          (record) =>
+            record?.runId &&
+            String(record.runId) === runId &&
+            record?.taskId &&
+            String(record.taskId) === issue.taskId &&
+            record?.workspaceId &&
+            String(record.workspaceId).length > 0 &&
+            record?.hostId &&
+            String(record.hostId) === targetHostId &&
+            (record.supersetProjectId === undefined ||
+              String(record.supersetProjectId) === supersetProjectId) &&
+            !observedWorkspaceIds.has(String(record.workspaceId)),
+        );
+      if (deletedTerminalExecution) {
+        confirmedExitedIssueIds.add(issue.id);
+        continue;
+      }
       const durableRecords = historicalRecords.filter(recordNeedsRuntimeProof);
       const hasHistoricalRuntime = durableRecords.some(
         (record) =>

@@ -44,8 +44,13 @@ list --host <TARGET_HOST_ID> --json`. Verify the configured host/project exactly
    is an issue-scoped required unknown.
 3. Run `superset workspaces list --host <TARGET_HOST_ID> --project
 <SUPERSET_PROJECT_ID> --json`. For every workspace, preserve id, projectId, hostId,
-   branch, name, and `taskId`. Run `superset workspaces get <id> --host
-<TARGET_HOST_ID> --json` when required fields are absent.
+   branch, name, and `taskId`, including main, foreign-task, and null-task entries. This
+   array is the full unfiltered workspace inventory; never reduce it to owned task ids.
+   Run `superset workspaces get <id> --host <TARGET_HOST_ID> --json` when required
+   fields are absent. Emit `workspaceInventory.complete: true` only when the list command
+   succeeded and every returned workspace has exact id, host, and project fields. Its
+   sorted `workspaceIds` must exactly equal the ids in `workspaces`; otherwise set
+   `complete: false`, mark Superset partial, and emit an unscoped required unknown.
 4. For every task-linked workspace, run `superset terminals list --workspace <id>
 --host <TARGET_HOST_ID> --json`. Normalize the provider's `sessions[]` entries to
    `{id: terminalId, exited, exitCode, attached, title, ...known agent/session fields}`.
@@ -57,13 +62,21 @@ number,url,state,isDraft,mergedAt,headRefName` and correlate only by exact recor
 
 ## Output
 
-Return strict JSON only:
+Return strict JSON only. `taskBindings` is mandatory even when empty and must contain
+one result or one scoped required unknown for every requested owned issue; never omit
+the field:
 
 ```json
 {
   "schemaVersion": 1,
   "providers": { "github": "ready", "superset": "ready" },
   "currentHostId": "<id>",
+  "workspaceInventory": {
+    "complete": true,
+    "hostId": "<TARGET_HOST_ID>",
+    "projectId": "<SUPERSET_PROJECT_ID>",
+    "workspaceIds": ["<every workspace id, sorted>"]
+  },
   "taskBindings": [
     {
       "issueId": "TEAM-123",
@@ -103,5 +116,9 @@ and unscoped. Optional presentation metadata uses `requiredForDecision: false`.
 - Never infer a `taskId` from branch text or an issue id from a PR title.
 - Treat every Linear identifier as an opaque team-owned key; never assume a `NOT-`
   prefix or apply a local identifier regex.
+- Always return `taskBindings` as a deterministic array, including `[]`; never omit it.
+- Always return `workspaceInventory`; `complete: true` requires the exact configured
+  host/project and exact set equality between `workspaceIds` and the full
+  unfiltered `workspaces` array.
 - Return all conflicts and unknowns; never choose among ambiguous resources.
 - Output strict JSON only, deterministic arrays, and no persona prose.

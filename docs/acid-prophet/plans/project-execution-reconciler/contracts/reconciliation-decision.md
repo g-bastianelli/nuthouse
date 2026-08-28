@@ -23,6 +23,7 @@ type ReconciliationDecision = {
   confirmations: Array<{ issueId: string; reason: string }>;
   blocked: Array<{ issueId: string; reasons: string[] }>;
   globalReasons: string[];
+  confirmedExitedIssueIds: string[];
 };
 ```
 
@@ -37,7 +38,10 @@ type ReconciliationDecision = {
 
 - Dispatch count never exceeds `availableSlots`; enforced by the pure resolver and fixtures.
 - Capacity includes only owned live task executions; unlinked/foreign workspaces and an
-  exact recorded agent terminal with `exited: true` do not consume a slot.
+  exact recorded agent terminal with `exited: true` do not consume a slot. A deleted
+  workspace also releases capacity only when the managed issue is terminal, its
+  active-run record has exact task/host identity, and a complete unfiltered Superset
+  inventory for the same host/project proves the recorded workspace id absent.
 - Dispatch order is the normalized Linear order with a stable id tie-break; enforced by sorting tests.
 - Every dispatch binds an opaque Linear `issueId` to a distinct exact Superset `taskId`; missing or ambiguous bindings are inspected and never dispatched.
 - Invalid nodes plus descendants are quarantined while disconnected valid components remain resolvable; enforced by component fixtures.

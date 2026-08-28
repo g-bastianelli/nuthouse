@@ -47,7 +47,9 @@ Read the record and provider rules in
 3. For control-baseline, `executionIssueIds`, and `exitedExecutionIssueIds` that are no longer in the project, fetch
    the exact issue only to recover execution comments across runs; mark them unmanaged and never
    put them back into `issues` or `currentBaseline`. Fetch comments for every current
-   managed issue and those baseline ids. Parse execution and waiver markers. A waiver
+   managed issue and those baseline ids. Parse execution and waiver markers. Preserve
+   every parsed execution-record field exactly; never project a record down to only
+   `issueId` and `runId`. A waiver
    is `valid: true` only when its ids match a current exact edge, its schema is complete
    and non-revoked, and the comment metadata proves a human author. Agent/app/unknown
    authors are not human approval.
@@ -100,7 +102,23 @@ Return strict JSON only:
       "humanApproved": true
     }
   ],
-  "executionRecords": [{ "issueId": "<id>", "runId": "<id>" }],
+  "executionRecords": [
+    {
+      "marker": "nuthouse:maestro-execution",
+      "schemaVersion": 1,
+      "issueId": "TEAM-123",
+      "runId": "<id>",
+      "outcome": "verified | partial | degraded | repaired",
+      "workspaceId": "<id>",
+      "terminalId": "<id; omit when absent>",
+      "taskId": "<Superset task UUID>",
+      "branch": "<branch>",
+      "agent": "<agent>",
+      "hostId": "<id>",
+      "recordedAt": "<ISO timestamp>",
+      "detail": "<detail; omit when absent>"
+    }
+  ],
   "currentBaseline": { "issueIds": [], "edges": [] },
   "unknown": []
 }
@@ -120,5 +138,7 @@ issue decisions.
 - Use normalized status types; never hard-code `Todo`, `In Progress`, or `Done`.
 - Use exact Linear identifiers throughout normalized issue/edge/control namespaces. Never
   require a provider UUID and never mark `ISSUE_UUID_UNAVAILABLE`.
+- Return every valid execution record with its complete parsed schema; never omit its
+  runtime identity fields.
 - Canceled is not completed. GitHub evidence is outside this agent and never satisfies an edge.
 - Output strict JSON only, deterministic arrays, no persona prose, and no invented field.

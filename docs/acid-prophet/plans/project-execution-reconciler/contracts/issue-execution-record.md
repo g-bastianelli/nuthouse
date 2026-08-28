@@ -33,6 +33,11 @@ type IssueExecutionRecord = {
 - `verified` requires both `workspaceId` and `terminalId`; enforced by the record parser.
 - `partial` preserves a created workspace and forbids an automatic duplicate; enforced by resolver actions.
 - A missing Linear comment never invalidates an existing verified runtime; enforced by repair decisions.
+- A missing recorded workspace proves exit only for a still-managed issue with known
+  terminal Linear status, an active-run record bound to the exact task and host, and an
+  authoritative same-host/project Superset inventory whose complete unfiltered id set
+  omits that exact `workspaceId`; filtered, cross-scope, earlier-run, or ambiguous
+  observations remain guarded.
 
 ## Errors
 
