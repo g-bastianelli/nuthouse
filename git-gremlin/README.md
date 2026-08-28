@@ -5,17 +5,17 @@
 Contextual review, commit, and PR helper for Claude Code and Codex.
 
 It recognizes review, commit, or PR intent, compiles repo instructions before review,
-drafts the boring text from the current git state, commits from explicit commit intent,
-and keeps PR creation behind a confirmation gate. Workspace orchestration and branch
-guards belong to Monkey Maestro.
+drafts the boring text from the current git state, stages dirty changes when a commit needs
+them, and publishes local branches after the PR confirmation gate. Workspace orchestration
+and branch guards belong to Monkey Maestro.
 
 ## Skills
 
-| Skill                | Purpose                                                                        |
-| -------------------- | ------------------------------------------------------------------------------ |
-| `git-gremlin:commit` | Run a conventional commit from staged or explicitly approved changes           |
-| `git-gremlin:pr`     | Draft and optionally create a GitHub pull request from branch history and diff |
-| `git-gremlin:review` | Review the current diff/branch with repo instruction files explicitly loaded   |
+| Skill                | Purpose                                                                       |
+| -------------------- | ----------------------------------------------------------------------------- |
+| `git-gremlin:commit` | Commit a staged selection, or stage dirty changes when no selection exists    |
+| `git-gremlin:pr`     | Draft a PR, then publish the branch and create it after explicit confirmation |
+| `git-gremlin:review` | Review the current diff/branch with repo instruction files explicitly loaded  |
 
 ## Review Skill
 
@@ -131,7 +131,7 @@ Ship it as a first-pass review harness, then tune from real reviews:
 | Agent            | Purpose                                                                         |
 | ---------------- | ------------------------------------------------------------------------------- |
 | `commit-drafter` | Read staged diff and produce a commit proposal or approved commit hash          |
-| `pr-drafter`     | Read branch log/diff and produce a PR proposal or approved PR URL               |
+| `pr-drafter`     | Read branch log/diff, publish it, and produce a PR proposal or approved PR URL  |
 | `reviewer`       | Host `git-gremlin:review` forked runs with the review-passes contract preloaded |
 
 ## Install

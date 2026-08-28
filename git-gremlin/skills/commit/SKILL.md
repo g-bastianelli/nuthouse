@@ -1,8 +1,8 @@
 ---
 name: commit
-description: Use automatically when the user asks to commit changes, create a commit, write a commit message, commit staged changes, commit everything, run git commit, "fais le commit", "commit mes changements", or "crée un commit". Handles staged changes first and stages dirty changes only when the user explicitly asks to commit all/everything or stage changes. Do not use for plain git status, diff, log, push, rebase, or PR creation.
+description: Use automatically when the user asks to commit changes, create a commit, write a commit message, commit staged changes, commit everything, run git commit, "fais le commit", "commit mes changements", or "crée un commit". Commits an existing staged selection, or stages dirty changes automatically while preserving any explicit file scope. Do not use for plain git status, diff, log, push, rebase, or PR creation.
 effort: high
-allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git branch --show-current), Bash(git rev-parse:*), Bash(cat:*), Read, Agent, mcp__claude_ai_Linear__get_issue
+allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git add:*), Bash(git log:*), Bash(git branch --show-current), Bash(git rev-parse:*), Bash(cat:*), Read, Agent, mcp__claude_ai_Linear__get_issue
 ---
 
 # git-gremlin:commit
@@ -36,10 +36,20 @@ is printed, revert to the session default voice immediately.
 
 1. Preconditions:
    - Verify this is a git repository.
+   - Resolve whether the user requested an actual commit or only a draft, suggestion, or review of a commit message. Draft-only intent never authorizes staging or committing.
+   - Resolve the requested mutation scope before staging:
+     - **Full tree:** the user explicitly said all/everything and did not also name a narrower file or directory scope.
+     - **Explicit path scope:** the user unambiguously named one or more repository pathspecs, such as `README.md` or `src/`.
+     - **Default:** the user requested a commit without expressing a narrower scope.
+     - If the request appears narrower but cannot be converted to unambiguous pathspecs, stop and ask for the intended paths. Never fall back to the full tree.
    - Gate on the `Staged` snapshot from `## Context`: it shows what is staged right now. Re-run `git diff --staged --name-only` only if the snapshot is empty or the tree may have changed since skill load.
-   - If nothing is staged, check the `Working tree` snapshot for dirty files.
-   - If dirty files exist and the user explicitly asked to commit all/everything or stage changes, run `git add -A`, then re-check staged files.
-   - If staged files are still empty, abort with a clear message asking the user to stage files or say they want all changes staged.
+   - For an actual commit:
+     - For **full tree** scope, run `git add -A` even when a partial staged selection already exists.
+     - For **explicit path scope** with an existing staged selection, compute two path sets: `ALL_STAGED` from the unfiltered `git diff --staged --name-only`, and `IN_SCOPE_STAGED` from `git diff --staged --name-only -- <pathspec...>`. Require the sets to be exactly equal. If they differ, at least one staged path is outside the requested scope: stop without mutating the index and ask whether to include the staged selection or adjust it. Otherwise preserve the staged selection without widening it.
+     - For **explicit path scope** with an empty index and a dirty working tree, run `git add -- <pathspec...>`. Pass each pathspec as a separately quoted argument after `--`; never use `eval` or shell-expanded globs.
+     - For **default** scope, preserve any existing staged selection. If nothing is staged and the working tree is dirty, commit intent authorizes `git add -A`; run it automatically.
+     - Re-check with `git diff --staged --name-only` after staging. If it is still empty, abort with a clear no-changes message.
+   - For draft-only intent, use only an existing staged diff. If nothing is staged, stop without mutating the tree and ask the user to stage a selection or request an actual commit.
 2. Draft commit message:
    - Dispatch the logical `git-gremlin:commit-drafter` agent with the staged diff as input.
    - Receive `{ message: string, files: string[] }`.
@@ -64,7 +74,10 @@ git-gremlin:commit report
 
 - Run `git push`, `git commit` directly from the skill (only via commit-drafter).
 - Commit when the user only asked for a draft/message suggestion/review.
-- Stage dirty files unless the user explicitly asked to commit all/everything or stage changes.
+- Add unstaged changes to an existing staged selection unless the user explicitly asked to commit all/everything or stage all changes.
+- Stage or commit a path outside an explicit file/directory scope.
+- Treat an ambiguous narrow scope as authorization for `git add -A`.
+- Stage anything for a draft-only request.
 - Skip the staged files check.
 - Retry silently after a pre-commit hook failure — surface stderr verbatim and stop.
 
