@@ -2,12 +2,15 @@ import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
-const WORKFLOW_MIRRORS = ["configuration.mjs", "worktree-overrides.mjs", "index.mjs"].map(
-  (filename) => ({
-    source: `_shared/workflow/src/${filename}`,
-    mirror: `warden/lib/workflow/${filename}`,
-  }),
-);
+const WORKFLOW_MIRRORS = [
+  "classification.mjs",
+  "configuration.mjs",
+  "worktree-overrides.mjs",
+  "index.mjs",
+].map((filename) => ({
+  source: `_shared/workflow/src/${filename}`,
+  mirror: `warden/lib/workflow/${filename}`,
+}));
 
 const REQUIRED_PATHS = [
   ...WORKFLOW_MIRRORS.flatMap(({ source, mirror }) => [source, mirror]),

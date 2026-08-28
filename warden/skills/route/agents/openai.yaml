@@ -1,0 +1,5 @@
+interface:
+  display_name: "Warden Route"
+  short_description: "Classify a task without executing its workflow"
+  icon_large: "../../../assets/banner.png"
+  default_prompt: "Use $warden:route to classify this task and show its non-mutating target."

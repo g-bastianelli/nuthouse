@@ -2,7 +2,12 @@ import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
-const WORKFLOW_CONFIG_FILES = ["configuration.mjs", "worktree-overrides.mjs", "index.mjs"];
+const WORKFLOW_CONFIG_FILES = [
+  "classification.mjs",
+  "configuration.mjs",
+  "worktree-overrides.mjs",
+  "index.mjs",
+];
 
 export function buildWorkflowConfig(repoRoot = path.resolve(import.meta.dirname, "..")) {
   const sourceRoot = path.join(repoRoot, "_shared", "workflow", "src");

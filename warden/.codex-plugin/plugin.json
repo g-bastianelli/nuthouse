@@ -1,7 +1,7 @@
 {
   "name": "warden",
-  "version": "1.0.2",
-  "description": "Workflow-mode controls and centralized persona-line dispatch for nuthouse plugins in Codex.",
+  "version": "1.0.3",
+  "description": "Workflow routing, mode controls, and centralized persona-line dispatch for nuthouse plugins in Codex.",
   "author": {
     "name": "g-bastianelli"
   },
@@ -9,8 +9,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Warden",
-    "shortDescription": "Control workflow rigor and fun messages",
-    "longDescription": "Warden provides worktree-scoped workflow profile controls plus the nuthouse voice gate for decorative persona lines.",
+    "shortDescription": "Route tasks, control rigor and fun messages",
+    "longDescription": "Warden classifies tasks through the shared workflow kernel, provides worktree-scoped profile controls, and owns the nuthouse voice gate for decorative persona lines.",
     "developerName": "g-bastianelli",
     "category": "Developer Tools",
     "capabilities": ["Read", "Write"],
@@ -18,7 +18,8 @@
     "defaultPrompt": [
       "Use Warden to check whether nuthouse fun messages are enabled.",
       "Use Warden to silence nuthouse persona lines globally.",
-      "Use Warden to inspect or change the workflow profile for the current Git worktree."
+      "Use Warden to inspect or change the workflow profile for the current Git worktree.",
+      "Use Warden to classify a task and show its non-mutating workflow target."
     ],
     "logo": "./assets/banner.png"
   }
