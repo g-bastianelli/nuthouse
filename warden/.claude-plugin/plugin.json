@@ -1,8 +1,8 @@
 {
   "name": "warden",
   "displayName": "Warden",
-  "description": "Centralized voice agent for nuthouse plugins — emits decorative persona lines; global on/off toggle silences all fun messages.",
-  "version": "1.0.1",
+  "description": "Workflow-mode controls and centralized persona-line dispatch for nuthouse plugins.",
+  "version": "1.0.2",
   "author": {
     "name": "g-bastianelli"
   },
