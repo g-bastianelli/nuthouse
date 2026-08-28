@@ -8,7 +8,7 @@ function read(relativePath) {
   return fs.readFileSync(path.join(ROOT, relativePath), "utf8");
 }
 
-const skillNames = ["start", "reconcile", "spawn", "stop"];
+const skillNames = ["status", "start", "reconcile", "spawn", "stop"];
 
 test("new Maestro skills follow the canonical root skill structure", () => {
   for (const name of skillNames) {
@@ -46,6 +46,24 @@ test("start persists versioned policy then runs one initial reconciliation", () 
   expect(skill).not.toContain("Dispatches:    0 — reconcile was not invoked");
   expect(skill).not.toMatch(/Do not call\s+`reconcile`/);
   expect(skill).not.toContain("superset automations create");
+});
+
+test("status claims project links only and remains read-only", () => {
+  const skill = read("monkey-maestro/skills/status/SKILL.md");
+  expect(skill).toContain("linear.app/<workspace>/project/<slug>/");
+  expect(skill).toContain("Never claim a `/issue/` URL");
+  expect(skill).toContain("project-snapshot-loader");
+  expect(skill).toContain("MODE: full");
+  expect(skill).toContain("Runtime:          not inspected");
+  expect(skill).toContain("Voice flag: !`cat");
+  expect(skill).toContain("CONTROL_AMBIGUOUS");
+  expect(skill).toContain("Control: invalid");
+  expect(skill.indexOf("invalid control authority")).toBeLessThan(
+    skill.indexOf("unavailable or required-partial Linear data"),
+  );
+  expect(skill).toContain("Call `start`, `reconcile`, `spawn`, or `stop` automatically");
+  expect(skill).not.toContain("mcp__claude_ai_Linear__save_");
+  expect(skill).not.toContain("superset workspaces create");
 });
 
 test("stop only revisions the Linear control", () => {

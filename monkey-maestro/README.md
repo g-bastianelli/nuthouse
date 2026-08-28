@@ -25,10 +25,16 @@ Neither a team prefix nor a Linear transport UUID is hard-coded.
 
 | Skill                      | What it does                                                                                                    |
 | -------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `monkey-maestro:status`    | Inspect a Linear project link read-only and report graph, control, dependencies, and durable execution records  |
 | `monkey-maestro:start`     | Activate one verified Linear project, then run one initial reconciliation pass without a second gate            |
 | `monkey-maestro:reconcile` | Perform one locked reconciliation pass and dispatch eligible issues within capacity; it never loops or polls    |
 | `monkey-maestro:spawn`     | Create exactly one task-linked Superset workspace, launch its agent, and record the workspace/terminal identity |
 | `monkey-maestro:stop`      | Disable future dispatches while leaving active workspaces and agents running                                    |
+
+`status` is the implicit landing point for URLs shaped like
+`https://linear.app/<workspace>/project/<slug>/overview`. It deliberately ignores Linear
+issue URLs, reads only durable Linear state, and never invokes `start` or `reconcile` on
+the user's behalf. Live Superset state is reconstructed only by an explicit reconcile.
 
 `spawn` has two authorization modes. A reconcile-held project lock plus a hash-bound
 per-issue eligibility packet authorizes project dispatch without another prompt; spawn
@@ -38,10 +44,10 @@ lock and rechecks task ownership after the human wait.
 
 ## Agents
 
-| Agent                                    | Used by                | Role                                                                       |
-| ---------------------------------------- | ---------------------- | -------------------------------------------------------------------------- |
-| `monkey-maestro:project-snapshot-loader` | start, reconcile, stop | Read-only normalized Linear graph, control, execution, and waiver snapshot |
-| `monkey-maestro:runtime-inspector`       | reconcile, spawn       | Read-only Superset workspace/terminal and GitHub PR snapshot               |
+| Agent                                    | Used by                        | Role                                                                       |
+| ---------------------------------------- | ------------------------------ | -------------------------------------------------------------------------- |
+| `monkey-maestro:project-snapshot-loader` | status, start, reconcile, stop | Read-only normalized Linear graph, control, execution, and waiver snapshot |
+| `monkey-maestro:runtime-inspector`       | reconcile, spawn               | Read-only Superset workspace/terminal and GitHub PR snapshot               |
 
 ## Branch guard
 

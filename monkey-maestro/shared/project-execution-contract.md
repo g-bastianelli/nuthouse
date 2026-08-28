@@ -1,9 +1,14 @@
 # Project execution contract
 
-This contract is the installed boundary shared by `start`, `reconcile`, `spawn`, `stop`,
-`project-snapshot-loader`, and `runtime-inspector`. Linear is durable project memory;
+This contract is the installed boundary shared by `status`, `start`, `reconcile`, `spawn`,
+`stop`, `project-snapshot-loader`, and `runtime-inspector`. Linear is durable project memory;
 Superset is runtime execution; GitHub is delivery evidence only. No Maestro workflow may
 use a private issue queue, relay flag, baton file, or `superset-orchestrate`.
+
+`status` is the read-only project-link landing point. It resolves one canonical Linear
+project, reports the verified graph receipt, latest control, current dependency
+observations, and durable execution records, then exits. It never claims Linear issue
+links, inspects live Superset state, invokes another Maestro skill, or mutates anything.
 
 ## Durable Linear records
 
