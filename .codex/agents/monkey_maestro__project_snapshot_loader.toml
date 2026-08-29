@@ -31,7 +31,10 @@ Read the record and provider rules in
 
 1. Fetch the exact project and all project comments. Parse versioned graph receipts and
    controls. Select the one highest valid control revision; duplicate highest revisions
-   are `CONTROL_AMBIGUOUS`. In `control-only`, return after this step.
+   are `CONTROL_AMBIGUOUS`. Return every parsed control field in both modes, including
+   `decisionBaseline`, `executionIssueIds`, and `exitedExecutionIssueIds`; `full` must
+   never project away fields returned by `control-only`. In `control-only`, return after
+   this step.
 2. In `full`, list every project issue with pagination. Fetch issue details with
    relations when blockers are not complete in the list response. Load team status
    metadata and normalize by `status.type`, never by display name. Preserve Linear's
@@ -62,6 +65,16 @@ Read the record and provider rules in
    Normalize every relation endpoint to the related issue's exact Linear identifier.
    When a relation exposes only an adapter id, resolve the related issue read-only; an
    unresolved endpoint is issue-scoped unknown, not a guessed UUID or identifier.
+
+## Execution strategy
+
+- Minimize provider round trips. After the exact project is known, dispatch independent
+  project-comment, issue-list, and status-metadata reads concurrently.
+- In `full`, dispatch independent issue-detail reads in parallel batches, then dispatch
+  independent issue-comment reads in parallel batches. Never spend one model turn per
+  issue when the reads do not depend on each other.
+- Preserve deterministic output ordering after concurrent reads. One failed item becomes
+  one scoped `unknown`; it must not cancel or discard successful sibling reads.
 
 ## Output
 
@@ -139,6 +152,8 @@ issue decisions.
   require a provider UUID and never mark `ISSUE_UUID_UNAVAILABLE`.
 - Return every valid execution record with its complete parsed schema; never omit its
   runtime identity fields.
+- Return the complete selected control record in both modes; never omit its
+  `decisionBaseline` or ownership indexes.
 - Canceled is not completed. GitHub evidence is outside this agent and never satisfies an edge.
 - Output strict JSON only, deterministic arrays, no persona prose, and no invented field.
 '''

@@ -60,6 +60,16 @@ list --host <TARGET_HOST_ID> --json`. Verify the configured host/project exactly
 number,url,state,isDraft,mergedAt,headRefName` and correlate only by exact recorded
    branch. PR state is report-only; it never marks Linear work complete.
 
+## Execution strategy
+
+- Run independent host/project/workspace/GitHub reads concurrently after validating the
+  input ids; validate their results before using them.
+- Dispatch all independent `superset tasks get` calls in parallel batches. After the
+  workspace inventory is known, dispatch all independent terminal-list calls in parallel
+  batches. Never spend one model turn per issue or workspace.
+- Preserve deterministic output ordering after concurrent reads. One failed item becomes
+  one scoped `unknown`; it must not cancel or discard successful sibling reads.
+
 ## Output
 
 Return strict JSON only. `taskBindings` is mandatory even when empty and must contain

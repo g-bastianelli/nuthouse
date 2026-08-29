@@ -13,8 +13,14 @@ activation lock, and immediately runs one reconciliation pass. Reconciliation re
 Linear, GitHub, and Superset, reconstructs existing executions by the exact Linear
 `taskId`, validates dependency eligibility, fills the approved concurrency capacity,
 records execution identities back in Linear, and exits. The default concurrency is four
-and the hard maximum is ten. Missing durable runtimes keep a slot until an explicit
-terminal-exit tombstone proves they are gone. When a finished/canceled managed issue's
+and the hard maximum is ten. A live runtime for an exact managed issue whose fresh Linear
+status is completed or canceled is reported as residual only after its live workspace
+and terminal correlate with the exact active-run issue/task/workspace/terminal/host
+execution record inside the control's Superset project. It then no longer consumes
+logical concurrency; Maestro does not pretend that
+runtime exited or delete it. Missing or mismatched durable identities keep a slot, as do
+missing durable runtimes until an explicit terminal-exit tombstone proves they are gone. When
+a finished/canceled managed issue's
 recorded workspace has been deleted, a complete same-host/project Superset inventory
 whose exact unfiltered workspace-id set omits that current-run record proves the exit and
 writes the tombstone automatically; partial, filtered, cross-scope, or ambiguous

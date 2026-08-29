@@ -89,35 +89,26 @@ unknowns do not poison known decisions, and an unscoped required unknown blocks 
 
 ## Step 2 — Reconstruct and resolve
 
-1. Merge the snapshots into the resolver input. Preserve every valid execution record so
-   a retained execution from an earlier run can identify its exact agent terminal; mark
-   which records belong to the active run. Pass the control baseline so runtime ownership survives an issue leaving the
-   project. Set workspace `claimed` from fresh Linear normalized status: started or
-   terminal status types mean claimed; unstarted means unclaimed; unknown stays unknown.
-   Preserve every terminal's normalized `exited` state. Capacity counts only owned,
-   task-linked executions whose recorded agent terminal is live (or whose partial state
-   cannot prove it exited); main workspaces, foreign task ids, and confirmed exited agent
-   terminals do not consume Maestro concurrency. A missing workspace confirms exit only
-   when Superset returned a complete `ready` workspace inventory for the control's exact
-   host/project, its declared `workspaceIds` equal the full unfiltered workspace array,
-   the issue remains managed with a known terminal Linear status, and every durable
-   record belongs to the active run with the exact task, host, and an absent recorded
-   `workspaceId`. Partial/filtered provider state, scope or task uncertainty, earlier-run
-   records, and moved issues stay guarded and capacity-consuming.
-   Join every managed Linear `issue.id` to exactly one runtime `taskBindings[].issueId`
-   and copy its validated Superset UUID to `issue.taskId`. The Linear side remains the
-   exact opaque, team-dependent identifier (`TEAM-123`); the runtime side remains
-   `task.id`. Never hard-code a team prefix. A missing,
-   mismatched, or duplicate binding is required unknown for that issue and cannot fall
-   back to a Linear UUID, branch, or title.
-   Pass the full `taskBindings` array, `workspaceInventory`, and the full unfiltered
-   `workspaces` array plus `linearUnknown: linearSnapshot.unknown` and
-   `runtimeUnknown: runtimeSnapshot.unknown` to the resolver. Never reconstruct the
-   completeness marker, filter the workspace array, merge the two unknown namespaces,
-   or drop optional/required flags.
-2. Write one ephemeral JSON packet and run
-   `node ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-state.mjs <packet>`. The resolver:
-   - counts owned live task executions against capacity and never duplicates a `taskId`;
+1. Write one ephemeral raw snapshot envelope containing the exact pre-lock
+   `expectedControl`, the untouched `linearSnapshot`, the untouched `runtimeSnapshot`,
+   and `confirmedRunnableExpansions`. Run
+   `node ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-state.mjs <packet>`. Its pure input
+   composer verifies the under-lock control, joins each exact task binding, annotates
+   active-run records, derives `claimed`, and preserves the complete workspace inventory
+   plus separate Linear/runtime unknown namespaces. Do not manually reconstruct, filter,
+   or rewrite provider arrays. Do not reread helper source or enumerate tool catalogs;
+   the normalized agent JSON and declared scripts are the contract.
+   It passes the exact `workspaceInventory` and full unfiltered `workspaces`; only a
+   complete `ready` workspace inventory can prove a recorded workspace was deleted.
+2. The resolver:
+   - counts owned live non-terminal task executions against capacity and never duplicates
+     a `taskId`;
+   - treats a known `completed` or `canceled` managed issue as logically finished even
+     when its workspace or terminal remains live only after that live identity correlates
+     with one exact active-run issue/task/workspace/terminal/host execution record inside
+     the control's exact Superset project, reporting that runtime as `residual` without
+     consuming concurrency or pretending the terminal exited; a missing, partial,
+     ambiguous, or mismatched record keeps the slot occupied;
    - orders issues by fresh Linear order;
    - accepts only Linear completion or one exact human waiver;
    - ignores a merged PR as blocker completion;
@@ -126,8 +117,8 @@ unknowns do not poison known decisions, and an unscoped required unknown blocks 
    - returns a representable `nextBaseline` that retains prior edges for unknown or
      quarantined components while adopting only known valid graph fields;
    - adopts constraining dependencies and requests confirmation for runnable expansion.
-3. Print active, dispatch, repair, inspect, blocked, quarantine, and confirmation lists.
-   Full capacity is a successful no-op.
+3. Print active, residual, dispatch, repair, inspect, blocked, quarantine, and
+   confirmation lists. Full capacity is a successful no-op.
 4. If `confirmations` is non-empty, release the project lock before showing the exact
    added issue/removal/reversal and asking: `Authorize these newly runnable dispatches?
 (y / no)`. On `no`, withhold them, do not advance the decision baseline, and exit. On
@@ -149,8 +140,9 @@ hash, replacing `executionIssueIds`, and updating the timestamp. Moved issues re
 that execution index only while their runtime still consumes capacity. An old execution
 record stops guarding only when its id has this explicit confirmed-exited tombstone,
 including the narrowly proven terminal-issue workspace-deletion case from Step 2.
-Update the
-existing project comment and reload it. A failed or ambiguous
+Residual runtimes are excluded from `executionIssueIds` because their managed Linear
+issue is logically terminal, but they are not added to `exitedExecutionIssueIds` until
+runtime exit is actually proven. Update the existing project comment and reload it. A failed or ambiguous
 write stops every new dispatch; otherwise subsequent runs can classify future Linear
 changes without local memory.
 
@@ -218,6 +210,7 @@ monkey-maestro:reconcile report
   Providers:      Linear <state> · GitHub <state> · Superset <state>
   Capacity:       <active>/<max> · <available> available
   Active:         <issue → workspace/terminal, ... | none>
+  Residual:       <terminal issue → live workspace/terminal, ... | none>
   Repaired:       <issue → Linear record, ... | none>
   Dispatched:     <issue → workspace/terminal/outcome, ... | none>
   Blocked:        <issue + reason, ... | none>
@@ -231,6 +224,9 @@ monkey-maestro:reconcile report
 - Dispatch without an active hash-valid control, held exact lock, fresh provider reads,
   and a per-issue hash-bound authorization from the final resolver decision.
 - Treat GitHub merge, canceled Linear status, title matching, or local state as blocker completion.
+- Count an exactly correlated live runtime for a known terminal managed issue against
+  concurrency; report it as residual instead. If its durable identity does not correlate,
+  keep it active and consuming one slot.
 - Auto-confirm a runnable expansion, auto-recover a stale lock, or guess an unknown field.
 - Maintain a queue, baton, relay flag, daemon, polling loop, sleep, or default automation.
 - Delete/terminate runtime resources, mark issues complete, or invoke `superset-orchestrate`.

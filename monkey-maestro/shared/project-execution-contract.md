@@ -55,8 +55,17 @@ memory.
 
 The control also keeps sorted `executionIssueIds` for task-linked executions that still
 consume capacity after their issue leaves the Linear project. Reconciliation rebuilds
-this set from fresh live runtime state and removes an id only after the recorded agent
-terminal is confirmed exited. A deleted workspace is also terminal proof only when the
+this set from fresh live runtime state. A managed issue with a known normalized terminal
+status (`completed` or `canceled`) is logically finished only after its live workspace
+and terminal correlate with one durable execution record for the exact active run,
+issue, task, workspace, terminal, and host, while the workspace itself belongs to the
+control's exact Superset project. That runtime is reported as residual and does not
+consume concurrency. A missing, partial, ambiguous, cross-scope, or mismatched durable
+record keeps the runtime active and consuming one slot. Residual classification does not
+pretend the process exited and does not create an exit tombstone; ambiguous bindings,
+unknown status, and runtimes whose issue left the project stay conservative. A recorded
+agent terminal with `exited: true` is actual exit proof. A deleted workspace is also
+terminal proof only when the
 issue is still managed with a known terminal Linear status, every durable execution
 record belongs to the active run and has the exact current task, host, and workspace id,
 and an authoritative Superset `ready` inventory covers the control's exact host/project.
@@ -151,11 +160,16 @@ status.
 - Reload current Linear status metadata, project graph/comments, GitHub PRs, Superset
   workspaces, and terminals before resolving.
 - Capacity counts live task-linked executions owned by the current issue set, control
-  baseline, `executionIssueIds`, or durable records from any run. Missing owned runtime
-  state consumes one conservative slot. Main/foreign workspaces do not count. A recorded agent
-  terminal with `exited: true` releases its slot; partial or unknown runtime state keeps
-  its slot conservatively. Extra shell/dev terminals never make a recorded agent
-  ambiguous when its exact `terminalId` still exists.
+  baseline, `executionIssueIds`, or durable records from any run, except an exact managed
+  runtime whose fresh normalized Linear status is terminal and whose live workspace and
+  terminal correlate with its exact active-run issue/task/workspace/terminal/host record
+  inside the control's exact Superset project.
+  That runtime is residual and report-only. Missing or mismatched durable identity keeps
+  the runtime active; missing owned runtime state consumes one conservative slot. Main/foreign
+  workspaces do not count. A recorded agent terminal with `exited: true` releases its
+  slot; partial or unknown identity/status state keeps its slot conservatively. Extra
+  shell/dev terminals never make a recorded agent ambiguous when its exact `terminalId`
+  still exists.
 - Provider unavailability or unscoped unknown required data allows no new dispatch.
   Issue-scoped runtime/Linear unknowns block only affected decisions, and optional
   unknowns do not poison known components. Preserve and report existing executions.

@@ -85,10 +85,16 @@ test("reconcile is one LLM pass with lock, fresh readers, pure resolution, and s
   expect(skill).toContain("runtime-inspector");
   expect(skill).toContain("scripts/reconcile-state.mjs");
   expect(skill).toContain("confirmedRunnableExpansions");
-  expect(skill).toContain("counts owned live task executions against capacity");
+  expect(skill).toContain("raw snapshot envelope");
+  expect(skill).toContain("Do not manually reconstruct");
+  expect(skill).toContain("counts owned live non-terminal task executions against capacity");
+  expect(skill).toContain("reporting that runtime as");
+  expect(skill).toContain("`residual`");
+  expect(skill).toContain("active-run issue/task/workspace/terminal/host execution record");
+  expect(skill).toContain("mismatched record keeps the slot occupied");
   expect(skill).toContain("executionIssueIds");
   expect(skill).toContain("confirmedExitedIssueIds");
-  expect(skill).toContain("known terminal Linear status");
+  expect(skill).toContain("known terminal managed issue");
   expect(skill).toContain("complete `ready` workspace inventory");
   expect(skill).toContain("`workspaceInventory`");
   expect(skill).toContain("full unfiltered");
@@ -117,6 +123,8 @@ test("snapshot and runtime agents are explicitly read-only", () => {
   expect(snapshot).toContain('"marker": "nuthouse:maestro-execution"');
   expect(snapshot).toContain('"workspaceId": "<id>"');
   expect(snapshot).toContain("complete parsed schema");
+  expect(snapshot).toContain("parallel batches");
+  expect(snapshot).toContain("`decisionBaseline` or ownership indexes");
   expect(snapshot).not.toContain("mcp__claude_ai_Linear__save_");
   expect(runtime).toContain("superset workspaces list");
   expect(runtime).toContain("superset tasks get");
@@ -130,5 +138,6 @@ test("snapshot and runtime agents are explicitly read-only", () => {
   expect(runtime).toContain("full unfiltered workspace inventory");
   expect(runtime).toContain("superset terminals list");
   expect(runtime).toContain("gh pr list");
+  expect(runtime).toContain("parallel batches");
   expect(runtime).toContain("Never run `superset workspaces create|delete`");
 });

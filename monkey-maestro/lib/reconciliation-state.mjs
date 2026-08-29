@@ -320,9 +320,40 @@ function runtimeState(input, issueById) {
     return true;
   }
   const active = [];
+  const residual = [];
   const inspect = [];
   const repair = [];
   const guardedIssueIds = new Set();
+
+  function releaseCorrelatedTerminalRuntime(issue, workspace, terminalId, identityGuarded) {
+    const statusType = normalizedStatus(issue);
+    const workspaceInScope =
+      workspace.hostId &&
+      String(workspace.hostId) === targetHostId &&
+      workspace.projectId &&
+      String(workspace.projectId) === supersetProjectId;
+    if (
+      identityGuarded ||
+      !TERMINAL_STATUS_TYPES.has(statusType) ||
+      !workspaceInScope ||
+      !terminalId
+    ) {
+      return;
+    }
+    const activeIndex = active.findIndex(
+      (entry) => entry.issueId === issue.id && entry.workspaceId === workspace.id,
+    );
+    if (activeIndex < 0) return;
+    active.splice(activeIndex, 1);
+    residual.push({
+      issueId: issue.id,
+      taskId: issue.taskId,
+      workspaceId: workspace.id,
+      terminalId,
+      statusType,
+      reason: "TERMINAL_ISSUE_RUNTIME_LIVE",
+    });
+  }
 
   for (const issue of issueById.values()) {
     if (!issue.taskId) {
@@ -459,6 +490,7 @@ function runtimeState(input, issueById) {
       continue;
     }
 
+    const identityGuarded = guardedIssueIds.has(issue.id);
     guardedIssueIds.add(issue.id);
     const workspace = matches[0];
     const terminals = normalizedTerminals(workspace);
@@ -517,6 +549,14 @@ function runtimeState(input, issueById) {
       const recordMatches =
         String(record.workspaceId) === workspace.id &&
         (!recordTerminalId || terminalIds.includes(recordTerminalId));
+      const residualRecordMatches =
+        recordMatches &&
+        record?.runId &&
+        String(record.runId) === runId &&
+        record?.taskId &&
+        String(record.taskId) === issue.taskId &&
+        record?.hostId &&
+        String(record.hostId) === targetHostId;
       if (!recordMatches) {
         inspect.push({
           issueId: issue.id,
@@ -533,6 +573,8 @@ function runtimeState(input, issueById) {
           resourceIds: [workspace.id, ...terminalIds].sort(),
           reason: "PARTIAL_EXECUTION_RECORD",
         });
+      } else if (residualRecordMatches) {
+        releaseCorrelatedTerminalRuntime(issue, workspace, recordTerminalId, identityGuarded);
       }
     }
   }
@@ -574,10 +616,12 @@ function runtimeState(input, issueById) {
   }
 
   active.sort((left, right) => left.workspaceId.localeCompare(right.workspaceId));
+  residual.sort((left, right) => left.workspaceId.localeCompare(right.workspaceId));
   inspect.sort((left, right) => left.issueId.localeCompare(right.issueId));
   repair.sort((left, right) => left.issueId.localeCompare(right.issueId));
   return {
     active,
+    residual,
     inspect,
     repair,
     guardedIssueIds,
@@ -650,6 +694,7 @@ export function resolveReconciliation(input) {
     status: "blocked",
     availableSlots: 0,
     active: [],
+    residual: [],
     dispatch: [],
     repair: [],
     inspect: [],
@@ -664,6 +709,7 @@ export function resolveReconciliation(input) {
   const issueById = new Map(issues.map((issue) => [issue.id, issue]));
   const runtime = runtimeState(input ?? {}, issueById);
   decision.active = runtime.active;
+  decision.residual = runtime.residual;
   decision.repair = runtime.repair;
   decision.inspect = runtime.inspect;
   decision.confirmedExitedIssueIds = runtime.confirmedExitedIssueIds;

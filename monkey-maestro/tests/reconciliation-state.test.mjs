@@ -684,6 +684,126 @@ describe("runtime reconstruction", () => {
     expect(ids(decision.dispatch)).toEqual(["candidate"]);
   });
 
+  test("a completed issue releases capacity while its live runtime is reported as residual", () => {
+    const decision = resolveReconciliation(
+      input({
+        control: {
+          ...input().control,
+          maxConcurrency: 1,
+          executionIssueIds: ["done"],
+        },
+        issues: [
+          issue("done", 1, { statusType: "completed" }),
+          issue("next", 2, { blockers: ["done"] }),
+        ],
+        baseline: {
+          issueIds: ["done", "next"],
+          edges: [{ dependentIssueId: "next", blockerIssueId: "done" }],
+        },
+        workspaces: [
+          {
+            id: "workspace-done",
+            taskId: "done",
+            hostId: "host-1",
+            projectId: "superset-project-1",
+            terminals: [{ id: "terminal-done", exited: false }],
+            claimed: true,
+          },
+        ],
+        executionRecords: [
+          {
+            issueId: "done",
+            taskId: "done",
+            runId: "run-1",
+            workspaceId: "workspace-done",
+            terminalId: "terminal-done",
+            hostId: "host-1",
+            outcome: "verified",
+          },
+        ],
+      }),
+    );
+
+    expect(decision.active).toEqual([]);
+    expect(decision.residual).toEqual([
+      {
+        issueId: "done",
+        taskId: "done",
+        workspaceId: "workspace-done",
+        terminalId: "terminal-done",
+        statusType: "completed",
+        reason: "TERMINAL_ISSUE_RUNTIME_LIVE",
+      },
+    ]);
+    expect(decision.confirmedExitedIssueIds).toEqual([]);
+    expect(decision.availableSlots).toBe(1);
+    expect(ids(decision.dispatch)).toEqual(["next"]);
+  });
+
+  test("a completed issue keeps consuming capacity when its durable runtime record mismatches", () => {
+    const decision = resolveReconciliation(
+      input({
+        control: {
+          ...input().control,
+          maxConcurrency: 1,
+          executionIssueIds: ["done"],
+        },
+        issues: [
+          issue("done", 1, { statusType: "completed" }),
+          issue("next", 2, { blockers: ["done"] }),
+        ],
+        baseline: {
+          issueIds: ["done", "next"],
+          edges: [{ dependentIssueId: "next", blockerIssueId: "done" }],
+        },
+        workspaces: [
+          {
+            id: "workspace-current",
+            taskId: "done",
+            hostId: "host-1",
+            projectId: "superset-project-1",
+            terminals: [{ id: "terminal-current", exited: false }],
+            claimed: true,
+          },
+        ],
+        executionRecords: [
+          {
+            issueId: "done",
+            taskId: "done",
+            runId: "run-1",
+            workspaceId: "workspace-missing",
+            terminalId: "terminal-missing",
+            hostId: "host-1",
+            outcome: "verified",
+          },
+        ],
+      }),
+    );
+
+    expect(decision.residual).toEqual([]);
+    expect(decision.active).toMatchObject([
+      {
+        issueId: "done",
+        workspaceId: "workspace-current",
+        terminalId: "terminal-current",
+      },
+    ]);
+    expect(decision.inspect).toEqual([
+      {
+        issueId: "done",
+        resourceIds: [
+          "terminal-current",
+          "terminal-missing",
+          "workspace-current",
+          "workspace-missing",
+        ],
+        reason: "RECORD_MISMATCH",
+      },
+    ]);
+    expect(decision.availableSlots).toBe(0);
+    expect(decision.dispatch).toEqual([]);
+  });
+
   test("blocks ambiguous taskId matches and lists every resource", () => {
     const decision = resolveReconciliation(
       input({
