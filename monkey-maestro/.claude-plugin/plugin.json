@@ -2,7 +2,7 @@
   "name": "monkey-maestro",
   "displayName": "Monkey Maestro",
   "description": "Inspect Linear project links and reconcile verified dependency graphs through durable Linear control, bounded concurrent Superset dispatch, and reconstructable task-linked workspaces.",
-  "version": "1.0.13",
+  "version": "1.0.14",
   "author": {
     "name": "g-bastianelli"
   },

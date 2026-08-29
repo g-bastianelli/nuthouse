@@ -1,6 +1,6 @@
 {
   "name": "monkey-maestro",
-  "version": "1.0.13",
+  "version": "1.0.14",
   "description": "Read-only Linear project-link inspection and verified project reconciliation with durable control, bounded concurrent Superset dispatch, and runtime reconstruction.",
   "author": {
     "name": "g-bastianelli"
