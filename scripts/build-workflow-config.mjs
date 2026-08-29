@@ -3,8 +3,11 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 const WORKFLOW_CONFIG_FILES = [
+  "capability-resolver.mjs",
   "classification.mjs",
   "configuration.mjs",
+  "policy-resolution.mjs",
+  "risk-evaluator.mjs",
   "worktree-overrides.mjs",
   "index.mjs",
 ];

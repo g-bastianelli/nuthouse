@@ -39,3 +39,24 @@ export {
   validateWorktreeOverride,
   writeWorktreeOverride,
 } from "./worktree-overrides.mjs";
+
+export {
+  AUTHORITATIVE_RISK_EVIDENCE_SOURCES,
+  RISK_CATEGORIES,
+  RISK_EVIDENCE_SOURCES,
+  RISK_EVIDENCE_STATES,
+  RISK_PROFILE_FLOORS,
+  evaluateRisk,
+  isRiskCategory,
+  normalizeRiskEvidence,
+} from "./risk-evaluator.mjs";
+
+export {
+  CAPABILITY_CONSUMERS,
+  DEFAULT_CAPABILITY_GRAPH,
+  IMMUTABLE_GATE_IDS,
+  resolveCapabilities,
+  validateCapabilityGraph,
+} from "./capability-resolver.mjs";
+
+export { resolveWorkflowPolicy } from "./policy-resolution.mjs";
