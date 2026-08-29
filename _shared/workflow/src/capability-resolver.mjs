@@ -335,12 +335,13 @@ export function resolveCapabilities(input) {
     throw new TypeError(`effectiveProfile must be one of: ${WORKFLOW_PROFILES.join(", ")}.`);
   }
 
-  const activeRisks = input.activeRisks ?? [];
+  const activeRisks = input.activeRisks === undefined ? [] : input.activeRisks;
   if (!Array.isArray(activeRisks) || activeRisks.some((risk) => !isRiskCategory(risk))) {
     throw new TypeError("activeRisks must contain normalized risk categories.");
   }
   const activeRiskSet = new Set(activeRisks);
-  const validation = validateCapabilityGraph(input.capabilities ?? DEFAULT_CAPABILITY_GRAPH);
+  const graph = input.capabilities === undefined ? DEFAULT_CAPABILITY_GRAPH : input.capabilities;
+  const validation = validateCapabilityGraph(graph);
   if (!validation.ok) return blockedResult(validation.diagnostics);
 
   const byId = new Map(validation.capabilities.map((capability) => [capability.id, capability]));

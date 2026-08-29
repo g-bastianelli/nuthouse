@@ -163,7 +163,8 @@ export function evaluateRisk(input) {
     throw new TypeError(`requestedProfile must be one of: ${WORKFLOW_PROFILES.join(", ")}.`);
   }
 
-  const normalizedEvidence = normalizeRiskEvidence(input.evidence ?? []);
+  const evidence = input.evidence === undefined ? [] : input.evidence;
+  const normalizedEvidence = normalizeRiskEvidence(evidence);
   const activeRiskSet = new Set();
   const reasonSet = new Set();
   let riskFloor = "quick";

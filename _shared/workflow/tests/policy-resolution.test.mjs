@@ -143,6 +143,32 @@ describe("workflow policy composition", () => {
     );
   });
 
+  test("fails closed on explicit null risk and capability handoff data", () => {
+    const configuration = resolveConfiguration({ invocationProfile: "quick" });
+
+    expect(() =>
+      resolveWorkflowPolicy({
+        configuration,
+        workflow: "issue-delivery",
+        riskEvidence: null,
+      }),
+    ).toThrow(TypeError);
+
+    const capabilities = resolveWorkflowPolicy({
+      configuration,
+      workflow: "issue-delivery",
+      capabilities: null,
+    });
+    expect(capabilities).toMatchObject({
+      enabledCapabilities: [],
+      resolvedCapabilities: [],
+      blocked: true,
+    });
+    expect(capabilities.diagnostics).toContainEqual(
+      expect.objectContaining({ code: "invalid-capability-graph" }),
+    );
+  });
+
   test("keeps configuration diagnostics separate for one-time status composition", () => {
     const directory = fs.mkdtempSync(path.join(os.tmpdir(), "workflow-policy-config-"));
     const personalConfigPath = path.join(directory, "workflow.json");

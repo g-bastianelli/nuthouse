@@ -123,6 +123,10 @@ describe("risk profile lattice", () => {
     }
   });
 
+  test("rejects explicit null evidence instead of defaulting to no risk", () => {
+    expect(() => evaluateRisk({ requestedProfile: "quick", evidence: null })).toThrow(TypeError);
+  });
+
   for (const category of STRICT_RISK_CATEGORIES) {
     test(`enforces strict for ${category} evidence (AC-013–AC-016)`, () => {
       const result = evaluateRisk({

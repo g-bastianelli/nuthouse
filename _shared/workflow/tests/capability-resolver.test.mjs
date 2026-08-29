@@ -209,6 +209,23 @@ describe("capability resolution", () => {
     );
   });
 
+  test("blocks an explicit null capability graph instead of using defaults", () => {
+    const result = resolveCapabilities({
+      workflow: "direct-task",
+      effectiveProfile: "quick",
+      capabilities: null,
+    });
+
+    expect(result).toMatchObject({
+      enabledCapabilities: [],
+      resolvedCapabilities: [],
+      blocked: true,
+    });
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({ code: "invalid-capability-graph" }),
+    );
+  });
+
   const invalidGraphs = [
     {
       name: "duplicate IDs",
@@ -267,6 +284,7 @@ describe("capability resolution", () => {
       {},
       { workflow: "ambiguous", effectiveProfile: "strict" },
       { workflow: "direct-task", effectiveProfile: "turbo" },
+      { workflow: "direct-task", effectiveProfile: "quick", activeRisks: null },
       { workflow: "direct-task", effectiveProfile: "quick", activeRisks: ["vibes"] },
     ]) {
       expect(() => resolveCapabilities(input)).toThrow(TypeError);

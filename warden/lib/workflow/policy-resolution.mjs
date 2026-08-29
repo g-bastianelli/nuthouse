@@ -37,7 +37,7 @@ export function resolveWorkflowPolicy(input) {
 
   const risk = evaluateRisk({
     requestedProfile: input.configuration.requestedProfile,
-    evidence: input.riskEvidence ?? [],
+    evidence: input.riskEvidence === undefined ? [] : input.riskEvidence,
   });
   const capabilities = resolveCapabilities({
     workflow: input.workflow,
