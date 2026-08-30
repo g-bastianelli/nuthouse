@@ -1,5 +1,8 @@
 # codebase map — project-execution-reconciler
 
+> Historical v1 codebase map. Paths and responsibilities below describe the original
+> one-shot reconciler migration, not the current durable orchestrator architecture.
+
 ## Relevant files
 
 - `linear-devotee/skills/create-project/SKILL.md` — existing recoverable project cascade; modify to canonicalize, hash, verify, and publish the graph receipt.

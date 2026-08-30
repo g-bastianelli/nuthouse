@@ -7,11 +7,14 @@ import {
   buildControlRecord,
   buildDispatchAuthorization,
   buildExecutionRecord,
+  buildWorkerResultRecord,
   buildWaiverRecord,
   hashDecisionBaseline,
   parseControlRecord,
   parseExecutionRecord,
+  parseWorkerResultRecord,
   parseWaiverRecord,
+  resolveControlAuthority,
   serializeRecord,
   validateDispatchAuthorization,
 } from "../lib/records.mjs";
@@ -36,6 +39,9 @@ try {
   } else if (operation === "build-execution") {
     const record = buildExecutionRecord(payload);
     write({ ok: true, record, body: serializeRecord(record) });
+  } else if (operation === "build-result") {
+    const record = buildWorkerResultRecord(payload);
+    write({ ok: true, record, body: serializeRecord(record) });
   } else if (operation === "build-authorization") {
     write({ ok: true, authorization: buildDispatchAuthorization(payload) });
   } else if (operation === "validate-authorization") {
@@ -45,8 +51,12 @@ try {
     write({ ok: true, record, body: serializeRecord(record) });
   } else if (operation === "parse-control") {
     write({ ok: true, record: parseControlRecord(payload.body) });
+  } else if (operation === "resolve-controls") {
+    write({ ok: true, authority: resolveControlAuthority(payload.comments) });
   } else if (operation === "parse-execution") {
     write({ ok: true, record: parseExecutionRecord(payload.body) });
+  } else if (operation === "parse-result") {
+    write({ ok: true, record: parseWorkerResultRecord(payload.body) });
   } else if (operation === "parse-waiver") {
     write({ ok: true, record: parseWaiverRecord(payload.body) });
   } else if (operation === "serialize") {

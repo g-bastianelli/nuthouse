@@ -61,6 +61,10 @@ validated-at: 2026-08-27
 spec-synced-at: 2026-08-27
 ---
 
+> Historical v1 implementation plan. It documents the one-shot reconciliation design
+> implemented for spec version 1 and is superseded by spec version 2's durable
+> `orchestrate` coordinator. Do not use it as the current execution contract.
+
 # Plan — Linear project execution reconciler (project-execution-reconciler)
 
 ## Context

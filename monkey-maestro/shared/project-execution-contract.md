@@ -1,14 +1,25 @@
 # Project execution contract
 
-This contract is the installed boundary shared by `status`, `start`, `reconcile`, `spawn`,
-`stop`, `project-snapshot-loader`, and `runtime-inspector`. Linear is durable project memory;
-Superset is runtime execution; GitHub is delivery evidence only. No Maestro workflow may
-use a private issue queue, relay flag, baton file, or `superset-orchestrate`.
+This contract is the installed boundary shared by `status`, `start`, `orchestrate`,
+`reconcile`, `spawn`, `stop`, `project-snapshot-loader`, and `runtime-inspector`.
 
-`status` is the read-only project-link landing point. It resolves one canonical Linear
-project, reports the verified graph receipt, latest control, current dependency
-observations, and durable execution records, then exits. It never claims Linear issue
-links, inspects live Superset state, invokes another Maestro skill, or mutates anything.
+- Linear is durable project memory: approved dependency graph, normalized lifecycle,
+  control policy, waivers, execution receipts, and worker results.
+- Superset is execution transport: isolated task-linked workspaces, terminal agents,
+  progress reads, and follow-ups.
+- The active `orchestrate` conversation is the live coordinator. Its table is rebuilt
+  from durable records after context loss; it is never stored in a private queue.
+- GitHub is delivery evidence only. A merge never substitutes for Linear completion.
+
+Normal execution uses one full hydration at coordinator start, then targeted Linear
+transition reads. Full `reconcile` is an explicit recovery/audit operation, never the
+per-issue loop. `spawn` is the manual one-workspace fallback and branch-guard target;
+project orchestration shares its verified primitive order but does not invoke it.
+
+`status` remains the read-only project-link landing point. It reports durable Linear
+state and recommends `orchestrate` for a healthy active control or `reconcile` for known
+drift. It never claims issue links, inspects live Superset state, invokes another skill,
+or mutates anything.
 
 ## Durable Linear records
 
@@ -16,175 +27,240 @@ Records are Markdown comments containing one HTML marker followed by one fenced 
 object. Schema version 1 markers are:
 
 - project control: `nuthouse:maestro-control`;
-- issue execution: `nuthouse:maestro-execution`;
+- issue execution identity: `nuthouse:maestro-execution`;
+- worker result: `nuthouse:maestro-result`;
 - explicit blocker waiver: `nuthouse:maestro-waiver`;
 - verified project graph receipt, produced by Linear Devotee:
   `nuthouse:project-graph-receipt`.
 
-Use `scripts/records.mjs` for control, execution, and waiver parsing/serialization. An
-unknown schema, malformed field, duplicate highest control revision, decision-hash
-mismatch, or missing verified graph receipt is unknown authority and blocks mutation.
+Use `scripts/records.mjs` for parsing and serialization. An unknown schema, malformed
+field, duplicate highest control revision, decision-hash mismatch, or missing verified
+graph receipt is unknown authority and blocks mutation.
 
-Two exact identity namespaces are used and must never be conflated:
+Resolve project controls with `records.mjs resolve-controls`: order every marker-bearing
+candidate by its claimed revision before strictly validating the sole highest candidate.
+Never filter invalid controls before ordering. An unorderable candidate or invalid sole
+highest revision is `CONTROL_INVALID`; duplicate highest claimed revisions are
+`CONTROL_AMBIGUOUS`.
 
-- `issueId` is Linear's canonical issue `identifier` (for example `TEAM-123`). Treat it
-  as an opaque, team-dependent value: never hard-code `NOT-`, another prefix, or a local
-  identifier regex. Graph
-  receipts, control baselines, blockers, waivers, resolver entries, and execution records
-  all use this value. A connector's generic `id` may be a transport UUID or may be the
-  identifier; its shape is not an authority and a missing Linear UUID is not an error.
-- `taskId` is Superset's internal task UUID. Resolve it read-only with `superset tasks get
-<issueId> --json` and require a non-empty `task.id`, `externalProvider === "linear"`,
-  and `externalKey === issueId`; a managed issue also requires the expected
-  `externalProjectId`. A workspace stores this `task.id`, not the Linear identifier or
-  Linear transport UUID.
+An execution record binds one run, Linear issue identifier, Superset task UUID,
+workspace, optional terminal, branch, agent, host, timestamp, and outcome. A result
+record binds the same run/workspace/terminal to `completed`, `blocked`, or `failed` and
+preserves the worker envelope evidence. A result is durable coordination evidence, not
+permission to change Linear lifecycle or satisfy a dependency edge. Reconstruction uses
+the latest exact active-run result by timestamp; conflicting canonical records tied at
+the latest timestamp are ambiguous authority.
 
-Never derive either identity from a title, branch, URL, or UUID shape. If the exact
-Linear identifier or Superset task binding is unavailable, the affected dispatch is
-unknown and must not mutate.
+Two exact identity namespaces are used and never conflated:
 
-The control's `decisionBaseline` contains sorted Linear issue ids and exact
-`dependentIssueId -> blockerIssueId` edges. `decisionHash` is the SHA-256 of that
-canonical baseline. `start` initializes it from the verified graph receipt on first
-activation and carries the latest inactive control baseline across restarts. `reconcile`
-updates it before dispatch only from the resolver's representable `nextBaseline`, after
-adopting known safe graph changes or receiving required confirmation. Unknown or
-quarantined components retain their previous edges; the raw partial Linear baseline is
-never persisted. This is how a later removal/reversal can be recognized without local
-memory.
+- `issueId` is Linear's opaque canonical issue `identifier`, for example `TEAM-123`.
+  Never hard-code a team prefix, infer it from a title/branch/URL, or require a transport
+  UUID.
+- `taskId` is Superset's internal task UUID. Resolve it read-only with
+  `superset tasks get <issueId> --json` and require a non-empty `task.id`,
+  `externalProvider === "linear"`, `externalKey === issueId`, and the expected
+  `externalProjectId`. A workspace stores this task UUID.
 
-The control also keeps sorted `executionIssueIds` for task-linked executions that still
-consume capacity after their issue leaves the Linear project. Reconciliation rebuilds
-this set from fresh live runtime state. A managed issue with a known normalized terminal
-status (`completed` or `canceled`) is logically finished only after its live workspace
-and terminal correlate with one durable execution record for the exact active run,
-issue, task, workspace, terminal, and host, while the workspace itself belongs to the
-control's exact Superset project. That runtime is reported as residual and does not
-consume concurrency. A missing, partial, ambiguous, cross-scope, or mismatched durable
-record keeps the runtime active and consuming one slot. Residual classification does not
-pretend the process exited and does not create an exit tombstone; ambiguous bindings,
-unknown status, and runtimes whose issue left the project stay conservative. A recorded
-agent terminal with `exited: true` is actual exit proof. A deleted workspace is also
-terminal proof only when the
-issue is still managed with a known terminal Linear status, every durable execution
-record belongs to the active run and has the exact current task, host, and workspace id,
-and an authoritative Superset `ready` inventory covers the control's exact host/project.
-That inventory carries a complete sorted `workspaceIds` set equal to the full unfiltered
-workspace array, and every recorded workspace id must be absent from it. This is the
-normal post-completion cleanup convention. A missing/filtered/partial inventory,
-different host/project, earlier-run record, observed workspace under a mismatched task,
-unknown status, task ambiguity, or issue that left the project remains guarded and
-consumes one slot. The companion `exitedExecutionIssueIds` set is the explicit durable
-tombstone for either proof; active and exited sets may never overlap, and a new dispatch
-removes its old tombstone. These are ownership indexes, not a queue and not eligibility
-state.
+If either exact identity is unavailable, only the affected dispatch is unknown and must
+not mutate.
 
-A waiver is valid only when the exact dependent/blocker ids match, all fields parse, it
-is not revoked, and Linear attributes the comment to an explicit human. A canceled
-blocker without that waiver remains unsatisfied. GitHub merge state never substitutes
-for Linear completion.
+## Control and graph authority
 
-## Reconciliation authorization
+One active control authorizes only its exact `projectId`, `runId`, `repository`,
+`targetHostId`, `supersetProjectId`, `defaultAgent`, and `maxConcurrency`.
 
-One active control record authorizes dispatches only for its `projectId`, `runId`,
-`targetHostId`, `supersetProjectId`, `defaultAgent`, and concurrency. `reconcile`
-acquires the short-lived local host lock through `scripts/project-lock.mjs` and passes
-this project authorization to `spawn`:
+The control's `decisionBaseline` contains sorted issue ids and exact
+`dependentIssueId -> blockerIssueId` edges. `decisionHash` is the SHA-256 of its canonical
+form. `start` initializes the baseline from a verified graph receipt or carries the exact
+latest inactive baseline across restart. Only explicit full reconciliation may adopt a
+new representable baseline. Targeted orchestration never silently adds, removes, or
+reverses an edge.
 
-```json
-{
-  "kind": "project",
-  "projectId": "<Linear project id>",
-  "runId": "<run id>",
-  "revision": 3,
-  "decisionHash": "sha256:<hash>",
-  "lockToken": "<ephemeral token>",
-  "issueId": "TEAM-123",
-  "taskId": "<Superset task UUID>",
-  "eligibility": "<canonical fresh status/blocker/waiver evidence>",
-  "authorizationHash": "sha256:<hash>"
-}
+The control also keeps `executionIssueIds` and `exitedExecutionIssueIds` as conservative
+ownership indexes for executions that have moved outside the current managed issue set.
+They are not a queue and never determine eligibility. Active and exited ids cannot
+overlap.
+
+Linear normalized `status.type === completed` is the ordinary blocker-completion proof.
+A canceled blocker is unsatisfied unless one exact non-revoked waiver is attributed to a
+human and names the same dependent/blocker ids. Worker results, terminal exit, PR state,
+and GitHub merge never replace that proof.
+
+## Coordinator session
+
+`orchestrate` keeps this table in live conversation context:
+
+| Field        | Meaning                                                |
+| ------------ | ------------------------------------------------------ |
+| Task         | exact Linear issue identifier                          |
+| Dependencies | exact blocker identifiers from the approved baseline   |
+| Workspace    | exact Superset workspace id or none                    |
+| Host         | configured host id                                     |
+| Terminal     | exact agent terminal id or none                        |
+| Status       | pending, ready, running, completed, blocked, or failed |
+| Result       | latest exact worker evidence or none                   |
+
+At the start of a coordinator session, load one complete Linear snapshot and one
+complete correlated Superset/GitHub runtime snapshot. Compose them through the pure
+reconciliation resolver to reconstruct active, residual, guarded, ready, blocked, and
+ambiguous work. If an exact same-run/revision/hash table is already present in the active
+conversation and its runtime identities remain valid, first make one targeted read for
+the deduplicated union of every existing Coordinator task and its approved blockers.
+This refresh is mandatory even when no row is running or ready. Require the same active
+control, baseline-equal relations, and fresh normalized status/waiver facts before
+deriving readiness or reusing the table. A lifecycle-only change updates the table
+without a full load; relation drift requires reconciliation, and partial/unknown
+authority blocks dispatch rather than reusing stale facts.
+
+Launch every ready independent issue up to available concurrency before monitoring the
+new batch. Capacity counts exact active/guarded task executions. A live runtime for a
+fresh terminal Linear issue becomes report-only `residual` only when its issue, task,
+workspace, terminal, host, run record, and Superset project correlate exactly. Partial,
+missing, cross-scope, or ambiguous evidence keeps one conservative slot occupied.
+
+After launch, release the project lock and monitor all running terminals at a measured
+cadence with `superset terminals read`. Use `superset terminals send` to provide
+clarification, dependency results, or review feedback to the same session. Terminal
+presence, title, attachment, or silence is never completion proof.
+
+Workers end with one of these prompt-level envelopes:
+
+```text
+SUPERSET_WORKER_DONE
+task: <issue identifier>
+summary: <one-line outcome>
+files: <comma-separated paths or none>
+checks: <commands and outcomes>
+handoff: <next-step context or none>
 ```
 
-`spawn` re-reads the control and lock owner, reloads the issue and blocker/waiver facts,
-and must reproduce the hash-bound per-issue authorization immediately before creation.
-Any mismatch, wrong/cross-project issue, non-startable status, unsatisfied blocker,
-inactive record, unavailable provider, or released lock blocks mutation. This authorized
-mode has no per-issue gate. Standalone spawn mints its own run id, uses
-`{ "kind": "manual" }`, refuses to bypass an active Maestro project, and shows one exact
-Superset mutation gate. After the human wait it acquires the project/task lock and
-rechecks both active control and exact `taskId` ownership before mutation.
+```text
+SUPERSET_WORKER_BLOCKED
+task: <issue identifier>
+reason: <specific blocker>
+needs: <decision, access, or dependency required>
+```
 
-`start`, `stop`, and `reconcile` serialize control mutations with the same target-host
-project lock. User confirmation always occurs before acquisition; reconciliation releases
-before an expansion question, then reacquires and reloads every authority before using
-that approval. No lock is held across an unbounded human wait.
+Correlate the envelope with its exact row and surrounding terminal evidence before
+persisting a result. Normalize the DONE envelope's comma-separated file field to a
+deduplicated array, with `none` becoming `[]`. A DONE result completes worker execution in the table, but its
+dependents remain pending until Linear reports the blocker completed or a valid waiver
+exists. Its live execution also remains capacity-guarding until targeted Linear status
+is terminal and the current-run execution/result/workspace/terminal identities correlate
+exactly, or exact terminal exit is proven. A correlated still-live terminal runtime is
+then residual and does not consume logical concurrency.
+
+## Targeted transition reads
+
+After a worker result or observed lifecycle transition, refresh only:
+
+1. the affected issue;
+2. its direct dependents from the approved baseline;
+3. their known blockers;
+4. the latest control and only comments/status metadata needed for those decisions.
+
+`project-snapshot-loader MODE: targeted` must receive the exact requested issue ids and
+expected control run/revision/hash. It never lists the full project. A targeted response
+is not valid input to the full reconciliation resolver; it only validates promotions
+already representable by the approved baseline.
+
+If a DONE result precedes native Linear completion, keep the issue as `Linear waiting`.
+At each measured monitoring pass, make one batched targeted read for the deduplicated
+union of all waiting issues, their baseline direct dependents, and their known blockers.
+Do not poll once per issue, and do not exit the coordinator merely because no worker is
+still running while Linear-waiting rows remain.
+
+Any new, removed, reversed, unknown, self, cyclic, or cross-project relation produces
+`reconcile_required` for the affected component. Preserve unrelated running work and
+continue independent known components. Never launch a full reconcile automatically.
+
+When a targeted read proves newly ready work and capacity exists, acquire the lock,
+revalidate the entire candidate batch together, dispatch the full ready batch, write its
+receipts, release the lock, and return to monitoring. Do not run a complete Linear or
+runtime reload between issue transitions.
+
+An inactive control observed before a batch stops every future dispatch. Existing
+workspaces and terminals continue untouched.
+
+## Locked batch authorization
+
+`start`, `stop`, `reconcile`, and orchestration dispatch/control batches serialize
+mutation through `scripts/project-lock.mjs` on the exact target host and project. Human
+confirmation always occurs before lock acquisition. No lock is held across terminal
+monitoring, worker waits, follow-ups, or user questions.
+
+For each batch candidate, orchestration builds one hash-bound authorization from the
+active control, held lock token, exact issue/task ids, fresh startable status, and exact
+blocker/waiver facts. All candidates are targeted-read and duplicate-checked before any
+new monitoring pass. A control change, lock mismatch, task-binding change, non-startable
+status, unsatisfied blocker, existing runtime, or unknown required field removes only
+the affected candidate.
+
+The active project control is the batch mutation gate. There is no extra per-issue
+confirmation. Always release the token-matched lock in `finally`.
 
 ## Superset primitive order
 
-Every dispatch runs on the one configured host and follows this order:
+Every authorized dispatch follows this order within its issue sequence. Different issue
+sequences in one locked batch may run concurrently.
 
-1. `superset workspaces list --host <host> --project <project> --json`; group exact
-   `taskId === <validated Superset task UUID>` matches.
-2. Zero matches may proceed. One match is reconstructed/inspected. Multiple matches are
-   ambiguous and block only that issue.
-3. `superset workspaces create --host <host> --project <project> --name <name> --task
-<validated Superset task UUID> --json` with no agent flag.
-4. `superset workspaces get <workspaceId> --host <host> --json`; require exact host,
-   project, and taskId.
-5. Snapshot terminals, then run `superset agents create --workspace <workspaceId>
---host <host> --agent <agent> --prompt <prompt> --json`.
-6. `superset terminals list --workspace <workspaceId> --host <host> --json`; require one
-   exact returned/new terminal and capture its id.
-7. Persist the execution record in Linear. A failed record write after verified runtime
-   creation is degraded traceability, never permission to delete or redispatch.
+1. Query one complete project workspace inventory and group exact task-id matches. Zero
+   may proceed; one is existing/repair; multiple are ambiguous.
+2. `superset workspaces create --host <host> --project <project> --name <name> --task
+<taskId> --json`, with no agent flag.
+3. `superset workspaces get <workspaceId> --host <host> --json`; require exact host,
+   project, task, and worktree.
+4. Snapshot terminals, then run `superset agents create --workspace <workspaceId> --host
+<host> --agent <agent> --prompt <prompt> --json`.
+5. Re-list terminals, require one exact returned/new terminal, and capture its id.
+6. Persist the execution record in Linear.
 
-Workspace creation success plus agent failure is a partial execution. Preserve the
-workspace, record it when Linear is available, and never create another automatically.
-No workflow deletes a workspace, terminates an agent, or creates a branch in place.
+Workspace success plus agent failure is a partial execution. Preserve it, record it when
+possible, and never create another automatically. A failed record write after verified
+runtime creation is degraded traceability, never permission to delete or redispatch.
+No Maestro workflow deletes a workspace, terminates an agent, or creates a branch in
+place.
 
-The spawned prompt begins by requiring `linear-devotee:greet <identifier>`. Only greet
-may move the issue to normalized status type `started`; Maestro never mutates issue
-status.
+The worker prompt begins with `linear-devotee:greet <identifier>`. Only greet may move an
+issue to normalized `started`; Maestro never mutates issue status.
 
-## Fresh-state and failure rules
+## Manual spawn
 
-- `reconcile` runs only on explicit invocation (manual, the successful `start`
-  transition, another known workflow transition, or a user-configured Superset
-  automation). After its control is verified active and its activation lock is released,
-  `start` invokes exactly one full reconciliation pass. It never dispatches directly,
-  keeps no background loop, and does not schedule another pass.
-- Acquire the target-host lock before the authoritative full reload. A held lock exits
-  without external mutation. A stale candidate needs explicit recovery after runtime
-  inspection proves the owner terminal absent.
-- Reload current Linear status metadata, project graph/comments, GitHub PRs, Superset
-  workspaces, and terminals before resolving.
-- Capacity counts live task-linked executions owned by the current issue set, control
-  baseline, `executionIssueIds`, or durable records from any run, except an exact managed
-  runtime whose fresh normalized Linear status is terminal and whose live workspace and
-  terminal correlate with its exact active-run issue/task/workspace/terminal/host record
-  inside the control's exact Superset project.
-  That runtime is residual and report-only. Missing or mismatched durable identity keeps
-  the runtime active; missing owned runtime state consumes one conservative slot. Main/foreign
-  workspaces do not count. A recorded agent terminal with `exited: true` releases its
-  slot; partial or unknown identity/status state keeps its slot conservatively. Extra
-  shell/dev terminals never make a recorded agent ambiguous when its exact `terminalId`
-  still exists.
-- Provider unavailability or unscoped unknown required data allows no new dispatch.
-  Issue-scoped runtime/Linear unknowns block only affected decisions, and optional
-  unknowns do not poison known components. Preserve and report existing executions.
-- Metadata and status updates are fresh values. Optional unknown fields do not make a
-  scoped partial response globally unavailable. Acyclic dependency additions are safe.
-  Removed/reversed edges and new startable issues require confirmation before affected
-  dispatch and before updating the decision baseline.
-- Quarantine invalid nodes and descendants; continue independent valid components.
-- An issue moved out of the project is unmanaged, but its runtime remains untouched.
-- Always release the token-matched lock in a `finally` path. Local lock/scratch files are
-  ephemeral coordination, never project memory.
+`spawn` creates exactly one workspace only when the user or branch guard invokes it. It
+resolves one issue/task/host/project/agent. For a project-bound issue, an active Maestro
+control redirects to `orchestrate`; invalid authority requires repair of the malformed or
+conflicting Linear control records and never redirects to `reconcile`. For a project-less
+issue, absent and `null` project bindings are equivalent, the project loader is skipped,
+and the exact `manual:<identifier>` lock scope is used. Spawn shows one exact mutation
+preview and continues only after confirmation. After the human wait it acquires the
+project/task lock, refetches issue/control/task/runtime ownership, then uses the same
+workspace-first primitive.
 
-## Ownership boundary
+Manual spawn mints its own run id. It never receives project batch authorization, never
+coordinates dependencies, and never serves as the normal project loop.
 
-Monkey Maestro owns Superset workspace/agent dispatch and its branch guard. Linear
-Devotee owns project graph correctness and `In Progress`. Git Gremlin owns review,
-commit, and PR. `superset-orchestrate` remains a separate user-invoked workflow for
-temporary parallel work and is neither read nor invoked here.
+## Full reconciliation and recovery
+
+`reconcile` is explicit-only and intentionally exhaustive. It reloads complete Linear,
+GitHub, workspaces, terminals, task bindings, records, waivers, and control; runs the pure
+resolver; repairs exact reconstructable execution identities; safely updates only the
+resolver's representable `nextBaseline` and ownership indexes; and creates a Coordinator
+handoff in conversation. It never dispatches a workspace or agent.
+
+Runnable graph expansion still requires a human confirmation outside the lock. After
+approval, reconcile reacquires the lock and repeats the authoritative reads before
+persisting. The following explicit `orchestrate` invocation reuses the validated handoff
+without another full hydration when its authority still matches.
+
+## Failure and ownership rules
+
+- Provider unavailability or unscoped required unknowns allow no new mutation. Scoped
+  unknowns quarantine only affected components.
+- Quarantine invalid nodes and descendants while continuing independent valid work.
+- An issue moved out of the project is unmanaged; its runtime remains untouched and
+  guarded until exact exit proof.
+- Local lock/scratch files are ephemeral coordination only. Linear remains durable
+  project memory.
+- Monkey Maestro owns project coordination, Superset workspace/agent dispatch, and its
+  branch guard. Linear Devotee owns graph correctness and In Progress. Git Gremlin owns
+  review, commit, and PR operations.

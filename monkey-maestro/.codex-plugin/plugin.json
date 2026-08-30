@@ -1,7 +1,7 @@
 {
   "name": "monkey-maestro",
-  "version": "1.0.14",
-  "description": "Read-only Linear project-link inspection and verified project reconciliation with durable control, bounded concurrent Superset dispatch, and runtime reconstruction.",
+  "version": "1.0.15",
+  "description": "Durable Linear-backed project orchestration with parallel Superset workers, targeted dependency advancement, and explicit full recovery.",
   "author": {
     "name": "g-bastianelli"
   },
@@ -9,8 +9,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Monkey Maestro",
-    "shortDescription": "Inspect Linear project links and reconcile verified execution graphs",
-    "longDescription": "Monkey Maestro automatically treats Linear project URLs as a read-only status request, reporting durable graph, control, dependency, and execution state without claiming issue links or starting work. Explicit activation creates a versioned control record; explicit one-shot reconciliation reloads Linear, GitHub, and Superset, reconstructs workspaces by exact task binding, respects dependency eligibility and concurrency, and dispatches without a private queue or polling loop.",
+    "shortDescription": "Orchestrate Linear dependency graphs through Superset agents",
+    "longDescription": "Monkey Maestro treats Linear project URLs as read-only status requests and uses Linear as durable project memory. Activation starts a live coordinator that hydrates the graph and runtime once, launches every ready issue up to bounded concurrency, monitors exact Superset terminals, and advances dependents through targeted Linear reads. Explicit full reconciliation is reserved for drift or context recovery; no private queue or hidden daemon is used.",
     "developerName": "g-bastianelli",
     "category": "Productivity",
     "capabilities": ["Read", "Write"],
@@ -18,7 +18,8 @@
     "defaultPrompt": [
       "Inspect this Linear project URL read-only and report its Maestro state.",
       "Use Monkey Maestro to start project execution for this verified Linear project.",
-      "Use Monkey Maestro to reconcile this Linear project once.",
+      "Use Monkey Maestro to orchestrate this active Linear project and monitor all ready work.",
+      "Use Monkey Maestro to fully reconcile this Linear project after drift or context loss.",
       "Use Monkey Maestro to spawn one task-linked Superset workspace.",
       "Use Monkey Maestro to stop future project dispatches without terminating active work."
     ],

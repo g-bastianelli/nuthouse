@@ -19,6 +19,7 @@ test("workspace orchestration has one owner and no compatibility aliases", () =>
   for (const filename of oldPaths)
     expect(fs.existsSync(path.join(ROOT, filename)), filename).toBe(false);
   expect(fs.existsSync(path.join(ROOT, "monkey-maestro/skills/spawn/SKILL.md"))).toBe(true);
+  expect(fs.existsSync(path.join(ROOT, "monkey-maestro/skills/orchestrate/SKILL.md"))).toBe(true);
   expect(fs.existsSync(path.join(ROOT, "monkey-maestro/hooks/hooks.json"))).toBe(true);
   expect(fs.existsSync(path.join(ROOT, "git-gremlin/hooks/hooks.json"))).toBe(false);
 });
@@ -29,7 +30,11 @@ test("the moved branch guard names only its current owner", () => {
     "utf8",
   );
   expect(guard).toContain("monkey-maestro:spawn");
+  expect(guard).toContain(
+    "active Maestro project, use `monkey-maestro:orchestrate <project-id>` instead.",
+  );
   expect(guard).toContain("MONKEY_MAESTRO_SPAWN_DISABLE");
+  expect(guard).not.toContain("monkey-maestro:reconcile");
   expect(guard).not.toContain("git-gremlin:spawn");
   expect(guard).not.toContain("GIT_GREMLIN_SPAWN_DISABLE");
 });

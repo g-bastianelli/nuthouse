@@ -1,6 +1,6 @@
 ---
 name: reconcile
-description: Use when the user or a configured Superset automation wants Monkey Maestro to reconcile an active Linear project — reloads Linear, GitHub, and Superset, reconstructs executions by taskId, safely adopts project changes, and dispatches eligible issues up to concurrency. Runs once and exits; never polls.
+description: Use when the user explicitly asks Monkey Maestro to recover or audit an active Linear project after drift, ambiguous runtime identity, provider uncertainty, or lost coordinator context. Performs one complete Linear, GitHub, and Superset reconstruction, repairs durable authority, prepares an orchestration handoff, and exits without dispatching work.
 argument-hint: "<linear-project-id>"
 effort: high
 allowed-tools: Bash(superset status:*), Bash(node:*), Bash(mktemp:*), Bash(rm:*), Read, Write, Agent, mcp__claude_ai_Linear__save_comment
@@ -28,208 +28,152 @@ Match the user's language. Preserve technical identifiers.
 
 ## When you're invoked
 
-Read `${CLAUDE_PLUGIN_ROOT}/shared/project-execution-contract.md`. This is the LLM
-reconciler: it performs one fresh observation/decision/mutation pass and exits. The pure
-resolver is evidence for its decision, not a scheduler deciding whether to wake the LLM.
+Read `${CLAUDE_PLUGIN_ROOT}/shared/project-execution-contract.md`. This is the explicit
+full recovery/audit path, not Maestro's normal issue-transition loop. It rebuilds
+authoritative state once, repairs representable durable records, prepares a Coordinator
+table handoff for `orchestrate`, and exits. Never dispatch work from this skill.
 
 ## Step 0 — Resolve control, host, and lock
 
 1. Require one exact Linear project id. Dispatch
    `monkey-maestro:project-snapshot-loader` with `MODE: control-only`. Require one valid
-   latest control. Missing/invalid/inactive control produces a no-dispatch report.
+   latest active control. Missing, invalid, or inactive control produces a no-mutation
+   report.
 2. Run `superset status --json` and require `hostId === control.targetHostId`. If not,
-   stop without mutation and instruct invocation on the configured host; do not create a
-   coordinator workspace implicitly.
+   stop and instruct invocation on the configured host; never create a coordinator
+   workspace implicitly.
 3. Acquire `${CLAUDE_PLUGIN_DATA}/locks` through
-   `scripts/project-lock.mjs acquire` with project/run/current terminal metadata. If
-   `LOCK_HELD`, report its owner and exit without external mutation. A stale candidate is
-   never auto-recovered; explicit recovery needs runtime proof that its owner terminal no
-   longer exists and the exact token.
-4. Keep the returned `lockToken` only while actively reading or mutating. Every held
-   interval is a `try/finally` whose `finally` calls `project-lock.mjs release` with that
-   exact token. Never hold the lock while waiting for human input.
+   `scripts/project-lock.mjs acquire` with project/run/current-terminal metadata. If
+   `LOCK_HELD`, report its owner and exit without external mutation. Stale-lock recovery
+   requires exact runtime proof and explicit recovery; never guess.
+4. Every held interval is a `try/finally` whose `finally` calls
+   `scripts/project-lock.mjs release` with the exact token. Always release the lock on
+   every exit, including provider failure, ambiguity, interruption, and declined graph
+   confirmation. Never hold it while waiting for human input.
 
-## Step 1 — Reload all authority under lock
+## Step 1 — Reload all authority
 
-Dispatch the Linear loader first, because its fresh managed/owned identifier sets are the
-authority for Superset task resolution:
+Dispatch the Linear loader first:
 
 ```text
 Agent({
   subagent_type: 'monkey-maestro:project-snapshot-loader',
-  description: 'reload Linear project execution truth',
+  description: 'reload complete Linear recovery truth',
   prompt: `PROJECT_ID: <project id>
 MODE: full`,
 })
 ```
 
-Build `MANAGED_ISSUE_IDS` from the returned `issues[].id`. Build
-`OWNED_ISSUE_IDS` as the sorted union of those ids, control baseline ids,
-`executionIssueIds`, and every valid execution record `issueId`. Then dispatch:
+Build `MANAGED_ISSUE_IDS` from its exact `issues[].id`. Build `OWNED_ISSUE_IDS` as the
+sorted union of those ids, control baseline ids, `executionIssueIds`, and every valid
+execution-record issue id. Then dispatch:
 
 ```text
 Agent({
   subagent_type: 'monkey-maestro:runtime-inspector',
-  description: 'reload Superset and GitHub execution truth',
+  description: 'reload complete Superset and GitHub recovery truth',
   prompt: `TARGET_HOST_ID: <control.targetHostId>
 SUPERSET_PROJECT_ID: <control.supersetProjectId>
 LINEAR_PROJECT_ID: <control.projectId>
 REPOSITORY: <control.repository>
 RUN_ID: <control.runId>
-MANAGED_ISSUE_IDS: <fresh comma-separated exact Linear identifiers>
-OWNED_ISSUE_IDS: <fresh comma-separated exact Linear identifiers>`,
+MANAGED_ISSUE_IDS: <fresh exact identifiers>
+OWNED_ISSUE_IDS: <fresh exact identifiers>`,
 })
 ```
 
-Require the reloaded control to match the pre-lock run/revision/decision hash and remain
-active. Linear unavailable, GitHub/Superset unavailable, unknown control/host/project,
-or changed authority permits no dispatch. A provider `partial` result must carry stable
-`unknown` entries: issue-scoped required unknowns block only those issues, optional
-unknowns do not poison known decisions, and an unscoped required unknown blocks mutation.
+Require the reloaded control to match the pre-lock run, revision, and decision hash and
+remain active. Linear, GitHub, or Superset unavailability; unknown host/project; changed
+authority; or an unscoped required unknown blocks recovery mutation. Preserve and report
+trustworthy scoped observations.
 
-## Step 2 — Reconstruct and resolve
+## Step 2 — Reconstruct through the pure resolver
 
-1. Write one ephemeral raw snapshot envelope containing the exact pre-lock
-   `expectedControl`, the untouched `linearSnapshot`, the untouched `runtimeSnapshot`,
-   and `confirmedRunnableExpansions`. Run
-   `node ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-state.mjs <packet>`. Its pure input
-   composer verifies the under-lock control, joins each exact task binding, annotates
-   active-run records, derives `claimed`, and preserves the complete workspace inventory
-   plus separate Linear/runtime unknown namespaces. Do not manually reconstruct, filter,
-   or rewrite provider arrays. Do not reread helper source or enumerate tool catalogs;
-   the normalized agent JSON and declared scripts are the contract.
-   It passes the exact `workspaceInventory` and full unfiltered `workspaces`; only a
-   complete `ready` workspace inventory can prove a recorded workspace was deleted.
-2. The resolver:
+1. Write one ephemeral raw snapshot envelope containing the exact `expectedControl`,
+   untouched `linearSnapshot`, untouched `runtimeSnapshot`, and
+   `confirmedRunnableExpansions`. Run
+   `node ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-state.mjs <packet>`. Do not manually
+   reconstruct, filter, or rewrite provider arrays.
+2. The pure composer joins exact Superset task bindings, annotates active-run records,
+   preserves the complete `ready` workspace inventory as `workspaceInventory`, and
+   passes the full unfiltered workspaces plus separate Linear/runtime unknowns.
+3. The resolver:
    - counts owned live non-terminal task executions against capacity and never duplicates
-     a `taskId`;
-   - treats a known `completed` or `canceled` managed issue as logically finished even
-     when its workspace or terminal remains live only after that live identity correlates
-     with one exact active-run issue/task/workspace/terminal/host execution record inside
-     the control's exact Superset project, reporting that runtime as `residual` without
-     consuming concurrency or pretending the terminal exited; a missing, partial,
-     ambiguous, or mismatched record keeps the slot occupied;
-   - orders issues by fresh Linear order;
-   - accepts only Linear completion or one exact human waiver;
-   - ignores a merged PR as blocker completion;
-   - classifies zero/one/multiple runtime matches as dispatch/repair/ambiguity;
-   - quarantines invalid components and descendants while preserving independent work;
+     a task id;
+   - reports a correlated live runtime for a known terminal managed issue as `residual`
+     only when one active-run issue/task/workspace/terminal/host execution record matches;
+   - keeps a mismatched record occupying capacity conservatively;
+   - accepts only Linear completion or one exact human waiver for dependency satisfaction;
+   - returns active, residual, repair, inspect, blocked, quarantine, confirmation,
+     `confirmedExitedIssueIds`, and an orchestration-ready candidate set;
    - returns a representable `nextBaseline` that retains prior edges for unknown or
-     quarantined components while adopting only known valid graph fields;
-   - adopts constraining dependencies and requests confirmation for runnable expansion.
-3. Print active, residual, dispatch, repair, inspect, blocked, quarantine, and
-   confirmation lists. Full capacity is a successful no-op.
-4. If `confirmations` is non-empty, release the project lock before showing the exact
-   added issue/removal/reversal and asking: `Authorize these newly runnable dispatches?
-(y / no)`. On `no`, withhold them, do not advance the decision baseline, and exit. On
-   `y`, remember only the approved issue ids, reacquire the project lock, reload both
-   providers and the control again, and rerun the resolver with those ids in
-   `confirmedRunnableExpansions`. An authority change or a new/different expansion
-   invalidates the stale decision: release before asking again or exit. Never dispatch
-   from the pre-confirmation snapshots.
+     quarantined components.
+4. A known terminal managed issue may use a complete `ready` workspace inventory to
+   prove an exact recorded workspace absent; missing, partial, filtered, different-host,
+   or different-project inventory cannot prove exit.
 
-## Step 3 — Persist the decision before dispatch
+## Step 3 — Confirm expansions and persist the recovery decision
 
-When all expansion confirmations are resolved, compare the resolver's `nextBaseline`
-and the sorted ids from its fresh `active` entries (including `runtimeMissing: true`)
-with the control's baseline and `executionIssueIds`. Build `exitedExecutionIssueIds` as
-the prior tombstones plus the resolver's `confirmedExitedIssueIds`, minus active ids and
-this decision's dispatch ids. If any set or baseline differs, build the next control revision through
-`records.mjs build-control`, preserving policy, replacing the changed baseline/decision
-hash, replacing `executionIssueIds`, and updating the timestamp. Moved issues remain in
-that execution index only while their runtime still consumes capacity. An old execution
-record stops guarding only when its id has this explicit confirmed-exited tombstone,
-including the narrowly proven terminal-issue workspace-deletion case from Step 2.
-Residual runtimes are excluded from `executionIssueIds` because their managed Linear
-issue is logically terminal, but they are not added to `exitedExecutionIssueIds` until
-runtime exit is actually proven. Update the existing project comment and reload it. A failed or ambiguous
-write stops every new dispatch; otherwise subsequent runs can classify future Linear
-changes without local memory.
+1. If the resolver reports a newly runnable expansion caused by a new issue, removal, or
+   reversed edge, release the lock before showing the exact change and ask:
 
-Never persist the loader's raw `currentBaseline`: partial blocker fields and invalid
-self/unknown/cyclic edges are observations, not a representable decision baseline. Only
-the resolver's `nextBaseline` may advance control state.
+   ```text
+   Adopt this recovered graph expansion? (y / no)
+   ```
 
-For every `repair` entry, build an `outcome: repaired` issue execution record from the
-exact runtime workspace/terminal/branch and write it to Linear. If Linear recording
-fails, report degraded traceability and stop new dispatch for this pass. Ambiguous or
-partial entries are reported, never guessed or relaunched.
+   On `no`, preserve the prior decision baseline and exit. On `y`, retain only those
+   confirmed issue ids, reacquire the lock, reload both providers and control, and rerun
+   the resolver with `confirmedRunnableExpansions`. Changed evidence invalidates the
+   approval; never reuse stale snapshots.
 
-## Step 4 — Fill slots through spawn
+2. Compare the resolver's `nextBaseline`, fresh active ownership ids, and
+   `confirmedExitedIssueIds` with the control. Build the next revision through
+   `records.mjs build-control`, preserving policy and replacing only the representable
+   baseline, decision hash, `executionIssueIds`, `exitedExecutionIssueIds`, and timestamp.
+   Never persist the loader's raw `currentBaseline`; partial and invalid graph
+   observations are not authority.
+3. Update the existing project comment and reload it. A failed or ambiguous write leaves
+   the previous authority in force and reports recovery failure.
+4. For every exact `repair` entry, build an `outcome: repaired` active-run execution
+   record and persist it as a Linear issue comment. Unknown or ambiguous identities are
+   reported and never guessed.
+5. Construct the same Task/Dependencies/Workspace/Host/Terminal/Status/Result Coordinator
+   table used by `orchestrate` from the final full snapshots. Keep it in conversation as
+   the handoff so a following `monkey-maestro:orchestrate <project-id>` can reuse it
+   without another full hydration.
 
-For each resolver `dispatch` in order, first run `records.mjs build-authorization` with
-the persisted control's project/run/revision/decision hash, the held lock token, the
-dispatch issue id, its validated Superset task id, and that dispatch entry's fresh
-`eligibility` evidence. The helper must accept the issue as startable with every blocker
-completed or exactly waived. Then
-invoke `monkey-maestro:spawn` with its complete output:
+## Step 4 — Release and report
 
-```json
-{
-  "issueId": "TEAM-123",
-  "authorization": {
-    "kind": "project",
-    "projectId": "<project id>",
-    "runId": "<run id>",
-    "revision": "<persisted revision>",
-    "decisionHash": "<persisted hash>",
-    "lockToken": "<held token>",
-    "issueId": "TEAM-123",
-    "taskId": "<Superset task UUID>",
-    "eligibility": {
-      "issueId": "TEAM-123",
-      "projectId": "<project id>",
-      "statusType": "<fresh startable type>",
-      "blockers": []
-    },
-    "authorizationHash": "sha256:<hash>"
-  }
-}
-```
-
-Use the installed skill workflow directly. If the runtime cannot nest a skill call, read
-`${CLAUDE_PLUGIN_ROOT}/skills/spawn/SKILL.md` and execute that exact project-authorized
-sub-workflow in this context; do not improvise a parallel implementation. It requires no
-per-issue gate. Capture every structured spawn result. Partial/degraded results preserve
-their runtime and consume capacity; never retry them in this pass.
-
-## Step 5 — Release and report
-
-Release the token-matched lock in `finally`, delete only this invocation's ephemeral
-packet, print the report, and exit. Do not sleep, wait for agents, poll, recurse, or
-schedule the next reconciliation. A known workflow transition or user-configured
-Superset automation may invoke this same skill later.
+Release the token-matched lock in `finally`, remove only this invocation's ephemeral raw
+packet, print the recovery report, and exit. The next action is explicit invocation only:
+`monkey-maestro:orchestrate <project-id>` resumes normal coordination from the validated
+handoff. Do not invoke it automatically.
 
 ## Final Report
 
 ```text
 monkey-maestro:reconcile report
-  Project/run:    <project id> / <run id>
-  Revision/hash:  <revision> / <decision hash>
-  Lock:           acquired then released | held by <owner> | failed
-  Providers:      Linear <state> · GitHub <state> · Superset <state>
-  Capacity:       <active>/<max> · <available> available
-  Active:         <issue → workspace/terminal, ... | none>
-  Residual:       <terminal issue → live workspace/terminal, ... | none>
-  Repaired:       <issue → Linear record, ... | none>
-  Dispatched:     <issue → workspace/terminal/outcome, ... | none>
-  Blocked:        <issue + reason, ... | none>
-  Quarantined:    <issue + reason, ... | none>
-  Ambiguous:      <issue + resource ids, ... | none>
-  Next run:       explicit invocation only
+  Project/run:        <project id> / <run id>
+  Revision/hash:      <revision> / <decision hash>
+  Lock:               acquired then released | held by <owner> | failed
+  Providers:          Linear <state> · GitHub <state> · Superset <state>
+  Active/residual:    <exact runtime rows | none>
+  Repaired:           <issue → Linear record, ... | none>
+  Blocked/quarantine: <issue + reason, ... | none>
+  Ambiguous:          <issue + resource ids, ... | none>
+  Coordinator handoff: ready | partial | unavailable
+  Dispatched:         none — recovery never launches work
+  Next:               explicit monkey-maestro:orchestrate <project-id>
 ```
 
 ## Never
 
-- Dispatch without an active hash-valid control, held exact lock, fresh provider reads,
-  and a per-issue hash-bound authorization from the final resolver decision.
-- Treat GitHub merge, canceled Linear status, title matching, or local state as blocker completion.
-- Count an exactly correlated live runtime for a known terminal managed issue against
-  concurrency; report it as residual instead. If its durable identity does not correlate,
-  keep it active and consuming one slot.
-- Auto-confirm a runnable expansion, auto-recover a stale lock, or guess an unknown field.
-- Maintain a queue, baton, relay flag, daemon, polling loop, sleep, or default automation.
-- Delete/terminate runtime resources, mark issues complete, or invoke `superset-orchestrate`.
-- Leave the lock held after any success, refusal, error, interruption, or partial spawn.
-- Hold the project lock while waiting for user confirmation.
-- Run `git commit`, `git push`, or `git rebase`.
+- Never dispatch work, create a workspace, launch an agent, or invoke
+  `monkey-maestro:spawn`.
+- Never treat GitHub merge, canceled Linear status, title matching, or local state as
+  blocker completion.
+- Never auto-confirm a graph expansion, auto-recover a stale lock, or guess unknown data.
+- Never maintain a queue, baton, relay flag, daemon, polling loop, or automation.
+- Never leave the lock held or hold it across human input.
+- Never delete/terminate runtime resources or mutate Linear issue status.
+- Never run `git commit`, `git push`, or `git rebase`.

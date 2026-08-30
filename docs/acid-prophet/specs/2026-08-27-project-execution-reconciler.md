@@ -1,100 +1,104 @@
 ---
 id: project-execution-reconciler
 status: ratified
-spec-version: 1
+spec-version: 2
 linear-project: _none_
 verified-by: spec-auditor
-last-reviewed: 2026-08-27
+last-reviewed: 2026-08-30
 ---
 
-# Linear project execution reconciler
+# Linear-backed Superset project orchestrator
 
 ## Problem & Why
 
-Nuthouse can create dependency-aware Linear projects and relay one issue after another,
-but the workflow does not yet operate as a reliable project-level execution system.
+Nuthouse can create and verify dependency-aware Linear projects, but its first
+project-execution design made full reconciliation the normal dispatch operation. Every
+issue transition reloaded the complete Linear project, GitHub delivery state, Superset
+workspace inventory, task bindings, and terminals. The reconciler then invoked the
+single-issue spawn workflow, which repeated expensive Linear and runtime checks for each
+candidate.
 
-The current project cascade does not treat the approved dependency graph as a fully
-verified post-mutation invariant. An incorrect, missing, reversed, or partially written
-dependency can therefore cause work to start in the wrong order. Canceled blockers are
-also currently treated as satisfied without explicit human approval.
+That model is safe but too slow for long-running issues. A user may spend hours on each
+task and expects Maestro to launch independent work immediately, monitor it, and promote
+newly unblocked work without another multi-minute scan. Repeated full reconciliation also
+throws away useful coordinator context that is already available in the current session.
 
-Monkey Maestro follows a sequential baton model: it waits for one issue to finish before
-selecting one successor. Independent issues cannot start concurrently, orchestration
-state is partly local, and recovering the real project state requires knowledge of the
-previous relay execution.
+The former sequential relay is not an acceptable fallback. It cannot fan out independent
+issues, relies on local baton state, and does not reconstruct task/workspace/terminal
+ownership durably.
 
-`git-gremlin:spawn` also combines workspace creation, agent selection, handoff, and
-cleanup around a local single-agent workflow. It does not expose the terminal identity
-needed for project-level reconciliation and cannot serve cleanly as a reusable execution
-primitive.
-
-The user needs to approve a Linear project and its dependency graph once, activate
-Maestro once, and then request reconciliation whenever desired. Each reconciliation must
-reconstruct project reality from Linear, GitHub, and Superset, safely fill available
-execution slots, and remain recoverable without relying on an immortal agent session or
-private issue queue.
+The required system treats Linear as durable orchestration memory, Superset as the
+workspace and terminal execution engine, and Maestro as a live coordinator. It must
+hydrate complete authority once at session start, launch every parallelizable issue up
+to bounded concurrency, monitor all workers, and use targeted Linear reads for normal
+transitions. Full reconciliation remains available only as explicit recovery/audit.
 
 ## Solution
 
-The delivery contains two subsystems with a strict ownership boundary.
+The delivery has two cooperating subsystems with strict ownership.
 
 ### Verified project graph
 
 `linear-devotee:create-project` owns the complete Linear project cascade. It validates
 the dependency DAG before mutation, binds approval to the exact payload hash, creates
-issues and relations recoverably, then reloads Linear and verifies exact graph
-equivalence.
+issues and relations recoverably, reloads Linear, and verifies exact graph equivalence.
 
-### Project execution reconciler
+### Durable project orchestration
 
-Monkey Maestro owns every project-execution entry point:
+Monkey Maestro owns the project-execution entry points:
 
-- `monkey-maestro:start` activates project orchestration after one approval defining the
-  default agent and concurrency policy.
-- `monkey-maestro:spawn` creates one task-linked Superset workspace and agent, then
-  returns their `workspaceId` and `terminalId`.
-- `monkey-maestro:reconcile` reloads Linear, GitHub, and Superset, identifies existing
-  executions through `taskId`, and invokes `monkey-maestro:spawn` for eligible issues
-  until available slots are filled.
-- `monkey-maestro:stop` prevents future dispatches without terminating executions
-  already in progress.
-- Monkey Maestro's branch guard redirects forbidden in-place branch creation to
-  `monkey-maestro:spawn`.
+- `monkey-maestro:status` inspects durable project state read-only and recommends the
+  next explicit action.
+- `monkey-maestro:start` activates one verified project after a single policy approval,
+  then enters `orchestrate`.
+- `monkey-maestro:orchestrate` is the normal execution path. It hydrates complete state
+  once, builds a coordinator table, launches every ready independent issue up to
+  concurrency, monitors exact Superset terminals, records worker results, and advances
+  through targeted Linear reads.
+- `monkey-maestro:reconcile` is an explicit full recovery/audit. It reconstructs all
+  provider authority, repairs exact records, prepares a reusable coordinator handoff,
+  and dispatches no work.
+- `monkey-maestro:spawn` is the manual/legacy one-workspace workflow and branch-guard
+  target. Active Maestro projects are routed to `orchestrate`; the project loop never
+  invokes spawn once per issue.
+- `monkey-maestro:stop` disables future dispatch batches without terminating existing
+  workspaces or agents.
 
-The migration deletes `git-gremlin:spawn` and moves its branch hook in the same release.
-No alias or compatibility layer remains. Git Gremlin retains only Git delivery
-responsibilities such as review, commit, and PR creation; this deletion is a boundary
-cleanup, not a third subsystem.
+Linear is durable memory for the verified graph, native statuses, active control,
+waivers, execution identities, and worker results. Superset provides isolated
+task-linked workspaces, terminal agents, progress reads, and follow-ups. The live
+coordinator table remains in conversation context and is reconstructable from Linear and
+Superset after context loss. No private issue queue, relay file, baton, or hidden daemon
+is introduced.
 
-Linear remains the durable project memory. Maestro has no private issue queue and runs
-only when `reconcile` is invoked manually, by a known workflow transition, or through an
-optional user-configured Superset automation.
-
-`linear-devotee:greet` remains the sole owner of moving a launched issue to `In Progress`.
-Canceled blockers remain unsatisfied until explicitly waived by a human.
+`linear-devotee:greet` remains the sole owner of the `In Progress` transition. Native
+Linear completion or an exact human waiver is required to satisfy a dependency; a worker
+DONE envelope or merged PR is not enough.
 
 ## Architecture
 
 ### Ownership boundaries
 
-`linear-devotee` owns project definition and dependency correctness.
-`monkey-maestro` owns project execution and Superset resources. `git-gremlin` owns Git
-delivery after implementation begins.
+`linear-devotee` owns project definition, dependency correctness, and issue claim.
+`monkey-maestro` owns project coordination, task-linked Superset resources, worker
+monitoring, durable execution/result receipts, and the branch guard. `git-gremlin` owns
+review, commit, and pull-request delivery.
 
-The existing `run / advance / halt` relay is replaced by `start / reconcile / stop`.
-Persistent local relay flags and baton files are removed.
+The deleted `run / advance / halt` relay remains deleted. The installed project lifecycle
+is `status / start / orchestrate / reconcile / spawn / stop`; there is no compatibility
+alias or local relay state.
 
-`superset-orchestrate` remains the coordinator for temporary parallel work that has no
-durable Linear project lifecycle. Maestro uses Superset CLI primitives directly and does
-not invoke or depend on that conversational skill.
+Maestro implements the native Superset coordinator protocol directly and remains
+self-contained. It uses stable task-to-terminal mappings, isolated workspaces, terminal
+read/send operations, structured worker envelopes, and dependency promotion without
+requiring a second orchestration workflow.
 
-### Durable control state
+### Durable Linear records
 
-Each activated project has one versioned Maestro control comment in Linear containing:
+An activated project has one versioned control comment containing:
 
 ```text
-schema_version
+project_id
 run_id
 active
 repository
@@ -102,139 +106,253 @@ superset_project_id
 target_host_id
 default_agent
 max_concurrency
+decision_baseline
 decision_hash
+graph_hash
+execution_issue_ids
+exited_execution_issue_ids
 revision
+updated_at
 ```
 
-Each dispatched issue receives a versioned execution comment containing its `run_id`,
-`workspaceId`, `terminalId`, branch, agent, and dispatch outcome. These records provide
-traceability but never replace native Linear statuses or dependency relations.
+Each dispatched issue receives an execution record containing its exact Linear issue
+identifier, Superset task UUID, run, workspace, terminal when known, branch, agent, host,
+timestamp, and verified/partial/degraded/repaired outcome.
 
-Human waivers for canceled blockers are recorded explicitly on the dependent issue with
-the blocker, reason, approver, and timestamp.
+Each accepted worker envelope receives a result record containing the same run,
+workspace, terminal, a completed/blocked/failed outcome, timestamp, and either
+summary/files/checks/handoff or reason/needs. Result records support recovery and audit,
+but never replace native Linear lifecycle.
 
-### Reconciliation lifecycle
+Control resolution orders every marker-bearing candidate by claimed revision before
+strictly validating the sole highest candidate. It never filters invalid candidates to
+fall back to an older valid control. An unorderable or invalid sole highest candidate is
+`CONTROL_INVALID`; duplicate highest claimed revisions are `CONTROL_AMBIGUOUS`.
 
-A `reconcile` execution:
+Human waivers remain explicit dependent-issue comments naming the exact blocker,
+dependent, reason, approver, and timestamp.
 
-1. acquires a short-lived project lock on the configured host;
-2. reloads the control record and authoritative Linear graph;
-3. validates that the graph remains acyclic and internally consistent;
-4. reloads GitHub PR state and Superset workspaces and terminals;
-5. reconstructs in-flight executions through `taskId`;
-6. calculates available capacity;
-7. dispatches eligible issues in deterministic Linear order;
-8. verifies every created workspace and terminal;
-9. records execution identities in Linear;
-10. releases the lock and exits.
+### Coordinator table
 
-The lock prevents concurrent reconciliations on the project's single configured host. It
-is ephemeral coordination, not project memory. A failed run can be reconstructed from
-Linear and Superset without the lock contents.
+The active session owns this compact table:
 
-### Spawn lifecycle
+| Field        | Meaning                                                |
+| ------------ | ------------------------------------------------------ |
+| Task         | exact Linear issue identifier                          |
+| Dependencies | exact approved blocker identifiers                     |
+| Workspace    | exact Superset workspace id or none                    |
+| Host         | configured host id                                     |
+| Terminal     | exact agent terminal id or none                        |
+| Status       | pending, ready, running, completed, blocked, or failed |
+| Result       | latest durable result evidence or none                 |
 
-`monkey-maestro:spawn` owns one issue dispatch. When called from an authorized active
-project, it inherits the approved host, agent, and concurrency policy and requires no
-additional confirmation. When called manually outside a project reconciliation, it
-presents its own mutation gate.
+The table is live context, not private durable state. On coordinator restart, one full
+Linear snapshot and one correlated runtime inventory reconstruct it from control,
+issues, waivers, execution records, result records, task bindings, workspaces, and
+terminals. If the exact same project/run/revision/hash handoff is already present and its
+runtime identities remain valid, orchestration first targeted-loads every known
+Coordinator task and its approved blockers in one deduplicated batch. This mandatory
+refresh runs even with no running or ready row and supplies fresh lifecycle/waiver facts
+before readiness is derived. Lifecycle-only changes update the table without another
+full hydration; drift becomes reconcile-required and partial authority blocks dispatch.
 
-The branch interception hook moves into Monkey Maestro and redirects in-place branch
-creation to this manual spawn workflow.
+### Initial hydration
 
-After the Superset agent starts, `linear-devotee:greet` loads the issue context and
-remains the sole owner of the `In Progress` transition.
+At a fresh orchestration session:
+
+1. load and validate the active control;
+2. verify the configured Superset host and terminal control surface;
+3. load one complete Linear graph/control/comment/status snapshot;
+4. load one complete correlated GitHub/Superset runtime snapshot;
+5. compose the untouched snapshots through the pure reconciliation resolver;
+6. build the coordinator table and classify active, residual, guarded, ready, blocked,
+   quarantined, and ambiguous rows;
+7. dispatch every ready independent issue up to available concurrency before monitoring.
+
+Hydration occurs outside the dispatch lock. Fresh candidate authority is revalidated in
+one targeted batch under the lock immediately before mutation.
+
+### Locked batch dispatch
+
+For one ready batch, `orchestrate`:
+
+1. acquires the exact target-host project lock;
+2. targeted-loads the candidates, their approved blockers, direct dependents, and latest
+   control;
+3. requires exact run/revision/decision-hash authority and baseline-equal relations;
+4. resolves exact Superset task UUIDs and one complete workspace inventory;
+5. rejects existing or ambiguous task ownership;
+6. builds hash-bound candidate authorizations;
+7. launches every surviving independent candidate, preserving the fixed primitive order
+   inside each issue sequence;
+8. writes execution receipts;
+9. releases the lock in `finally` before monitoring, follow-ups, waits, or user input.
+
+Independent issue sequences may run concurrently. Inside each sequence the order is:
+
+```text
+workspace duplicate check
+  -> workspaces create without agent
+  -> workspaces get and exact verification
+  -> terminal snapshot
+  -> agents create
+  -> terminal correlation
+  -> Linear execution receipt
+```
+
+Workspace success plus agent failure is a preserved partial execution. Ambiguous
+mutation responses are inspected once and never blindly retried. No failure deletes a
+workspace or terminal.
+
+### Worker protocol and monitoring
+
+Each worker receives a bounded issue prompt with objective, dependencies, scope,
+acceptance, verification, ownership constraints, `linear-devotee:greet`, and one required
+envelope:
+
+```text
+SUPERSET_WORKER_DONE
+task: <issue identifier>
+summary: <one-line outcome>
+files: <comma-separated paths or none>
+checks: <commands and outcomes>
+handoff: <next-step context or none>
+```
+
+or:
+
+```text
+SUPERSET_WORKER_BLOCKED
+task: <issue identifier>
+reason: <specific blocker>
+needs: <decision, access, or dependency required>
+```
+
+The coordinator reads all running terminals in every measured pass and sends follow-up
+context to the same terminal when needed. Terminal presence, title, attachment, or
+silence is not completion. An envelope is accepted only after correlation with its exact
+issue/workspace/terminal and surrounding evidence, then persisted as a result record. A
+DONE result remains capacity-guarding until targeted Linear state is terminal and its
+current-run execution/result/runtime identities correlate exactly, or exact terminal
+exit is proven.
+
+### Incremental advancement
+
+After a worker result or observed Linear lifecycle transition, Maestro reads only:
+
+- the affected issue;
+- its direct dependents from the approved decision baseline;
+- their known blockers;
+- the latest control and decision-relevant status/relation/waiver comments.
+
+This targeted response validates only already-approved promotions and is never passed to
+the full-project resolver. A dependent becomes ready only when every blocker is freshly
+Linear-completed or exactly human-waived. When capacity opens, the coordinator dispatches
+the entire newly ready batch before its next monitoring pass.
+
+When a DONE envelope arrives before native Linear completion, the coordinator retains a
+`Linear waiting` row. Every measured monitoring pass performs one batched targeted read
+for the deduplicated union of all such issues, their baseline direct dependents, and known
+blockers. It does not poll once per issue and does not exit while these rows remain.
+
+Any new, removed, reversed, unknown, self, cyclic, or cross-project relation marks the
+affected component `reconcile_required`. Maestro never launches a full reconcile
+automatically. Existing workers and independent known components continue safely.
+
+### Explicit reconciliation
+
+Reconciliation is intentionally exhaustive and may be slow. It is used only after
+explicit request for drift, ambiguous identity, provider uncertainty, or lost context.
+It acquires the recovery lock, reloads all Linear/GitHub/Superset authority, runs the pure
+resolver, repairs exact execution records, updates only the resolver's representable
+baseline/ownership state, constructs a coordinator handoff, releases the lock, and exits
+without workspace or agent creation.
+
+Runnable graph expansion still requires an exact human confirmation outside the lock,
+followed by reacquisition and a complete authority reload. A subsequent explicit
+`orchestrate` reuses the validated handoff if its authority remains unchanged.
+
+### Manual spawn
+
+Manual spawn resolves one issue/task/host/project/agent, redirects a healthy active
+Maestro control to `orchestrate`, and requires direct Linear control-record repair for
+invalid authority instead of recommending reconciliation. A project-less issue skips the
+project loader, normalizes absent/`null` project bindings, and uses the exact
+`manual:<identifier>` lock scope. Spawn checks duplicates, previews the complete mutation,
+and proceeds only after confirmation. It reacquires the project/task lock after the human
+wait and repeats issue/control/task/runtime ownership checks before using the same
+workspace-first primitive. It never coordinates a project batch.
 
 ## Components / data flow
 
-- **Project cascade drafter:** produces the Linear project, milestones, complete issue
-  packets, and proposed dependency DAG.
-- **Graph validator:** rejects cycles, unknown targets, self-dependencies, reversed
-  relations, duplicate edges, cross-project edges, and missing Acceptance coverage before
-  mutation.
-- **Cascade committer:** creates approved Linear entities in recoverable phases and maps
-  draft identifiers to real Linear identifiers.
-- **Graph verifier:** reloads the created project and compares the stored graph with the
-  approved graph before allowing activation.
-- **Control records:** `start` and `spawn` write the versioned Linear project and issue
-  comments; `reconcile` and `stop` read and update them.
-- **Project snapshot loader:** reads Linear issues, statuses, dependency relations,
-  waivers, and deterministic ordering.
-- **Runtime inspector:** reads GitHub PR state and Superset workspaces, agents, and
-  terminals for the configured host.
-- **Eligibility resolver:** derives startable issues from the verified graph, native
-  Linear state, explicit waivers, existing executions, and remaining concurrency.
-- **Spawn executor:** creates one task-linked workspace, starts its configured agent,
-  verifies both identities, and records the dispatch.
-- **Reconcile coordinator:** owns the short-lived lock, invokes the readers and resolver,
-  fills available slots, and emits one structured report.
-- **Branch guard:** prevents in-place branch creation inside Superset-managed repositories
-  and redirects manual work to `monkey-maestro:spawn`.
-- **Issue bootstrap:** `linear-devotee:greet` loads context, moves the issue to
-  `In Progress`, and hands off to planning and implementation.
+- **Project cascade drafter:** produces the project, milestones, complete issue packets,
+  and proposed DAG.
+- **Graph validator/verifier:** rejects invalid edges before mutation and verifies the
+  written graph exactly afterward.
+- **Control records:** persist activation, policy, approved baseline, and conservative
+  runtime ownership indexes.
+- **Project snapshot loader:** supports `control-only`, `full`, and exact `targeted`
+  Linear normalization.
+- **Runtime inspector:** reconstructs exact task/workspace/terminal and GitHub evidence
+  for hydration/recovery only.
+- **Eligibility resolver:** computes deterministic ready/active/residual/blocked/
+  quarantine state from complete snapshots.
+- **Live coordinator:** maintains the table, fans out ready batches, monitors all
+  terminals, records results, and performs targeted promotions.
+- **Dispatch primitive:** creates and verifies one task-linked workspace, starts one
+  terminal agent, and records identity.
+- **Recovery reconciler:** performs one explicit exhaustive audit/repair and returns a
+  coordinator handoff without dispatching.
+- **Manual spawn:** exposes the one-workspace primitive behind its own confirmation.
+- **Branch guard:** redirects forbidden in-place branch creation to manual spawn.
+- **Issue bootstrap:** greet loads context and exclusively owns In Progress.
 
 ```text
-approved spec or project request
-  -> draft complete Linear cascade and dependency DAG
-  -> validate and preview exact payload
-  -> user approves once
-  -> create project, issues, milestones, and relations
-  -> reload and verify exact Linear graph
-  -> activate Maestro control record
-  -> reconcile Linear + GitHub + Superset
-  -> resolve eligible issues and available slots
-  -> spawn task-linked workspaces and agents
-  -> greet -> plan -> implementation -> verification -> PR
-  -> Linear/GitHub records completion
-  -> next reconcile unlocks dependents
-```
+verified Linear project + active control
+  -> orchestrate
+  -> hydrate Linear + Superset once
+  -> build coordinator table
+  -> targeted-validate one ready batch under lock
+  -> create/verify isolated workspaces and terminal agents
+  -> release lock
+  -> monitor every running terminal and send follow-ups
+  -> persist worker results in Linear
+  -> targeted-read affected issue + direct dependents
+  -> launch complete newly ready batch
+  -> repeat without full project reload
 
-`superset-orchestrate` remains outside this flow. It coordinates temporary parallel work
-that has no durable Linear project lifecycle.
+drift / ambiguity / context loss
+  -> explicit reconcile
+  -> complete authority reload + repair
+  -> reusable coordinator handoff
+  -> explicit orchestrate resume
+```
 
 ## Error handling
 
-The approved graph hash protects the initial project creation without freezing Linear
-for the lifetime of the project. Every reconciliation reloads and validates current
-Linear state.
+- Workflow status names are never hard-coded; native types are normalized.
+- Provider unavailability or an unscoped required unknown prevents new mutation while
+  existing workers continue.
+- Issue-scoped unknowns quarantine only affected decisions.
+- Targeted relation drift yields `reconcile_required`; it is never silently adopted.
+- A canceled blocker remains unsatisfied without one exact human waiver.
+- A DONE envelope, terminal exit, or merged PR never satisfies a Linear edge.
+- Invalid components and descendants are quarantined while independent components remain
+  eligible.
+- Issues moved out of the project become unmanaged without runtime termination.
+- Exact task/workspace/terminal matches are reconstructed before retry decisions.
+- Multiple matches block only that issue and report every conflicting resource.
+- Workspace creation plus agent failure is recorded as partial and never duplicated.
+- Linear receipt failure after verified creation is degraded traceability, not
+  redispatch permission.
+- A result-record failure preserves the worker and terminal evidence and is reported for
+  recovery.
+- A held project lock prevents competing mutation; stale recovery needs exact terminal
+  proof and explicit authority.
+- An inactive control prevents every new batch but leaves existing workers untouched.
 
-- Linear title, description, priority, assignment, order, and status changes are adopted
-  automatically.
-- Workflow status names are never hard-coded; Maestro uses normalized status types and
-  reloads workflow metadata.
-- A dependency addition is adopted automatically after DAG validation because it reduces
-  the set of startable issues.
-- A change that can expand runnable work, including a removed or reversed dependency or a
-  newly startable issue, requires confirmation before the affected dispatch.
-- A canceled blocker remains unsatisfied until an explicit human waiver is recorded.
-- An invalid graph component and its descendants are quarantined while independent valid
-  components remain eligible.
-- An issue moved out of the project is no longer managed, but its active execution is not
-  terminated automatically.
-- An issue added to the project enters the next validated snapshot.
-- An unknown Linear response, missing API field, or unrecognized status representation
-  blocks only decisions that require the missing data.
-- Temporary Linear unavailability prevents new dispatches while existing executions
-  continue.
-- Partial creations, orphaned workspaces, and missing terminals are reconstructed by
-  `taskId` before any retry decision.
-- A concurrent reconciliation exits without mutation when the project lock is held.
-- A stale lock requires explicit recovery after verifying that its owning terminal no
-  longer exists.
-- A workspace created without a successfully launched agent is recorded as a partial
-  execution and never duplicated automatically.
-- A failed Linear write after a verified Superset dispatch is reported as degraded
-  traceability and repaired from runtime identity on the next reconciliation.
-- A workspace whose issue remains unclaimed is inspected and reported instead of
-  relaunched.
-- A merged GitHub PR does not satisfy a blocker until Linear records the blocker as
-  completed.
-- Exhausted capacity completes as a successful no-op.
-- An inactive or invalid Maestro control record permits no external mutation.
-- Unreliable Linear, GitHub, or Superset state permits no new dispatch decision.
-
-No failure deletes an existing workspace, terminates an active agent, marks an issue
-completed, or silently rewrites the dependency graph.
+No failure deletes runtime resources, marks an issue completed, silently rewrites the
+graph, or creates a private orchestration queue.
 
 ## Acceptance
 
@@ -242,7 +360,7 @@ completed, or silently rewrites the dependency graph.
 
 - [AC-001] WHEN a Linear project cascade is drafted, THE SYSTEM SHALL produce the complete normalized dependency DAG before any external mutation.
 - [AC-002] IF the proposed DAG contains a cycle, unknown target, self-edge, duplicate edge, cross-project edge, or invalid direction, THE SYSTEM SHALL refuse mutation and identify the exact relation.
-- [AC-003] WHEN the cascade is previewed, THE SYSTEM SHALL display every project, milestone, issue, dependency, and the normalized payload hash.
+- [AC-003] WHEN the cascade is previewed, THE SYSTEM SHALL display every project, milestone, issue, dependency, and normalized payload hash.
 - [AC-004] WHEN the user approves the cascade, THE SYSTEM SHALL bind that approval to the exact previewed payload hash.
 - [AC-005] WHEN a partially committed cascade resumes, THE SYSTEM SHALL retry only operations not confirmed by Linear.
 - [AC-006] WHEN all approved entities and relations have been written, THE SYSTEM SHALL reload the complete graph from Linear and compare it with the approved graph.
@@ -250,22 +368,21 @@ completed, or silently rewrites the dependency graph.
 
 ### Maestro activation and control
 
-- [AC-008] WHEN Maestro is activated for a project, THE SYSTEM SHALL persist a versioned Linear control record containing its `run_id`, repository, Superset project, host, agent, concurrency, decision hash, and revision.
+- [AC-008] WHEN Maestro is activated, THE SYSTEM SHALL persist a versioned Linear control containing its run, repository, Superset project, host, agent, concurrency, approved baseline/hash, ownership indexes, and revision.
 - [AC-009] WHEN no concurrency value is supplied, THE SYSTEM SHALL configure four simultaneous executions.
 - [AC-010] IF requested concurrency exceeds ten, THE SYSTEM SHALL reject the configuration.
-- [AC-011] WHEN Maestro is stopped, THE SYSTEM SHALL prevent every future dispatch for that project.
+- [AC-011] WHEN Maestro is stopped, THE SYSTEM SHALL prevent every future dispatch batch for that project.
 - [AC-012] WHEN Maestro is stopped while executions are active, THE SYSTEM SHALL leave those executions running.
-- [AC-013] WHEN no `reconcile` invocation occurs, THE SYSTEM SHALL launch no project execution.
-- [AC-014] WHEN the user configures a Superset automation, THE SYSTEM SHALL allow that automation to invoke the same `reconcile` workflow.
+- [AC-014] WHEN the user configures a Superset automation, THE SYSTEM SHALL allow that automation to invoke the same controlled orchestration entry point without creating private queue state.
 
-### Reconciliation and eligibility
+### Eligibility and dispatch safety
 
-- [AC-015] WHEN reconciliation begins, THE SYSTEM SHALL acquire an exclusive short-lived lock for the project on its configured host.
-- [AC-016] IF another reconciliation owns the project lock, THE SYSTEM SHALL exit without external mutation.
-- [AC-017] WHEN reconciliation holds the lock, THE SYSTEM SHALL reload Linear, GitHub, and Superset before resolving eligibility.
-- [AC-018] WHEN an execution already exists for a Linear `taskId`, THE SYSTEM SHALL count it as in flight and refuse a duplicate dispatch.
-- [AC-019] WHEN capacity is available, THE SYSTEM SHALL select eligible issues in deterministic Linear order until the configured limit is reached.
-- [AC-020] WHEN concurrency capacity is exhausted, THE SYSTEM SHALL complete reconciliation as a no-op and report the active executions.
+- [AC-015] WHEN explicit full reconciliation begins, THE SYSTEM SHALL acquire an exclusive project lock on the configured host.
+- [AC-016] IF another mutation owns the project lock, THE SYSTEM SHALL exit without competing external mutation.
+- [AC-017] WHEN explicit reconciliation holds the lock, THE SYSTEM SHALL reload Linear, GitHub, and Superset before resolving recovery state.
+- [AC-018] WHEN an execution already exists for an exact Superset task UUID, THE SYSTEM SHALL count or classify it and refuse duplicate dispatch.
+- [AC-019] WHEN orchestration capacity is available, THE SYSTEM SHALL select ready issues in deterministic Linear order until the configured limit is reached.
+- [AC-020] WHEN concurrency is exhausted, THE SYSTEM SHALL report active executions and launch no additional work.
 - [AC-021] WHEN an issue is evaluated, THE SYSTEM SHALL consider it eligible only when every blocker is completed in Linear or covered by a valid explicit waiver.
 - [AC-022] IF a blocker is canceled without an explicit waiver, THE SYSTEM SHALL keep the dependent issue blocked.
 - [AC-023] WHEN a valid waiver is recorded, THE SYSTEM SHALL satisfy only the named blocker-to-dependent relation.
@@ -273,104 +390,109 @@ completed, or silently rewrites the dependency graph.
 
 ### Linear evolution and resilience
 
-- [AC-025] WHEN Linear issue metadata, ordering, assignment, priority, or status changes, THE SYSTEM SHALL adopt the fresh values without requiring graph approval.
-- [AC-026] WHEN a dependency is added, THE SYSTEM SHALL adopt it automatically after validating the resulting DAG.
-- [AC-027] WHEN a Linear change expands the set of runnable issues, THE SYSTEM SHALL require confirmation before dispatching the newly runnable work.
+- [AC-025] WHEN Linear issue metadata, ordering, assignment, priority, or status changes within a targeted scope, THE SYSTEM SHALL adopt the fresh known value without requiring graph approval.
+- [AC-027] WHEN a Linear graph change may expand runnable work, THE SYSTEM SHALL require explicit full reconciliation and confirmation before adopting that expansion.
 - [AC-028] IF a graph component becomes invalid, THE SYSTEM SHALL quarantine its affected issues and descendants.
-- [AC-029] WHEN one graph component is quarantined, THE SYSTEM SHALL continue reconciling independent valid components.
-- [AC-030] WHEN an issue is added to the active Linear project, THE SYSTEM SHALL include it in the next validated snapshot.
+- [AC-029] WHEN one graph component is quarantined, THE SYSTEM SHALL continue coordinating independent valid components.
+- [AC-030] WHEN an issue is added to the active Linear project, THE SYSTEM SHALL mark the affected scope reconcile-required before project dispatch.
 - [AC-031] WHEN an issue leaves the active Linear project, THE SYSTEM SHALL stop managing it without terminating an existing execution.
-- [AC-032] IF Linear is unavailable or required Linear data is unknown, THE SYSTEM SHALL launch no new execution.
+- [AC-032] IF Linear is unavailable or required Linear data is unknown, THE SYSTEM SHALL launch no new execution whose decision needs that data.
 - [AC-033] IF Linear changes a required API field or workflow representation, THE SYSTEM SHALL block only decisions whose required data cannot be normalized.
 
-### Spawn and issue ownership
+### Workspace and issue ownership
 
-- [AC-034] WHEN Maestro dispatches an eligible issue, THE SYSTEM SHALL create exactly one task-linked workspace on the project's configured Superset host.
-- [AC-035] WHEN the workspace is verified, THE SYSTEM SHALL launch the project-configured agent and capture its `workspaceId` and `terminalId`.
-- [AC-036] WHEN a dispatch is verified, THE SYSTEM SHALL record its execution identity in a versioned Linear issue comment.
-- [AC-037] WHEN `monkey-maestro:spawn` runs under an approved active project reconciliation, THE SYSTEM SHALL require no additional per-issue confirmation.
-- [AC-038] WHEN `monkey-maestro:spawn` runs as a standalone manual workflow, THE SYSTEM SHALL require an explicit mutation confirmation.
-- [AC-039] IF workspace creation succeeds but agent launch fails, THE SYSTEM SHALL record the partial execution and refuse automatic duplicate workspace creation.
-- [AC-040] WHEN a spawned agent claims an issue, THE SYSTEM SHALL leave the `In Progress` transition exclusively to `linear-devotee:greet`.
-- [AC-041] IF a workspace exists while its issue remains unclaimed, THE SYSTEM SHALL inspect and report that execution instead of launching another one.
+- [AC-034] WHEN Maestro dispatches an eligible issue, THE SYSTEM SHALL create exactly one task-linked workspace on the configured Superset host.
+- [AC-035] WHEN the workspace is verified, THE SYSTEM SHALL launch the configured agent and capture exact workspace and terminal ids.
+- [AC-036] WHEN a dispatch is verified or partial, THE SYSTEM SHALL record its execution identity in a versioned Linear issue comment.
+- [AC-038] WHEN manual `monkey-maestro:spawn` runs outside an active project, THE SYSTEM SHALL require one explicit mutation confirmation.
+- [AC-039] IF workspace creation succeeds but agent launch fails, THE SYSTEM SHALL record the partial execution and refuse automatic duplicate creation.
+- [AC-040] WHEN a spawned agent claims an issue, THE SYSTEM SHALL leave In Progress exclusively to `linear-devotee:greet`.
+- [AC-041] IF a workspace exists while its issue remains unclaimed, THE SYSTEM SHALL inspect and report that execution instead of launching another.
 
 ### Ownership migration
 
-- [AC-042] WHEN this migration is installed, THE SYSTEM SHALL expose `spawn` from Monkey Maestro and expose no `spawn` skill from Git Gremlin.
-- [AC-043] WHEN the branch guard intercepts in-place branch creation, THE SYSTEM SHALL redirect the user to `monkey-maestro:spawn`.
+- [AC-042] WHEN this migration is installed, THE SYSTEM SHALL expose manual `spawn` from Monkey Maestro and expose no `spawn` skill from Git Gremlin.
+- [AC-043] WHEN the branch guard intercepts in-place branch creation, THE SYSTEM SHALL redirect to `monkey-maestro:spawn`.
 - [AC-044] WHEN Git Gremlin is installed after the migration, THE SYSTEM SHALL contain no workspace orchestration hook or spawn contract.
-- [AC-045] WHEN Maestro reconciles a Linear project, THE SYSTEM SHALL use Superset CLI primitives without requiring the `superset-orchestrate` skill.
-- [AC-046] WHEN `superset-orchestrate` is invoked independently, THE SYSTEM SHALL remain usable for temporary parallel work without Maestro project state.
+- [AC-045] WHEN Maestro coordinates a Linear project, THE SYSTEM SHALL use native Superset CLI primitives without requiring another orchestration skill.
+- [AC-046] WHEN independent temporary orchestration is invoked, THE SYSTEM SHALL remain usable without Maestro project state.
 
 ### Recovery
 
-- [AC-047] WHEN reconciliation restarts after interruption, THE SYSTEM SHALL reconstruct project execution from Linear records and Superset `taskId` mappings without a private local issue queue.
-- [AC-048] WHEN one exact workspace matches a missing execution record, THE SYSTEM SHALL repair the Linear record instead of redispatching the issue.
+- [AC-047] WHEN coordinator context is lost, THE SYSTEM SHALL reconstruct project execution from Linear records and exact Superset task mappings without a private local queue.
+- [AC-048] WHEN one exact workspace matches a missing execution record, THE SYSTEM SHALL repair the Linear record instead of redispatching.
 - [AC-049] IF multiple runtime resources ambiguously claim one issue, THE SYSTEM SHALL block that issue and report every conflicting resource.
-- [AC-050] IF recording to Linear fails after a verified dispatch, THE SYSTEM SHALL preserve the runtime execution and report degraded traceability for repair on the next reconciliation.
+- [AC-050] IF recording to Linear fails after verified dispatch, THE SYSTEM SHALL preserve the runtime and report degraded traceability for explicit recovery.
+
+### Durable orchestration
+
+- [AC-051] WHEN Maestro activation succeeds, THE SYSTEM SHALL enter `monkey-maestro:orchestrate` without invoking full reconciliation first.
+- [AC-052] WHEN orchestration starts without a valid coordinator table, THE SYSTEM SHALL hydrate one complete Linear graph/control/record snapshot and one correlated runtime snapshot before dispatch.
+- [AC-053] WHEN hydration succeeds, THE SYSTEM SHALL construct a coordinator table containing task, dependencies, workspace, host, terminal, status, and result.
+- [AC-054] WHEN multiple independent issues are ready and capacity is available, THE SYSTEM SHALL dispatch every ready issue up to configured concurrency before monitoring newly launched workers.
+- [AC-055] WHEN project orchestration dispatches an issue, THE SYSTEM SHALL execute the verified workspace-and-agent primitive directly without invoking standalone `spawn`.
+- [AC-056] WHEN a worker is launched, THE SYSTEM SHALL provide its objective, dependencies, scope, acceptance checks, verification, and DONE/BLOCKED envelope.
+- [AC-057] WHEN workers are running, THE SYSTEM SHALL read every running terminal at a measured cadence and send follow-up context to the same terminal when required.
+- [AC-058] WHEN a worker emits a result envelope, THE SYSTEM SHALL correlate it with the exact issue, workspace, terminal, and surrounding evidence without treating it as native Linear completion.
+- [AC-059] WHEN a worker result may change dependency eligibility, THE SYSTEM SHALL refresh only the issue, its direct dependents, and decision-required blocker/status/relation/waiver facts.
+- [AC-060] WHEN the coordinator table remains valid, THE SYSTEM SHALL advance issue transitions without reloading the complete Linear project or runtime inventory.
+- [AC-061] IF targeted refresh detects baseline drift, ambiguous authority, or an uncorrelated runtime, THE SYSTEM SHALL mark the affected component reconcile-required, avoid automatic full reconciliation, and continue independent valid components.
+- [AC-062] WHEN orchestration dispatches a batch or mutates control, THE SYSTEM SHALL hold the project lock only for that bounded mutation and release it before monitoring or human input.
+- [AC-063] WHEN full reconciliation is explicitly requested, THE SYSTEM SHALL rebuild authoritative Linear, GitHub, and Superset state, repair reconstructable identities, produce an orchestration-ready handoff, and dispatch no work.
+- [AC-064] WHEN coordinator context is lost, THE SYSTEM SHALL rebuild the coordinator table from Linear control/execution/result records and exact Superset task bindings without private durable state.
+- [AC-065] WHEN an active coordinator session ends, THE SYSTEM SHALL leave existing workers and durable records intact and require explicit resume instead of hidden background polling.
+- [AC-066] WHEN a worker result is accepted, THE SYSTEM SHALL persist its completed/blocked/failed evidence in a versioned Linear result record; a failed result write SHALL NOT authorize redispatch.
+- [AC-067] WHEN an existing Coordinator table is considered for reuse, THE SYSTEM SHALL targeted-refresh every known task and approved blocker before deriving readiness, including when no row is running or ready.
+- [AC-068] WHEN a healthy active Maestro project needs continued execution, THE SYSTEM SHALL route the handoff to `orchestrate`; `reconcile` SHALL remain reserved for explicit drift recovery or audit.
+- [AC-069] WHEN manual spawn receives a project-less issue, THE SYSTEM SHALL skip project-control loading, require an absent/null task project binding, and revalidate the same absence under the `manual:<identifier>` lock before mutation.
+- [AC-070] IF manual spawn observes invalid or ambiguous control authority, including a newer invalid control above an older valid revision, THE SYSTEM SHALL stop and require repair of malformed or conflicting Linear control records without recommending `start` or `reconcile`.
 
 ## Acceptance history
 
-- None.
+- [AC-013] retired 2026-08-30 — WHEN no `reconcile` invocation occurs, THE SYSTEM SHALL launch no project execution. — reason: active Maestro sessions now dispatch through `orchestrate`; full reconciliation is not required between issue transitions.
+- [AC-026] retired 2026-08-30 — WHEN a dependency is added, THE SYSTEM SHALL adopt it automatically after validating the resulting DAG. — reason: targeted orchestration treats decision-baseline drift as reconcile-required instead of silently performing full validation.
+- [AC-037] retired 2026-08-30 — WHEN `monkey-maestro:spawn` runs under an approved active project reconciliation, THE SYSTEM SHALL require no additional per-issue confirmation. — reason: project orchestration now executes the shared Superset primitive directly and keeps `spawn` manual-only.
 
 ## Testing approach
 
-### Dependency graph contract tests
+### Dependency graph and cascade tests
 
-Table-driven fixtures cover valid DAGs, cycles, self-edges, duplicate edges, unknown
-issues, reversed relations, cross-project relations, disconnected components, and
-canceled blockers. Every failure identifies the exact offending relation.
+Table-driven fixtures cover valid DAGs, invalid edges, cycles, disconnected components,
+canceled blockers, partial mutation, payload-hash binding, resume, and exact graph
+verification.
 
-### Cascade mutation and recovery tests
+### Coordinator contract tests
 
-A controlled Linear boundary simulates successful creation, partial issue creation,
-partial relation creation, timeouts after successful writes, duplicate retry attempts,
-and post-write graph drift. Tests prove that approval remains bound to one payload hash
-and that resume never duplicates confirmed entities.
+Static and behavioral tests prove:
 
-### Reconciliation state-machine tests
+- one full hydration per coordinator session;
+- all ready independent issues launch before the first terminal monitoring pass;
+- workspace create/verify precedes agent launch;
+- the project path never invokes standalone spawn;
+- the lock is released before reads, sends, worker waits, or human input;
+- every worker prompt carries exact DONE/BLOCKED envelopes;
+- targeted reads contain only the affected issue, direct dependents, and known blockers;
+- Linear-waiting rows are reread in one targeted batch until delayed completion is
+  observed, without a full reload or one request per row;
+- worker DONE alone never unlocks a Linear dependency;
+- drift yields reconcile-required without an automatic full reload;
+- durable result records round-trip and preserve evidence.
 
-Normalized Linear, GitHub, and Superset snapshots cover:
+### Resolver and recovery tests
 
-- zero, partial, and exhausted concurrency;
-- multiple independent startable roots;
-- completed, canceled, waived, started, and unknown blockers;
-- existing workspaces and terminals matched by `taskId`;
-- partial and ambiguous runtime resources;
-- safe Linear metadata changes;
-- dependencies added or removed after activation;
-- newly runnable work requiring confirmation;
-- invalid components quarantined beside valid components;
-- stopped projects and concurrent reconciliations.
+Complete normalized snapshots cover concurrency, independent roots, native statuses,
+waivers, exact task bindings, residual runtimes, partial/ambiguous resources, provider
+unknowns, project movement, baseline drift, stopped controls, lock contention, record
+repair, and coordinator handoff reconstruction.
 
-Each fixture asserts the selected issues, blocked reasons, required confirmations,
-dispatch order, and final report.
+### Manual spawn and branch-guard tests
 
-### Spawn integration tests
-
-Temporary Git repositories and Superset boundary doubles verify branch naming, one host
-per project, task-linked workspace creation, agent launch, `workspaceId` and `terminalId`
-capture, partial failure recording, and duplicate prevention.
-
-Standalone spawn tests require confirmation. Project-authorized spawn tests prove that
-the existing project approval is sufficient.
-
-### Hook migration tests
-
-The branch guard test suite moves to Monkey Maestro and continues covering
-`git checkout -b`, `git switch -c`, and `git branch <new>`. Static tests reject remaining
-`git-gremlin:spawn` references, skills, agents, hook messages, and manifest entries.
-
-### Resilience and compatibility tests
-
-Fixtures remove or rename optional Linear response fields, change workflow status names,
-simulate temporary API failures, move issues between projects, and interrupt
-reconciliation between every external operation. The system must either normalize fresh
-state, quarantine only affected decisions, or stop dispatch safely.
+Temporary repositories and Superset boundary doubles verify manual confirmation,
+post-confirmation ownership revalidation, duplicate prevention, workspace-first order,
+terminal capture, partial/degraded receipts, active-project redirection to orchestrate,
+and branch-command interception.
 
 ### Repository gates
-
-Final verification runs the affected plugin suites and repository-wide contracts:
 
 ```text
 bunx bun test linear-devotee/
@@ -386,20 +508,20 @@ bun run fmt:check
 
 ## Non-goals
 
-- Run Maestro continuously or enable periodic reconciliation by default.
+- Run a hidden coordinator daemon or background polling process after the active session ends.
 - Automatically create a scheduled Superset automation.
+- Automatically launch full reconciliation after targeted drift.
 - Distribute one project's executions across multiple Superset hosts.
-- Replace Linear with a private Maestro issue queue or database.
-- Emulate arbitrary Linear custom fields.
-- Accept cross-project dependency edges.
+- Replace Linear with a private Maestro queue, database, relay, or baton.
+- Pass targeted partial snapshots to the full reconciliation resolver.
+- Treat worker envelopes, terminal exit, canceled issues, or merged PRs as Linear completion.
 - Repair, reverse, remove, or waive a dependency without explicit authority.
 - Mark Linear issues completed directly from Maestro.
-- Merge GitHub pull requests automatically.
-- Terminate active agents or delete workspaces when Maestro is stopped.
-- Automatically delete completed workspaces during reconciliation.
-- Replace `superset-orchestrate` for temporary ad hoc parallel work.
-- Make Monkey Maestro depend on the `superset-orchestrate` skill.
-- Preserve aliases for `git-gremlin:spawn` or the former sequential relay skills.
-- Automatically migrate historical relay flags, baton files, or active relay sessions.
-- Implement the feature work described by the dispatched Linear issues.
+- Merge pull requests automatically.
+- Terminate active agents or delete workspaces when Maestro stops.
+- Automatically delete completed or partial workspaces.
+- Invoke manual spawn once per project issue.
+- Make Monkey Maestro depend on another orchestration workflow.
+- Restore aliases for Git Gremlin spawn or the deleted sequential relay skills.
+- Implement the feature work described by dispatched issues.
 - Guarantee progress when Linear, GitHub, or Superset cannot provide trustworthy state.

@@ -27,6 +27,7 @@ const REQUIRED_PATHS = [
   "monkey-maestro/lib/project-lock.mjs",
   "monkey-maestro/lib/reconciliation-state.mjs",
   "monkey-maestro/lib/records.mjs",
+  "monkey-maestro/skills/orchestrate/SKILL.md",
   "monkey-maestro/skills/reconcile/SKILL.md",
   "monkey-maestro/skills/spawn/SKILL.md",
   "monkey-maestro/skills/start/SKILL.md",
@@ -196,8 +197,32 @@ export function checkWorkflowMigration(repoRoot) {
   if (!interceptor.includes("monkey-maestro:spawn")) {
     problems.push("Monkey Maestro branch guard does not route to monkey-maestro:spawn");
   }
+  if (
+    !interceptor.includes(
+      "active Maestro project, use `monkey-maestro:orchestrate <project-id>` instead.",
+    )
+  ) {
+    problems.push("Monkey Maestro branch guard does not route active projects to orchestrate");
+  }
   if (!interceptor.includes("MONKEY_MAESTRO_SPAWN_DISABLE")) {
     problems.push("Monkey Maestro branch guard does not expose its owned kill switch");
+  }
+
+  const prSkillPath = path.join(repoRoot, "git-gremlin/skills/pr/SKILL.md");
+  const prSkill = fs.existsSync(prSkillPath) ? fs.readFileSync(prSkillPath, "utf8") : "";
+  if (
+    !prSkill.includes(
+      "active Maestro project, mention only this optional next action: after Linear records the issue completed, the user or a known workflow may invoke `monkey-maestro:orchestrate <project-id>`.",
+    )
+  ) {
+    problems.push("Git Gremlin PR handoff does not route active projects to orchestrate");
+  }
+  if (
+    !prSkill.includes(
+      "Reserve `monkey-maestro:reconcile <project-id>` for explicit recovery or audit",
+    )
+  ) {
+    problems.push("Git Gremlin PR handoff does not reserve reconcile for recovery");
   }
 
   const greetPath = path.join(repoRoot, "linear-devotee/skills/greet/SKILL.md");

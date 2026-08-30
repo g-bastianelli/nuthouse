@@ -1,5 +1,8 @@
 # quickstart — project-execution-reconciler
 
+> Historical v1 walkthrough. Its repeated reconciliation steps are retained for release
+> traceability and are superseded by the spec-version 2 orchestration contract.
+
 ## Setup
 
 - Install dependencies: `bun install`.

@@ -45,7 +45,7 @@ const reason = [
   "checks existing taskId mappings, creates the workspace first, then launches its agent.",
   "",
   "The standalone spawn workflow shows its own mutation gate. If this issue belongs to an",
-  "active Maestro project, use `monkey-maestro:reconcile <project-id>` instead.",
+  "active Maestro project, use `monkey-maestro:orchestrate <project-id>` instead.",
 ].join("\n");
 
 process.stdout.write(

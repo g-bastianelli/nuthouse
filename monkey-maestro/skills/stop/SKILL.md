@@ -1,6 +1,6 @@
 ---
 name: stop
-description: Use when the user wants to stop future Monkey Maestro dispatches for a Linear project — "stop Maestro", "disable project execution", "baton down", or "stop the reconciler". Revision-updates the durable Linear control record to inactive and leaves every existing workspace and agent running.
+description: Use when the user wants to stop future Monkey Maestro dispatches for a Linear project — "stop Maestro", "disable project execution", "baton down", or "stop orchestration". Revision-updates the durable Linear control record to inactive; the live coordinator observes it before its next batch while existing workers keep running.
 argument-hint: "<linear-project-id>"
 effort: high
 allowed-tools: Bash(node:*), Bash(superset status:*), Read, Write, Agent, mcp__claude_ai_Linear__save_comment
@@ -68,6 +68,8 @@ mutation in progress` and ask the user to invoke stop again; mutate nothing.
    on every outcome.
 
 Do not run any Superset delete/stop command, change an issue status, or touch a workspace.
+An active coordinator notices this inactive revision before its next targeted dispatch
+batch and stops launching new work; no terminal interruption is required.
 
 ## Final Report
 

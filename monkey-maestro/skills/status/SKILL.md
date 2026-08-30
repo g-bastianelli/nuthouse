@@ -1,6 +1,6 @@
 ---
 name: status
-description: Use automatically when the user supplies a Linear project URL (`linear.app/<workspace>/project/<slug>/...`) or asks to inspect/check one Linear project's Maestro state. Resolves the project and reports its graph receipt, control, dependencies, and durable executions read-only. Do not use for Linear issue URLs or issue identifiers; never starts or reconciles the project automatically.
+description: Use automatically when the user supplies a Linear project URL (`linear.app/<workspace>/project/<slug>/...`) or asks to inspect/check one Linear project's Maestro state. Resolves the project and reports its graph receipt, control, dependencies, durable executions, and whether to orchestrate or reconcile next. Do not use for Linear issue URLs or issue identifiers; never starts work automatically.
 argument-hint: "<linear-project-url-or-id>"
 effort: medium
 allowed-tools: Read, Agent, Bash(cat:*), mcp__claude_ai_Linear__get_project
@@ -81,6 +81,7 @@ Report:
   revision, concurrency, target host, Superset project, and default agent;
 - durable execution-record totals, separating records for the latest control run when a
   run exists;
+- durable worker-result totals by completed/blocked/failed, separating the latest run;
 - `Runtime: not inspected` so the report never implies fresh Superset reconstruction.
 
 Choose one next action without executing it:
@@ -95,8 +96,10 @@ conflicting Linear control records`; never recommend `start` or `reconcile`;
 - missing or unverified graph receipt → verify/adopt the project graph before Maestro
   activation;
 - missing or inactive control → explicit `monkey-maestro:start <project-id>`;
-- active control → explicit `monkey-maestro:reconcile <project-id>` when the user wants
-  one fresh runtime/dispatch pass.
+- active control with unchanged known baseline → explicit
+  `monkey-maestro:orchestrate <project-id>` to resume or begin the live coordinator;
+- active control with observed baseline drift or required graph unknowns → explicit
+  `monkey-maestro:reconcile <project-id>` for full recovery before orchestration.
 
 ## Final Report
 
@@ -111,6 +114,7 @@ monkey-maestro:status report
   Run / revision:   <run id / N | _none_>
   Policy:           <N/10; agent; host; Superset project | _none_>
   Executions:       <N durable records; M for latest run>
+  Results:          <completed N; blocked N; failed N; latest-run M>
   Runtime:          not inspected
   Unknowns:         <required N; optional N>
   Next:             <one explicit action or stopped reason>
@@ -120,7 +124,7 @@ monkey-maestro:status report
 
 - Handle a Linear issue URL or issue identifier as a project.
 - Guess a project id from a URL suffix or an issue's project field.
-- Call `start`, `reconcile`, `spawn`, or `stop` automatically.
+- Call `start`, `orchestrate`, `reconcile`, `spawn`, or `stop` automatically.
 - Treat ambiguous, malformed, hash-invalid, or unknown-schema control authority as a
   missing/inactive control or recommend mutation while it remains invalid.
 - Inspect Superset/GitHub, acquire a lock, or imply durable records are live runtimes.

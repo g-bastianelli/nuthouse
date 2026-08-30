@@ -31,6 +31,10 @@ test("redirects in-place branch creation to monkey-maestro:spawn", () => {
   expect(output.permissionDecisionReason).toContain("monkey-maestro:spawn");
   expect(output.permissionDecisionReason).toContain("feat-x");
   expect(output.permissionDecisionReason).toContain("taskId");
+  expect(output.permissionDecisionReason).toContain(
+    "active Maestro project, use `monkey-maestro:orchestrate <project-id>` instead",
+  );
+  expect(output.permissionDecisionReason).not.toContain("monkey-maestro:reconcile");
   expect(output.permissionDecisionReason).not.toContain("git-gremlin:spawn");
 });
 

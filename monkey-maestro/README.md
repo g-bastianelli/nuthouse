@@ -4,60 +4,72 @@
 
 > screeching monkey maestro conducting the issue-symphony
 
-Monkey Maestro is the project execution reconciler for verified Linear dependency
-graphs. Linear is durable project memory; Superset supplies task-linked workspaces and
-agents. Maestro keeps no private issue queue and never polls by default.
+Monkey Maestro is a durable Linear-backed Superset project orchestrator. Linear stores
+the approved dependency graph, lifecycle, control policy, waivers, execution identities,
+and worker results. Superset supplies isolated task-linked workspaces, terminal agents,
+progress reads, and follow-ups. Maestro keeps no private issue queue or hidden background
+daemon.
 
-Activation writes one versioned project control record after approval, releases its
-activation lock, and immediately runs one reconciliation pass. Reconciliation reloads
-Linear, GitHub, and Superset, reconstructs existing executions by the exact Linear
-`taskId`, validates dependency eligibility, fills the approved concurrency capacity,
-records execution identities back in Linear, and exits. The default concurrency is four
-and the hard maximum is ten. A live runtime for an exact managed issue whose fresh Linear
-status is completed or canceled is reported as residual only after its live workspace
-and terminal correlate with the exact active-run issue/task/workspace/terminal/host
-execution record inside the control's Superset project. It then no longer consumes
-logical concurrency; Maestro does not pretend that
-runtime exited or delete it. Missing or mismatched durable identities keep a slot, as do
-missing durable runtimes until an explicit terminal-exit tombstone proves they are gone. When
-a finished/canceled managed issue's
-recorded workspace has been deleted, a complete same-host/project Superset inventory
-whose exact unfiltered workspace-id set omits that current-run record proves the exit and
-writes the tombstone automatically; partial, filtered, cross-scope, or ambiguous
-observations stay guarded.
+Activation writes one versioned project control record after approval, then enters the
+live orchestration session. The coordinator hydrates Linear and runtime state once,
+builds a task/dependency/workspace/terminal table, and launches every independent ready
+issue up to the configured concurrency before monitoring workers. The default
+concurrency is four and the hard maximum is ten.
 
-Maestro bridges two different identities: Linear graph state uses the exact opaque issue
-identifier returned by the issue's team (for example `ENG-42`), while Superset workspace
+Workers report through structured DONE/BLOCKED envelopes. Maestro records those results
+in Linear, but dependency promotion still requires fresh Linear completion or one exact
+human waiver. After a transition, Maestro reloads only the affected issue, its direct
+dependents, and their known blocker facts. It does not reload the complete project
+between issues.
+
+Full reconciliation is reserved for explicit recovery after graph drift, provider
+ambiguity, runtime mismatch, or lost coordinator context. It rebuilds all Linear,
+GitHub, and Superset authority, repairs reconstructable records, prepares a coordinator
+handoff, and never dispatches work itself.
+
+Maestro bridges two identities: Linear graph state uses the exact opaque issue
+identifier returned by its team, for example `ENG-42`, while Superset workspace
 ownership uses the internal `task.id` returned by `superset tasks get ENG-42 --json`.
-Neither a team prefix nor a Linear transport UUID is hard-coded.
+Neither a team prefix nor a Linear transport UUID is inferred.
 
 ## Skills
 
-| Skill                      | What it does                                                                                                    |
-| -------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `monkey-maestro:status`    | Inspect a Linear project link read-only and report graph, control, dependencies, and durable execution records  |
-| `monkey-maestro:start`     | Activate one verified Linear project, then run one initial reconciliation pass without a second gate            |
-| `monkey-maestro:reconcile` | Perform one locked reconciliation pass and dispatch eligible issues within capacity; it never loops or polls    |
-| `monkey-maestro:spawn`     | Create exactly one task-linked Superset workspace, launch its agent, and record the workspace/terminal identity |
-| `monkey-maestro:stop`      | Disable future dispatches while leaving active workspaces and agents running                                    |
+| Skill                        | What it does                                                                                              |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `monkey-maestro:status`      | Inspect a Linear project link read-only and recommend activation, orchestration, or recovery              |
+| `monkey-maestro:start`       | Activate one verified project, configure concurrency, and enter orchestration                             |
+| `monkey-maestro:orchestrate` | Hydrate once, fan out every ready issue, monitor terminals, and advance through targeted Linear reads     |
+| `monkey-maestro:reconcile`   | Perform one explicit full recovery/audit and prepare a reusable orchestration handoff without dispatching |
+| `monkey-maestro:spawn`       | Manually create exactly one task-linked workspace and terminal outside an active Maestro project          |
+| `monkey-maestro:stop`        | Disable future dispatch batches while leaving existing workspaces and agents running                      |
 
 `status` is the implicit landing point for URLs shaped like
 `https://linear.app/<workspace>/project/<slug>/overview`. It deliberately ignores Linear
-issue URLs, reads only durable Linear state, and never invokes `start` or `reconcile` on
-the user's behalf. Live Superset state is reconstructed only by an explicit reconcile.
+issue URLs, reads only durable Linear state, and never starts work on the user's behalf.
 
-`spawn` has two authorization modes. A reconcile-held project lock plus a hash-bound
-per-issue eligibility packet authorizes project dispatch without another prompt; spawn
-rebuilds that packet from fresh Linear state immediately before creation. Standalone
-manual spawn has its own run id and mutation confirmation, then reacquires the project
-lock and rechecks task ownership after the human wait.
+`orchestrate` is the normal project path. During one live coordinator session it:
+
+1. hydrates the complete graph/runtime once or reuses an exact validated handoff;
+2. dispatches a full ready batch through the native Superset workspace-first protocol;
+3. releases the project lock before monitoring all running terminals;
+4. stores exact execution and worker-result receipts in Linear;
+5. refreshes only affected Linear nodes and immediately launches newly unblocked work.
+
+If a targeted read detects an added, removed, reversed, unknown, or ambiguous relation,
+only the affected component becomes `reconcile_required`. Reconciliation is never
+started automatically, and unrelated known work may continue.
+
+`spawn` remains the manual/legacy one-workspace escape hatch and branch-guard target.
+The project orchestrator reuses its safe primitive order—duplicate check, create
+workspace, verify, launch agent, capture terminal, write receipt—but executes that order
+directly for a batch instead of invoking the standalone workflow once per issue.
 
 ## Agents
 
-| Agent                                    | Used by                        | Role                                                                       |
-| ---------------------------------------- | ------------------------------ | -------------------------------------------------------------------------- |
-| `monkey-maestro:project-snapshot-loader` | status, start, reconcile, stop | Read-only normalized Linear graph, control, execution, and waiver snapshot |
-| `monkey-maestro:runtime-inspector`       | reconcile, spawn               | Read-only Superset workspace/terminal and GitHub PR snapshot               |
+| Agent                                    | Used by                                            | Role                                                                 |
+| ---------------------------------------- | -------------------------------------------------- | -------------------------------------------------------------------- |
+| `monkey-maestro:project-snapshot-loader` | status, start, orchestrate, reconcile, spawn, stop | Read-only control, full-project, or targeted Linear normalization    |
+| `monkey-maestro:runtime-inspector`       | orchestrate hydration, reconcile                   | Read-only Superset workspace/terminal/task and GitHub reconstruction |
 
 ## Branch guard
 
@@ -66,9 +78,10 @@ in-place `git checkout -b`, `git switch -c`, or `git branch <new>` is denied and
 to `monkey-maestro:spawn`. Set `MONKEY_MAESTRO_SPAWN_DISABLE=1` to disable that guard
 explicitly.
 
-The reconciler calls Superset CLI primitives directly. The independent
-`superset-orchestrate` skill remains available for temporary parallel work and has no
-Maestro project-state dependency.
+Maestro implements the native Superset coordinator protocol directly: isolated
+workspaces, stable task-to-terminal mappings, terminal reads/follow-ups, dependency
+promotion, and structured worker envelopes. It remains self-contained and does not
+depend on a second workflow layer.
 
 ## Install
 

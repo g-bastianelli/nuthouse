@@ -3,13 +3,16 @@ import { describe, expect, test } from "bun:test";
 import {
   buildExecutionRecord,
   buildDispatchAuthorization,
+  buildWorkerResultRecord,
   buildWaiverRecord,
   RecordValidationError,
   buildControlRecord,
   hashDecisionBaseline,
   parseControlRecord,
   parseExecutionRecord,
+  parseWorkerResultRecord,
   parseWaiverRecord,
+  resolveControlAuthority,
   serializeRecord,
   validateDispatchAuthorization,
 } from "../lib/records.mjs";
@@ -110,6 +113,42 @@ describe("Maestro control records", () => {
     expect(() => parseControlRecord(body)).toThrow("unsupported schemaVersion");
     expect(() => serializeRecord(record)).toThrow("unsupported schemaVersion");
   });
+
+  test("does not hide a newer invalid control behind an older valid revision", () => {
+    const older = buildControlRecord(controlInput);
+    const newer = { ...buildControlRecord(controlInput, older), maxConcurrency: 99 };
+    const newerBody = `<!-- nuthouse:maestro-control schema_version=1 -->\n\n\`\`\`json\n${JSON.stringify(newer)}\n\`\`\`\n`;
+
+    expect(
+      resolveControlAuthority([
+        { id: "control-old", body: serializeRecord(older) },
+        { id: "control-new-invalid", body: newerBody },
+      ]),
+    ).toMatchObject({
+      status: "invalid",
+      code: "CONTROL_INVALID",
+      control: null,
+      controlCommentId: "control-new-invalid",
+      revision: 2,
+    });
+  });
+
+  test("treats duplicate highest claimed revisions as ambiguous", () => {
+    const control = buildControlRecord(controlInput);
+    expect(
+      resolveControlAuthority([
+        { id: "control-a", body: serializeRecord(control) },
+        { id: "control-b", body: serializeRecord({ ...control, runId: "run-2" }) },
+      ]),
+    ).toEqual({
+      status: "ambiguous",
+      code: "CONTROL_AMBIGUOUS",
+      control: null,
+      controlCommentId: null,
+      controlCommentIds: ["control-a", "control-b"],
+      revision: 1,
+    });
+  });
 });
 
 describe("execution and waiver records", () => {
@@ -196,6 +235,40 @@ describe("execution and waiver records", () => {
         approvedAt: "2026-08-27T10:00:00.000Z",
       }),
     ).toThrow("self-edge");
+  });
+});
+
+describe("worker result records", () => {
+  test("round trips a completed Superset worker envelope", () => {
+    const record = buildWorkerResultRecord({
+      issueId: "OPS-7",
+      runId: "run-1",
+      workspaceId: "workspace-1",
+      terminalId: "terminal-1",
+      outcome: "completed",
+      summary: "Implemented the issue and opened its pull request",
+      files: ["src/example.ts", "src/example.test.ts"],
+      checks: "bun test: passed",
+      handoff: "PR #42",
+      recordedAt: "2026-08-27T12:00:00.000Z",
+    });
+
+    expect(parseWorkerResultRecord(serializeRecord(record))).toEqual(record);
+  });
+
+  test("requires actionable evidence for blocked results", () => {
+    expect(() =>
+      buildWorkerResultRecord({
+        issueId: "OPS-7",
+        runId: "run-1",
+        workspaceId: "workspace-1",
+        terminalId: "terminal-1",
+        outcome: "blocked",
+        reason: "",
+        needs: "API credentials",
+        recordedAt: "2026-08-27T12:00:00.000Z",
+      }),
+    ).toThrow("reason");
   });
 });
 

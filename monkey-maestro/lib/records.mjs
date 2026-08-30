@@ -1,13 +1,16 @@
 import { createHash } from "node:crypto";
 
+const CONTROL_MARKER = "nuthouse:maestro-control";
 const MARKERS = new Set([
-  "nuthouse:maestro-control",
+  CONTROL_MARKER,
   "nuthouse:maestro-execution",
+  "nuthouse:maestro-result",
   "nuthouse:maestro-waiver",
 ]);
 
 const HASH_PATTERN = /^sha256:[a-f0-9]{64}$/;
 const EXECUTION_OUTCOMES = new Set(["verified", "partial", "degraded", "repaired"]);
+const WORKER_RESULT_OUTCOMES = new Set(["completed", "blocked", "failed"]);
 const STARTABLE_STATUS_TYPES = new Set(["backlog", "triage", "unstarted"]);
 
 export class RecordValidationError extends Error {
@@ -214,7 +217,7 @@ function validateHeader(value, marker) {
   return record;
 }
 
-function parseBody(body, marker) {
+function parseEnvelope(body, marker, requireKnownSchema = true) {
   if (typeof body !== "string") fail("INVALID_COMMENT", "comment body must be a string");
   const markerText = `<!-- ${marker} schema_version=`;
   const markerIndex = body.indexOf(markerText);
@@ -222,16 +225,109 @@ function parseBody(body, marker) {
   const markerEnd = body.indexOf("-->", markerIndex);
   if (markerEnd < 0) fail("INVALID_COMMENT", "unterminated record marker");
   const versionText = body.slice(markerIndex + markerText.length, markerEnd).trim();
-  if (versionText !== "1") fail("UNSUPPORTED_SCHEMA", `unsupported schemaVersion: ${versionText}`);
+  if (requireKnownSchema && versionText !== "1") {
+    fail("UNSUPPORTED_SCHEMA", `unsupported schemaVersion: ${versionText}`);
+  }
 
   const fenceStart = body.indexOf("```json", markerEnd);
   const jsonStart = fenceStart < 0 ? -1 : body.indexOf("\n", fenceStart);
   const fenceEnd = jsonStart < 0 ? -1 : body.indexOf("```", jsonStart + 1);
   if (jsonStart < 0 || fenceEnd < 0) fail("INVALID_COMMENT", "missing JSON record fence");
   try {
-    return JSON.parse(body.slice(jsonStart + 1, fenceEnd));
+    return { versionText, record: JSON.parse(body.slice(jsonStart + 1, fenceEnd)) };
   } catch (error) {
     fail("INVALID_JSON", error instanceof Error ? error.message : String(error));
+  }
+}
+
+function parseBody(body, marker) {
+  return parseEnvelope(body, marker).record;
+}
+
+function validationCode(error) {
+  return error instanceof RecordValidationError ? error.code : "INVALID_RECORD";
+}
+
+export function resolveControlAuthority(comments) {
+  if (!Array.isArray(comments)) fail("INVALID_INPUT", "comments must be an array");
+  const candidates = comments
+    .map((comment, index) => {
+      const value = object(comment, `comments[${index}]`);
+      const body = value.body;
+      if (typeof body !== "string") {
+        fail("INVALID_INPUT", `comments[${index}].body must be a string`);
+      }
+      if (!body.includes(`<!-- ${CONTROL_MARKER}`)) return null;
+      const id = string(value.id, `comments[${index}].id`);
+      try {
+        const envelope = parseEnvelope(body, CONTROL_MARKER, false);
+        return {
+          id,
+          body,
+          revision: integer(
+            envelope.record?.revision,
+            `comments[${index}].revision`,
+            1,
+            Number.MAX_SAFE_INTEGER,
+          ),
+        };
+      } catch (error) {
+        return { id, body, revision: null, errorCode: validationCode(error) };
+      }
+    })
+    .filter(Boolean);
+
+  if (candidates.length === 0) {
+    return { status: "missing", code: "CONTROL_MISSING", control: null, controlCommentId: null };
+  }
+
+  const unorderable = candidates
+    .filter((candidate) => candidate.revision === null)
+    .sort((left, right) => left.id.localeCompare(right.id));
+  if (unorderable.length > 0) {
+    const candidate = unorderable[0];
+    return {
+      status: "invalid",
+      code: "CONTROL_INVALID",
+      control: null,
+      controlCommentId: candidate.id,
+      revision: null,
+      reason: candidate.errorCode,
+    };
+  }
+
+  const highestRevision = Math.max(...candidates.map((candidate) => candidate.revision));
+  const highest = candidates
+    .filter((candidate) => candidate.revision === highestRevision)
+    .sort((left, right) => left.id.localeCompare(right.id));
+  if (highest.length > 1) {
+    return {
+      status: "ambiguous",
+      code: "CONTROL_AMBIGUOUS",
+      control: null,
+      controlCommentId: null,
+      controlCommentIds: highest.map((candidate) => candidate.id),
+      revision: highestRevision,
+    };
+  }
+
+  const candidate = highest[0];
+  try {
+    return {
+      status: "valid",
+      control: parseControlRecord(candidate.body),
+      controlCommentId: candidate.id,
+      revision: highestRevision,
+    };
+  } catch (error) {
+    return {
+      status: "invalid",
+      code: "CONTROL_INVALID",
+      control: null,
+      controlCommentId: candidate.id,
+      revision: highestRevision,
+      reason: validationCode(error),
+    };
   }
 }
 
@@ -246,7 +342,7 @@ export function buildControlRecord(input, existing) {
     fail("DECISION_HASH_MISMATCH", "decisionHash does not match decisionBaseline");
   }
   return validateControlRecord({
-    marker: "nuthouse:maestro-control",
+    marker: CONTROL_MARKER,
     schemaVersion: 1,
     projectId: value.projectId,
     runId: value.runId,
@@ -268,7 +364,7 @@ export function buildControlRecord(input, existing) {
 }
 
 export function validateControlRecord(value) {
-  const record = validateHeader(value, "nuthouse:maestro-control");
+  const record = validateHeader(value, CONTROL_MARKER);
   if (typeof record.active !== "boolean") fail("INVALID_RECORD", "active must be boolean");
   const decisionBaseline = canonicalizeDecisionBaseline(record.decisionBaseline);
   const decisionHash = hash(record.decisionHash, "decisionHash");
@@ -345,6 +441,41 @@ export function buildExecutionRecord(input) {
   });
 }
 
+export function validateWorkerResultRecord(value) {
+  const record = validateHeader(value, "nuthouse:maestro-result");
+  if (!WORKER_RESULT_OUTCOMES.has(record.outcome)) {
+    fail("INVALID_RECORD", `unknown worker result outcome: ${String(record.outcome)}`);
+  }
+  const normalized = {
+    marker: record.marker,
+    schemaVersion: 1,
+    issueId: string(record.issueId, "issueId"),
+    runId: string(record.runId, "runId"),
+    workspaceId: string(record.workspaceId, "workspaceId"),
+    terminalId: string(record.terminalId, "terminalId"),
+    outcome: record.outcome,
+    recordedAt: timestamp(record.recordedAt, "recordedAt"),
+  };
+  if (record.outcome === "completed") {
+    normalized.summary = string(record.summary, "summary");
+    normalized.files = sortedUniqueStrings(record.files ?? [], "files");
+    normalized.checks = string(record.checks, "checks");
+    normalized.handoff = string(record.handoff, "handoff");
+  } else {
+    normalized.reason = string(record.reason, "reason");
+    normalized.needs = string(record.needs, "needs");
+  }
+  return normalized;
+}
+
+export function buildWorkerResultRecord(input) {
+  return validateWorkerResultRecord({
+    ...object(input, "worker result input"),
+    marker: "nuthouse:maestro-result",
+    schemaVersion: 1,
+  });
+}
+
 export function validateWaiverRecord(value) {
   const record = validateHeader(value, "nuthouse:maestro-waiver");
   if (record.revokedAt !== undefined && record.revokedAt !== null) {
@@ -383,16 +514,22 @@ export function serializeRecord(value) {
       ? validateControlRecord(record)
       : marker === "nuthouse:maestro-execution"
         ? validateExecutionRecord(record)
-        : validateWaiverRecord(record);
+        : marker === "nuthouse:maestro-result"
+          ? validateWorkerResultRecord(record)
+          : validateWaiverRecord(record);
   return `<!-- ${marker} schema_version=${String(normalized.schemaVersion)} -->\n\n\`\`\`json\n${JSON.stringify(normalized, null, 2)}\n\`\`\`\n`;
 }
 
 export function parseControlRecord(body) {
-  return validateControlRecord(parseBody(body, "nuthouse:maestro-control"));
+  return validateControlRecord(parseBody(body, CONTROL_MARKER));
 }
 
 export function parseExecutionRecord(body) {
   return validateExecutionRecord(parseBody(body, "nuthouse:maestro-execution"));
+}
+
+export function parseWorkerResultRecord(body) {
+  return validateWorkerResultRecord(parseBody(body, "nuthouse:maestro-result"));
 }
 
 export function parseWaiverRecord(body) {
