@@ -54,7 +54,7 @@ is printed, revert to the session default voice immediately.
    - On rejection: offer to regenerate or cancel. Never create PR silently.
 4. Report and hand off:
    - Return result.
-   - Stop after the report. If the issue belongs to an active Maestro project, mention only this optional next action: after Linear records the issue completed, the user or a known workflow may invoke `monkey-maestro:orchestrate <project-id>`. Never invoke it automatically and never treat the PR as Linear completion. Reserve `monkey-maestro:reconcile <project-id>` for explicit recovery or audit when coordinator state is lost, drifted, or ambiguous.
+   - Stop after the report. If the issue belongs to an active Maestro project, mention only this optional next action: after Linear records the issue completed, the user or a known workflow may invoke `monkey-maestro:orchestrate <project-id>`. Never invoke it automatically and never treat the PR as Linear completion. Reserve `monkey-maestro:reconcile <project-id>` for an explicit Superset runtime-correlation audit or telemetry repair.
 
 ## Final Report
 

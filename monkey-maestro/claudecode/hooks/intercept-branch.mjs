@@ -40,12 +40,13 @@ const reason = [
   "monkey-maestro: branch creation intercepted — Superset work stays one workspace per branch.",
   "",
   `Do NOT run \`${command}\` in this workspace.`,
-  "Invoke the `monkey-maestro:spawn` skill for the Linear issue/task instead.",
-  `Pass \`${branch}\` only as the requested branch hint; spawn resolves the exact Linear identifier and Superset task,`,
-  "checks existing taskId mappings, creates the workspace first, then launches its agent.",
+  `Attempted branch: \`${branch}\`. Invoke \`monkey-maestro:spawn <LINEAR-ISSUE-ID>\` instead.`,
+  "Use the exact Linear issue identifier from the request; if it is unavailable, ask the user for it.",
+  "Spawn uses Linear's provider branch, resolves the exact Superset task, checks existing taskId mappings,",
+  "creates the workspace first when needed, then launches its agent.",
   "",
-  "The standalone spawn workflow shows its own mutation gate. If this issue belongs to an",
-  "active Maestro project, use `monkey-maestro:orchestrate <project-id>` instead.",
+  "Spawn applies the same Linear-first planner and mutation gate. An active Maestro control",
+  "supplies transport configuration; it does not redirect or block this issue-scoped launch.",
 ].join("\n");
 
 process.stdout.write(

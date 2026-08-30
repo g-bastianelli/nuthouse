@@ -1,13 +1,17 @@
 {
   "name": "monkey-maestro",
   "displayName": "Monkey Maestro",
-  "description": "Orchestrate verified Linear dependency graphs through durable control, parallel Superset workers, targeted transitions, and explicit full recovery.",
-  "version": "1.0.16",
+  "description": "Plan from live Linear statuses and blockedBy links, then dispatch selected Superset workers in parallel with issue-scoped failures.",
+  "version": "1.0.17",
   "author": {
     "name": "g-bastianelli"
   },
   "repository": "https://github.com/g-bastianelli/nuthouse",
   "homepage": "https://github.com/g-bastianelli/nuthouse",
   "skills": "./skills/",
-  "agents": ["./agents/project-snapshot-loader.md", "./agents/runtime-inspector.md"]
+  "agents": [
+    "./agents/control-loader.md",
+    "./agents/project-snapshot-loader.md",
+    "./agents/runtime-inspector.md"
+  ]
 }

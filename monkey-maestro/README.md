@@ -4,96 +4,87 @@
 
 > screeching monkey maestro conducting the issue-symphony
 
-Monkey Maestro is a durable Linear-backed Superset project orchestrator. Linear stores
-the approved dependency graph, lifecycle, control policy, waivers, execution identities,
-and worker results. Superset supplies isolated task-linked workspaces, terminal agents,
-progress reads, and follow-ups. Maestro keeps no private issue queue or hidden background
-daemon.
+Monkey Maestro conducts a Linear project through parallel, task-linked Superset
+workspaces. Linear is the sole scheduling authority: each issue's live status and
+`blockedBy` relations decide whether it is terminal, active, ready, or blocked.
+Workspace, terminal, receipt, pull-request, and worker-report state never overrides that
+decision.
 
-Activation writes one versioned project control record after approval, then enters the
-live orchestration session. The coordinator hydrates Linear and runtime state once,
-builds a task/dependency/workspace/terminal table, and launches every independent ready
-issue up to the configured concurrency before monitoring workers. The default
-concurrency is four and the hard maximum is ten.
-
-Workers report through structured DONE/BLOCKED envelopes. Maestro records those results
-in Linear, but dependency promotion still requires fresh Linear completion or one exact
-human waiver. After a transition, Maestro reloads only the affected issue, its direct
-dependents, and their known blocker facts. It does not reload the complete project
-between issues.
-
-Full reconciliation is reserved for explicit recovery after graph drift, provider
-ambiguity, runtime mismatch, or lost coordinator context. It rebuilds all Linear,
-GitHub, and Superset authority, repairs reconstructable records, prepares a coordinator
-handoff, and never dispatches work itself.
-
-Maestro bridges two identities: Linear graph state uses the exact opaque issue
-identifier returned by its team, for example `ENG-42`, while Superset workspace
-ownership uses the internal `task.id` returned by `superset tasks get ENG-42 --json`.
-Neither a team prefix nor a Linear transport UUID is inferred.
+Within one invocation Maestro hydrates the Linear graph once, keeps a disposable
+in-memory cache, and refreshes only issues affected by a transition. A new invocation or
+lost context performs a new full hydration. Dynamic Linear dependency edits therefore
+apply to the next dispatch without a separate recovery ceremony.
 
 ## Skills
 
-| Skill                        | What it does                                                                                              |
-| ---------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `monkey-maestro:status`      | Inspect a Linear project link read-only and recommend activation, orchestration, or recovery              |
-| `monkey-maestro:start`       | Activate one verified project, configure concurrency, and enter orchestration                             |
-| `monkey-maestro:orchestrate` | Hydrate once, fan out every ready issue, monitor terminals, and advance through targeted Linear reads     |
-| `monkey-maestro:reconcile`   | Perform one explicit full recovery/audit and prepare a reusable orchestration handoff without dispatching |
-| `monkey-maestro:spawn`       | Manually create exactly one task-linked workspace and terminal outside an active Maestro project          |
-| `monkey-maestro:stop`        | Disable future dispatch batches while leaving existing workspaces and agents running                      |
+| Skill                        | Responsibility                                                                     |
+| ---------------------------- | ---------------------------------------------------------------------------------- |
+| `monkey-maestro:status`      | Report control and the live Linear frontier without inspecting runtimes            |
+| `monkey-maestro:start`       | Write minimal v2 control, then enter orchestration                                 |
+| `monkey-maestro:orchestrate` | Plan from Linear, dispatch ready issues in parallel, and monitor selected runtimes |
+| `monkey-maestro:reconcile`   | Optionally audit or repair runtime telemetry; never rebuild scheduling truth       |
+| `monkey-maestro:spawn`       | Launch one selected issue through the same planner and idempotence rules           |
+| `monkey-maestro:stop`        | Set project control inactive without touching running work                         |
 
-`status` is the implicit landing point for URLs shaped like
-`https://linear.app/<workspace>/project/<slug>/overview`. It deliberately ignores Linear
-issue URLs, reads only durable Linear state, and never starts work on the user's behalf.
+`status` is the implicit landing point for a Linear project URL. It is read-only and
+never scans GitHub or Superset.
 
-`orchestrate` is the normal project path. During one live coordinator session it:
+`orchestrate` computes one deterministic frontier, plans runtime actions only for ready,
+forced, or active issues, acquires a short-lived dispatch lock, and launches independent
+work with all-settled semantics. One issue or provider failure is quarantined to that
+issue or provider; unrelated Linear-ready work continues. When no issue is ready or
+active, the command returns idle instead of polling.
 
-1. hydrates the complete graph/runtime once or reuses an exact validated handoff;
-2. dispatches a full ready batch through the native Superset workspace-first protocol;
-3. releases the project lock before monitoring all running terminals;
-4. stores exact execution and worker-result receipts in Linear;
-5. refreshes only affected Linear nodes and immediately launches newly unblocked work.
+If Linear says an issue is terminal, it is complete for scheduling even when an old
+workspace, terminal, or receipt remains. If Linear says an issue is started but no
+runtime can be selected, Maestro asks whether to launch a replacement. That confirmation
+may cover a group. An explicit issue-scoped force request can authorize a launch despite
+non-terminal blockers or uncertain live relations, but it cannot bypass terminal state,
+identity ambiguity, an ambiguous live runtime, inactive or invalid control, or lock
+ownership.
 
-If a targeted read detects an added, removed, reversed, unknown, or ambiguous relation,
-only the affected component becomes `reconcile_required`. Reconciliation is never
-started automatically, and unrelated known work may continue.
+## Agents and deterministic kernels
 
-`spawn` remains the manual/legacy one-workspace escape hatch and branch-guard target.
-The project orchestrator reuses its safe primitive order—duplicate check, create
-workspace, verify, launch agent, capture terminal, write receipt—but executes that order
-directly for a batch instead of invoking the standalone workflow once per issue.
+| Component                                  | Role                                                                           |
+| ------------------------------------------ | ------------------------------------------------------------------------------ |
+| `monkey-maestro:control-loader`            | Retrieve raw project control-marker comments only                              |
+| `monkey-maestro:project-snapshot-loader`   | Retrieve full or targeted live Linear issue/status/`blockedBy` facts           |
+| `monkey-maestro:runtime-inspector`         | Inspect Superset candidates for the planner-selected issues only               |
+| `lib/linear-snapshot.mjs`                  | Validate snapshots and maintain the invocation-local cache                     |
+| `lib/linear-frontier.mjs`                  | Classify the Linear frontier and enforce force exclusions                      |
+| `lib/runtime-actions.mjs`                  | Choose reuse, launch, ask, skip, or quarantine without changing readiness      |
+| `scripts/orchestration-epoch.mjs`          | Drive the shared state machine through replay-safe provider effect transcripts |
+| `lib/records.mjs` / `lib/project-lock.mjs` | Select monotonic control and manage an expiring owner-verified dispatch lock   |
 
-## Agents
+Control records are append-only v2 Linear comments. They hold activation and stable
+configuration, not a copied dependency graph. Their monotonic revisions expose stale or
+conflicting writers. The dispatch lock is a short ephemeral local project lease whose
+owner also binds the target host; expiry or a crashed owner can be reclaimed, and only
+the token holder may release it.
 
-| Agent                                    | Used by                                            | Role                                                                 |
-| ---------------------------------------- | -------------------------------------------------- | -------------------------------------------------------------------- |
-| `monkey-maestro:project-snapshot-loader` | status, start, orchestrate, reconcile, spawn, stop | Read-only control, full-project, or targeted Linear normalization    |
-| `monkey-maestro:runtime-inspector`       | orchestrate hydration, reconcile                   | Read-only Superset workspace/terminal/task and GitHub reconstruction |
+GitHub is optional delivery telemetry. Superset is transport and idempotence evidence.
+Neither provider is required to classify the Linear frontier, and neither can turn a
+Linear-ready issue into a blocked one.
 
 ## Branch guard
 
-Monkey Maestro owns the one-workspace-per-branch guard. Inside Superset-managed roots,
-in-place `git checkout -b`, `git switch -c`, or `git branch <new>` is denied and routed
-to `monkey-maestro:spawn`. Set `MONKEY_MAESTRO_SPAWN_DISABLE=1` to disable that guard
-explicitly.
+Inside Superset-managed roots, in-place branch creation is denied and routed to
+`monkey-maestro:spawn`, preserving one workspace per issue. Set
+`MONKEY_MAESTRO_SPAWN_DISABLE=1` to disable that guard explicitly.
 
-Maestro implements the native Superset coordinator protocol directly: isolated
-workspaces, stable task-to-terminal mappings, terminal reads/follow-ups, dependency
-promotion, and structured worker envelopes. It remains self-contained and does not
-depend on a second workflow layer.
+## Development
+
+```text
+bun test monkey-maestro/
+bun run test:meta
+bun run check:runtime
+bun run check:workflow
+```
 
 ## Install
 
-### Claude Code
-
 ```text
 /plugin install monkey-maestro@nuthouse
-```
-
-### Codex CLI
-
-```text
 codex plugin install monkey-maestro@nuthouse
 ```
 

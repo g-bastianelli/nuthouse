@@ -21,7 +21,7 @@ const MODEL_MAP = new Map([
 const SANDBOX_POLICIES = new Map([
   ["git-gremlin:commit-drafter", { mode: "workspace-write" }],
   ["git-gremlin:pr-drafter", { mode: "workspace-write", networkAccess: true }],
-  ["monkey-maestro:runtime-inspector", { mode: "workspace-write", networkAccess: true }],
+  ["monkey-maestro:runtime-inspector", { permissionsProfile: "maestro-runtime-read-network" }],
   ["moon-moth:verify-runner", { mode: "workspace-write" }],
   ["stack-golem:platform-scout", { mode: "workspace-write", networkAccess: true }],
 ]);
@@ -133,9 +133,20 @@ function renderAgent(agent, { marker, name, description }) {
 
   if (model) lines.push(`model = ${tomlString(model)}`);
   if (agent.effort) lines.push(`model_reasoning_effort = ${tomlString(agent.effort)}`);
-  lines.push(`sandbox_mode = ${tomlString(sandboxPolicy.mode)}`);
-  if (sandboxPolicy.networkAccess) {
-    lines.push("sandbox_workspace_write.network_access = true");
+  if (sandboxPolicy.permissionsProfile) {
+    const profile = sandboxPolicy.permissionsProfile;
+    lines.push(`default_permissions = ${tomlString(profile)}`);
+    lines.push(`permissions.${profile}.extends = ":read-only"`);
+    lines.push(
+      `permissions.${profile}.description = "Read-only filesystem with provider network access"`,
+    );
+    lines.push(`permissions.${profile}.network.enabled = true`);
+    lines.push(`permissions.${profile}.network.mode = "full"`);
+  } else {
+    lines.push(`sandbox_mode = ${tomlString(sandboxPolicy.mode)}`);
+    if (sandboxPolicy.networkAccess) {
+      lines.push("sandbox_workspace_write.network_access = true");
+    }
   }
   lines.push("", "developer_instructions = '''", instructions, "'''", "");
   return lines.join("\n");

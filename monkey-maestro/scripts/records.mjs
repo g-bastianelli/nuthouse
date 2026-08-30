@@ -5,18 +5,16 @@ import fs from "node:fs";
 import {
   RecordValidationError,
   buildControlRecord,
-  buildDispatchAuthorization,
   buildExecutionRecord,
   buildWorkerResultRecord,
   buildWaiverRecord,
-  hashDecisionBaseline,
   parseControlRecord,
   parseExecutionRecord,
   parseWorkerResultRecord,
   parseWaiverRecord,
   resolveControlAuthority,
   serializeRecord,
-  validateDispatchAuthorization,
+  validateControlSnapshot,
 } from "../lib/records.mjs";
 
 function readPayload() {
@@ -42,17 +40,16 @@ try {
   } else if (operation === "build-result") {
     const record = buildWorkerResultRecord(payload);
     write({ ok: true, record, body: serializeRecord(record) });
-  } else if (operation === "build-authorization") {
-    write({ ok: true, authorization: buildDispatchAuthorization(payload) });
-  } else if (operation === "validate-authorization") {
-    write({ ok: true, authorization: validateDispatchAuthorization(payload) });
   } else if (operation === "build-waiver") {
     const record = buildWaiverRecord(payload);
     write({ ok: true, record, body: serializeRecord(record) });
   } else if (operation === "parse-control") {
     write({ ok: true, record: parseControlRecord(payload.body) });
   } else if (operation === "resolve-controls") {
-    write({ ok: true, authority: resolveControlAuthority(payload.comments) });
+    const snapshot = validateControlSnapshot(payload.snapshot, {
+      expectedProjectId: payload.expectedProjectId,
+    });
+    write({ ok: true, authority: resolveControlAuthority(snapshot.comments) });
   } else if (operation === "parse-execution") {
     write({ ok: true, record: parseExecutionRecord(payload.body) });
   } else if (operation === "parse-result") {
@@ -61,8 +58,6 @@ try {
     write({ ok: true, record: parseWaiverRecord(payload.body) });
   } else if (operation === "serialize") {
     write({ ok: true, body: serializeRecord(payload.record) });
-  } else if (operation === "hash-baseline") {
-    write({ ok: true, decisionHash: hashDecisionBaseline(payload) });
   } else {
     throw new RecordValidationError("USAGE", "unknown records operation");
   }

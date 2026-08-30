@@ -7,6 +7,7 @@ import {
   inspectProjectLock,
   recoverProjectLock,
   releaseProjectLock,
+  verifyProjectLock,
 } from "../lib/project-lock.mjs";
 
 function write(value) {
@@ -21,6 +22,7 @@ try {
   const payload = JSON.parse(source);
   if (operation === "acquire") write(acquireProjectLock(payload));
   else if (operation === "inspect") write(inspectProjectLock(payload));
+  else if (operation === "verify") write(verifyProjectLock(payload.handle, payload.options));
   else if (operation === "release") write(releaseProjectLock(payload));
   else if (operation === "recover") write(recoverProjectLock(payload));
   else throw new Error("unknown project-lock operation");

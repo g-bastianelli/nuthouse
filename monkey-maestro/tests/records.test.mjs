@@ -1,93 +1,161 @@
 import { describe, expect, test } from "bun:test";
+import path from "node:path";
 
 import {
-  buildExecutionRecord,
-  buildDispatchAuthorization,
-  buildWorkerResultRecord,
-  buildWaiverRecord,
   RecordValidationError,
   buildControlRecord,
-  hashDecisionBaseline,
+  buildExecutionRecord,
+  buildWaiverRecord,
+  buildWorkerResultRecord,
   parseControlRecord,
   parseExecutionRecord,
   parseWorkerResultRecord,
   parseWaiverRecord,
   resolveControlAuthority,
   serializeRecord,
-  validateDispatchAuthorization,
+  validateControlSnapshot,
 } from "../lib/records.mjs";
-
-const decisionBaseline = {
-  issueIds: ["issue-b", "issue-a"],
-  edges: [{ dependentIssueId: "issue-b", blockerIssueId: "issue-a" }],
-};
 
 const controlInput = {
   projectId: "project-1",
   runId: "run-1",
   active: true,
-  repository: "org/repo",
-  supersetProjectId: "superset-project",
   targetHostId: "host-1",
+  supersetProjectId: "superset-project",
   defaultAgent: "codex",
-  decisionBaseline,
-  graphHash: `sha256:${"b".repeat(64)}`,
   updatedAt: "2026-08-27T10:00:00.000Z",
 };
 
+function legacyControlBody(overrides = {}) {
+  const record = {
+    marker: "nuthouse:maestro-control",
+    schemaVersion: 1,
+    projectId: "project-1",
+    runId: "run-legacy",
+    active: true,
+    repository: "org/repo",
+    targetHostId: "host-1",
+    supersetProjectId: "superset-project",
+    defaultAgent: "codex",
+    maxConcurrency: 3,
+    revision: 7,
+    updatedAt: "2026-08-27T09:00:00.000Z",
+    decisionBaseline: "malformed and deliberately ignored",
+    decisionHash: 42,
+    graphHash: null,
+    executionIssueIds: { malformed: true },
+    exitedExecutionIssueIds: [null],
+    ...overrides,
+  };
+  return `<!-- nuthouse:maestro-control schema_version=1 -->\n\n\`\`\`json\n${JSON.stringify(record)}\n\`\`\`\n`;
+}
+
 describe("Maestro control records", () => {
-  test("defaults concurrency to four and starts at revision one", () => {
-    expect(buildControlRecord(controlInput)).toEqual({
-      marker: "nuthouse:maestro-control",
+  test("validates the exact paginated control-loader boundary before resolution", () => {
+    const body = serializeRecord(buildControlRecord(controlInput));
+    const snapshot = {
       schemaVersion: 1,
+      provider: "ready",
+      project: { id: "project-1", name: "Project One" },
+      comments: [
+        {
+          id: "comment-1",
+          body,
+          createdAt: "2026-08-27T10:00:00.000Z",
+          updatedAt: "2026-08-27T10:00:00.000Z",
+        },
+      ],
+      unknown: [],
+    };
+
+    expect(validateControlSnapshot(snapshot, { expectedProjectId: "project-1" })).toEqual(snapshot);
+    expect(() =>
+      validateControlSnapshot(snapshot, { expectedProjectId: "another-project" }),
+    ).toThrowError(expect.objectContaining({ code: "CONTROL_PROJECT_MISMATCH" }));
+    expect(() => validateControlSnapshot({ ...snapshot, schemaVersion: 2 })).toThrowError(
+      expect.objectContaining({ code: "CONTROL_SNAPSHOT_INVALID" }),
+    );
+  });
+
+  test("rejects unavailable or contradictory control-loader evidence", () => {
+    const unavailable = {
+      schemaVersion: 1,
+      provider: "unavailable",
+      project: { id: "project-1", name: "Project One" },
+      comments: [],
+      unknown: [{ code: "LINEAR_UNAVAILABLE", detail: "comment pagination failed" }],
+    };
+
+    expect(() => validateControlSnapshot(unavailable)).toThrowError(
+      expect.objectContaining({ code: "CONTROL_PROVIDER_UNAVAILABLE" }),
+    );
+    expect(() => validateControlSnapshot({ ...unavailable, provider: "ready" })).toThrowError(
+      expect.objectContaining({ code: "CONTROL_SNAPSHOT_CONTRADICTION" }),
+    );
+  });
+
+  test("the resolve-controls CLI requires the full loader envelope and exact project", () => {
+    const script = path.resolve(import.meta.dir, "..", "scripts", "records.mjs");
+    const snapshot = {
+      schemaVersion: 1,
+      provider: "ready",
+      project: { id: "project-1", name: "Project One" },
+      comments: [
+        {
+          id: "comment-1",
+          body: serializeRecord(buildControlRecord(controlInput)),
+          createdAt: "2026-08-27T10:00:00.000Z",
+          updatedAt: "2026-08-27T10:00:00.000Z",
+        },
+      ],
+      unknown: [],
+    };
+    const result = Bun.spawnSync({
+      cmd: [process.execPath, script, "resolve-controls"],
+      stdin: new Blob([JSON.stringify({ snapshot, expectedProjectId: "project-1" })]),
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(JSON.parse(result.stdout.toString())).toMatchObject({
+      ok: true,
+      authority: {
+        status: "valid",
+        sourceSchemaVersion: 2,
+        control: { schemaVersion: 2, projectId: "project-1" },
+      },
+    });
+    expect(result.stderr.toString()).toBe("");
+  });
+
+  test("writes exactly the minimal v2 control fields", () => {
+    expect(buildControlRecord(controlInput)).toEqual({
+      schemaVersion: 2,
       projectId: "project-1",
       runId: "run-1",
       active: true,
-      repository: "org/repo",
-      supersetProjectId: "superset-project",
       targetHostId: "host-1",
+      supersetProjectId: "superset-project",
       defaultAgent: "codex",
       maxConcurrency: 4,
-      executionIssueIds: [],
-      exitedExecutionIssueIds: [],
-      decisionBaseline: {
-        issueIds: ["issue-a", "issue-b"],
-        edges: [{ dependentIssueId: "issue-b", blockerIssueId: "issue-a" }],
-      },
-      decisionHash: hashDecisionBaseline(decisionBaseline),
-      graphHash: `sha256:${"b".repeat(64)}`,
       revision: 1,
       updatedAt: "2026-08-27T10:00:00.000Z",
     });
   });
 
-  test("increments an existing revision and preserves an explicit limit", () => {
-    const existing = buildControlRecord({
-      ...controlInput,
-      executionIssueIds: ["issue-b", "issue-a"],
+  test("inherits operational policy and increments revision for stop", () => {
+    const existing = buildControlRecord({ ...controlInput, maxConcurrency: 10 });
+    const next = buildControlRecord(
+      { active: false, updatedAt: "2026-08-27T10:05:00.000Z" },
+      existing,
+    );
+    expect(next).toEqual({
+      ...existing,
+      active: false,
+      revision: 2,
+      updatedAt: "2026-08-27T10:05:00.000Z",
     });
-    const next = buildControlRecord({ ...controlInput, maxConcurrency: 10 }, existing);
-    expect(next.maxConcurrency).toBe(10);
-    expect(next.revision).toBe(2);
-    expect(next.executionIssueIds).toEqual(["issue-a", "issue-b"]);
-    expect(next.exitedExecutionIssueIds).toEqual([]);
-  });
-
-  test("preserves explicit exited execution tombstones without overlap", () => {
-    const existing = buildControlRecord({
-      ...controlInput,
-      exitedExecutionIssueIds: ["issue-old"],
-    });
-    expect(buildControlRecord(controlInput, existing).exitedExecutionIssueIds).toEqual([
-      "issue-old",
-    ]);
-    expect(() =>
-      buildControlRecord({
-        ...controlInput,
-        executionIssueIds: ["issue-old"],
-        exitedExecutionIssueIds: ["issue-old"],
-      }),
-    ).toThrow("both active and confirmed exited");
   });
 
   test.each([0, 11, 1.5])("rejects invalid concurrency %s", (maxConcurrency) => {
@@ -98,26 +166,77 @@ describe("Maestro control records", () => {
 
   test("round trips through a Linear markdown comment", () => {
     const record = buildControlRecord(controlInput);
-    expect(parseControlRecord(serializeRecord(record))).toEqual(record);
+    const body = serializeRecord(record);
+    expect(body).toContain("schema_version=2");
+    expect(parseControlRecord(body)).toEqual(record);
   });
 
-  test("binds the decision hash to the exact normalized baseline", () => {
+  test("projects a usable v1 control while ignoring every malformed obsolete field", () => {
+    expect(parseControlRecord(legacyControlBody())).toEqual({
+      schemaVersion: 2,
+      projectId: "project-1",
+      runId: "run-legacy",
+      active: true,
+      targetHostId: "host-1",
+      supersetProjectId: "superset-project",
+      defaultAgent: "codex",
+      maxConcurrency: 3,
+      revision: 7,
+      updatedAt: "2026-08-27T09:00:00.000Z",
+    });
+  });
+
+  test("retains the source schema version beside a projected active control", () => {
+    expect(
+      resolveControlAuthority([{ id: "control-v1", body: legacyControlBody() }]),
+    ).toMatchObject({
+      status: "valid",
+      sourceSchemaVersion: 1,
+      control: {
+        schemaVersion: 2,
+        active: true,
+        revision: 7,
+      },
+    });
+  });
+
+  test("migrates v1 operational fields on the next explicit write", () => {
+    const legacy = parseControlRecord(legacyControlBody());
+    const next = buildControlRecord(
+      { active: false, updatedAt: "2026-08-27T11:00:00.000Z" },
+      legacy,
+    );
+    expect(next).toEqual({
+      ...legacy,
+      schemaVersion: 2,
+      active: false,
+      revision: 8,
+      updatedAt: "2026-08-27T11:00:00.000Z",
+    });
+  });
+
+  test("rejects missing operational v1 fields and obsolete v2 fields", () => {
+    expect(() => parseControlRecord(legacyControlBody({ targetHostId: null }))).toThrow(
+      "targetHostId",
+    );
     expect(() =>
-      buildControlRecord({ ...controlInput, decisionHash: `sha256:${"a".repeat(64)}` }),
-    ).toThrow("decisionHash does not match");
+      serializeRecord({ ...buildControlRecord(controlInput), decisionHash: "obsolete" }),
+    ).toThrow("unsupported fields: decisionHash");
   });
 
-  test("fails closed on unknown schema versions", () => {
-    const record = { ...buildControlRecord(controlInput), schemaVersion: 2 };
-    const body = `<!-- nuthouse:maestro-control schema_version=2 -->\n\n\`\`\`json\n${JSON.stringify(record)}\n\`\`\`\n`;
+  test("fails closed on unknown or mismatched schema versions", () => {
+    const record = { ...buildControlRecord(controlInput), schemaVersion: 3 };
+    const body = `<!-- nuthouse:maestro-control schema_version=3 -->\n\n\`\`\`json\n${JSON.stringify(record)}\n\`\`\`\n`;
     expect(() => parseControlRecord(body)).toThrow("unsupported schemaVersion");
-    expect(() => serializeRecord(record)).toThrow("unsupported schemaVersion");
+
+    const mismatch = `<!-- nuthouse:maestro-control schema_version=1 -->\n\n\`\`\`json\n${JSON.stringify(buildControlRecord(controlInput))}\n\`\`\`\n`;
+    expect(() => parseControlRecord(mismatch)).toThrow("schema versions differ");
   });
 
   test("does not hide a newer invalid control behind an older valid revision", () => {
     const older = buildControlRecord(controlInput);
     const newer = { ...buildControlRecord(controlInput, older), maxConcurrency: 99 };
-    const newerBody = `<!-- nuthouse:maestro-control schema_version=1 -->\n\n\`\`\`json\n${JSON.stringify(newer)}\n\`\`\`\n`;
+    const newerBody = `<!-- nuthouse:maestro-control schema_version=2 -->\n\n\`\`\`json\n${JSON.stringify(newer)}\n\`\`\`\n`;
 
     expect(
       resolveControlAuthority([
@@ -269,59 +388,5 @@ describe("worker result records", () => {
         recordedAt: "2026-08-27T12:00:00.000Z",
       }),
     ).toThrow("reason");
-  });
-});
-
-describe("dispatch authorization", () => {
-  const authorizationInput = {
-    projectId: "project-1",
-    runId: "run-1",
-    revision: 3,
-    decisionHash: `sha256:${"c".repeat(64)}`,
-    lockToken: "lock-1",
-    issueId: "issue-2",
-    taskId: "task-2",
-    eligibility: {
-      issueId: "issue-2",
-      projectId: "project-1",
-      statusType: "unstarted",
-      blockers: [{ issueId: "issue-1", statusType: "completed", waiverApproved: false }],
-    },
-  };
-
-  test("hash-binds one eligible issue to control, lock, and fresh blocker facts", () => {
-    const authorization = buildDispatchAuthorization(authorizationInput);
-    expect(authorization.authorizationHash).toMatch(/^sha256:[a-f0-9]{64}$/);
-    expect(validateDispatchAuthorization(authorization)).toEqual(authorization);
-
-    for (const mutate of [
-      (value) => (value.issueId = "wrong-issue"),
-      (value) => (value.projectId = "other-project"),
-      (value) => (value.revision = 4),
-      (value) => (value.lockToken = "lock-2"),
-      (value) => (value.taskId = "task-other"),
-      (value) => (value.eligibility.statusType = "canceled"),
-      (value) => (value.eligibility.blockers[0].statusType = "started"),
-    ]) {
-      const changed = structuredClone(authorization);
-      mutate(changed);
-      expect(() => validateDispatchAuthorization(changed)).toThrow();
-    }
-  });
-
-  test("refuses to mint authorization for an unsatisfied blocker", () => {
-    const input = structuredClone(authorizationInput);
-    input.eligibility.blockers[0].statusType = "started";
-    expect(() => buildDispatchAuthorization(input)).toThrow("unsatisfied blocker");
-  });
-
-  test("accepts an exact approved waiver as blocker evidence", () => {
-    const input = structuredClone(authorizationInput);
-    input.eligibility.blockers[0] = {
-      issueId: "issue-1",
-      statusType: "canceled",
-      waiverApproved: true,
-    };
-    expect(buildDispatchAuthorization(input).authorizationHash).toMatch(/^sha256:/);
   });
 });

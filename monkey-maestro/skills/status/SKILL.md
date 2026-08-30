@@ -1,9 +1,9 @@
 ---
 name: status
-description: Use automatically when the user supplies a Linear project URL (`linear.app/<workspace>/project/<slug>/...`) or asks to inspect/check one Linear project's Maestro state. Resolves the project and reports its graph receipt, control, dependencies, durable executions, and whether to orchestrate or reconcile next. Do not use for Linear issue URLs or issue identifiers; never starts work automatically.
+description: Use automatically when the user supplies a Linear project URL or asks to inspect one project's Maestro state. Reads only the minimal control plus live Linear statuses and blockedBy links, reports the deterministic frontier, and never inspects Superset or requires reconciliation.
 argument-hint: "<linear-project-url-or-id>"
 effort: medium
-allowed-tools: Read, Agent, Bash(cat:*), mcp__claude_ai_Linear__get_project
+allowed-tools: Read, Write, Agent, Bash(node:*), Bash(mktemp:*), Bash(rm:*), mcp__claude_ai_Linear__get_project
 ---
 
 # status
@@ -11,122 +11,64 @@ allowed-tools: Read, Agent, Bash(cat:*), mcp__claude_ai_Linear__get_project
 > Agent resolution: Before any subagent dispatch, read
 > `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md`; select the active runtime name and follow its spawn rule.
 
-> At visible transitions, try to dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Print the returned `line` only when non-empty. Skip on failure or disabled voice; never retry or mention it.
-> Voice flag: !`cat "$HOME/.claude/nuthouse/voice.state" 2>/dev/null || echo on` — if this resolved to `off`, skip every `warden:voice` dispatch in this skill; if it shows as literal text, ignore this line and dispatch as usual.
+> At visible transitions, try `warden:voice` with `SUMMARY: <≤15 words, user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Print only a non-empty line. Skip failure or disabled voice without mention or retry.
 
 ## Voice
 
-Read `../../persona.md` at the start. Apply it only around the final plain-language report;
-provider data stays neutral.
+Read `../../persona.md`. Use it only around the concise final report; provider evidence
+and machine data stay neutral. Restore the session voice afterward.
 
-**Scope:** this skill only. Restore the session voice after the final report.
+## Contract
 
-## Language
+Read `${CLAUDE_PLUGIN_ROOT}/shared/project-execution-contract.md`. This skill is strictly
+read-only and Linear-only. It never calls Superset, GitHub, a lock, `reconcile`, or another
+public skill.
 
-Match the user's language. Preserve URLs, ids, record fields, and skill names exactly.
+## Workflow
 
-## When you're invoked
-
-Read `${CLAUDE_PLUGIN_ROOT}/shared/project-execution-contract.md`. This is the lightweight,
-read-only landing point for a Linear project link. It explains the project's durable
-Linear state and the next available Maestro action. It does not inspect live Superset
-runtime, acquire a lock, persist records, invoke another skill, or dispatch work.
-
-## Step 0 — Accept only one project reference
-
-1. Require one exact project reference from `$ARGUMENTS` or the user's explicit context.
-2. A Linear URL is a project reference only when its host is exactly `linear.app` and its
-   path has one non-empty segment immediately after `/project/`, for example
-   `https://linear.app/acme/project/runtime-rework-a1b2c3/overview`. Query strings,
-   fragments, and later project-page sections do not alter that project slug.
-3. Never claim a `/issue/` URL or a bare issue identifier such as `TEAM-123`. Leave those
-   to Linear Devotee. A malformed URL, an issue URL, zero references, or multiple project
-   references produces `not-a-single-project` without any provider call.
-
-## Step 1 — Resolve the canonical project id
-
-For a project URL, pass the exact decoded path segment immediately after `/project/` to
-Linear `get_project`. For an explicit project id, identifier, name, or slug, pass that
-exact value. Require one resolved project whose returned id is non-empty. Do not derive a
-project id from the URL suffix, an issue, a local cache, or a guessed UUID. An unavailable,
-missing, or ambiguous lookup returns `project-unresolved` and stops read-only.
-
-## Step 2 — Load durable project state
-
-Dispatch exactly once:
+1. Require one exact Linear project reference. Accept a URL only when the host is exactly
+   `linear.app` and one non-empty path segment follows `/project/`. Reject issue URLs,
+   bare issue identifiers, malformed URLs, and multiple references before provider calls.
+2. Resolve the reference with Linear `get_project`; capture the exact returned project id.
+3. In parallel, dispatch:
+   - `monkey-maestro:control-loader` for that project;
+   - `monkey-maestro:project-snapshot-loader` with `MODE: full`.
+4. Pass the complete control-loader envelope plus exact `expectedProjectId` to
+   `scripts/records.mjs resolve-controls`; retry an unavailable/invalid retrieval once. A
+   malformed obsolete v1 field is only a warning when operational fields remain
+   projectable.
+5. Build the disposable cache only through `scripts/linear-snapshot.mjs`: `hydrate` the
+   exact expected project/full snapshot; use `recover-full` for one exact targeted retry
+   of identifiable malformed rows; use `recover-full-unknown` only when those exact
+   validator-attributed ids remain malformed before a cache exists; use `refresh` for
+   schema-valid scoped unknown retries; and `mark-unknown` for retry-exhausted ids after
+   hydration. Never splice issue or unknown arrays
+   manually. Retry a project-wide unknown once with the same full scope, then run
+   `planLinearFrontier` through `scripts/linear-frontier.mjs`. Never derive readiness
+   manually or from control history.
+6. Report one deterministic table:
 
 ```text
-Agent({
-  subagent_type: 'monkey-maestro:project-snapshot-loader',
-  description: 'inspect Linear project Maestro state',
-  prompt: `PROJECT_ID: <resolved Linear project id>
-MODE: full`,
-})
+Issue | Linear status | Live blockers | Classification | Reason
 ```
 
-Use only the loader's normalized output. Do not supplement missing values from issue
-titles, URL text, GitHub, Superset, or memory. Treat `executionRecords` as durable Linear
-records only: this skill cannot claim their workspaces or terminals are currently live.
+7. Report control as `active`, `inactive`, `not-configured`, or `unusable`, followed by:
+   - active with ready/started work: `Next: monkey-maestro:orchestrate <project-id>`;
+   - active with no ready/started work: `Next: idle`;
+   - inactive or absent: `Next: monkey-maestro:start <project-id>`;
+   - unusable: `Next: repair the conflicting or malformed control comments`.
 
-## Step 3 — Classify without mutation
+Never recommend `reconcile` for a link change, stale history, runtime residue, or unrelated
+unknown issue. A scoped unknown stays on its row. Total Linear unavailability produces a
+read-only `degraded` report and no invented frontier.
 
-Report:
-
-- the exact project name and id;
-- provider state and required/optional unknown counts;
-- whether the graph receipt is verified, plus its graph hash when present;
-- issue counts by normalized `statusType`, observed dependency-edge count, and whether
-  `currentBaseline` differs from the active control's `decisionBaseline`;
-- latest control state: missing, inactive, or active; when present include run id,
-  revision, concurrency, target host, Superset project, and default agent;
-- durable execution-record totals, separating records for the latest control run when a
-  run exists;
-- durable worker-result totals by completed/blocked/failed, separating the latest run;
-- `Runtime: not inspected` so the report never implies fresh Superset reconstruction.
-
-Choose one next action without executing it:
-
-- invalid control authority — including `CONTROL_AMBIGUOUS`, `CONTROL_INVALID`, an
-  unknown control schema, a decision-hash mismatch, malformed control fields, or
-  duplicate highest revisions — takes precedence over every provider-partial or missing
-  control branch → report `Control: invalid` and `Next: stopped — repair the malformed or
-conflicting Linear control records`; never recommend `start` or `reconcile`;
-- unavailable or required-partial Linear data → retry the status check after Linear
-  recovers;
-- missing or unverified graph receipt → verify/adopt the project graph before Maestro
-  activation;
-- missing or inactive control → explicit `monkey-maestro:start <project-id>`;
-- active control with unchanged known baseline → explicit
-  `monkey-maestro:orchestrate <project-id>` to resume or begin the live coordinator;
-- active control with observed baseline drift or required graph unknowns → explicit
-  `monkey-maestro:reconcile <project-id>` for full recovery before orchestration.
-
-## Final Report
+## Report
 
 ```text
 monkey-maestro:status report
-  Project:          <name> (<Linear project id>)
-  Linear:           ready | partial | unavailable
-  Graph receipt:    verified <sha256:...> | missing | invalid
-  Issues:           <total; normalized status counts>
-  Dependencies:     <observed edge count; unchanged | changed | unknown>
-  Control:          active | inactive | missing | invalid
-  Run / revision:   <run id / N | _none_>
-  Policy:           <N/10; agent; host; Superset project | _none_>
-  Executions:       <N durable records; M for latest run>
-  Results:          <completed N; blocked N; failed N; latest-run M>
-  Runtime:          not inspected
-  Unknowns:         <required N; optional N>
-  Next:             <one explicit action or stopped reason>
+  Project:  <id / name>
+  Control:  <active | inactive | not-configured | unusable>
+  Frontier: <ready N · started N · blocked N · terminal N · unknown N>
+  Runtime:  not inspected
+  Next:     <action>
 ```
-
-## Never
-
-- Handle a Linear issue URL or issue identifier as a project.
-- Guess a project id from a URL suffix or an issue's project field.
-- Call `start`, `orchestrate`, `reconcile`, `spawn`, or `stop` automatically.
-- Treat ambiguous, malformed, hash-invalid, or unknown-schema control authority as a
-  missing/inactive control or recommend mutation while it remains invalid.
-- Inspect Superset/GitHub, acquire a lock, or imply durable records are live runtimes.
-- Create, update, or delete Linear data, local state, workspaces, terminals, or agents.
-- Run `git commit`, `git push`, `git rebase`, or any destructive action.

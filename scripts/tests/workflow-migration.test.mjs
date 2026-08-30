@@ -57,6 +57,22 @@ describe("workflow migration gate", () => {
     }
   });
 
+  test.each([
+    "monkey-maestro/lib/reconciliation-input.mjs",
+    "monkey-maestro/lib/reconciliation-state.mjs",
+    "monkey-maestro/scripts/reconcile-state.mjs",
+  ])("rejects the superseded Maestro scheduling authority: %s", (filename) => {
+    const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "nuthouse-linear-first-gate-"));
+    try {
+      const target = path.join(fixture, filename);
+      fs.mkdirSync(path.dirname(target), { recursive: true });
+      fs.writeFileSync(target, "export const legacy = true;\n");
+      expect(checkWorkflowMigration(fixture)).toContain(`legacy path remains ${filename}`);
+    } finally {
+      fs.rmSync(fixture, { recursive: true, force: true });
+    }
+  });
+
   test("reports a missing Warden workflow mirror", () => {
     const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "nuthouse-workflow-gate-"));
     try {

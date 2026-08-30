@@ -1,266 +1,384 @@
-# Project execution contract
+# Linear-first project execution contract
 
-This contract is the installed boundary shared by `status`, `start`, `orchestrate`,
-`reconcile`, `spawn`, `stop`, `project-snapshot-loader`, and `runtime-inspector`.
+This is the installed boundary shared by `status`, `start`, `orchestrate`, `reconcile`,
+`spawn`, `stop`, `control-loader`, `project-snapshot-loader`, and `runtime-inspector`.
 
-- Linear is durable project memory: approved dependency graph, normalized lifecycle,
-  control policy, waivers, execution receipts, and worker results.
-- Superset is execution transport: isolated task-linked workspaces, terminal agents,
-  progress reads, and follow-ups.
-- The active `orchestrate` conversation is the live coordinator. Its table is rebuilt
-  from durable records after context loss; it is never stored in a private queue.
-- GitHub is delivery evidence only. A merge never substitutes for Linear completion.
+## Authority
 
-Normal execution uses one full hydration at coordinator start, then targeted Linear
-transition reads. Full `reconcile` is an explicit recovery/audit operation, never the
-per-issue loop. `spawn` is the manual one-workspace fallback and branch-guard target;
-project orchestration shares its verified primitive order but does not invoke it.
+Linear is the only durable scheduling authority. Readiness uses only:
 
-`status` remains the read-only project-link landing point. It reports durable Linear
-state and recommends `orchestrate` for a healthy active control or `reconcile` for known
-drift. It never claims issue links, inspects live Superset state, invokes another skill,
-or mutates anything.
+- exact current project membership;
+- normalized current `status.type`;
+- exact current `relations.blockedBy` identifiers.
 
-## Durable Linear records
+Superset is execution transport and idempotence evidence. GitHub, pull requests, worker
+envelopes, terminals, execution records, result records, waivers, historical graph
+receipts, and obsolete control fields never make an issue ready, blocked, terminal, or
+capacity-consuming.
 
-Records are Markdown comments containing one HTML marker followed by one fenced JSON
-object. Schema version 1 markers are:
+`completed` and `canceled` are terminal. Terminal Linear state wins before any Superset
+lookup, satisfies a blocker relation, and consumes no logical concurrency even when one
+or many residual runtimes remain alive.
 
-- project control: `nuthouse:maestro-control`;
-- issue execution identity: `nuthouse:maestro-execution`;
-- worker result: `nuthouse:maestro-result`;
-- explicit blocker waiver: `nuthouse:maestro-waiver`;
-- verified project graph receipt, produced by Linear Devotee:
-  `nuthouse:project-graph-receipt`.
+`backlog`, `triage`, and `unstarted` are startable. A startable issue is ready exactly
+when every current blocker is terminal. `started` means Linear already considers the
+issue claimed; one exact runtime is monitored, while no exact runtime requires user
+confirmation before a worker is created.
 
-Use `scripts/records.mjs` for parsing and serialization. An unknown schema, malformed
-field, duplicate highest control revision, decision-hash mismatch, or missing verified
-graph receipt is unknown authority and blocks mutation.
+## Disposable Linear cache
 
-Resolve project controls with `records.mjs resolve-controls`: order every marker-bearing
-candidate by its claimed revision before strictly validating the sole highest candidate.
-Never filter invalid controls before ordering. An unorderable candidate or invalid sole
-highest revision is `CONTROL_INVALID`; duplicate highest claimed revisions are
-`CONTROL_AMBIGUOUS`.
+One orchestration invocation performs one full Linear bootstrap. The in-memory cache
+contains only issue id, project id, status type, blocker ids, and scoped unknowns. It is a
+performance view, not durable authority.
 
-An execution record binds one run, Linear issue identifier, Superset task UUID,
-workspace, optional terminal, branch, agent, host, timestamp, and outcome. A result
-record binds the same run/workspace/terminal to `completed`, `blocked`, or `failed` and
-preserves the worker envelope evidence. A result is durable coordination evidence, not
-permission to change Linear lifecycle or satisfy a dependency edge. Reconstruction uses
-the latest exact active-run result by timestamp; conflicting canonical records tied at
-the latest timestamp are ambiguous authority.
+Every cache construction or mutation goes through `scripts/linear-snapshot.mjs`:
+`hydrate` validates one exact full bootstrap; `recover-full` replaces only identifiable
+malformed rows with one exact targeted retry; `recover-full-unknown` replaces only
+uniquely identifiable rows whose targeted retry remained malformed with canonical scoped
+unknowns; `refresh` applies one validated exact targeted snapshot; and `mark-unknown`
+isolates retry-exhausted ids after a cache exists. The CLI returns
+the next normalized cache to invocation memory and never persists it. No skill manually
+splices issue or unknown arrays.
 
-Two exact identity namespaces are used and never conflated:
+After worker events, refresh only affected issues, cached candidates, and their blockers.
+Immediately before mutation, targeted-read candidates first, derive their blocker ids
+from those fresh relations, then targeted-read that exact live blocker union. Fresh facts
+replace cached facts directly. Relation additions, removals, or reversals never require
+historical adoption or `reconcile`.
 
-- `issueId` is Linear's opaque canonical issue `identifier`, for example `TEAM-123`.
-  Never hard-code a team prefix, infer it from a title/branch/URL, or require a transport
-  UUID.
-- `taskId` is Superset's internal task UUID. Resolve it read-only with
-  `superset tasks get <issueId> --json` and require a non-empty `task.id`,
-  `externalProvider === "linear"`, `externalKey === issueId`, and the expected
-  `externalProjectId`. A workspace stores this task UUID.
+Lost context or a new invocation performs a new full bootstrap. Never store the cache in
+a queue, baton, relay file, project comment, or hidden daemon.
 
-If either exact identity is unavailable, only the affected dispatch is unknown and must
-not mutate.
+## Retrieval boundaries
 
-## Control and graph authority
+`control-loader` performs one exhaustive project-comment pagination traversal and returns
+raw marker-bearing project comments. Only `scripts/records.mjs resolve-controls`
+validates the exact loader envelope and interprets them.
 
-One active control authorizes only its exact `projectId`, `runId`, `repository`,
-`targetHostId`, `supersetProjectId`, `defaultAgent`, and `maxConcurrency`.
+`project-snapshot-loader` returns only live Linear project/status/blocker facts. Full mode
+performs one exhaustive project-membership pagination traversal and detail-fetches issues
+in parallel. Targeted mode fetches exact requested ids and never lists the project. It
+never sees controls, records, GitHub, or Superset.
 
-The control's `decisionBaseline` contains sorted issue ids and exact
-`dependentIssueId -> blockerIssueId` edges. `decisionHash` is the SHA-256 of its canonical
-form. `start` initializes the baseline from a verified graph receipt or carries the exact
-latest inactive baseline across restart. Only explicit full reconciliation may adopt a
-new representable baseline. Targeted orchestration never silently adds, removes, or
-reverses an edge.
+Every loader result is schema- and scope-validated before use. Invalid JSON, missing
+requested ids, expanded scope, or contradictory ids is rejected. Retry once in the same
+scope or fall back to a direct targeted read when available. An identifiable malformed
+row carries its exact issue id so the targeted recovery replaces only that row. A
+schema-valid scoped
+unknown is likewise retried once for only that scope; persistent failure becomes a scoped
+unknown and cannot fabricate facts. A project-wide unknown prevents dispatch.
 
-The control also keeps `executionIssueIds` and `exitedExecutionIssueIds` as conservative
-ownership indexes for executions that have moved outside the current managed issue set.
-They are not a queue and never determine eligibility. Active and exited ids cannot
-overlap.
+`runtime-inspector` receives only selected non-terminal issue ids after Linear planning.
+It echoes the exact Linear project, host, and Superset project context, resolves exact
+task/workspace/terminal evidence, and never calls GitHub or decides readiness. Runtime
+validation binds all echoed context plus the exact issue scope before planning.
+When validation attributes malformed rows or scoped unknowns to exact ids, orchestration
+retries only those ids once. It then calls `scripts/runtime-snapshot.mjs merge-targeted`
+with the initial raw snapshot, subset retry, exact full selected rows, retry ids, and
+expected context. If the retry remains malformed, `merge-targeted-unknown` replaces only
+those rows with canonical unknown evidence. Only the helper's revalidated full raw
+`runtimeSnapshot` may enter `scripts/runtime-actions.mjs`; consumers never pass a subset
+retry to a full-scope planner or splice runtime arrays manually.
+For project-less manual spawn, the invocation uses synthetic scope `manual:<issueId>` and
+accepts only a task whose external project id is absent; that scope is never persisted as
+Linear fact.
 
-Linear normalized `status.type === completed` is the ordinary blocker-completion proof.
-A canceled blocker is unsatisfied unless one exact non-revoked waiver is attributed to a
-human and names the same dependent/blocker ids. Worker results, terminal exit, PR state,
-and GitHub merge never replace that proof.
+## Minimal control v2
 
-## Coordinator session
-
-`orchestrate` keeps this table in live conversation context:
-
-| Field        | Meaning                                                |
-| ------------ | ------------------------------------------------------ |
-| Task         | exact Linear issue identifier                          |
-| Dependencies | exact blocker identifiers from the approved baseline   |
-| Workspace    | exact Superset workspace id or none                    |
-| Host         | configured host id                                     |
-| Terminal     | exact agent terminal id or none                        |
-| Status       | pending, ready, running, completed, blocked, or failed |
-| Result       | latest exact worker evidence or none                   |
-
-At the start of a coordinator session, load one complete Linear snapshot and one
-complete correlated Superset/GitHub runtime snapshot. Compose them through the pure
-reconciliation resolver to reconstruct active, residual, guarded, ready, blocked, and
-ambiguous work. If an exact same-run/revision/hash table is already present in the active
-conversation and its runtime identities remain valid, first make one targeted read for
-the deduplicated union of every existing Coordinator task and its approved blockers.
-This refresh is mandatory even when no row is running or ready. Require the same active
-control, baseline-equal relations, and fresh normalized status/waiver facts before
-deriving readiness or reusing the table. A lifecycle-only change updates the table
-without a full load; relation drift requires reconciliation, and partial/unknown
-authority blocks dispatch rather than reusing stale facts.
-
-Launch every ready independent issue up to available concurrency before monitoring the
-new batch. Capacity counts exact active/guarded task executions. A live runtime for a
-fresh terminal Linear issue becomes report-only `residual` only when its issue, task,
-workspace, terminal, host, run record, and Superset project correlate exactly. Partial,
-missing, cross-scope, or ambiguous evidence keeps one conservative slot occupied.
-
-After launch, release the project lock and monitor all running terminals at a measured
-cadence with `superset terminals read`. Use `superset terminals send` to provide
-clarification, dependency results, or review feedback to the same session. Terminal
-presence, title, attachment, or silence is never completion proof.
-
-Workers end with one of these prompt-level envelopes:
+The active Linear control stores only:
 
 ```text
-SUPERSET_WORKER_DONE
-task: <issue identifier>
-summary: <one-line outcome>
-files: <comma-separated paths or none>
-checks: <commands and outcomes>
-handoff: <next-step context or none>
+schemaVersion: 2
+projectId
+runId
+active
+targetHostId
+supersetProjectId
+defaultAgent
+maxConcurrency
+revision
+updatedAt
 ```
+
+`maxConcurrency` defaults to four and must be between one and ten. A v1 control is usable
+when these operational values can be projected from it. Malformed obsolete graph, hash,
+or ownership values are ignored warnings. The next explicit control mutation writes v2.
+Historical comments are never deleted automatically.
+
+`start` short-circuits an already-active control only when its source schema is v2 and no
+explicit transport, agent, or concurrency override was supplied. An active v1 control or
+any explicit override follows the normal grouped preview and writes one verified v2
+successor, so migration and configuration updates never require a stop/start cycle.
+
+An inactive control prevents normal and forced dispatch. `stop` is Linear-only and can
+never be prevented by Superset unavailability. Existing workers remain untouched.
+
+## Pure planners
+
+`planLinearFrontier` accepts only validated Linear facts plus optional invocation-scoped
+forced issue ids. It deterministically returns terminal, ready, started, blocked, and
+unknown rows. Unknown data, cycles, self-relations, and cross-project relations isolate
+only affected components and their dependent decisions. A known `started` issue remains
+selected for runtime monitoring and capacity accounting when only its relations are
+defective; unknown identity, membership, data, or status still makes the row unknown.
+An absent blocker becomes a canonical force uncertainty instead of aborting planning.
+
+`planRuntimeActions` accepts the selected frontier rows plus validated candidate-scoped
+runtime evidence. It returns:
+
+- zero exact workspace: `create`;
+- one exact workspace: `reuse` or `monitor`;
+- multiple exact workspaces: issue-scoped `ambiguous`;
+- started without runtime: `confirm`;
+- missing task or provider fact: issue-scoped `non-transportable`.
+
+Runtime planning cannot reclassify Linear facts. Inputs and outputs use stable issue-id
+ordering.
+
+## Force
+
+Force is an explicit escape hatch for named issues. Show one preview of bypassed blockers
+or uncertain relations and require one confirmation; multiple issues may share that
+confirmation. Authorization exists only in the current invocation and never mutates
+Linear relations or status.
+
+Force may bypass non-terminal blockers or uncertain relations. It cannot bypass:
+
+- a terminal candidate;
+- missing issue or Superset task identity;
+- multiple exact runtimes;
+- inactive control;
+- missing host/project/agent configuration;
+- a held dispatch lock.
+
+Force memory includes the exact previewed blocker ids and the exact canonical uncertainty
+tokens emitted on each forced frontier row. Each token is
+`{ issueId: string | null, code: string }`; arrays are deterministically sorted. The
+confirmation builds both `bypassedBlockerIssueIds` and `bypassedUncertainties` maps for
+every named issue, including empty arrays. Refresh candidate Linear facts immediately
+before mutation. A candidate that became terminal is skipped even after force
+confirmation; a newly added blocker or uncertainty that widens either preview invalidates
+that authorization instead of being silently included. Because the under-lock read
+contains only the candidate and live direct blockers, omitted transitive blocker
+subgraphs are not reinterpreted as newly missing facts during reauthorization; relations
+fully present inside the refreshed scope and explicit unknown evidence remain enforced.
+
+Requested force ids enter an unconfirmed frontier overlay before runtime inspection. That
+overlay selects candidates but authorizes no mutation. `planRuntimeActions` returns
+`confirm` for forced create/reuse until an invocation-id-bound authorization is supplied.
+
+Manual `spawn` configuration is allowed only when a project control is provably absent,
+or when the issue itself has no project. It becomes an invocation-only active control
+with concurrency one and a `manual:<invocationId>` run. Under the lock, a project-bound
+manual control must prove control is still absent; a newly written, inactive, or
+conflicting control refuses dispatch. A project-less control refresh replays the exact
+immutable invocation control while live Linear candidate/blocker refresh remains
+mandatory. An inactive or unusable durable control is never bypassed.
+
+## Runtime idempotence and dispatch
+
+`lib/orchestration-epoch.mjs` exports the normative `runOrchestrationEpoch` state machine.
+`scripts/orchestration-epoch.mjs` is its production transcript/effect bridge.
+`orchestrate` and `spawn` drive provider adapters through that executable bridge rather
+than maintaining separate dispatch rules. Every public bridge invocation mints a fresh
+UUID v4 `invocationId`; it is never accepted from a user, derived from a durable run id,
+or reused. Effect ids bind that invocation id, adapter name, exact input, and occurrence;
+forged, duplicate, cross-invocation, stale, or unused transcript responses are rejected.
+Only a final `state: complete` result authorizes the reported outcome.
+
+Adapter wiring is fixed: project-lock helpers acquire/release; control-loader plus
+records refreshes control; project-snapshot-loader refreshes candidates/live blockers;
+runtime-inspector performs exact runtime inspection; the Superset sequence below is
+`dispatchIssue`; exact terminal reads are `monitorWorker`; targeted Linear reads after an
+event are `refreshAfterWorkerEvent`/promotion input. No adapter may reclassify Linear.
+The one exception is a project-less manual spawn: because no Linear project exists, its
+`refreshCandidateAndBlockers` adapter uses direct exact `get_issue` reads, candidate
+first and then the freshly derived blocker union, and emits a strict targeted envelope
+whose project/scope is the synthetic `manual:<issueId>`. The same Linear validator must
+accept that envelope before the bridge consumes it; failed reads remain scoped unknown.
+
+### Adapter response envelopes
+
+Invoke `scripts/orchestration-epoch.mjs` with this exact outer structure:
 
 ```text
-SUPERSET_WORKER_BLOCKED
-task: <issue identifier>
-reason: <specific blocker>
-needs: <decision, access, or dependency required>
+{
+  schemaVersion: 1,
+  request: {
+    invocationId,
+    frontierPlan,
+    runtimePlan,
+    control,
+    selectedIssueIds,
+    lockDirectory,
+    dispatchContextByIssueId
+  },
+  transcript: [] | exact prior response entries
+}
 ```
 
-Correlate the envelope with its exact row and surrounding terminal evidence before
-persisting a result. Normalize the DONE envelope's comma-separated file field to a
-deduplicated array, with `none` becoming `[]`. A DONE result completes worker execution in the table, but its
-dependents remain pending until Linear reports the blocker completed or a valid waiver
-exists. Its live execution also remains capacity-guarding until targeted Linear status
-is terminal and the current-run execution/result/workspace/terminal identities correlate
-exactly, or exact terminal exit is proven. A correlated still-live terminal runtime is
-then residual and does not consume logical concurrency.
+The CLI writes the bridge result directly as top-level
+`{ schemaVersion: 1, state: "needs-effects" | "complete", ... }` on success, without an
+`ok` or `epoch` wrapper. A nonzero failure alone uses `{ ok: false, error }`.
 
-## Targeted transition reads
+Bridge responses are values, not raw CLI wrappers. Apply these exact projections:
 
-After a worker result or observed lifecycle transition, refresh only:
+- `acquireDispatchLock` returns the direct successful `project-lock acquire` value;
+  `releaseDispatchLock` returns the direct `{ "released": true }` value.
+- `refreshControl` validates the loader envelope with `records resolve-controls`, requires
+  `{ "ok": true, "authority": { "status": "valid" } }`, and returns
+  `authority.control` only. It never returns the CLI wrapper or the authority object.
+- `refreshCandidateAndBlockers` and `refreshAfterWorkerEvent` return the strict raw
+  targeted Linear snapshot envelope, after the required candidate-first/blocker-union
+  reads. `inspectExactRuntime` returns the strict raw candidate-only runtime envelope.
+- `monitorWorker` returns `{}` when no event occurred or `{ "event": <provider-event> }`;
+  terminal-suggested issue ids have no scheduling authority.
+- `promoteAfterRefresh` applies only the already validated refreshed rows to the
+  invocation cache, replans, and returns `{ "applied": true }`.
 
-1. the affected issue;
-2. its direct dependents from the approved baseline;
-3. their known blockers;
-4. the latest control and only comments/status metadata needed for those decisions.
+`dispatchIssue` has four fulfilled response forms. All begin with
+`schemaVersion: 1`, the named `state`, and
+`lockVerification: verifyOutput.verification` from the live verify-first sub-step:
 
-`project-snapshot-loader MODE: targeted` must receive the exact requested issue ids and
-expected control run/revision/hash. It never lists the full project. A targeted response
-is not valid input to the full reconciliation resolver; it only validates promotions
-already representable by the approved baseline.
+```json
+{
+  "schemaVersion": 1,
+  "state": "verified",
+  "lockVerification": "<exact inner verification object>",
+  "runtimeSnapshot": "<strict raw one-issue envelope; one workspace and one active terminal>",
+  "record": { "status": "written" }
+}
+```
 
-If a DONE result precedes native Linear completion, keep the issue as `Linear waiting`.
-At each measured monitoring pass, make one batched targeted read for the deduplicated
-union of all waiting issues, their baseline direct dependents, and their known blockers.
-Do not poll once per issue, and do not exit the coordinator merely because no worker is
-still running while Linear-waiting rows remain.
+For verified runtime with failed telemetry, `record` is
+`{ "status": "failed", "detail": "<non-empty reason>" }`. A `partial` response uses the
+same fields, changes state to `partial`, adds non-empty `failedPhase`, requires exactly
+one workspace and at most one active terminal, and permits record status `written`,
+`failed`, or `not-attempted`. If partial evidence contains one exact active terminal,
+monitor it after verified lock release. `ambiguous` and `failed` responses contain no runtime
+snapshot or record and use this identity-bound form:
 
-Any new, removed, reversed, unknown, self, cyclic, or cross-project relation produces
-`reconcile_required` for the affected component. Preserve unrelated running work and
-continue independent known components. Never launch a full reconcile automatically.
+```json
+{
+  "schemaVersion": 1,
+  "state": "ambiguous | failed",
+  "issueId": "<exact issue id>",
+  "taskId": "<exact task id>",
+  "context": {
+    "targetHostId": "<exact host id>",
+    "supersetProjectId": "<exact Superset project id>",
+    "linearProjectId": "<exact Linear/manual project scope>"
+  },
+  "lockVerification": "<exact inner verification object>",
+  "code": "<non-empty failure code>",
+  "detail": "<optional detail>"
+}
+```
 
-When a targeted read proves newly ready work and capacity exists, acquire the lock,
-revalidate the entire candidate batch together, dispatch the full ready batch, write its
-receipts, release the lock, and return to monitoring. Do not run a complete Linear or
-runtime reload between issue transitions.
+If live lock verification itself fails, append a rejected transcript response with the
+helper error instead of fabricating a fulfilled dispatch envelope. Every fulfilled form
+is rejected unless the issue, task, context, workspace cardinality, terminal cardinality,
+record state, and lock verification match the effect and validated runtime boundary.
 
-An inactive control observed before a batch stops every future dispatch. Existing
-workspaces and terminals continue untouched.
+Only ready issues, confirmed started issues, confirmed forced issues, and exact active
+workers enter Superset inspection. Never inspect a terminal issue.
 
-## Locked batch authorization
+Select a deterministic batch up to available `maxConcurrency`. Independent issue
+sequences use all-settled semantics: one failure never cancels, rolls back, or suppresses
+sibling sequences. Within one issue, preserve this order:
 
-`start`, `stop`, `reconcile`, and orchestration dispatch/control batches serialize
-mutation through `scripts/project-lock.mjs` on the exact target host and project. Human
-confirmation always occurs before lock acquisition. No lock is held across terminal
-monitoring, worker waits, follow-ups, or user questions.
+Before the bridge, exact-fetch and bind branch/workspace/prompt context per selected
+mutation. Retry only the failed issue once. A persistent per-issue context failure is
+removed from the execution batch as `DISPATCH_CONTEXT_UNAVAILABLE`; valid siblings and
+active monitors continue, and the next deterministic deferred candidate may fill freed
+capacity. The bridge still rejects extra, missing, or malformed context for every
+surviving mutation.
 
-For each batch candidate, orchestration builds one hash-bound authorization from the
-active control, held lock token, exact issue/task ids, fresh startable status, and exact
-blocker/waiver facts. All candidates are targeted-read and duplicate-checked before any
-new monitoring pass. A control change, lock mismatch, task-binding change, non-startable
-status, unsatisfied blocker, existing runtime, or unknown required field removes only
-the affected candidate.
+```text
+live token/owner/lease verification
+  -> exact task lookup
+  -> exact workspace duplicate check
+  -> workspace create when absent
+  -> exact workspace verification
+  -> terminal snapshot
+  -> agent create
+  -> exact terminal correlation
+  -> best-effort Linear execution record
+```
 
-The active project control is the batch mutation gate. There is no extra per-issue
-confirmation. Always release the token-matched lock in `finally`.
+The first `dispatchIssue` sub-step invokes `scripts/project-lock.mjs verify` with the
+exact effect `lockReceipt`, immediately before any Superset call. It requires
+`verifyOutput.verified === true` and returns
+`lockVerification: verifyOutput.verification`, the exact inner verification object.
+Never fabricate verification from the acquisition receipt. Expired, changed, or missing
+ownership refuses mutation.
 
-## Superset primitive order
+Acquire the short project dispatch lock only after every human decision. Under the lock,
+revalidate the latest exact control, refresh candidates then their live blockers, and
+repeat exact workspace checks. A stop or configuration race refuses mutation. Release in
+`finally` before monitoring, follow-ups, waits, or questions.
 
-Every authorized dispatch follows this order within its issue sequence. Different issue
-sequences in one locked batch may run concurrently.
+An ambiguous mutation response gets one exact inspection and no blind retry. A workspace
+created before agent or record failure is preserved and reused on a later invocation.
+Workspace-only recovery with no active terminal is reported `degraded`, not `busy`.
+If partial evidence already contains one exact active terminal, monitor it after release.
+Record-write failure is degraded telemetry, never redispatch permission.
 
-1. Query one complete project workspace inventory and group exact task-id matches. Zero
-   may proceed; one is existing/repair; multiple are ambiguous.
-2. `superset workspaces create --host <host> --project <project> --name <name> --task
-<taskId> --json`, with no agent flag.
-3. `superset workspaces get <workspaceId> --host <host> --json`; require exact host,
-   project, task, and worktree.
-4. Snapshot terminals, then run `superset agents create --workspace <workspaceId> --host
-<host> --agent <agent> --prompt <prompt> --json`.
-5. Re-list terminals, require one exact returned/new terminal, and capture its id.
-6. Persist the execution record in Linear.
+## Lock recovery
 
-Workspace success plus agent failure is a partial execution. Preserve it, record it when
-possible, and never create another automatically. A failed record write after verified
-runtime creation is degraded traceability, never permission to delete or redispatch.
-No Maestro workflow deletes a workspace, terminates an agent, or creates a branch in
-place.
+The ephemeral local lock lives only below `${CLAUDE_PLUGIN_DATA}/locks`, is keyed by exact
+`projectId`, binds the selected `hostId` in its owner, and has one exclusive owner token
+plus creation/expiry timestamps. Release requires the matching token. There is no
+recursive transition lock. Recovery directly handles an expired owner, an empty owner
+left by a crash, and a stale legacy transition artifact. Concurrent recoverers converge
+on one exclusive owner.
 
-The worker prompt begins with `linear-devotee:greet <identifier>`. Only greet may move an
-issue to normalized `started`; Maestro never mutates issue status.
+For an expired owner, recovery requires the exact token observed during inspection. Empty
+and stale legacy-transition artifacts need no token. After one successful recovery,
+acquisition may be retried once; a changed artifact or new live owner returns `busy`.
 
-## Manual spawn
+## Monitoring and exit
 
-`spawn` creates exactly one workspace only when the user or branch guard invokes it. It
-resolves one issue/task/host/project/agent. For a project-bound issue, an active Maestro
-control redirects to `orchestrate`; invalid authority requires repair of the malformed or
-conflicting Linear control records and never redirects to `reconcile`. For a project-less
-issue, absent and `null` project bindings are equivalent, the project loader is skipped,
-and the exact `manual:<identifier>` lock scope is used. Spawn shows one exact mutation
-preview and continues only after confirmation. After the human wait it acquires the
-project/task lock, refetches issue/control/task/runtime ownership, then uses the same
-workspace-first primitive.
+Monitor only exact active terminals. Read active workers together at a measured cadence
+and send follow-ups to the same terminal when needed. A worker DONE/BLOCKED envelope is
+coordination evidence only and never changes Linear lifecycle.
 
-Manual spawn mints its own run id. It never receives project batch authorization, never
-coordinates dependencies, and never serves as the normal project loop.
+After a worker event, derive direct dependent candidates only from validated cached
+frontier rows whose `blockerIssueIds` contain the worker issue. Ignore refresh ids from
+terminal output, then perform a targeted Linear refresh before promoting dependents. If
+there is no exact active worker and no ready or confirmed force candidate, return `idle`
+immediately. Do not poll Linear waiting rows, sleep in the background, or create a hidden
+automation. A later Linear change needs a new invocation.
 
-## Full reconciliation and recovery
+## Public entry points
 
-`reconcile` is explicit-only and intentionally exhaustive. It reloads complete Linear,
-GitHub, workspaces, terminals, task bindings, records, waivers, and control; runs the pure
-resolver; repairs exact reconstructable execution identities; safely updates only the
-resolver's representable `nextBaseline` and ownership indexes; and creates a Coordinator
-handoff in conversation. It never dispatches a workspace or agent.
+- `status`: Linear-only, read-only control and live frontier report. Never inspect runtime
+  and never require reconciliation.
+- `start`: preview and write minimal control v2, verify it, then enter `orchestrate`.
+- `orchestrate`: bootstrap/cache, plan, confirm, inspect selected runtime, lock/dispatch,
+  monitor active workers, targeted-refresh, and exit idle.
+- `reconcile`: optional runtime audit and exact telemetry repair. It never owns, adopts,
+  or gates the Linear graph and never dispatches work. Before proposing any repair it
+  reads every page of the issue's existing telemetry comments; incomplete comment
+  evidence disables repair for that issue. Exact post-write pagination verifies an
+  accepted repair, and an equivalent pre-existing record is never duplicated.
+- `spawn`: one issue through the same planners, force rules, lock, and idempotent primitive
+  as orchestration. An active project control supplies configuration rather than causing
+  redirection.
+- `stop`: preview and write `active:false` using Linear only.
 
-Runnable graph expansion still requires a human confirmation outside the lock. After
-approval, reconcile reacquires the lock and repeats the authoritative reads before
-persisting. The following explicit `orchestrate` invocation reuses the validated handoff
-without another full hydration when its authority still matches.
+`linear-devotee:greet` remains the sole owner of the `In Progress` mutation inside worker
+prompts. Maestro never changes business issue status or dependency relations.
 
-## Failure and ownership rules
+## Failure scope
 
-- Provider unavailability or unscoped required unknowns allow no new mutation. Scoped
-  unknowns quarantine only affected components.
-- Quarantine invalid nodes and descendants while continuing independent valid work.
-- An issue moved out of the project is unmanaged; its runtime remains untouched and
-  guarded until exact exit proof.
-- Local lock/scratch files are ephemeral coordination only. Linear remains durable
-  project memory.
-- Monkey Maestro owns project coordination, Superset workspace/agent dispatch, and its
-  branch guard. Linear Devotee owns graph correctness and In Progress. Git Gremlin owns
-  review, commit, and PR operations.
+- One issue read failure: retry once, then isolate that issue and dependent decisions.
+- Complete Linear outage: no blind dispatch; return `degraded`; existing workers stay.
+- Superset outage: selected issues become temporarily non-transportable; Linear state is
+  unchanged.
+- One issue dispatch failure: siblings continue.
+- Multiple runtime matches: only that issue is ambiguous.
+- No active/ready work: clean immediate `idle`.
+
+Only explicit `stop` changes control activation. Other exits are `idle`, `busy`, or
+`degraded`; none silently disables Maestro or recommends graph reconciliation.

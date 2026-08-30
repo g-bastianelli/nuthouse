@@ -7,6 +7,7 @@ for the active runtime.
 
 | Logical id                               | Claude Code                              | Codex                                     |
 | ---------------------------------------- | ---------------------------------------- | ----------------------------------------- |
+| `monkey-maestro:control-loader`          | `monkey-maestro:control-loader`          | `monkey_maestro__control_loader`          |
 | `monkey-maestro:project-snapshot-loader` | `monkey-maestro:project-snapshot-loader` | `monkey_maestro__project_snapshot_loader` |
 | `monkey-maestro:runtime-inspector`       | `monkey-maestro:runtime-inspector`       | `monkey_maestro__runtime_inspector`       |
 | `warden:voice`                           | `warden:voice`                           | `warden__voice`                           |

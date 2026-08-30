@@ -79,11 +79,18 @@ describe("Codex agent parity", () => {
       "sandbox_workspace_write.network_access = true",
     );
     expect(render("monkey-maestro:runtime-inspector")).toContain(
-      "sandbox_workspace_write.network_access = true",
+      'default_permissions = "maestro-runtime-read-network"',
+    );
+    expect(render("monkey-maestro:runtime-inspector")).toContain(
+      'permissions.maestro-runtime-read-network.extends = ":read-only"',
+    );
+    expect(render("monkey-maestro:runtime-inspector")).toContain(
+      "permissions.maestro-runtime-read-network.network.enabled = true",
     );
     expect(render("monkey-maestro:project-snapshot-loader")).toContain(
       'sandbox_mode = "read-only"',
     );
+    expect(render("monkey-maestro:control-loader")).toContain('sandbox_mode = "read-only"');
     expect(render("linear-devotee:project-graph-loader")).toContain('sandbox_mode = "read-only"');
     expect(render("lore-hound:source-fetcher")).toContain('sandbox_mode = "read-only"');
   });

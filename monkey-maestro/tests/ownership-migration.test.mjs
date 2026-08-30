@@ -9,6 +9,9 @@ const oldPaths = [
   "git-gremlin/hooks/hooks.json",
   "git-gremlin/skills/spawn/SKILL.md",
   "monkey-maestro/agents/queue-scout.md",
+  "monkey-maestro/lib/reconciliation-input.mjs",
+  "monkey-maestro/lib/reconciliation-state.mjs",
+  "monkey-maestro/scripts/reconcile-state.mjs",
   "monkey-maestro/shared/pipeline-contract.md",
   "monkey-maestro/skills/advance/SKILL.md",
   "monkey-maestro/skills/halt/SKILL.md",
@@ -30,9 +33,9 @@ test("the moved branch guard names only its current owner", () => {
     "utf8",
   );
   expect(guard).toContain("monkey-maestro:spawn");
-  expect(guard).toContain(
-    "active Maestro project, use `monkey-maestro:orchestrate <project-id>` instead.",
-  );
+  expect(guard).toContain("active Maestro control");
+  expect(guard).toContain("supplies transport configuration");
+  expect(guard).not.toContain("use `monkey-maestro:orchestrate");
   expect(guard).toContain("MONKEY_MAESTRO_SPAWN_DISABLE");
   expect(guard).not.toContain("monkey-maestro:reconcile");
   expect(guard).not.toContain("git-gremlin:spawn");
@@ -43,5 +46,5 @@ test("greet keeps exclusive ownership of the issue claim", () => {
   const greet = fs.readFileSync(path.join(ROOT, "linear-devotee/skills/greet/SKILL.md"), "utf8");
   const spawn = fs.readFileSync(path.join(ROOT, "monkey-maestro/skills/spawn/SKILL.md"), "utf8");
   expect(greet).toContain("sole owner of this transition");
-  expect(spawn).toContain("never changes Linear status");
+  expect(spawn).toMatch(/spawn never changes Linear\s+status/);
 });

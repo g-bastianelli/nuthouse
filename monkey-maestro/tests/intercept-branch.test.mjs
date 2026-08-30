@@ -7,7 +7,7 @@ const HOOK = path.resolve(import.meta.dir, "..", "claudecode", "hooks", "interce
 const SUPERSET_CWD = path.join(os.homedir(), ".superset", "projects", "nuthouse");
 
 function run(input, env = {}) {
-  return spawnSync("node", [HOOK], {
+  return spawnSync(process.execPath, [HOOK], {
     input: JSON.stringify(input),
     encoding: "utf8",
     env: { ...process.env, MONKEY_MAESTRO_SPAWN_DISABLE: "", ...env },
@@ -30,10 +30,15 @@ test("redirects in-place branch creation to monkey-maestro:spawn", () => {
   expect(output.permissionDecision).toBe("deny");
   expect(output.permissionDecisionReason).toContain("monkey-maestro:spawn");
   expect(output.permissionDecisionReason).toContain("feat-x");
+  expect(output.permissionDecisionReason).toContain("<LINEAR-ISSUE-ID>");
+  expect(output.permissionDecisionReason).toContain("ask the user for it");
+  expect(output.permissionDecisionReason).toContain("Linear's provider branch");
+  expect(output.permissionDecisionReason).not.toContain("requested branch hint");
   expect(output.permissionDecisionReason).toContain("taskId");
-  expect(output.permissionDecisionReason).toContain(
-    "active Maestro project, use `monkey-maestro:orchestrate <project-id>` instead",
-  );
+  expect(output.permissionDecisionReason).toContain("same Linear-first planner");
+  expect(output.permissionDecisionReason).toContain("active Maestro control");
+  expect(output.permissionDecisionReason).toContain("supplies transport configuration");
+  expect(output.permissionDecisionReason).not.toContain("use `monkey-maestro:orchestrate");
   expect(output.permissionDecisionReason).not.toContain("monkey-maestro:reconcile");
   expect(output.permissionDecisionReason).not.toContain("git-gremlin:spawn");
 });
@@ -68,7 +73,7 @@ test("Monkey Maestro kill switch disables interception", () => {
 });
 
 test("malformed stdin fails open", () => {
-  const result = spawnSync("node", [HOOK], {
+  const result = spawnSync(process.execPath, [HOOK], {
     input: "not json",
     encoding: "utf8",
     env: { ...process.env, MONKEY_MAESTRO_SPAWN_DISABLE: "" },

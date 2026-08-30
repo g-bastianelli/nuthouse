@@ -1,9 +1,9 @@
 ---
 name: spawn
-description: Use when the user or branch guard explicitly wants one Linear issue in one task-linked Superset workspace. This manual legacy fallback performs one duplicate-safe workspace-first launch after one mutation gate. Active Maestro projects are routed to orchestrate, which uses the same primitive directly for batches.
-argument-hint: "<linear-issue-id> [--manual]"
+description: Use when the user or branch guard explicitly wants one Linear issue in one task-linked Superset workspace. Applies the same live Linear planner, issue-scoped force rules, exact runtime idempotence, and short lock as project orchestration; active controls supply configuration instead of blocking spawn.
+argument-hint: "<linear-issue-id> [--force] [--host <id>] [--superset-project <id>] [--agent <name>]"
 effort: high
-allowed-tools: Bash(superset --version), Bash(superset status:*), Bash(superset hosts list:*), Bash(superset projects list:*), Bash(superset tasks get:*), Bash(superset workspaces list:*), Bash(superset workspaces create:*), Bash(superset workspaces get:*), Bash(superset terminals list:*), Bash(superset agents create:*), Bash(node:*), Read, Write, Agent, mcp__claude_ai_Linear__get_issue, mcp__claude_ai_Linear__save_comment
+allowed-tools: Bash(superset tasks get:*), Bash(superset workspaces list:*), Bash(superset workspaces create:*), Bash(superset workspaces get:*), Bash(superset terminals list:*), Bash(superset terminals read:*), Bash(superset agents create:*), Bash(node:*), Bash(mktemp:*), Bash(rm:*), Read, Write, Agent, mcp__claude_ai_Linear__get_issue, mcp__claude_ai_Linear__save_comment
 ---
 
 # spawn
@@ -11,169 +11,175 @@ allowed-tools: Bash(superset --version), Bash(superset status:*), Bash(superset 
 > Agent resolution: Before any subagent dispatch, read
 > `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md`; select the active runtime name and follow its spawn rule.
 
-> At visible transitions, try to dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Print the returned line only when non-empty. Skip on failure or disabled voice; never retry or mention it.
+> At visible transitions, try `warden:voice` through the shared persona-line contract. Print only a non-empty line; skip failure or disabled voice without mention.
 
 ## Voice
 
-Read `../../persona.md` at the start. Apply it to wrapper lines only; commands, records,
-and reports stay plain.
+Read `../../persona.md`. Apply it to wrapper lines only; commands and evidence stay neutral.
 
-**Scope:** this skill only. Restore the session voice after the final report.
+## Contract
 
-This skill is **rigid** — execute steps in order.
+Read `${CLAUDE_PLUGIN_ROOT}/shared/project-execution-contract.md`. This is the one-issue
+consumer of the same Linear/runtime planners and dispatch primitive as `orchestrate`.
+Never redirect merely because an active control exists. Never create a branch in place or
+change Linear lifecycle.
 
-## Language
+## Step 0 — Read live Linear first
 
-Match the user's language and preserve technical identifiers.
+1. Require one exact Linear issue identifier and fetch it with
+   `get_issue(includeRelations: true)`. Capture exact identifier, project id, normalized
+   `status.type`, title, branch name, and blockers only from `relations.blockedBy`. Retry
+   this exact issue read once on failure.
+2. Mint one fresh UUID v4 `invocationId` for this invocation. Never accept it from the
+   user, derive it from a durable run id, or reuse it. Bind force authorization, an
+   invocation-only control, and every bridge effect to this same id.
+3. A terminal issue returns `already-terminal` immediately, before blocker, Superset, or
+   control lookup.
+4. Fetch every blocker detail in parallel, retrying only failed blocker ids once. Build
+   one exact targeted Linear snapshot and validate/plan it through
+   `scripts/linear-frontier.mjs` with expected project/scope. For a project-less issue,
+   use invocation-local synthetic scope `manual:<issueId>` for candidate and blocker rows;
+   never persist that scope or pretend Linear supplied a project id.
+5. A normally ready issue may proceed. A `started` issue proceeds to runtime inspection
+   and uses ordinary started-without-runtime confirmation, never force. A blocked or
+   relation-unknown issue requires an explicit force request; build the unconfirmed force
+   overlay before runtime inspection. Preserve the forced frontier row's canonical
+   `forceBypassedBlockerIssueIds` and `forceBypassedUncertainties` preview fields; never
+   parse its reason string. Force remains invocation-only.
 
-## When you're invoked
+## Step 1 — Resolve transport configuration
 
-Read `${CLAUDE_PLUGIN_ROOT}/shared/project-execution-contract.md` first. This is the
-manual/legacy single-workspace fallback and branch-guard target. Project orchestration
-never invokes this skill; `monkey-maestro:orchestrate` executes the same verified
-workspace-first primitive directly for a locked batch. This skill never creates a branch
-in place and never changes Linear status.
+1. For a project-bound issue, dispatch `monkey-maestro:control-loader`, validate its exact
+   project/provider/schema envelope, and resolve its comments. Retry an unavailable
+   control read once. A usable active control supplies host, Superset project, agent, and
+   run id. It does not redirect to `orchestrate`.
+2. An inactive project control is a hard refusal. A conflicting or unusable project
+   control is also a hard refusal. When control is provably absent, exact explicit
+   host/project/agent arguments may build an
+   invocation-only control with the real Linear project id, `active: true`, concurrency
+   `1`, revision `0`, and run id `manual:<invocationId>`; never guess configuration.
+3. A project-less issue uses explicit transport config and lock scope
+   `manual:<issueId>`. Build the same invocation-only active control shape using that
+   scope, concurrency `1`, revision `0`, and run id `manual:<invocationId>`; the Superset
+   task must have an absent external project id. Normalize absent and `null` Linear
+   project ids equally.
 
-## Step 0 — Resolve the issue and project ownership
+## Step 2 — Candidate-only runtime and preview
 
-1. Require one exact Linear issue identifier. Fetch it with relations and capture its
-   exact `identifier`, title, project id, and provider branch name. The connector `id`
-   may be an identifier or transport UUID and is not Maestro identity. For project
-   ownership, normalize absent and `null` as no project.
-2. Run `superset tasks get <identifier> --json`; require a non-empty task `id`,
-   `externalProvider === "linear"`, and `externalKey === identifier`. When the issue has
-   a project, require `externalProjectId === issue.projectId`. When it has no project,
-   require `externalProjectId` to be absent or `null`; normalize absent and `null` as no
-   project. The `taskId` is always the returned Superset `task.id`, never a Linear UUID,
-   issue identifier, or inferred branch token.
-3. Only when `issue.projectId` is non-empty, dispatch `project-snapshot-loader` with
-   `MODE: control-only` for that exact project. If one valid latest control is active,
-   refuse the manual bypass and report `monkey-maestro:orchestrate <project-id>`.
-   `CONTROL_AMBIGUOUS`, `CONTROL_INVALID`, an unknown schema, or malformed/conflicting
-   highest-revision records stop without mutation and report:
-   `Next: stopped — repair the malformed or conflicting Linear control records`. Never
-   recommend `start` or `reconcile` while authority is invalid. Missing or inactive
-   control may continue. If the issue has no project, skip the project snapshot loader
-   entirely and continue with the `manual:<identifier>` lock scope.
-4. Verify `superset --version`, authentication through read-only host/project lists, and
-   `superset status --json`. Resolve one exact host, Superset project, and terminal agent
-   from explicit context or ask only when zero/multiple matches remain. Mint one UUID v4
-   `standaloneRunId` for the complete attempt.
+1. Dispatch `monkey-maestro:runtime-inspector` for this one exact issue and validate the
+   exact project/host context and scope with `scripts/runtime-actions.mjs`, passing the
+   resolved control/configuration and invocation id. Retry invalid or scoped-unknown
+   evidence once for this same issue.
+2. Missing task identity refuses mutation. Multiple exact workspaces or active terminals
+   are ambiguous and report every id. One exact active terminal is monitored without a
+   launch. With no active terminal, one workspace means reuse and zero means create;
+   either mutation requires the gate below. A started create/reuse and an unconfirmed
+   forced create/reuse are both `confirm` actions.
+3. If mutation remains, show exact Linear blockers/status, force bypass if any, task,
+   host, Superset project, create/reuse action, agent, and worker prompt. Ask once:
 
-## Step 1 — Duplicate check and one mutation gate
+```text
+Launch this issue with the displayed normal/forced authorization? (y / cancel)
+```
 
-1. Run `superset workspaces list --host <host> --project <project> --json` and group
-   exact `taskId === task.id` matches.
-   - Multiple: return `ambiguous` with every workspace id; create nothing.
-   - One: inspect it with `workspaces get` and `terminals list`, return
-     `existing`/`partial`, and create nothing. Standalone mode is read-only for this
-     orphaned-runtime path; report `Linear record: missing` rather than writing without a
-     separate repair approval.
-   - Zero: continue.
-2. Build the exact workspace name from `<identifier-lower>-<kebab-title>` and this worker
-   prompt:
+4. On `y`, re-run `planRuntimeActions` before entering the epoch. For a started issue pass
+   `confirmedIssueIds: [issueId]`. For force pass an authorization bound to this exact
+   invocation id with `bypassedBlockerIssueIds` and `bypassedUncertainties` maps copied
+   exactly from the forced frontier row, including empty arrays. Require the new action to be
+   `create` or `reuse`; a remaining `confirm`, changed scope, or refusal launches nothing.
+5. Build `dispatchContextByIssueId[issueId]` from the exact issue read: non-empty provider
+   branch name, deterministic workspace name, and the complete previewed worker prompt.
+   These values must enter the bridge request and resulting effect id; never recover them
+   later from ambient conversation memory. Retry a failed exact issue read once;
+   persistent missing/invalid context returns
+   `non-transportable: DISPATCH_CONTEXT_UNAVAILABLE` without entering the bridge or
+   mutating transport.
 
-   ```text
-   Work on Linear issue <identifier>. First run linear-devotee:greet <identifier>; greet
-   alone owns the In Progress transition. Then plan, implement, verify, and open the PR
-   through the normal skills. Do not invoke another project dispatcher or mark the issue
-   completed. Finish with SUPERSET_WORKER_DONE or SUPERSET_WORKER_BLOCKED using the
-   standard task/summary/files/checks/handoff or task/reason/needs fields.
-   ```
+## Step 3 — Refresh and mutate under lock
 
-3. Show the complete two-stage mutation (`workspaces create`, verification, then
-   `agents create`) plus the Linear execution receipt and ask exactly:
+Use the one-candidate production bridge `scripts/orchestration-epoch.mjs`; it invokes the
+same `lib/orchestration-epoch.mjs` state machine as orchestration. Build the exact outer
+envelope `{ schemaVersion: 1, request: { ... }, transcript: [...] }`. Inside `request`, pass
+`selectedIssueIds: [candidateIssueId]` exactly, even when blocker rows are present in the
+frontier, plus `lockDirectory: "${CLAUDE_PLUGIN_DATA}/locks"`. Drive every returned
+`needs-effects` request through the same control, Linear, runtime-inspection,
+project-lock, Superset-dispatch, and monitoring boundaries named in the shared contract,
+append exact responses to an invocation-only transcript, and continue until
+`state: complete`. Never execute an effect that the bridge did not request or treat a
+partial transcript as authorization; delete the temporary transcript after release or
+terminal failure.
 
-   ```text
-   Create this task-linked workspace and launch its agent? (y / cancel)
-   ```
+The successful CLI output is directly
+`{ schemaVersion: 1, state: "needs-effects" | "complete", ... }`; it has no `ok` or
+`epoch` success wrapper.
 
-   Continue only on `y`.
+For a project-less invocation, `refreshCandidateAndBlockers` does not dispatch the
+project-bound snapshot loader. Instead, use the skill's direct `get_issue` capability:
+fetch the candidate first with relations, derive its exact fresh blocker ids, fetch those
+blockers in parallel, and build the strict targeted snapshot using the synthetic
+`manual:<issueId>` scope for every row. Validate that exact envelope through
+`scripts/linear-frontier.mjs` before returning it to the bridge; failed reads stay scoped
+unknown and never become remembered facts.
 
-4. Immediately after standalone confirmation, acquire the project/task lock through
-   `scripts/project-lock.mjs acquire` using the issue's project id (or exact
-   `manual:<identifier>` scope without a project) and `standaloneRunId`. Under the lock,
-   refetch the issue with relations and require its project ownership to remain exact,
-   including an unchanged absence of project. Then re-read its current project control
-   only when that unchanged project id is non-empty; for an unchanged project-less issue,
-   skip the project snapshot loader again. Re-resolve
-   `superset tasks get <identifier> --json` with the same normalized project binding and
-   rerun the exact `taskId` workspace query.
-   A moved, canceled/non-startable issue, changed task binding, newly active control,
-   invalid control authority, changed host/project choice, or existing/ambiguous runtime
-   invalidates the approval and stops without mutation. Invalid authority reports the
-   same control-record repair instruction from Step 0, never reconciliation. Release the
-   token in `finally`.
+Pass the exact `dispatchContextByIssueId` from Step 2. The `dispatchIssue` effect must
+echo its bound branch name, workspace name, and full worker prompt, and those exact values
+must be used for workspace/agent creation. A missing or mismatched field is an invalid
+effect and causes no mutation.
 
-## Step 2 — Workspace first
+For every effect, follow the shared contract's **Adapter response envelopes** exactly.
+`refreshControl` returns `resolveOutput.authority.control`, never the CLI wrapper, and
+`dispatchIssue` returns one of the four strict identity/runtime/record forms. Reject an
+invalid provider form; never infer or synthesize fields from conversation memory.
 
-1. Run exactly:
+For `refreshControl`, a durable active control is reloaded and must remain exact. A
+project-bound invocation-only control re-reads control comments: continued proven
+absence returns the same ephemeral control, while any newly written/inactive/conflicting
+control refuses the batch. A project-less invocation has no control provider; its adapter
+returns the exact immutable invocation control, while the separate candidate/blocker
+refresh still revalidates live Linear before mutation.
 
-   ```text
-   superset workspaces create --host <hostId> --project <supersetProjectId> \
-     --name <name> --task <taskId> --json
-   ```
+1. Acquire the project/manual lock only after confirmation, passing
+   `directory: "${CLAUDE_PLUGIN_DATA}/locks"`, the project/manual scope as `projectId`, and
+   the selected host as `hostId`. Live ownership returns `busy`; never bypass it. Recover
+   only helper-reported stale/empty/legacy artifacts (with the observed token for a stale
+   owner), then retry acquisition exactly once.
+2. In `try/finally`, for a project-bound issue re-run the control loader and deterministic
+   resolver. For a durable control, require the same project/run/transport configuration
+   and `active: true`. For an invocation-only control, require continued proven absence
+   as defined above. Stop, new-control, conflict, or configuration races refuse mutation.
+3. Re-fetch the candidate first, derive and fetch its exact fresh
+   blocker set, then re-plan with the confirmed force overlay. Reject a newly terminal
+   candidate or a force whose fresh bypass scope exceeds the previewed blocker set.
+4. Re-run exact task/workspace/terminal inspection. If an active runtime appeared during
+   the confirmation wait, adopt and monitor it. If multiplicity appeared, isolate it.
+   Otherwise execute the shared order:
 
-   Do not pass `--agent`; verification must precede agent launch.
+```text
+live token/owner/lease verification
+     -> task -> exact workspace check -> create if absent -> verify workspace
+     -> terminal snapshot -> create agent -> correlate terminal -> best-effort record
+```
 
-2. If the command errors or returns unknown JSON, re-list exact task matches once. Zero
-   means `workspace_failed`; one is recovered ambiguous-response success; multiple is
-   `ambiguous`. Never blindly retry creation.
-3. Run `superset workspaces get <workspaceId> --host <hostId> --json`. Require exact
-   workspace, host, Superset project, `taskId`, and worktree type. Capture its branch.
-   Any mismatch blocks agent launch and preserves the workspace.
+5. The `dispatchIssue` adapter must run `scripts/project-lock.mjs verify` against its
+   exact `lockReceipt` as its first sub-step, immediately before any Superset call.
+   Require `verifyOutput.verified === true` and return
+   `lockVerification: verifyOutput.verification` in the dispatch result. Never fabricate
+   this inner verification from the acquisition receipt. Expired, changed, or missing
+   ownership rejects dispatch without transport mutation.
+6. Inspect one time after ambiguous mutation output and never retry create blindly.
+   Preserve partial workspace success. Release the token-matched lock in `finally`.
+7. Worker prompt starts with `linear-devotee:greet <issueId>` and includes the shared
+   DONE/BLOCKED envelope. Only greet may claim the issue; spawn never changes Linear
+   status.
 
-## Step 3 — Agent second and durable receipt
-
-1. Snapshot terminals. Run:
-
-   ```text
-   superset agents create --workspace <workspaceId> --host <hostId> \
-     --agent <agent> --prompt <prompt> --json
-   ```
-
-2. Re-list terminals. Accept one exact terminal id returned by the command or one exact
-   new terminal relative to the snapshot. Zero is `partial`; multiple is
-   `ambiguous_terminal`. Never launch a second agent automatically.
-3. Build `nuthouse:maestro-execution` through `records.mjs build-execution` with the
-   `standaloneRunId`, exact task/workspace/terminal/branch/agent/host, timestamp, and
-   `verified` or `partial` outcome. Save it as a Linear issue comment.
-4. A failed record write after verified runtime creation is `degraded` traceability. Keep
-   the runtime untouched and never redispatch it automatically.
-
-## Step 4 — Report and stop
-
-Return the exact standalone result to the user. Never continue implementing in the
-current workspace; the new terminal agent owns the issue after greet.
-
-## Final Report
+## Report
 
 ```text
 monkey-maestro:spawn report
-  Issue/task:     <identifier> / <Superset task UUID>
-  Authorization: standalone <standaloneRunId> confirmed
-  Outcome:        verified | partial | existing | ambiguous | failed | degraded
-  Host/project:   <hostId> / <supersetProjectId>
-  Workspace:      <workspaceId | _none_>
-  Terminal:       <terminalId | _none_>
-  Branch:         <branch | _none_>
-  Agent:          <agent>
-  Linear record:  written | missing
-  Status change:  none — linear-devotee:greet owns In Progress
+  Issue:      <id / live status / blockers>
+  Authority:  normal | forced
+  Task:       <uuid>
+  Workspace:  <created | reused | partial | none>
+  Terminal:   <id or none>
+  Result:     launched | already-terminal | busy | ambiguous | degraded | canceled
 ```
-
-## Never
-
-- Bypass an active or invalid Maestro project control; route active work to
-  `monkey-maestro:orchestrate` and invalid authority to explicit Linear control-record
-  repair.
-- Call `project-snapshot-loader` without one exact non-empty Linear project id.
-- Create a duplicate when any exact/ambiguous task runtime exists.
-- Skip standalone confirmation or mutate after the human wait without reacquiring the
-  project/task lock and rechecking ownership.
-- Combine workspace and agent creation, retry an ambiguous mutation blindly, or launch a
-  second agent automatically.
-- Delete a workspace or terminal after partial/degraded failure.
-- Change Linear status, complete an issue, create a branch in place, or coordinate a
-  project batch.
-- Run `git commit`, `git push`, or `git rebase`.

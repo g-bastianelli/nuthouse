@@ -101,7 +101,7 @@ test("PR handoff resumes healthy Maestro orchestration and keeps reconcile recov
     "active Maestro project, mention only this optional next action: after Linear records the issue completed, the user or a known workflow may invoke `monkey-maestro:orchestrate <project-id>`.",
   );
   expect(prSkill).toContain(
-    "Reserve `monkey-maestro:reconcile <project-id>` for explicit recovery or audit",
+    "Reserve `monkey-maestro:reconcile <project-id>` for an explicit Superset runtime-correlation audit or telemetry repair",
   );
   expect(prSkill).toContain(
     "Project execution: optional monkey-maestro:orchestrate <project-id> after Linear completion | n/a",

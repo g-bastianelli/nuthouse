@@ -20,17 +20,32 @@ const REQUIRED_PATHS = [
   "linear-devotee/agents/project-graph-loader.md",
   "linear-devotee/lib/project-graph.mjs",
   "linear-devotee/scripts/project-graph.mjs",
+  "monkey-maestro/agents/control-loader.md",
   "monkey-maestro/agents/project-snapshot-loader.md",
   "monkey-maestro/agents/runtime-inspector.md",
   "monkey-maestro/claudecode/hooks/intercept-branch.mjs",
   "monkey-maestro/hooks/hooks.json",
+  "monkey-maestro/lib/linear-frontier.mjs",
+  "monkey-maestro/lib/linear-snapshot.mjs",
+  "monkey-maestro/lib/orchestration-effect-signal.mjs",
+  "monkey-maestro/lib/orchestration-effects.mjs",
+  "monkey-maestro/lib/orchestration-epoch.mjs",
   "monkey-maestro/lib/project-lock.mjs",
-  "monkey-maestro/lib/reconciliation-state.mjs",
   "monkey-maestro/lib/records.mjs",
+  "monkey-maestro/lib/runtime-actions.mjs",
+  "monkey-maestro/lib/runtime-snapshot.mjs",
+  "monkey-maestro/scripts/linear-frontier.mjs",
+  "monkey-maestro/scripts/linear-snapshot.mjs",
+  "monkey-maestro/scripts/orchestration-epoch.mjs",
+  "monkey-maestro/scripts/project-lock.mjs",
+  "monkey-maestro/scripts/records.mjs",
+  "monkey-maestro/scripts/runtime-actions.mjs",
+  "monkey-maestro/scripts/runtime-snapshot.mjs",
   "monkey-maestro/skills/orchestrate/SKILL.md",
   "monkey-maestro/skills/reconcile/SKILL.md",
   "monkey-maestro/skills/spawn/SKILL.md",
   "monkey-maestro/skills/start/SKILL.md",
+  "monkey-maestro/skills/status/SKILL.md",
   "monkey-maestro/skills/stop/SKILL.md",
 ];
 
@@ -44,6 +59,9 @@ const FORBIDDEN_PATHS = [
   "monkey-maestro/skills/advance/SKILL.md",
   "monkey-maestro/skills/halt/SKILL.md",
   "monkey-maestro/skills/run/SKILL.md",
+  "monkey-maestro/lib/reconciliation-input.mjs",
+  "monkey-maestro/lib/reconciliation-state.mjs",
+  "monkey-maestro/scripts/reconcile-state.mjs",
 ];
 
 const PRODUCTION_ROOTS = [
@@ -197,12 +215,15 @@ export function checkWorkflowMigration(repoRoot) {
   if (!interceptor.includes("monkey-maestro:spawn")) {
     problems.push("Monkey Maestro branch guard does not route to monkey-maestro:spawn");
   }
+  if (!interceptor.includes("active Maestro control")) {
+    problems.push("Monkey Maestro branch guard does not preserve active-control spawn behavior");
+  }
   if (
-    !interceptor.includes(
-      "active Maestro project, use `monkey-maestro:orchestrate <project-id>` instead.",
-    )
+    !interceptor.includes("<LINEAR-ISSUE-ID>") ||
+    !interceptor.includes("Linear's provider branch") ||
+    interceptor.includes("requested branch hint")
   ) {
-    problems.push("Monkey Maestro branch guard does not route active projects to orchestrate");
+    problems.push("Monkey Maestro branch guard does not require an exact Linear issue id");
   }
   if (!interceptor.includes("MONKEY_MAESTRO_SPAWN_DISABLE")) {
     problems.push("Monkey Maestro branch guard does not expose its owned kill switch");
@@ -219,7 +240,7 @@ export function checkWorkflowMigration(repoRoot) {
   }
   if (
     !prSkill.includes(
-      "Reserve `monkey-maestro:reconcile <project-id>` for explicit recovery or audit",
+      "Reserve `monkey-maestro:reconcile <project-id>` for an explicit Superset runtime-correlation audit",
     )
   ) {
     problems.push("Git Gremlin PR handoff does not reserve reconcile for recovery");
@@ -237,11 +258,12 @@ export function checkWorkflowMigration(repoRoot) {
 
   const maestroManifest = readJson(repoRoot, "monkey-maestro/.claude-plugin/plugin.json", problems);
   const expectedMaestroAgents = [
+    "./agents/control-loader.md",
     "./agents/project-snapshot-loader.md",
     "./agents/runtime-inspector.md",
   ];
   if (JSON.stringify(maestroManifest?.agents) !== JSON.stringify(expectedMaestroAgents)) {
-    problems.push("Monkey Maestro manifest agent inventory is not the reconciler inventory");
+    problems.push("Monkey Maestro manifest agent inventory is not the Linear-first inventory");
   }
 
   const linearManifest = readJson(repoRoot, "linear-devotee/.claude-plugin/plugin.json", problems);

@@ -1,5 +1,3 @@
-import { createHash } from "node:crypto";
-
 const CONTROL_MARKER = "nuthouse:maestro-control";
 const MARKERS = new Set([
   CONTROL_MARKER,
@@ -8,10 +6,27 @@ const MARKERS = new Set([
   "nuthouse:maestro-waiver",
 ]);
 
-const HASH_PATTERN = /^sha256:[a-f0-9]{64}$/;
 const EXECUTION_OUTCOMES = new Set(["verified", "partial", "degraded", "repaired"]);
 const WORKER_RESULT_OUTCOMES = new Set(["completed", "blocked", "failed"]);
-const STARTABLE_STATUS_TYPES = new Set(["backlog", "triage", "unstarted"]);
+const CONTROL_V2_FIELDS = new Set([
+  "schemaVersion",
+  "projectId",
+  "runId",
+  "active",
+  "targetHostId",
+  "supersetProjectId",
+  "defaultAgent",
+  "maxConcurrency",
+  "revision",
+  "updatedAt",
+]);
+const CONTROL_SNAPSHOT_FIELDS = new Set([
+  "schemaVersion",
+  "provider",
+  "project",
+  "comments",
+  "unknown",
+]);
 
 export class RecordValidationError extends Error {
   constructor(code, message, detail = {}) {
@@ -46,12 +61,6 @@ function timestamp(value, label) {
   return normalized;
 }
 
-function hash(value, label) {
-  const normalized = string(value, label);
-  if (!HASH_PATTERN.test(normalized)) fail("INVALID_RECORD", `${label} must be a SHA-256 hash`);
-  return normalized;
-}
-
 function integer(value, label, minimum, maximum) {
   if (!Number.isInteger(value) || value < minimum || value > maximum) {
     fail("INVALID_RECORD", `${label} must be an integer from ${minimum} through ${maximum}`);
@@ -66,146 +75,6 @@ function sortedUniqueStrings(value, label) {
     fail("INVALID_RECORD", `${label} contains duplicates`);
   }
   return normalized.sort();
-}
-
-export function canonicalizeDecisionBaseline(value) {
-  const baseline = object(value, "decisionBaseline");
-  if (!Array.isArray(baseline.issueIds) || !Array.isArray(baseline.edges)) {
-    fail("INVALID_RECORD", "decisionBaseline requires issueIds and edges arrays");
-  }
-  const issueIds = baseline.issueIds.map((id, index) => string(id, `issueIds[${index}]`));
-  if (new Set(issueIds).size !== issueIds.length) {
-    fail("INVALID_RECORD", "decisionBaseline contains duplicate issueIds");
-  }
-  issueIds.sort();
-  const issueIdSet = new Set(issueIds);
-  const seenEdges = new Set();
-  const edges = baseline.edges.map((value, index) => {
-    const edge = object(value, `edges[${index}]`);
-    const normalized = {
-      dependentIssueId: string(edge.dependentIssueId, `edges[${index}].dependentIssueId`),
-      blockerIssueId: string(edge.blockerIssueId, `edges[${index}].blockerIssueId`),
-    };
-    if (
-      !issueIdSet.has(normalized.dependentIssueId) ||
-      !issueIdSet.has(normalized.blockerIssueId)
-    ) {
-      fail("INVALID_RECORD", "decisionBaseline edge targets an unknown issue", normalized);
-    }
-    if (normalized.dependentIssueId === normalized.blockerIssueId) {
-      fail("INVALID_RECORD", "decisionBaseline contains a self-edge", normalized);
-    }
-    const key = `${normalized.dependentIssueId}\u0000${normalized.blockerIssueId}`;
-    if (seenEdges.has(key))
-      fail("INVALID_RECORD", "decisionBaseline contains a duplicate edge", normalized);
-    seenEdges.add(key);
-    return normalized;
-  });
-  edges.sort((left, right) => {
-    const dependentOrder = left.dependentIssueId.localeCompare(right.dependentIssueId);
-    return dependentOrder || left.blockerIssueId.localeCompare(right.blockerIssueId);
-  });
-  return { issueIds, edges };
-}
-
-export function hashDecisionBaseline(value) {
-  const canonical = canonicalizeDecisionBaseline(value);
-  return `sha256:${createHash("sha256").update(JSON.stringify(canonical)).digest("hex")}`;
-}
-
-function canonicalizeDispatchEligibility(value) {
-  const eligibility = object(value, "dispatch eligibility");
-  const issueId = string(eligibility.issueId, "eligibility.issueId");
-  const projectId = string(eligibility.projectId, "eligibility.projectId");
-  const statusType = string(eligibility.statusType, "eligibility.statusType").toLowerCase();
-  if (!STARTABLE_STATUS_TYPES.has(statusType)) {
-    fail("ISSUE_NOT_STARTABLE", `issue status is not startable: ${statusType}`);
-  }
-  if (!Array.isArray(eligibility.blockers)) {
-    fail("INVALID_RECORD", "eligibility.blockers must be an array");
-  }
-  const seen = new Set();
-  const blockers = eligibility.blockers
-    .map((value, index) => {
-      const blocker = object(value, `eligibility.blockers[${index}]`);
-      const blockerIssueId = string(blocker.issueId, `eligibility.blockers[${index}].issueId`);
-      if (blockerIssueId === issueId) {
-        fail("ISSUE_NOT_ELIGIBLE", "dispatch eligibility contains a self blocker");
-      }
-      if (seen.has(blockerIssueId)) {
-        fail("ISSUE_NOT_ELIGIBLE", "dispatch eligibility contains duplicate blockers");
-      }
-      seen.add(blockerIssueId);
-      const blockerStatusType = string(
-        blocker.statusType,
-        `eligibility.blockers[${index}].statusType`,
-      ).toLowerCase();
-      if (typeof blocker.waiverApproved !== "boolean") {
-        fail("INVALID_RECORD", "eligibility blocker waiverApproved must be boolean");
-      }
-      if (blockerStatusType !== "completed" && blocker.waiverApproved !== true) {
-        fail("ISSUE_NOT_ELIGIBLE", `unsatisfied blocker: ${blockerIssueId}`);
-      }
-      return {
-        issueId: blockerIssueId,
-        statusType: blockerStatusType,
-        waiverApproved: blocker.waiverApproved,
-      };
-    })
-    .sort((left, right) => left.issueId.localeCompare(right.issueId));
-  return { issueId, projectId, statusType, blockers };
-}
-
-function canonicalDispatchAuthorization(value) {
-  const authorization = object(value, "dispatch authorization");
-  if (authorization.schemaVersion !== 1 || authorization.kind !== "project") {
-    fail("INVALID_RECORD", "dispatch authorization must be schemaVersion 1 project mode");
-  }
-  const normalized = {
-    schemaVersion: 1,
-    kind: "project",
-    projectId: string(authorization.projectId, "projectId"),
-    runId: string(authorization.runId, "runId"),
-    revision: integer(authorization.revision, "revision", 1, Number.MAX_SAFE_INTEGER),
-    decisionHash: hash(authorization.decisionHash, "decisionHash"),
-    lockToken: string(authorization.lockToken, "lockToken"),
-    issueId: string(authorization.issueId, "issueId"),
-    taskId: string(authorization.taskId, "taskId"),
-    eligibility: canonicalizeDispatchEligibility(authorization.eligibility),
-  };
-  if (
-    normalized.issueId !== normalized.eligibility.issueId ||
-    normalized.projectId !== normalized.eligibility.projectId
-  ) {
-    fail("AUTHORIZATION_SCOPE_MISMATCH", "authorization and eligibility scope differ");
-  }
-  return normalized;
-}
-
-export function hashDispatchAuthorization(value) {
-  const canonical = canonicalDispatchAuthorization(value);
-  const digest = createHash("sha256").update(JSON.stringify(canonical)).digest("hex");
-  return `sha256:${digest}`;
-}
-
-export function buildDispatchAuthorization(input) {
-  const canonical = canonicalDispatchAuthorization({
-    ...object(input, "dispatch authorization input"),
-    schemaVersion: 1,
-    kind: "project",
-  });
-  return { ...canonical, authorizationHash: hashDispatchAuthorization(canonical) };
-}
-
-export function validateDispatchAuthorization(value) {
-  const authorization = object(value, "dispatch authorization");
-  const canonical = canonicalDispatchAuthorization(authorization);
-  const authorizationHash = hash(authorization.authorizationHash, "authorizationHash");
-  const expectedHash = hashDispatchAuthorization(canonical);
-  if (authorizationHash !== expectedHash) {
-    fail("AUTHORIZATION_HASH_MISMATCH", "authorizationHash does not match dispatch evidence");
-  }
-  return { ...canonical, authorizationHash };
 }
 
 function validateHeader(value, marker) {
@@ -248,6 +117,96 @@ function validationCode(error) {
   return error instanceof RecordValidationError ? error.code : "INVALID_RECORD";
 }
 
+export function validateControlSnapshot(value, { expectedProjectId } = {}) {
+  const snapshot = object(value, "control snapshot");
+  const unsupported = Object.keys(snapshot)
+    .filter((field) => !CONTROL_SNAPSHOT_FIELDS.has(field))
+    .sort();
+  if (unsupported.length > 0) {
+    fail(
+      "CONTROL_SNAPSHOT_INVALID",
+      `control snapshot contains unsupported fields: ${unsupported.join(", ")}`,
+    );
+  }
+  if (snapshot.schemaVersion !== 1) {
+    fail("CONTROL_SNAPSHOT_INVALID", "control snapshot schemaVersion must be 1");
+  }
+  if (snapshot.provider !== "ready" && snapshot.provider !== "unavailable") {
+    fail("CONTROL_SNAPSHOT_INVALID", "control snapshot provider is invalid");
+  }
+
+  const project = object(snapshot.project, "control snapshot project");
+  const projectId = string(project.id, "control snapshot project.id");
+  const projectName = string(project.name, "control snapshot project.name");
+  if (expectedProjectId !== undefined && projectId !== expectedProjectId) {
+    fail(
+      "CONTROL_PROJECT_MISMATCH",
+      `expected project ${expectedProjectId}, received ${projectId}`,
+    );
+  }
+  if (!Array.isArray(snapshot.comments)) {
+    fail("CONTROL_SNAPSHOT_INVALID", "control snapshot comments must be an array");
+  }
+  const seenCommentIds = new Set();
+  const comments = snapshot.comments
+    .map((entry, index) => {
+      const comment = object(entry, `control snapshot comments[${index}]`);
+      const id = string(comment.id, `control snapshot comments[${index}].id`);
+      if (seenCommentIds.has(id)) {
+        fail("CONTROL_SNAPSHOT_INVALID", `duplicate control comment id ${id}`);
+      }
+      seenCommentIds.add(id);
+      if (typeof comment.body !== "string" || comment.body.trim().length === 0) {
+        fail(
+          "CONTROL_SNAPSHOT_INVALID",
+          `control snapshot comments[${index}].body must be a non-empty string`,
+        );
+      }
+      const body = comment.body;
+      if (!body.includes(`<!-- ${CONTROL_MARKER}`)) {
+        fail("CONTROL_SNAPSHOT_INVALID", `control comment ${id} is missing the marker prefix`);
+      }
+      return {
+        id,
+        body,
+        createdAt: timestamp(comment.createdAt, `control snapshot comments[${index}].createdAt`),
+        updatedAt: timestamp(comment.updatedAt, `control snapshot comments[${index}].updatedAt`),
+      };
+    })
+    .sort((left, right) => left.id.localeCompare(right.id));
+
+  if (!Array.isArray(snapshot.unknown)) {
+    fail("CONTROL_SNAPSHOT_INVALID", "control snapshot unknown must be an array");
+  }
+  const unknown = snapshot.unknown.map((entry, index) => {
+    const item = object(entry, `control snapshot unknown[${index}]`);
+    return {
+      code: string(item.code, `control snapshot unknown[${index}].code`),
+      detail: string(item.detail, `control snapshot unknown[${index}].detail`),
+    };
+  });
+  if (snapshot.provider === "ready" && unknown.length > 0) {
+    fail("CONTROL_SNAPSHOT_CONTRADICTION", "ready control snapshot cannot contain unknowns");
+  }
+  if (snapshot.provider === "unavailable") {
+    if (comments.length > 0 || unknown.length === 0) {
+      fail(
+        "CONTROL_SNAPSHOT_CONTRADICTION",
+        "unavailable control snapshot requires unknown evidence and no comments",
+      );
+    }
+    fail("CONTROL_PROVIDER_UNAVAILABLE", unknown.map((entry) => entry.detail).join("; "));
+  }
+
+  return {
+    schemaVersion: 1,
+    provider: "ready",
+    project: { id: projectId, name: projectName },
+    comments,
+    unknown: [],
+  };
+}
+
 export function resolveControlAuthority(comments) {
   if (!Array.isArray(comments)) fail("INVALID_INPUT", "comments must be an array");
   const candidates = comments
@@ -264,6 +223,7 @@ export function resolveControlAuthority(comments) {
         return {
           id,
           body,
+          sourceSchemaVersion: Number(envelope.versionText),
           revision: integer(
             envelope.record?.revision,
             `comments[${index}].revision`,
@@ -317,6 +277,7 @@ export function resolveControlAuthority(comments) {
       status: "valid",
       control: parseControlRecord(candidate.body),
       controlCommentId: candidate.id,
+      sourceSchemaVersion: candidate.sourceSchemaVersion,
       revision: highestRevision,
     };
   } catch (error) {
@@ -334,73 +295,55 @@ export function resolveControlAuthority(comments) {
 export function buildControlRecord(input, existing) {
   const value = object(input, "control input");
   const previous = existing === undefined ? undefined : validateControlRecord(existing);
-  const previousRevision = previous?.revision ?? 0;
-  const maxConcurrency = value.maxConcurrency === undefined ? 4 : value.maxConcurrency;
-  const decisionBaseline = canonicalizeDecisionBaseline(value.decisionBaseline);
-  const computedDecisionHash = hashDecisionBaseline(decisionBaseline);
-  if (value.decisionHash !== undefined && value.decisionHash !== computedDecisionHash) {
-    fail("DECISION_HASH_MISMATCH", "decisionHash does not match decisionBaseline");
-  }
+
+  const inherited = (field, fallback) => {
+    if (Object.hasOwn(value, field)) return value[field];
+    if (previous !== undefined) return previous[field];
+    return fallback;
+  };
+
   return validateControlRecord({
-    marker: CONTROL_MARKER,
-    schemaVersion: 1,
-    projectId: value.projectId,
-    runId: value.runId,
-    active: value.active,
-    repository: value.repository,
-    supersetProjectId: value.supersetProjectId,
-    targetHostId: value.targetHostId,
-    defaultAgent: value.defaultAgent,
-    maxConcurrency,
-    executionIssueIds: value.executionIssueIds ?? previous?.executionIssueIds ?? [],
-    exitedExecutionIssueIds:
-      value.exitedExecutionIssueIds ?? previous?.exitedExecutionIssueIds ?? [],
-    decisionBaseline,
-    decisionHash: computedDecisionHash,
-    graphHash: value.graphHash,
-    revision: previousRevision + 1,
+    schemaVersion: 2,
+    projectId: inherited("projectId"),
+    runId: inherited("runId"),
+    active: inherited("active"),
+    targetHostId: inherited("targetHostId"),
+    supersetProjectId: inherited("supersetProjectId"),
+    defaultAgent: inherited("defaultAgent"),
+    maxConcurrency: inherited("maxConcurrency", 4),
+    revision: (previous?.revision ?? 0) + 1,
     updatedAt: value.updatedAt,
   });
 }
 
 export function validateControlRecord(value) {
-  const record = validateHeader(value, CONTROL_MARKER);
+  const record = object(value, "record");
+  if (record.marker !== undefined && record.marker !== CONTROL_MARKER) {
+    fail("MARKER_MISMATCH", `expected marker ${CONTROL_MARKER}`);
+  }
+  if (record.schemaVersion !== 1 && record.schemaVersion !== 2) {
+    fail("UNSUPPORTED_SCHEMA", `unsupported schemaVersion: ${String(record.schemaVersion)}`);
+  }
+  if (record.schemaVersion === 2) {
+    const unexpected = Object.keys(record)
+      .filter((field) => field !== "marker" && !CONTROL_V2_FIELDS.has(field))
+      .sort();
+    if (unexpected.length > 0) {
+      fail("INVALID_RECORD", `control v2 contains unsupported fields: ${unexpected.join(", ")}`, {
+        fields: unexpected,
+      });
+    }
+  }
   if (typeof record.active !== "boolean") fail("INVALID_RECORD", "active must be boolean");
-  const decisionBaseline = canonicalizeDecisionBaseline(record.decisionBaseline);
-  const decisionHash = hash(record.decisionHash, "decisionHash");
-  if (decisionHash !== hashDecisionBaseline(decisionBaseline)) {
-    fail("DECISION_HASH_MISMATCH", "decisionHash does not match decisionBaseline");
-  }
-  const executionIssueIds = sortedUniqueStrings(
-    record.executionIssueIds ?? [],
-    "executionIssueIds",
-  );
-  const exitedExecutionIssueIds = sortedUniqueStrings(
-    record.exitedExecutionIssueIds ?? [],
-    "exitedExecutionIssueIds",
-  );
-  const overlap = executionIssueIds.find((issueId) => exitedExecutionIssueIds.includes(issueId));
-  if (overlap) {
-    fail("INVALID_RECORD", "an execution cannot be both active and confirmed exited", {
-      issueId: overlap,
-    });
-  }
   return {
-    marker: record.marker,
-    schemaVersion: 1,
+    schemaVersion: 2,
     projectId: string(record.projectId, "projectId"),
     runId: string(record.runId, "runId"),
     active: record.active,
-    repository: string(record.repository, "repository"),
-    supersetProjectId: string(record.supersetProjectId, "supersetProjectId"),
     targetHostId: string(record.targetHostId, "targetHostId"),
+    supersetProjectId: string(record.supersetProjectId, "supersetProjectId"),
     defaultAgent: string(record.defaultAgent, "defaultAgent"),
     maxConcurrency: integer(record.maxConcurrency, "maxConcurrency", 1, 10),
-    executionIssueIds,
-    exitedExecutionIssueIds,
-    decisionBaseline,
-    decisionHash,
-    graphHash: hash(record.graphHash, "graphHash"),
     revision: integer(record.revision, "revision", 1, Number.MAX_SAFE_INTEGER),
     updatedAt: timestamp(record.updatedAt, "updatedAt"),
   };
@@ -507,7 +450,10 @@ export function buildWaiverRecord(input) {
 
 export function serializeRecord(value) {
   const record = object(value, "record");
-  const marker = string(record.marker, "marker");
+  const marker =
+    record.marker === undefined && Object.hasOwn(record, "active")
+      ? CONTROL_MARKER
+      : string(record.marker, "marker");
   if (!MARKERS.has(marker)) fail("UNKNOWN_MARKER", `unknown record marker: ${marker}`);
   const normalized =
     marker === "nuthouse:maestro-control"
@@ -521,7 +467,14 @@ export function serializeRecord(value) {
 }
 
 export function parseControlRecord(body) {
-  return validateControlRecord(parseBody(body, CONTROL_MARKER));
+  const envelope = parseEnvelope(body, CONTROL_MARKER, false);
+  if (envelope.versionText !== "1" && envelope.versionText !== "2") {
+    fail("UNSUPPORTED_SCHEMA", `unsupported schemaVersion: ${envelope.versionText}`);
+  }
+  if (String(envelope.record?.schemaVersion) !== envelope.versionText) {
+    fail("SCHEMA_MISMATCH", "control envelope and record schema versions differ");
+  }
+  return validateControlRecord(envelope.record);
 }
 
 export function parseExecutionRecord(body) {
