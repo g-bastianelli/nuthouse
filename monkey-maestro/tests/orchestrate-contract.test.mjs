@@ -72,6 +72,15 @@ test("targeted loader scales with the requested transition, not project size", (
   expect(targetedLoader).toContain("Never pass a `targeted` response");
 });
 
+test("full and targeted snapshots use the same authoritative relation reads", () => {
+  expect(targetedLoader).toContain("always fetch every managed issue detail with relations");
+  expect(targetedLoader).toContain("The list response is never relation authority");
+  expect(targetedLoader).toContain("same relation read and normalization path");
+  expect(targetedLoader).toMatch(
+    /Never backfill current relations from the verified graph receipt or control baseline/,
+  );
+});
+
 test("delayed Linear completion stays observable without a full reload", () => {
   const monitoring = orchestrate.slice(
     orchestrate.indexOf("## Step 4 — Monitor every worker"),

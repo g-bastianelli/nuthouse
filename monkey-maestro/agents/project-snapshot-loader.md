@@ -47,11 +47,14 @@ Read the record and provider rules in
    by `control-only`. In `control-only`, return after this step. In `targeted`, require the
    selected control to match all three expected fields and remain active; a mismatch is
    required unknown authority, never a replacement baseline.
-2. In `full`, list every project issue with pagination. Fetch issue details with
-   relations when blockers are not complete in the list response. Load team status
-   metadata and normalize by `status.type`, never by display name. Preserve Linear's
-   milestone/order/sort fields and derive one stable numeric order with the identifier as
-   the final tie-break. The canonical issue identity is Linear's exact `identifier`
+2. In `full`, list every project issue with pagination, then always fetch every managed issue detail with relations.
+   The list response is never relation authority, even when it appears to contain blocker
+   data. Derive blockers only from each detail response's exact `relations.blockedBy`;
+   an empty array is complete, while an absent or partial relation field is required
+   unknown data. `full` and `targeted` use the same relation read and normalization path.
+   Load team status metadata and normalize by `status.type`, never by display name.
+   Preserve Linear's milestone/order/sort fields and derive one stable numeric order with
+   the identifier as the final tie-break. The canonical issue identity is Linear's exact `identifier`
    (for example `TEAM-123`), not a transport UUID. Treat the returned value as opaque:
    never assume a `NOT-` prefix or validate it with a locally invented regex. Set both normalized `id` and
    `identifier` to that exact value. If an adapter collapses them into one returned `id`,
@@ -81,7 +84,8 @@ Read the record and provider rules in
    `dependentIssueId -> blockerIssueId` relations. When an issue's blocker field is
    missing or partial, set its `dataState: "unknown"`, omit only the unproven current
    edges, and emit an issue-scoped required `unknown`; the resolver retains the prior
-   control edges. Invalid self/unknown/cyclic observations remain in issue `blockers` for
+   control edges. Never backfill current relations from the verified graph receipt or control baseline.
+   Invalid self/unknown/cyclic observations remain in issue `blockers` for
    quarantine but are never declared safe. Preserve every unnormalizable field in
    `unknown`; never fill it from a title, comment prose, or GitHub state.
    Normalize every relation endpoint to the related issue's exact Linear identifier.

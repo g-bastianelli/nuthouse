@@ -2,7 +2,7 @@
   "name": "monkey-maestro",
   "displayName": "Monkey Maestro",
   "description": "Orchestrate verified Linear dependency graphs through durable control, parallel Superset workers, targeted transitions, and explicit full recovery.",
-  "version": "1.0.15",
+  "version": "1.0.16",
   "author": {
     "name": "g-bastianelli"
   },

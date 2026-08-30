@@ -318,6 +318,33 @@ describe("Linear evolution", () => {
     expect(ids(confirmed.dispatch)).toEqual(["dependent"]);
   });
 
+  test("removes a stale completed dependency without gating an already-ready successor", () => {
+    const decision = resolveReconciliation(
+      input({
+        issues: [
+          issue("completed-a", 1, { statusType: "completed" }),
+          issue("completed-b", 2, { statusType: "completed" }),
+          issue("successor", 3, { blockers: ["completed-a", "completed-b"] }),
+        ],
+        baseline: {
+          issueIds: ["completed-a", "completed-b", "successor"],
+          edges: [
+            { dependentIssueId: "completed-b", blockerIssueId: "completed-a" },
+            { dependentIssueId: "successor", blockerIssueId: "completed-a" },
+            { dependentIssueId: "successor", blockerIssueId: "completed-b" },
+          ],
+        },
+      }),
+    );
+
+    expect(decision.confirmations).toEqual([]);
+    expect(ids(decision.dispatch)).toEqual(["successor"]);
+    expect(decision.nextBaseline.edges).toEqual([
+      { dependentIssueId: "successor", blockerIssueId: "completed-a" },
+      { dependentIssueId: "successor", blockerIssueId: "completed-b" },
+    ]);
+  });
+
   test("requires confirmation for a newly added startable issue", () => {
     const fresh = resolveReconciliation(
       input({ issues: [issue("new-issue", 1)], baseline: { issueIds: [], edges: [] } }),

@@ -1,6 +1,6 @@
 {
   "name": "monkey-maestro",
-  "version": "1.0.15",
+  "version": "1.0.16",
   "description": "Durable Linear-backed project orchestration with parallel Superset workers, targeted dependency advancement, and explicit full recovery.",
   "author": {
     "name": "g-bastianelli"
