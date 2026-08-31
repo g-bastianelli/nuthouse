@@ -6,8 +6,12 @@ const WORKFLOW_MIRRORS = [
   "capability-resolver.mjs",
   "classification.mjs",
   "configuration.mjs",
+  "manifest-handoff.mjs",
+  "manifest-schema.mjs",
+  "manifest-store.mjs",
   "policy-resolution.mjs",
   "risk-evaluator.mjs",
+  "workflow-resolution.mjs",
   "worktree-overrides.mjs",
   "index.mjs",
 ].map((filename) => ({

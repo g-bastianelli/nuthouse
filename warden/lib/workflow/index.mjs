@@ -60,3 +60,27 @@ export {
 } from "./capability-resolver.mjs";
 
 export { resolveWorkflowPolicy } from "./policy-resolution.mjs";
+
+export {
+  DECISION_MANIFEST_SCHEMA_VERSION,
+  DecisionManifestValidationError,
+  createDecisionManifest,
+  createManifestHandoff,
+  deriveRepositoryId,
+  hashDecisionManifestContent,
+  serializeDecisionManifest,
+  validateDecisionManifest,
+  validateManifestHandoff,
+} from "./manifest-schema.mjs";
+
+export {
+  DecisionManifestStoreError,
+  WorkflowStateConflictError,
+  getDecisionManifestPath,
+  inspectDecisionManifest,
+  writeDecisionManifest,
+} from "./manifest-store.mjs";
+
+export { WorkflowDecisionError, resolveWorkflowDecision } from "./workflow-resolution.mjs";
+
+export { ManifestHandoffError, consumeManifestHandoff } from "./manifest-handoff.mjs";
