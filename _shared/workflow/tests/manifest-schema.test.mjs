@@ -169,6 +169,111 @@ describe("decision manifest v1", () => {
     }
   });
 
+  test("rejects well-shaped decisions that contradict normalized risk evidence", () => {
+    const fixtures = [
+      [
+        "confirmed risk without its floor",
+        (value) => ({
+          ...value,
+          decision: {
+            ...value.decision,
+            riskFloor: "quick",
+            effectiveProfile: "quick",
+            escalations: [],
+          },
+        }),
+        "inconsistent-risk-floor",
+        "$.decision.riskFloor",
+      ],
+      [
+        "effective profile below its risk floor",
+        (value) => ({
+          ...value,
+          decision: {
+            ...value.decision,
+            effectiveProfile: "standard",
+            escalations: [{ reason: "security", from: "quick", to: "standard" }],
+          },
+        }),
+        "inconsistent-effective-profile",
+        "$.decision.effectiveProfile",
+      ],
+      [
+        "invented active risk",
+        (value) => ({
+          ...value,
+          decision: { ...value.decision, activeRisks: ["privacy"] },
+        }),
+        "inconsistent-active-risks",
+        "$.decision.activeRisks",
+      ],
+      [
+        "missing escalation",
+        (value) => ({
+          ...value,
+          decision: { ...value.decision, escalations: [] },
+        }),
+        "inconsistent-escalations",
+        "$.decision.escalations",
+      ],
+      [
+        "escalation when the requested profile is already strict",
+        (value) => ({
+          ...value,
+          decision: {
+            ...value.decision,
+            requestedProfile: "strict",
+            escalations: [{ reason: "security", from: "strict", to: "strict" }],
+          },
+        }),
+        "inconsistent-escalations",
+        "$.decision.escalations",
+      ],
+    ];
+
+    for (const [name, mutate, code, field] of fixtures) {
+      const invalid = mutate(validManifest());
+      const result = validateDecisionManifest(invalid);
+
+      expect(result.ok, name).toBe(false);
+      expect(fieldCodes(result), name).toContainEqual({ code, field });
+      expect(() => serializeDecisionManifest(invalid), name).toThrow(
+        DecisionManifestValidationError,
+      );
+    }
+  });
+
+  test("preserves semantically equivalent decision array order and exact-byte hashing", () => {
+    const policy = resolveWorkflowPolicy({
+      configuration: resolveConfiguration({ invocationProfile: "quick" }),
+      workflow: "issue-delivery",
+      riskEvidence: [
+        { category: "security", source: "repository-rule", state: "confirmed" },
+        { category: "privacy", source: "semantic-analysis", state: "confirmed" },
+      ],
+    });
+    const manifest = createDecisionManifest(manifestInput({ decision: policy }));
+    const reordered = {
+      ...manifest,
+      decision: {
+        ...manifest.decision,
+        normalizedEvidence: [...manifest.decision.normalizedEvidence].reverse(),
+        activeRisks: [...manifest.decision.activeRisks].reverse(),
+        escalations: [...manifest.decision.escalations].reverse(),
+      },
+    };
+
+    expect(validateDecisionManifest(reordered)).toEqual({
+      ok: true,
+      value: reordered,
+      diagnostics: [],
+    });
+    expect(serializeDecisionManifest(reordered)).not.toBe(serializeDecisionManifest(manifest));
+    expect(hashDecisionManifestContent(serializeDecisionManifest(reordered))).not.toBe(
+      hashDecisionManifestContent(serializeDecisionManifest(manifest)),
+    );
+  });
+
   test("rejects unknown persisted fields recursively with exact field diagnostics", () => {
     const fixtures = [
       ["top-level", (value) => ({ ...value, secret: "nope" }), "$.secret"],

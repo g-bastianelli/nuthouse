@@ -9,6 +9,7 @@ import {
   RISK_CATEGORIES,
   RISK_EVIDENCE_SOURCES,
   RISK_EVIDENCE_STATES,
+  evaluateRisk,
 } from "./risk-evaluator.mjs";
 
 export const DECISION_MANIFEST_SCHEMA_VERSION = 1;
@@ -55,7 +56,6 @@ const ARTIFACT_FIELD_SET = new Set(ARTIFACT_FIELDS);
 const HANDOFF_FIELD_SET = new Set(HANDOFF_FIELDS);
 const WORKFLOW_SET = new Set(CAPABILITY_CONSUMERS);
 const PROFILE_SET = new Set(WORKFLOW_PROFILES);
-const PROFILE_RANK = new Map(WORKFLOW_PROFILES.map((profile, index) => [profile, index]));
 const RISK_CATEGORY_SET = new Set(RISK_CATEGORIES);
 const RISK_SOURCE_SET = new Set(RISK_EVIDENCE_SOURCES);
 const AUTHORITATIVE_RISK_SOURCE_SET = new Set(AUTHORITATIVE_RISK_EVIDENCE_SOURCES);
@@ -353,7 +353,71 @@ function validateEscalations(value, decision, diagnostics) {
   return normalized;
 }
 
+function haveSameMembers(left, right, key = (item) => item) {
+  if (left.length !== right.length) return false;
+  const expected = new Set(right.map(key));
+  return left.every((item) => expected.has(key(item)));
+}
+
+function validateRiskDecision(decision, diagnostics) {
+  const expected = evaluateRisk({
+    requestedProfile: decision.requestedProfile,
+    evidence: decision.normalizedEvidence.map(
+      ({ category, source, state, potentiallyCritical }) => ({
+        category,
+        source,
+        state,
+        potentiallyCritical,
+      }),
+    ),
+  });
+
+  if (decision.riskFloor !== expected.riskFloor) {
+    diagnostics.push(
+      diagnostic(
+        "inconsistent-risk-floor",
+        "$.decision.riskFloor",
+        "riskFloor must be derived from normalizedEvidence.",
+      ),
+    );
+  }
+  if (decision.effectiveProfile !== expected.effectiveProfile) {
+    diagnostics.push(
+      diagnostic(
+        "inconsistent-effective-profile",
+        "$.decision.effectiveProfile",
+        "effectiveProfile must be derived from requestedProfile and normalizedEvidence.",
+      ),
+    );
+  }
+  if (!haveSameMembers(decision.activeRisks, expected.activeRisks)) {
+    diagnostics.push(
+      diagnostic(
+        "inconsistent-active-risks",
+        "$.decision.activeRisks",
+        "activeRisks must match normalizedEvidence.",
+      ),
+    );
+  }
+  if (
+    !haveSameMembers(
+      decision.escalations,
+      expected.escalations,
+      ({ reason, from, to }) => `${reason}\0${from}\0${to}`,
+    )
+  ) {
+    diagnostics.push(
+      diagnostic(
+        "inconsistent-escalations",
+        "$.decision.escalations",
+        "escalations must match requestedProfile and normalizedEvidence.",
+      ),
+    );
+  }
+}
+
 function validateDecision(value, diagnostics) {
+  const diagnosticCount = diagnostics.length;
   if (
     !validateClosedObject(
       value,
@@ -387,27 +451,8 @@ function validateDecision(value, diagnostics) {
       );
     }
   }
-  if (
-    PROFILE_SET.has(value.requestedProfile) &&
-    PROFILE_SET.has(value.riskFloor) &&
-    PROFILE_SET.has(value.effectiveProfile)
-  ) {
-    const expectedRank = Math.max(
-      PROFILE_RANK.get(value.requestedProfile),
-      PROFILE_RANK.get(value.riskFloor),
-    );
-    if (PROFILE_RANK.get(value.effectiveProfile) !== expectedRank) {
-      diagnostics.push(
-        diagnostic(
-          "inconsistent-effective-profile",
-          "$.decision.effectiveProfile",
-          "effectiveProfile must be the strictest of requestedProfile and riskFloor.",
-        ),
-      );
-    }
-  }
 
-  return {
+  const decision = {
     workflow: value.workflow,
     requestedProfile: value.requestedProfile,
     riskFloor: value.riskFloor,
@@ -430,6 +475,8 @@ function validateDecision(value, diagnostics) {
       },
     ),
   };
+  if (diagnostics.length === diagnosticCount) validateRiskDecision(decision, diagnostics);
+  return decision;
 }
 
 function validateArtifacts(value, diagnostics) {

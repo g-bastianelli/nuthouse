@@ -19,6 +19,7 @@ const RUN_LOCK_STALE_MS = 30_000;
 const RUN_LOCK_WAIT_TIMEOUT_MS = 5_000;
 const RUN_LOCK_RETRY_INTERVAL_MS = 10;
 const RUN_LOCK_SLEEP_STATE = new Int32Array(new SharedArrayBuffer(4));
+const PROTECTED_ERROR_DETAIL_KEYS = new Set(["name", "code", "message", "stack"]);
 const OUT_OF_SCOPE_DIAGNOSTICS = new Set([
   "run-id-mismatch",
   "repository-mismatch",
@@ -38,7 +39,9 @@ export class DecisionManifestStoreError extends Error {
     super(message, causeOptions(cause));
     this.name = "DecisionManifestStoreError";
     this.code = code ?? "decision-manifest-store-error";
-    Object.assign(this, details);
+    for (const [key, value] of Object.entries(details)) {
+      if (!PROTECTED_ERROR_DETAIL_KEYS.has(key)) this[key] = value;
+    }
   }
 }
 
@@ -179,10 +182,14 @@ function ensurePrivateRunDirectory(gitCommonDir) {
 }
 
 function normalizeNow(value) {
-  const epochMilliseconds = value instanceof Date ? value.getTime() : value;
+  const epochMilliseconds =
+    value instanceof Date ? value.getTime() : typeof value === "string" ? Date.parse(value) : value;
   try {
     if (!Number.isFinite(epochMilliseconds)) throw new RangeError("Invalid clock");
-    new Date(epochMilliseconds).toISOString();
+    const canonicalTimestamp = new Date(epochMilliseconds).toISOString();
+    if (typeof value === "string" && canonicalTimestamp !== value) {
+      throw new RangeError("Non-canonical clock");
+    }
   } catch {
     throw new DecisionManifestStoreError("The injected manifest clock is invalid.", {
       code: "invalid-manifest-clock",
@@ -458,11 +465,18 @@ function withRunLock({ normalizedContext, manifestPath }, operation) {
     }
   }
 
+  let result;
   try {
-    return operation();
-  } finally {
-    releaseRunLock(lockPath, token);
+    result = operation();
+  } catch (operationError) {
+    try {
+      releaseRunLock(lockPath, token);
+    } catch {}
+    throw operationError;
   }
+
+  releaseRunLock(lockPath, token);
+  return result;
 }
 
 function readObservedState(manifestPath) {

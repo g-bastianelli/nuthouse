@@ -7,7 +7,7 @@ import path from "node:path";
 import { resolveConfiguration } from "../src/configuration.mjs";
 import { getDecisionManifestPath, inspectDecisionManifest } from "../src/manifest-store.mjs";
 import { discoverGitContext } from "../src/worktree-overrides.mjs";
-import { WorkflowDecisionError, resolveWorkflowDecision } from "../src/workflow-resolution.mjs";
+import { resolveWorkflowDecision } from "../src/workflow-resolution.mjs";
 
 const NOW = new Date("2026-08-31T09:00:00.000Z");
 const EXPIRES_AT = new Date(NOW.getTime() + 60_000).toISOString();
@@ -108,10 +108,20 @@ describe("canonical workflow decision resolution", () => {
     });
   });
 
-  test("does not write ambiguous or blocked policy results", () => {
+  test("does not write ambiguous, invalid, or blocked policy results", () => {
     for (const fixture of [
-      { workflow: "ambiguous", blocked: false },
-      { workflow: "direct-task", blocked: true },
+      {
+        decision: { workflow: "ambiguous", blocked: false },
+        code: "workflow-resolution-ambiguous",
+      },
+      {
+        decision: { workflow: "unsupported", blocked: false },
+        code: "invalid-workflow-resolution",
+      },
+      {
+        decision: { workflow: "direct-task", blocked: true },
+        code: "workflow-resolution-blocked",
+      },
     ]) {
       let writes = 0;
       expect(() =>
@@ -124,16 +134,38 @@ describe("canonical workflow decision resolution", () => {
             policyInput: policyInput(),
           },
           {
-            resolvePolicy: () => fixture,
+            resolvePolicy: () => fixture.decision,
             writeManifest: () => {
               writes += 1;
               throw new Error("must not write");
             },
           },
         ),
-      ).toThrow(WorkflowDecisionError);
+      ).toThrow(expect.objectContaining({ code: fixture.code }));
       expect(writes).toBe(0);
     }
+  });
+
+  test("returns the persisted manifest decision even if a store result has a conflicting field", () => {
+    const persistedDecision = { workflow: "direct-task", persisted: true };
+    const result = resolveWorkflowDecision(
+      {
+        gitContext: { gitCommonDir: "/tmp/git", worktreeId: "c".repeat(64) },
+        runId: "run-test-001",
+        policyHash: POLICY_HASH,
+        expiresAt: EXPIRES_AT,
+        policyInput: policyInput(),
+      },
+      {
+        resolvePolicy: () => ({ workflow: "direct-task", blocked: false }),
+        writeManifest: () => ({
+          ...storedResolution(persistedDecision),
+          decision: { workflow: "project-creation", persisted: false },
+        }),
+      },
+    );
+
+    expect(result.decision).toBe(persistedDecision);
   });
 
   test("writes and reopens a schema-valid manifest in a real temporary repository (AC-036)", () => {

@@ -1,13 +1,14 @@
 import { isDeepStrictEqual } from "node:util";
 
-import { validateManifestHandoff } from "./manifest-schema.mjs";
+import { CAPABILITY_CONSUMERS } from "./capability-resolver.mjs";
+import { DecisionManifestValidationError, validateManifestHandoff } from "./manifest-schema.mjs";
 import {
   getDecisionManifestPath,
   inspectDecisionManifest,
   writeDecisionManifest,
 } from "./manifest-store.mjs";
 
-const SUCCESSFUL_WORKFLOWS = new Set(["project-creation", "issue-delivery", "direct-task"]);
+const SUCCESSFUL_WORKFLOWS = new Set(CAPABILITY_CONSUMERS);
 const DECISION_FIELDS = [
   "workflow",
   "requestedProfile",
@@ -26,6 +27,79 @@ function isRecord(value) {
 
 function handoffError(code, message, details = {}) {
   return new ManifestHandoffError(message, { code, ...details });
+}
+
+function parseCanonicalTimestamp(value) {
+  if (typeof value !== "string") return null;
+  const epochMilliseconds = Date.parse(value);
+  if (!Number.isFinite(epochMilliseconds)) return null;
+  try {
+    return new Date(epochMilliseconds).toISOString() === value ? epochMilliseconds : null;
+  } catch {
+    return null;
+  }
+}
+
+function parseClock(value) {
+  if (value === undefined) return Date.now();
+  if (value instanceof Date) {
+    const epochMilliseconds = value.getTime();
+    return Number.isFinite(epochMilliseconds) ? epochMilliseconds : null;
+  }
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  return parseCanonicalTimestamp(value);
+}
+
+function invalidReplacement(diagnostics, status, cause) {
+  return handoffError(
+    "invalid-manifest-replacement",
+    "The replacement manifest input is invalid.",
+    { diagnostics, status, cause },
+  );
+}
+
+function requireReplacement(value, now, status) {
+  if (!isRecord(value) || !Object.hasOwn(value, "expiresAt")) {
+    throw invalidReplacement(
+      [
+        {
+          code: "missing-field",
+          field: "$.replacement.expiresAt",
+          message: "A replacement expiresAt timestamp is required.",
+        },
+      ],
+      status,
+    );
+  }
+
+  const expiresAt = parseCanonicalTimestamp(value.expiresAt);
+  if (expiresAt === null) {
+    throw invalidReplacement(
+      [
+        {
+          code: "invalid-timestamp",
+          field: "$.replacement.expiresAt",
+          message: "Expected expiresAt to be a canonical ISO timestamp.",
+        },
+      ],
+      status,
+    );
+  }
+
+  const nowMilliseconds = parseClock(now);
+  if (nowMilliseconds !== null && expiresAt <= nowMilliseconds) {
+    throw invalidReplacement(
+      [
+        {
+          code: "invalid-expiry",
+          field: "$.replacement.expiresAt",
+          message: "Replacement expiresAt must be later than the current workflow time.",
+        },
+      ],
+      status,
+    );
+  }
+  return value;
 }
 
 function runtimeDrift(producerPolicyHash, consumerPolicyHash) {
@@ -222,6 +296,7 @@ export function consumeManifestHandoff(input, dependencies = {}) {
     );
   }
 
+  const replacement = requireReplacement(input.replacement, input.now, recoveryReason);
   const writeOptions = {
     expectedRevision: inspection.manifest?.revision ?? 0,
     ...(input.now === undefined ? {} : { now: input.now }),
@@ -229,7 +304,6 @@ export function consumeManifestHandoff(input, dependencies = {}) {
       ? {}
       : { observedContentHash: inspection.contentHash }),
   };
-  const replacement = input.replacement ?? {};
   const authoritativeResult = resolveAuthoritatively({
     reason: recoveryReason,
     runId: descriptor.run_id,
@@ -260,17 +334,23 @@ export function consumeManifestHandoff(input, dependencies = {}) {
     );
   }
 
-  const persisted = writeManifest(
-    input.gitContext,
-    {
-      runId: descriptor.run_id,
-      policy: decision,
-      policyHash: input.policyHash,
-      artifacts: replacement.artifacts ?? [],
-      expiresAt: replacement.expiresAt,
-    },
-    writeOptions,
-  );
+  let persisted;
+  try {
+    persisted = writeManifest(
+      input.gitContext,
+      {
+        runId: descriptor.run_id,
+        policy: decision,
+        policyHash: input.policyHash,
+        artifacts: replacement.artifacts ?? [],
+        expiresAt: replacement.expiresAt,
+      },
+      writeOptions,
+    );
+  } catch (cause) {
+    if (!(cause instanceof DecisionManifestValidationError)) throw cause;
+    throw invalidReplacement(cause.diagnostics, recoveryReason, cause);
+  }
   if (
     !isRecord(persisted) ||
     !isRecord(persisted.manifest) ||

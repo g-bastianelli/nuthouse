@@ -128,6 +128,26 @@ afterEach(() => {
   fs.rmSync(temporaryDirectory, { recursive: true, force: true });
 });
 
+describe("decision manifest store errors", () => {
+  test("does not let details clobber protected error fields", () => {
+    const error = new DecisionManifestStoreError("trusted message", {
+      code: "trusted-code",
+      name: "ClobberedError",
+      message: "clobbered message",
+      stack: "clobbered stack",
+      runId: RUN_ID,
+    });
+
+    expect(error).toMatchObject({
+      name: "DecisionManifestStoreError",
+      code: "trusted-code",
+      message: "trusted message",
+      runId: RUN_ID,
+    });
+    expect(error.stack).not.toBe("clobbered stack");
+  });
+});
+
 describe("decision manifest paths", () => {
   test("uses the shared Git common directory for real linked worktrees", () => {
     expect(mainContext.gitCommonDir).toBe(linkedContext.gitCommonDir);
@@ -186,6 +206,23 @@ describe("decision manifest paths", () => {
 });
 
 describe("decision manifest persistence", () => {
+  test("accepts canonical ISO string clocks for writes and inspections", () => {
+    const now = START_TIME.toISOString();
+    const result = writeDecisionManifest(mainContext, writeInput(), {
+      expectedRevision: 0,
+      now,
+    });
+
+    expect(result.manifest).toMatchObject({
+      createdAt: now,
+      updatedAt: now,
+    });
+    expect(inspectDecisionManifest(mainContext, RUN_ID, { now })).toMatchObject({
+      status: "valid",
+      manifest: result.manifest,
+    });
+  });
+
   test("creates canonical private state and hashes the exact persisted bytes (AC-036, AC-037)", () => {
     const result = writeDecisionManifest(mainContext, writeInput(), {
       expectedRevision: 0,
@@ -372,6 +409,67 @@ describe("decision manifest persistence", () => {
 
     expect(fs.existsSync(manifestPath)).toBe(false);
     expect(fs.existsSync(lockPath)).toBe(true);
+  });
+
+  test("preserves the primary state conflict when releasing the run lock also fails", () => {
+    const created = writeDecisionManifest(mainContext, writeInput(), {
+      expectedRevision: 0,
+      now: START_TIME,
+    });
+    const lockPath = `${created.path}.lock`;
+    const releaseError = new Error("injected lock release failure");
+    releaseError.code = "EIO";
+    const originalUnlink = fs.unlinkSync;
+    fs.unlinkSync = (target) => {
+      if (target === lockPath) throw releaseError;
+      return originalUnlink(target);
+    };
+
+    let thrown;
+    try {
+      writeDecisionManifest(mainContext, writeInput(), {
+        expectedRevision: 0,
+        now: LATER_TIME,
+      });
+    } catch (error) {
+      thrown = error;
+    } finally {
+      fs.unlinkSync = originalUnlink;
+    }
+
+    expect(thrown).toBeInstanceOf(WorkflowStateConflictError);
+    expect(thrown).toMatchObject({
+      code: "workflow-state-conflict",
+      expectedRevision: 0,
+      actualRevision: 1,
+    });
+  });
+
+  test("surfaces a run-lock release failure after a successful operation", () => {
+    const manifestPath = getDecisionManifestPath(mainContext, RUN_ID);
+    const lockPath = `${manifestPath}.lock`;
+    const releaseError = new Error("injected lock release failure");
+    releaseError.code = "EIO";
+    const originalUnlink = fs.unlinkSync;
+    fs.unlinkSync = (target) => {
+      if (target === lockPath) throw releaseError;
+      return originalUnlink(target);
+    };
+
+    let thrown;
+    try {
+      writeDecisionManifest(mainContext, writeInput(), {
+        expectedRevision: 0,
+        now: START_TIME,
+      });
+    } catch (error) {
+      thrown = error;
+    } finally {
+      fs.unlinkSync = originalUnlink;
+    }
+
+    expect(thrown).toBe(releaseError);
+    expect(inspectDecisionManifest(mainContext, RUN_ID, { now: START_TIME }).status).toBe("valid");
   });
 });
 

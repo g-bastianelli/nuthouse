@@ -1,7 +1,8 @@
+import { CAPABILITY_CONSUMERS } from "./capability-resolver.mjs";
 import { writeDecisionManifest } from "./manifest-store.mjs";
 import { resolveWorkflowPolicy } from "./policy-resolution.mjs";
 
-const SUCCESSFUL_WORKFLOWS = new Set(["project-creation", "issue-delivery", "direct-task"]);
+const SUCCESSFUL_WORKFLOWS = new Set(CAPABILITY_CONSUMERS);
 
 function isRecord(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -18,10 +19,17 @@ function assertSuccessfulDecision(decision) {
       "The workflow policy resolver returned an invalid decision.",
     );
   }
-  if (decision.workflow === "ambiguous" || !SUCCESSFUL_WORKFLOWS.has(decision.workflow)) {
+  if (decision.workflow === "ambiguous") {
     throw resolutionError(
       "workflow-resolution-ambiguous",
       "The workflow decision is ambiguous and cannot be persisted.",
+      { decision },
+    );
+  }
+  if (!SUCCESSFUL_WORKFLOWS.has(decision.workflow)) {
+    throw resolutionError(
+      "invalid-workflow-resolution",
+      "The workflow policy resolver returned an invalid decision.",
       { decision },
     );
   }
@@ -62,6 +70,12 @@ export function resolveWorkflowDecision(input, dependencies = {}) {
       "The workflow decision is ambiguous and cannot be persisted.",
     );
   }
+  if (!SUCCESSFUL_WORKFLOWS.has(input.policyInput.workflow)) {
+    throw resolutionError(
+      "invalid-workflow-resolution",
+      "The workflow policy input contains an invalid workflow.",
+    );
+  }
 
   const decision = assertSuccessfulDecision(resolvePolicy(input.policyInput));
   const manifestInput = {
@@ -93,5 +107,5 @@ export function resolveWorkflowDecision(input, dependencies = {}) {
     );
   }
 
-  return { decision: persisted.manifest.decision, ...persisted };
+  return { ...persisted, decision: persisted.manifest.decision };
 }

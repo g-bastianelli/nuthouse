@@ -6,6 +6,7 @@ import path from "node:path";
 
 import { resolveConfiguration } from "../src/configuration.mjs";
 import { ManifestHandoffError, consumeManifestHandoff } from "../src/manifest-handoff.mjs";
+import { DecisionManifestValidationError } from "../src/manifest-schema.mjs";
 import { discoverGitContext } from "../src/worktree-overrides.mjs";
 import { resolveWorkflowDecision } from "../src/workflow-resolution.mjs";
 
@@ -230,6 +231,164 @@ describe("manifest handoff reuse", () => {
 });
 
 describe("one-shot authoritative manifest recovery", () => {
+  test("requires a canonical future replacement expiry before authoritative resolution", () => {
+    for (const replacement of [
+      undefined,
+      {},
+      { expiresAt: "tomorrow" },
+      { expiresAt: NOW.toISOString() },
+    ]) {
+      let resolverCalls = 0;
+      let writes = 0;
+      let thrown;
+      try {
+        consumeManifestHandoff(
+          {
+            handoff: handoff(),
+            gitContext: GIT_CONTEXT,
+            policyHash: POLICY_HASH,
+            now: NOW,
+            replacement,
+          },
+          {
+            getManifestPath: () => EXPECTED_PATH,
+            inspectManifest: () => ({
+              status: "missing",
+              path: EXPECTED_PATH,
+              contentHash: null,
+              manifest: null,
+              handoff: null,
+              diagnostics: [],
+            }),
+            resolveAuthoritatively: () => {
+              resolverCalls += 1;
+              return DECISION;
+            },
+            writeManifest: () => {
+              writes += 1;
+              throw new DecisionManifestValidationError([
+                {
+                  code: "invalid-timestamp",
+                  field: "$.expiresAt",
+                  message: "Invalid expiry.",
+                },
+              ]);
+            },
+          },
+        );
+      } catch (error) {
+        thrown = error;
+      }
+
+      expect(thrown).toBeInstanceOf(ManifestHandoffError);
+      expect(thrown).toMatchObject({
+        code: "invalid-manifest-replacement",
+        blocked: true,
+      });
+      expect(resolverCalls).toBe(0);
+      expect(writes).toBe(0);
+    }
+  });
+
+  test("rejects replacement expiry at or before a canonical ISO-string clock", () => {
+    for (const expiresAt of [NOW.toISOString(), new Date(NOW.getTime() - 1).toISOString()]) {
+      let resolverCalls = 0;
+      let writes = 0;
+      let thrown;
+      try {
+        consumeManifestHandoff(
+          {
+            handoff: handoff(),
+            gitContext: GIT_CONTEXT,
+            policyHash: POLICY_HASH,
+            now: NOW.toISOString(),
+            replacement: { expiresAt },
+          },
+          {
+            getManifestPath: () => EXPECTED_PATH,
+            inspectManifest: () => ({
+              status: "missing",
+              path: EXPECTED_PATH,
+              contentHash: null,
+              manifest: null,
+              handoff: null,
+              diagnostics: [],
+            }),
+            resolveAuthoritatively: () => {
+              resolverCalls += 1;
+              return DECISION;
+            },
+            writeManifest: () => {
+              writes += 1;
+              throw new Error("must not write");
+            },
+          },
+        );
+      } catch (error) {
+        thrown = error;
+      }
+
+      expect(thrown).toBeInstanceOf(ManifestHandoffError);
+      expect(thrown).toMatchObject({ code: "invalid-manifest-replacement" });
+      expect(resolverCalls).toBe(0);
+      expect(writes).toBe(0);
+    }
+  });
+
+  test("wraps replacement schema failures without retrying resolution or persistence", () => {
+    const validationError = new DecisionManifestValidationError([
+      {
+        code: "invalid-artifact-id",
+        field: "$.artifacts[0].id",
+        message: "Invalid artifact id.",
+      },
+    ]);
+    let resolverCalls = 0;
+    let writes = 0;
+    let thrown;
+    try {
+      consumeManifestHandoff(
+        {
+          handoff: handoff(),
+          gitContext: GIT_CONTEXT,
+          policyHash: POLICY_HASH,
+          now: NOW,
+          replacement: { expiresAt: EXPIRES_AT },
+        },
+        {
+          getManifestPath: () => EXPECTED_PATH,
+          inspectManifest: () => ({
+            status: "missing",
+            path: EXPECTED_PATH,
+            contentHash: null,
+            manifest: null,
+            handoff: null,
+            diagnostics: [],
+          }),
+          resolveAuthoritatively: () => {
+            resolverCalls += 1;
+            return DECISION;
+          },
+          writeManifest: () => {
+            writes += 1;
+            throw validationError;
+          },
+        },
+      );
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(ManifestHandoffError);
+    expect(thrown).toMatchObject({
+      code: "invalid-manifest-replacement",
+      diagnostics: validationError.diagnostics,
+      cause: validationError,
+    });
+    expect(resolverCalls).toBe(1);
+    expect(writes).toBe(1);
+  });
+
   const recoverableStates = [
     {
       name: "missing",
