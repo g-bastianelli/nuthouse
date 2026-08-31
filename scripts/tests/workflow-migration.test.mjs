@@ -15,8 +15,12 @@ describe("workflow migration gate", () => {
       ["capability-resolver.mjs", Buffer.from("export const capabilities = ['verification'];\n")],
       ["classification.mjs", Buffer.from("export const workflow = 'direct-task';\n")],
       ["configuration.mjs", Buffer.from("export const profile = 'standard';\r\n")],
+      ["manifest-handoff.mjs", Buffer.from("export const handoff = 'valid';\n")],
+      ["manifest-schema.mjs", Buffer.from("export const schemaVersion = 1;\n")],
+      ["manifest-store.mjs", Buffer.from("export const revision = 1;\n")],
       ["policy-resolution.mjs", Buffer.from("export const policy = 'resolved';\n")],
       ["risk-evaluator.mjs", Buffer.from("export const riskFloor = 'strict';\n")],
+      ["workflow-resolution.mjs", Buffer.from("export const resolution = 'persisted';\n")],
       ["worktree-overrides.mjs", Buffer.from("export const lifetime = 24;\n")],
       ["index.mjs", Buffer.from("export * from './configuration.mjs';\n")],
     ]);
@@ -153,8 +157,12 @@ describe("workflow migration gate", () => {
 
   for (const filename of [
     "capability-resolver.mjs",
+    "manifest-handoff.mjs",
+    "manifest-schema.mjs",
+    "manifest-store.mjs",
     "policy-resolution.mjs",
     "risk-evaluator.mjs",
+    "workflow-resolution.mjs",
   ]) {
     test(`reports a missing Warden ${filename} mirror`, () => {
       const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "nuthouse-workflow-gate-"));
