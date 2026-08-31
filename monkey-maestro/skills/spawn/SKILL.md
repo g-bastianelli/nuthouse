@@ -102,8 +102,8 @@ same `lib/orchestration-epoch.mjs` state machine as orchestration. Build the exa
 envelope `{ schemaVersion: 1, request: { ... }, transcript: [...] }`. Inside `request`, pass
 `selectedIssueIds: [candidateIssueId]` exactly, even when blocker rows are present in the
 frontier, plus `lockDirectory: "${CLAUDE_PLUGIN_DATA}/locks"`. Drive every returned
-`needs-effects` request through the same control, Linear, runtime-inspection,
-project-lock, Superset-dispatch, and monitoring boundaries named in the shared contract,
+`needs-effects` request through the same Linear, project-lock, Superset-dispatch, and
+monitoring boundaries named in the shared contract,
 append exact responses to an invocation-only transcript, and continue until
 `state: complete`. Never execute an effect that the bridge did not request or treat a
 partial transcript as authorization; delete the temporary transcript after release or
@@ -127,32 +127,34 @@ must be used for workspace/agent creation. A missing or mismatched field is an i
 effect and causes no mutation.
 
 For every effect, follow the shared contract's **Adapter response envelopes** exactly.
-`refreshControl` returns `resolveOutput.authority.control`, never the CLI wrapper, and
-`dispatchIssue` returns one of the four strict identity/runtime/record forms. Reject an
-invalid provider form; never infer or synthesize fields from conversation memory.
-
-For `refreshControl`, a durable active control is reloaded and must remain exact. A
-project-bound invocation-only control re-reads control comments: continued proven
-absence returns the same ephemeral control, while any newly written/inactive/conflicting
-control refuses the batch. A project-less invocation has no control provider; its adapter
-returns the exact immutable invocation control, while the separate candidate/blocker
-refresh still revalidates live Linear before mutation.
+`dispatchIssue` returns one of the four strict identity/runtime/record forms and includes
+the actual live action, `create` or `reuse`. A `create` request may come back `reuse`; a
+`reuse` request must come back `reuse` bound to the exact requested workspace. Reject an
+invalid provider form or an unbound reuse; never infer or synthesize fields from
+conversation memory.
 
 1. Acquire the project/manual lock only after confirmation, passing
    `directory: "${CLAUDE_PLUGIN_DATA}/locks"`, the project/manual scope as `projectId`, and
    the selected host as `hostId`. Live ownership returns `busy`; never bypass it. Recover
    only helper-reported stale/empty/legacy artifacts (with the observed token for a stale
    owner), then retry acquisition exactly once.
-2. In `try/finally`, for a project-bound issue re-run the control loader and deterministic
-   resolver. For a durable control, require the same project/run/transport configuration
-   and `active: true`. For an invocation-only control, require continued proven absence
-   as defined above. Stop, new-control, conflict, or configuration races refuse mutation.
-3. Re-fetch the candidate first, derive and fetch its exact fresh
-   blocker set, then re-plan with the confirmed force overlay. Reject a newly terminal
-   candidate or a force whose fresh bypass scope exceeds the previewed blocker set.
-4. Re-run exact task/workspace/terminal inspection. If an active runtime appeared during
-   the confirmation wait, adopt and monitor it. If multiplicity appeared, isolate it.
-   Otherwise execute the shared order:
+2. Re-resolve the project control once immediately after confirmation and before
+   acquiring the lock: an inactive, newly written, or conflicting control refuses the
+   launch without mutation, and a configuration change refuses it too. The control
+   validated there authorizes this one batch and remains fixed until the lock is released;
+   do not re-page control comments under the same lock. A project-less invocation has no
+   control provider and replays its exact immutable invocation control.
+3. For a project-bound issue, make one project-snapshot-loader dispatch with
+   `MODE: candidate-blockers`; it fetches the candidate first, derives its exact fresh
+   direct blockers, and fetches that union before returning one targeted snapshot. For a
+   project-less issue, perform the same phases through direct `get_issue` calls. Validate,
+   re-plan with the confirmed force overlay, and reject a newly terminal candidate or a
+   force whose fresh bypass scope exceeds the previewed blocker set.
+4. `dispatchIssue` verifies the live lock, then performs the exact task/workspace/terminal
+   duplicate check itself. Zero exact workspaces selects `create`; one selects `reuse`;
+   multiplicity is ambiguous. If an active terminal appeared during confirmation, reuse
+   and monitor it without launching a second agent. The returned action is the actual live
+   action. Execute the shared order:
 
 ```text
 live token/owner/lease verification
@@ -166,8 +168,9 @@ live token/owner/lease verification
    `lockVerification: verifyOutput.verification` in the dispatch result. Never fabricate
    this inner verification from the acquisition receipt. Expired, changed, or missing
    ownership rejects dispatch without transport mutation.
-6. Inspect one time after ambiguous mutation output and never retry create blindly.
-   Preserve partial workspace success. Release the token-matched lock in `finally`.
+6. Inspect one time only after ambiguous or invalid mutation evidence and never retry
+   create blindly. Preserve partial workspace success. Release the token-matched lock in
+   `finally`.
 7. Worker prompt starts with `linear-devotee:greet <issueId>` and includes the shared
    DONE/BLOCKED envelope. Only greet may claim the issue; spawn never changes Linear
    status.

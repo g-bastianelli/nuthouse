@@ -302,7 +302,7 @@ test("control-loader is raw one-project control evidence, never a scheduler", ()
   ).toThrow("expected project different-project, received project-1");
 });
 
-test("project-snapshot-loader emits the exact full and targeted validator envelope", () => {
+test("project-snapshot-loader emits the exact full, targeted, and candidate-blockers envelope", () => {
   const snapshot = normalize(agents["project-snapshot-loader"]);
 
   expect(agentTools(agents["project-snapshot-loader"])).toEqual([
@@ -317,6 +317,14 @@ test("project-snapshot-loader emits the exact full and targeted validator envelo
   expect(snapshot).toMatch(/fetch every returned issue with get_issue\(includerelations: true\)/);
   expect(snapshot).toMatch(/in targeted mode, never call list_issues/);
   expect(snapshot).toMatch(/fetch exactly every requested issue_ids entry/);
+  expect(snapshot).toMatch(
+    /in candidate-blockers mode, never call list_issues.*fetch the exact candidate issue_ids first.*derive the deduplicated direct blocker identifiers only from those fresh responses.*fetch that blocker union in parallel.*return the candidate and blocker rows together/,
+  );
+  expect(snapshot).toMatch(/never traverse transitive blockers or expand from a blocker row/);
+  expect(snapshot).toMatch(
+    /for candidate-blockers, output scope.mode: "targeted" and set requestedissueids to the exact sorted union of input candidates and their freshly discovered direct blockers/,
+  );
+  expect(snapshot).toMatch(/no transitive expansion and no remembered relation/);
   expect(snapshot).toMatch(
     /failed issue detail becomes an unknown issue row.*statustype: "unknown".*blockerissueids: \[\].*datastate: "unknown".*scoped unknown entry/,
   );

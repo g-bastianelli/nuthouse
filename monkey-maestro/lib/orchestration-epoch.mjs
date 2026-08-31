@@ -445,15 +445,12 @@ function ambiguousRuntime(match) {
   return match.workspaceIds.length > 1 || match.activeTerminalIds.length > 1;
 }
 
-function adoptedRuntime(match, phase) {
+function preservedRuntime(match) {
   if (match.dataState !== "known" || match.workspaceIds.length !== 1 || ambiguousRuntime(match)) {
-    return {
-      outcome: "isolated",
-      reason: phase === "post-mutation" ? "MUTATION_AMBIGUOUS" : "RUNTIME_AMBIGUOUS",
-    };
+    return { outcome: "isolated", reason: "MUTATION_AMBIGUOUS" };
   }
   return {
-    outcome: phase === "post-mutation" ? "preserved" : "adopted",
+    outcome: "preserved",
     action: match.activeTerminalIds.length === 1 ? "monitor" : "reuse",
     workspaceId: match.workspaceIds[0],
     ...(match.activeTerminalIds.length === 1 ? { terminalId: match.activeTerminalIds[0] } : {}),
@@ -539,14 +536,7 @@ function dispatchRecord(input, state) {
   };
 }
 
-function validateDispatchResult(
-  input,
-  action,
-  control,
-  lock,
-  requestedAction,
-  expectedWorkspaceId,
-) {
+function validateDispatchResult(input, action, control, lock) {
   if (!input || typeof input !== "object" || Array.isArray(input) || input.schemaVersion !== 1) {
     fail("DISPATCH_RESULT_INVALID");
   }
@@ -596,7 +586,11 @@ function validateDispatchResult(
   if (match.workspaceIds.length !== 1 || match.activeTerminalIds.length > 1) {
     fail("DISPATCH_RESULT_RUNTIME_INVALID");
   }
-  if (requestedAction === "reuse" && match.workspaceIds[0] !== expectedWorkspaceId) {
+  if (!DISPATCH_ACTIONS.has(input.action)) fail("DISPATCH_RESULT_ACTION_INVALID");
+  if (action.action === "reuse" && input.action !== "reuse") {
+    fail("DISPATCH_RESULT_ACTION_INVALID");
+  }
+  if (action.action === "reuse" && match.workspaceIds[0] !== action.workspaceId) {
     fail("DISPATCH_RESULT_WORKSPACE_MISMATCH");
   }
   if (input.state === "verified" && match.activeTerminalIds.length !== 1) {
@@ -612,6 +606,7 @@ function validateDispatchResult(
   return {
     schemaVersion: 1,
     state: input.state,
+    action: input.action,
     lockVerification,
     runtimeSnapshot,
     record,
@@ -634,15 +629,14 @@ async function inspectExactRuntime(action, control, adapters) {
   );
 }
 
-async function dispatchSequence(action, initialRow, dispatchContext, control, lock, adapters) {
+async function dispatchSequence(action, dispatchContext, control, lock, adapters) {
   const refresh = requireFunction(
     adapters.refreshCandidateAndBlockers,
     "LINEAR_REFRESH_ADAPTER_MISSING",
   );
   const snapshot = await refresh({
     issueId: action.issueId,
-    blockerIssueIds: initialRow?.blockerIssueIds ?? [],
-    refreshMode: "candidate-then-live-blockers",
+    refreshMode: "candidate-blockers",
   });
   const authorization = authorizeFreshCandidate({
     action,
@@ -653,26 +647,13 @@ async function dispatchSequence(action, initialRow, dispatchContext, control, lo
     return { outcome: "refused", reason: authorization.reason };
   }
 
-  const beforeMutation = await inspectExactRuntime(action, control, adapters);
-  if (beforeMutation.dataState !== "known") {
-    return { outcome: "isolated", reason: "RUNTIME_UNKNOWN" };
-  }
-  if (ambiguousRuntime(beforeMutation)) {
-    return { outcome: "isolated", reason: "RUNTIME_AMBIGUOUS" };
-  }
-  if (beforeMutation.workspaceIds.length === 1 && beforeMutation.activeTerminalIds.length === 1) {
-    return adoptedRuntime(beforeMutation, "pre-mutation");
-  }
-
   const dispatch = requireFunction(adapters.dispatchIssue, "DISPATCH_ADAPTER_MISSING");
-  const requestedAction = beforeMutation.workspaceIds.length === 1 ? "reuse" : "create";
+  const requestedAction = action.action;
   const dispatchInput = {
     issueId: action.issueId,
     taskId: action.taskId,
     action: requestedAction,
-    ...(beforeMutation.workspaceIds.length === 1
-      ? { workspaceId: beforeMutation.workspaceIds[0] }
-      : {}),
+    ...(requestedAction === "reuse" ? { workspaceId: action.workspaceId } : {}),
     forced: action.forced === true,
     targetHostId: control.targetHostId,
     supersetProjectId: control.supersetProjectId,
@@ -690,37 +671,30 @@ async function dispatchSequence(action, initialRow, dispatchContext, control, lo
   } catch (error) {
     if (!ambiguousMutationError(error)) throw error;
     const afterAmbiguity = await inspectExactRuntime(action, control, adapters);
-    return adoptedRuntime(afterAmbiguity, "post-mutation");
+    return preservedRuntime(afterAmbiguity);
   }
 
   let mutation;
   try {
-    mutation = validateDispatchResult(
-      rawMutation,
-      action,
-      control,
-      lock,
-      requestedAction,
-      beforeMutation.workspaceIds[0],
-    );
+    mutation = validateDispatchResult(rawMutation, action, control, lock);
   } catch {
     const afterAmbiguity = await inspectExactRuntime(action, control, adapters);
-    return adoptedRuntime(afterAmbiguity, "post-mutation");
+    return preservedRuntime(afterAmbiguity);
   }
 
   if (mutation.state === "ambiguous") {
     const afterAmbiguity = await inspectExactRuntime(action, control, adapters);
-    return adoptedRuntime(afterAmbiguity, "post-mutation");
+    return preservedRuntime(afterAmbiguity);
   }
   if (mutation.state === "failed") {
     return { outcome: "failed", reason: mutation.code, mutation };
   }
   if (mutation.state === "partial") {
-    return { outcome: "partial", action: requestedAction, mutation };
+    return { outcome: "partial", action: mutation.action, mutation };
   }
   return {
     outcome: "dispatched",
-    action: requestedAction,
+    action: mutation.action,
     mutation,
     ...(mutation.record.status === "failed" ? { telemetryDegraded: true } : {}),
   };
@@ -748,18 +722,7 @@ function hardDispatchRefusal(control) {
   return undefined;
 }
 
-function controlChanged(expected, current) {
-  return [
-    "projectId",
-    "runId",
-    "targetHostId",
-    "supersetProjectId",
-    "defaultAgent",
-    "maxConcurrency",
-  ].some((field) => expected[field] !== current[field]);
-}
-
-async function dispatchBatch(actions, rows, contextByIssueId, control, lockDirectory, adapters) {
+async function dispatchBatch(actions, contextByIssueId, control, lockDirectory, adapters) {
   const refusal = hardDispatchRefusal(control);
   if (refusal) {
     return {
@@ -816,38 +779,12 @@ async function dispatchBatch(actions, rows, contextByIssueId, control, lockDirec
   let bodyError;
   let effectsPending = false;
   try {
-    const refreshControl = requireFunction(
-      adapters.refreshControl,
-      "CONTROL_REFRESH_ADAPTER_MISSING",
+    settled = await Promise.allSettled(
+      actions.map((action) =>
+        dispatchSequence(action, contextByIssueId.get(action.issueId), control, lock, adapters),
+      ),
     );
-    const currentControl = await refreshControl({
-      projectId: control.projectId,
-      runId: control.runId,
-      revision: control.revision,
-    });
-    const currentRefusal = hardDispatchRefusal(currentControl);
-    const reason =
-      currentRefusal ?? (controlChanged(control, currentControl) ? "CONTROL_CHANGED" : undefined);
-    if (reason) {
-      settled = actions.map(() => ({
-        status: "fulfilled",
-        value: { outcome: "refused", reason },
-      }));
-    } else {
-      settled = await Promise.allSettled(
-        actions.map((action) =>
-          dispatchSequence(
-            action,
-            rows.get(action.issueId),
-            contextByIssueId.get(action.issueId),
-            currentControl,
-            lock,
-            adapters,
-          ),
-        ),
-      );
-      throwRequiredEffects(settled);
-    }
+    throwRequiredEffects(settled);
   } catch (error) {
     if (effectRequired(error)) effectsPending = true;
     bodyError = error;
@@ -939,7 +876,7 @@ async function monitorOne(action, control, adapters, dependentsByBlocker) {
       issueId: action.issueId,
       issueIds: seedIssueIds,
       event: result.event,
-      refreshMode: "candidates-then-live-blockers",
+      refreshMode: "candidate-blockers",
     }),
     { expectedProjectId: control.projectId },
   );
@@ -989,7 +926,7 @@ function postDispatchMonitorActions(dispatch, actionByIssueId) {
       if (!source) return [];
       const result = entry.value;
       if (
-        ["adopted", "preserved"].includes(result?.outcome) &&
+        result?.outcome === "preserved" &&
         result.action === "monitor" &&
         typeof result.workspaceId === "string" &&
         typeof result.terminalId === "string"
@@ -1191,14 +1128,7 @@ export async function runOrchestrationEpoch({
   try {
     dispatch =
       selectedActions.length > 0
-        ? await dispatchBatch(
-            selectedActions,
-            rows,
-            contextByIssueId,
-            control,
-            lockDirectory,
-            adapters,
-          )
+        ? await dispatchBatch(selectedActions, contextByIssueId, control, lockDirectory, adapters)
         : {
             lock: {
               acquired: false,

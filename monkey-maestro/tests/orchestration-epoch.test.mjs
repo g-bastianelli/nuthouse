@@ -5,6 +5,7 @@ import {
   runOrchestrationEpoch as runOrchestrationEpochKernel,
 } from "../lib/orchestration-epoch.mjs";
 import { OrchestrationEffectRequired } from "../lib/orchestration-effect-signal.mjs";
+import { planRuntimeActions } from "../lib/runtime-actions.mjs";
 
 const LOCK_DIRECTORY = "/tmp/monkey-maestro-test-locks";
 
@@ -215,6 +216,7 @@ function dispatchResult(input, overrides = {}) {
   return {
     schemaVersion: 1,
     state,
+    action: overrides.action ?? input.action,
     lockVerification,
     runtimeSnapshot: runtimeInspection(input.issueId, {
       control: runtimeControl,
@@ -263,7 +265,6 @@ function baseAdapters(overrides = {}) {
       },
     })),
     releaseDispatchLock: mock(async () => ({ released: true })),
-    refreshControl: mock(async () => control()),
     refreshCandidateAndBlockers: mock(async ({ issueId }) => freshSnapshot(issueId)),
     inspectExactRuntime: mock(async ({ issueId }) => runtimeInspection(issueId)),
     dispatchIssue: mock(async (input) => dispatchResult(input)),
@@ -442,7 +443,6 @@ describe("one orchestration epoch", () => {
       ],
     });
     expect(adapters.acquireDispatchLock).toHaveBeenCalledTimes(0);
-    expect(adapters.refreshControl).toHaveBeenCalledTimes(0);
     expect(adapters.dispatchIssue).toHaveBeenCalledTimes(0);
   });
 
@@ -454,10 +454,6 @@ describe("one orchestration epoch", () => {
         return freshSnapshot(issueId, {
           blockers: issueId === "NOT-A" ? [issue("NOT-DONE", "completed")] : [],
         });
-      }),
-      inspectExactRuntime: mock(async ({ issueId }) => {
-        calls.push(`${issueId}:inspect`);
-        return runtimeInspection(issueId);
       }),
       dispatchIssue: mock(async (input) => {
         calls.push(`${input.issueId}:dispatch`);
@@ -490,8 +486,7 @@ describe("one orchestration epoch", () => {
     expect(calls).toContain("NOT-B:dispatch");
     expect(calls).not.toContain("NOT-C:refresh");
     for (const issueId of ["NOT-A", "NOT-B"]) {
-      expect(calls.indexOf(`${issueId}:refresh`)).toBeLessThan(calls.indexOf(`${issueId}:inspect`));
-      expect(calls.indexOf(`${issueId}:inspect`)).toBeLessThan(
+      expect(calls.indexOf(`${issueId}:refresh`)).toBeLessThan(
         calls.indexOf(`${issueId}:dispatch`),
       );
     }
@@ -529,7 +524,6 @@ describe("one orchestration epoch", () => {
       status: "rejected",
       reason: { code: "LOCK_RECEIPT_INVALID" },
     });
-    expect(adapters.refreshControl).toHaveBeenCalledTimes(0);
     expect(adapters.dispatchIssue).toHaveBeenCalledTimes(0);
     expect(adapters.releaseDispatchLock).toHaveBeenCalledTimes(0);
   });
@@ -676,8 +670,7 @@ describe("one orchestration epoch", () => {
 
     expect(adapters.refreshCandidateAndBlockers.mock.calls[0][0]).toEqual({
       issueId: "NOT-RACE",
-      blockerIssueIds: [],
-      refreshMode: "candidate-then-live-blockers",
+      refreshMode: "candidate-blockers",
     });
     expect(result.dispatch.settled[0]).toMatchObject({
       value: {
@@ -1021,7 +1014,7 @@ describe("one orchestration epoch", () => {
     expect(adapters.dispatchIssue).toHaveBeenCalledTimes(0);
   });
 
-  test("rejects direct runtime matches that bypass exact inspection context", async () => {
+  test("rejects malformed fallback inspections after invalid dispatch evidence", async () => {
     const adapters = baseAdapters({
       inspectExactRuntime: mock(async ({ issueId }) => ({
         issueId,
@@ -1030,6 +1023,11 @@ describe("one orchestration epoch", () => {
         terminalIds: [],
         dataState: "known",
       })),
+      dispatchIssue: mock(async (input) => {
+        const result = dispatchResult(input);
+        delete result.action;
+        return result;
+      }),
     });
 
     const result = await runOrchestrationEpoch({
@@ -1043,22 +1041,21 @@ describe("one orchestration epoch", () => {
       status: "rejected",
       reason: { code: "RUNTIME_INSPECTION_ENVELOPE_REQUIRED" },
     });
-    expect(adapters.dispatchIssue).toHaveBeenCalledTimes(0);
+    expect(adapters.dispatchIssue).toHaveBeenCalledTimes(1);
+    expect(adapters.inspectExactRuntime).toHaveBeenCalledTimes(1);
   });
 
-  test("adopts an exact active runtime and monitors it only after lock release", async () => {
+  test("lets dispatch absorb a live runtime race and monitors it only after lock release", async () => {
     const order = [];
     const adapters = baseAdapters({
-      inspectExactRuntime: mock(async ({ issueId }) =>
-        runtimeInspection(issueId, {
-          workspaceIds: ["workspace-adopted"],
+      dispatchIssue: mock(async (input) => {
+        order.push("dispatch");
+        return dispatchResult(input, {
+          action: "reuse",
+          workspaceId: "workspace-adopted",
           terminalIds: ["terminal-adopted"],
           activeTerminalIds: ["terminal-adopted"],
-        }),
-      ),
-      dispatchIssue: mock(async () => {
-        order.push("dispatch");
-        throw new Error("an adopted runtime must not be relaunched");
+        });
       }),
       releaseDispatchLock: mock(async () => {
         order.push("release");
@@ -1079,33 +1076,62 @@ describe("one orchestration epoch", () => {
 
     expect(result.dispatch.settled[0]).toMatchObject({
       value: {
-        outcome: "adopted",
-        action: "monitor",
-        workspaceId: "workspace-adopted",
-        terminalId: "terminal-adopted",
+        outcome: "dispatched",
+        action: "reuse",
       },
     });
     expect(result.monitoring.settled[0]).toMatchObject({
       issueId: "NOT-ADOPT",
       value: { outcome: "monitored" },
     });
-    expect(adapters.dispatchIssue).toHaveBeenCalledTimes(0);
-    expect(order).toEqual(["release", "monitor:terminal-adopted"]);
+    expect(adapters.dispatchIssue).toHaveBeenCalledTimes(1);
+    expect(adapters.inspectExactRuntime).toHaveBeenCalledTimes(0);
+    expect(order).toEqual(["dispatch", "release", "monitor:terminal-adopted"]);
+  });
+
+  test("rejects reuse evidence that changes the requested action or workspace", async () => {
+    for (const invalidMutation of [
+      { action: "create", workspaceId: "workspace-expected" },
+      { action: "reuse", workspaceId: "workspace-other" },
+    ]) {
+      const adapters = baseAdapters({
+        inspectExactRuntime: mock(async ({ issueId }) =>
+          runtimeInspection(issueId, { workspaceIds: ["workspace-expected"] }),
+        ),
+        dispatchIssue: mock(async (input) => dispatchResult(input, invalidMutation)),
+      });
+
+      const result = await runOrchestrationEpoch({
+        frontierPlan: frontier([row("NOT-REUSE")]),
+        runtimePlan: runtimePlan([
+          action("NOT-REUSE", { action: "reuse", workspaceId: "workspace-expected" }),
+        ]),
+        control: control(),
+        adapters,
+      });
+
+      expect(result.dispatch.settled[0]).toMatchObject({
+        status: "fulfilled",
+        value: {
+          outcome: "preserved",
+          action: "reuse",
+          workspaceId: "workspace-expected",
+        },
+      });
+      expect(adapters.inspectExactRuntime).toHaveBeenCalledTimes(1);
+    }
   });
 
   test("inspects exactly once after an ambiguous mutation and never retries it", async () => {
-    let inspection = 0;
     const order = [];
     const adapters = baseAdapters({
-      inspectExactRuntime: mock(async ({ issueId }) => {
-        inspection += 1;
-        if (inspection === 1) return runtimeInspection(issueId);
-        return runtimeInspection(issueId, {
+      inspectExactRuntime: mock(async ({ issueId }) =>
+        runtimeInspection(issueId, {
           workspaceIds: ["workspace-created"],
           terminalIds: ["terminal-created"],
           activeTerminalIds: ["terminal-created"],
-        });
-      }),
+        }),
+      ),
       dispatchIssue: mock(async (input) => dispatchResult(input, { state: "ambiguous" })),
       releaseDispatchLock: mock(async () => {
         order.push("release");
@@ -1125,7 +1151,7 @@ describe("one orchestration epoch", () => {
     });
 
     expect(adapters.dispatchIssue).toHaveBeenCalledTimes(1);
-    expect(adapters.inspectExactRuntime).toHaveBeenCalledTimes(2);
+    expect(adapters.inspectExactRuntime).toHaveBeenCalledTimes(1);
     expect(result.dispatch.settled[0]).toMatchObject({
       status: "fulfilled",
       value: {
@@ -1143,14 +1169,10 @@ describe("one orchestration epoch", () => {
   });
 
   test("reports workspace-only ambiguous mutation recovery as degraded", async () => {
-    let inspection = 0;
     const adapters = baseAdapters({
-      inspectExactRuntime: mock(async ({ issueId }) => {
-        inspection += 1;
-        return inspection === 1
-          ? runtimeInspection(issueId)
-          : runtimeInspection(issueId, { workspaceIds: ["workspace-created"] });
-      }),
+      inspectExactRuntime: mock(async ({ issueId }) =>
+        runtimeInspection(issueId, { workspaceIds: ["workspace-created"] }),
+      ),
       dispatchIssue: mock(async (input) => dispatchResult(input, { state: "ambiguous" })),
     });
 
@@ -1172,10 +1194,10 @@ describe("one orchestration epoch", () => {
     });
     expect(result.monitoring.settled).toEqual([]);
     expect(adapters.dispatchIssue).toHaveBeenCalledTimes(1);
-    expect(adapters.inspectExactRuntime).toHaveBeenCalledTimes(2);
+    expect(adapters.inspectExactRuntime).toHaveBeenCalledTimes(1);
   });
 
-  test("preserves partial workspace evidence and reuses it on the next invocation", async () => {
+  test("discovers a partial workspace and reuses it on the next invocation", async () => {
     const firstDispatch = mock(async (input) =>
       dispatchResult(input, {
         state: "partial",
@@ -1202,18 +1224,28 @@ describe("one orchestration epoch", () => {
       },
     });
 
-    const secondDispatch = mock(async (input) => dispatchResult(input));
-    const secondAdapters = baseAdapters({
-      inspectExactRuntime: mock(async ({ issueId }) =>
-        runtimeInspection(issueId, {
-          workspaceIds: ["workspace-partial"],
-        }),
-      ),
-      dispatchIssue: secondDispatch,
+    const preservedWorkspaceIds =
+      first.dispatch.settled[0].value.mutation.runtimeSnapshot.matches[0].workspaceIds;
+    expect(preservedWorkspaceIds).toEqual(["workspace-partial"]);
+    const secondFrontier = frontier([row("NOT-PARTIAL")]);
+    const secondRuntimePlan = planRuntimeActions(
+      secondFrontier,
+      runtimeInspection("NOT-PARTIAL", { workspaceIds: preservedWorkspaceIds }),
+      {
+        control: control(),
+        selectedIssueIds: ["NOT-PARTIAL"],
+      },
+    );
+    expect(secondRuntimePlan.actions[0]).toMatchObject({
+      action: "reuse",
+      workspaceId: "workspace-partial",
     });
+
+    const secondDispatch = mock(async (input) => dispatchResult(input));
+    const secondAdapters = baseAdapters({ dispatchIssue: secondDispatch });
     const second = await runOrchestrationEpoch({
-      frontierPlan: frontier([row("NOT-PARTIAL")]),
-      runtimePlan: runtimePlan([action("NOT-PARTIAL")]),
+      frontierPlan: secondFrontier,
+      runtimePlan: secondRuntimePlan,
       control: control(),
       adapters: secondAdapters,
     });
@@ -1290,23 +1322,19 @@ describe("one orchestration epoch", () => {
       value: { outcome: "isolated", reason: "MUTATION_AMBIGUOUS" },
     });
     expect(adapters.dispatchIssue).toHaveBeenCalledTimes(1);
-    expect(adapters.inspectExactRuntime).toHaveBeenCalledTimes(2);
+    expect(adapters.inspectExactRuntime).toHaveBeenCalledTimes(1);
   });
 
   test("preserves and monitors exact runtime after malformed fulfilled dispatch evidence", async () => {
-    let inspection = 0;
     const order = [];
     const adapters = baseAdapters({
-      inspectExactRuntime: mock(async ({ issueId }) => {
-        inspection += 1;
-        return inspection === 1
-          ? runtimeInspection(issueId)
-          : runtimeInspection(issueId, {
-              workspaceIds: ["workspace-after-malformed"],
-              terminalIds: ["terminal-after-malformed"],
-              activeTerminalIds: ["terminal-after-malformed"],
-            });
-      }),
+      inspectExactRuntime: mock(async ({ issueId }) =>
+        runtimeInspection(issueId, {
+          workspaceIds: ["workspace-after-malformed"],
+          terminalIds: ["terminal-after-malformed"],
+          activeTerminalIds: ["terminal-after-malformed"],
+        }),
+      ),
       dispatchIssue: mock(async (input) => {
         const result = dispatchResult(input);
         return {
@@ -1344,7 +1372,7 @@ describe("one orchestration epoch", () => {
       },
     });
     expect(adapters.dispatchIssue).toHaveBeenCalledTimes(1);
-    expect(adapters.inspectExactRuntime).toHaveBeenCalledTimes(2);
+    expect(adapters.inspectExactRuntime).toHaveBeenCalledTimes(1);
     expect(order).toEqual(["release", "monitor:terminal-after-malformed"]);
   });
 
@@ -1508,7 +1536,7 @@ describe("one orchestration epoch", () => {
     });
     expect(calls[0]).toMatchObject({
       issueIds: ["NOT-A", "NOT-B"],
-      refreshMode: "candidates-then-live-blockers",
+      refreshMode: "candidate-blockers",
     });
     expect(calls[1].issueIds).toEqual(["NOT-A", "NOT-B", "NOT-C"]);
   });
@@ -1580,8 +1608,8 @@ describe("one orchestration epoch", () => {
 
   test("preserves release failure when a provider also failed under the lock", async () => {
     const adapters = baseAdapters({
-      refreshControl: mock(async () => {
-        throw Object.assign(new Error("control unavailable"), { code: "CONTROL_UNAVAILABLE" });
+      refreshCandidateAndBlockers: mock(async () => {
+        throw Object.assign(new Error("Linear unavailable"), { code: "LINEAR_UNAVAILABLE" });
       }),
       releaseDispatchLock: mock(async () => ({ released: false, reason: "TOKEN_MISMATCH" })),
     });
@@ -1605,7 +1633,7 @@ describe("one orchestration epoch", () => {
     expect(result.dispatch.lock.releaseError).toMatchObject({ code: "TOKEN_MISMATCH" });
     expect(result.dispatch.settled[0]).toMatchObject({
       status: "rejected",
-      reason: { code: "CONTROL_UNAVAILABLE" },
+      reason: { code: "LINEAR_UNAVAILABLE" },
     });
     expect(result.monitoring.settled[0]).toMatchObject({
       value: { outcome: "refused", reason: "LOCK_RELEASE_FAILED" },
@@ -1652,12 +1680,16 @@ describe("one orchestration epoch", () => {
     expect(adapters.refreshCandidateAndBlockers).toHaveBeenCalledTimes(0);
   });
 
-  test("rechecks active control under lock before any candidate mutation", async () => {
+  test("uses the validated batch control without reloading it under lock", async () => {
     const order = [];
     const adapters = baseAdapters({
-      refreshControl: mock(async () => {
-        order.push("control");
-        return control({ active: false });
+      refreshCandidateAndBlockers: mock(async ({ issueId }) => {
+        order.push("refresh");
+        return freshSnapshot(issueId);
+      }),
+      dispatchIssue: mock(async (input) => {
+        order.push("dispatch");
+        return dispatchResult(input);
       }),
       releaseDispatchLock: mock(async () => {
         order.push("release");
@@ -1673,11 +1705,11 @@ describe("one orchestration epoch", () => {
     });
 
     expect(result.dispatch.settled[0]).toMatchObject({
-      value: { outcome: "refused", reason: "CONTROL_INACTIVE" },
+      value: { outcome: "dispatched", action: "create" },
     });
-    expect(order).toEqual(["control", "release"]);
-    expect(adapters.refreshCandidateAndBlockers).toHaveBeenCalledTimes(0);
-    expect(adapters.dispatchIssue).toHaveBeenCalledTimes(0);
+    expect(order).toEqual(["refresh", "dispatch", "release"]);
+    expect(adapters.refreshCandidateAndBlockers).toHaveBeenCalledTimes(1);
+    expect(adapters.dispatchIssue).toHaveBeenCalledTimes(1);
   });
 
   test("batches required provider effects and preserves the held lock between transcripts", async () => {

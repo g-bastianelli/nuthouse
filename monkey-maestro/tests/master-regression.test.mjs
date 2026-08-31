@@ -215,13 +215,10 @@ test("NOT-550 dispatches through the production bridge despite terminal residue 
             },
           };
           break;
-        case "refreshControl":
-          value = control;
-          break;
         case "refreshCandidateAndBlockers":
           expect(effect.input).toMatchObject({
             issueId: "NOT-550",
-            refreshMode: "candidate-then-live-blockers",
+            refreshMode: "candidate-blockers",
           });
           value = freshNot550Snapshot();
           break;
@@ -252,6 +249,7 @@ test("NOT-550 dispatches through the production bridge despite terminal residue 
           value = {
             schemaVersion: 1,
             state: "verified",
+            action: effect.input.action,
             lockVerification: {
               directory: effect.input.lockReceipt.directory,
               projectId: effect.input.lockReceipt.projectId,
@@ -296,13 +294,11 @@ test("NOT-550 dispatches through the production bridge despite terminal residue 
       value: { outcome: "dispatched", action: "create" },
     },
   ]);
-  expect(inspectedIssueIds).toEqual(["NOT-550"]);
+  expect(inspectedIssueIds).toEqual([]);
   expect(effectAdapters).not.toContain("github");
   expect(effectAdapters).toEqual([
     "acquireDispatchLock",
-    "refreshControl",
     "refreshCandidateAndBlockers",
-    "inspectExactRuntime",
     "dispatchIssue",
     "releaseDispatchLock",
     "monitorWorker",

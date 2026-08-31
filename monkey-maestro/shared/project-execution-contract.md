@@ -41,10 +41,10 @@ the next normalized cache to invocation memory and never persists it. No skill m
 splices issue or unknown arrays.
 
 After worker events, refresh only affected issues, cached candidates, and their blockers.
-Immediately before mutation, targeted-read candidates first, derive their blocker ids
-from those fresh relations, then targeted-read that exact live blocker union. Fresh facts
-replace cached facts directly. Relation additions, removals, or reversals never require
-historical adoption or `reconcile`.
+Immediately before mutation, one `candidate-blockers` loader invocation reads candidates
+first, derives blocker ids from those fresh relations, then reads that exact live blocker
+union. Fresh facts replace cached facts directly. Relation additions, removals, or
+reversals never require historical adoption or `reconcile`.
 
 Lost context or a new invocation performs a new full bootstrap. Never store the cache in
 a queue, baton, relay file, project comment, or hidden daemon.
@@ -57,7 +57,9 @@ validates the exact loader envelope and interprets them.
 
 `project-snapshot-loader` returns only live Linear project/status/blocker facts. Full mode
 performs one exhaustive project-membership pagination traversal and detail-fetches issues
-in parallel. Targeted mode fetches exact requested ids and never lists the project. It
+in parallel. Targeted mode fetches exact requested ids and never lists the project.
+Candidate-blockers mode fetches exact candidates first and their fresh direct blocker
+union second inside one loader invocation, returning one strict targeted envelope. It
 never sees controls, records, GitHub, or Superset.
 
 Every loader result is schema- and scope-validated before use. Invalid JSON, missing
@@ -110,8 +112,13 @@ explicit transport, agent, or concurrency override was supplied. An active v1 co
 any explicit override follows the normal grouped preview and writes one verified v2
 successor, so migration and configuration updates never require a stop/start cycle.
 
-An inactive control prevents normal and forced dispatch. `stop` is Linear-only and can
-never be prevented by Superset unavailability. Existing workers remain untouched.
+An inactive control prevents normal and forced dispatch. One validated active control
+authorizes one dispatch batch; it is not redundantly paginated again under that batch's
+short lock. Each batch is instead preceded by its own control read: the loop refreshes
+before advancing, and a one-issue spawn re-resolves after its confirmation gate, so a
+freshly inactive, reconfigured, or conflicting control ends the run `stopped` before any
+mutation. `stop` is Linear-only, prevents the next batch, and never touches existing or
+already-locked workers.
 
 ## Pure planners
 
@@ -169,10 +176,8 @@ overlay selects candidates but authorizes no mutation. `planRuntimeActions` retu
 
 Manual `spawn` configuration is allowed only when a project control is provably absent,
 or when the issue itself has no project. It becomes an invocation-only active control
-with concurrency one and a `manual:<invocationId>` run. Under the lock, a project-bound
-manual control must prove control is still absent; a newly written, inactive, or
-conflicting control refuses dispatch. A project-less control refresh replays the exact
-immutable invocation control while live Linear candidate/blocker refresh remains
+with concurrency one and a `manual:<invocationId>` run. That validated invocation control
+authorizes one locked batch while live Linear candidate/blocker refresh remains
 mandatory. An inactive or unusable durable control is never bypassed.
 
 ## Runtime idempotence and dispatch
@@ -186,11 +191,11 @@ or reused. Effect ids bind that invocation id, adapter name, exact input, and oc
 forged, duplicate, cross-invocation, stale, or unused transcript responses are rejected.
 Only a final `state: complete` result authorizes the reported outcome.
 
-Adapter wiring is fixed: project-lock helpers acquire/release; control-loader plus
-records refreshes control; project-snapshot-loader refreshes candidates/live blockers;
-runtime-inspector performs exact runtime inspection; the Superset sequence below is
-`dispatchIssue`; exact terminal reads are `monitorWorker`; targeted Linear reads after an
-event are `refreshAfterWorkerEvent`/promotion input. No adapter may reclassify Linear.
+Adapter wiring is fixed: project-lock helpers acquire/release; project-snapshot-loader
+refreshes each candidate and its live direct blockers in one invocation; the Superset
+sequence below is `dispatchIssue`; runtime-inspector is reserved for one ambiguous
+mutation recovery; exact terminal reads are `monitorWorker`; targeted Linear reads after
+an event are `refreshAfterWorkerEvent`/promotion input. No adapter may reclassify Linear.
 The one exception is a project-less manual spawn: because no Linear project exists, its
 `refreshCandidateAndBlockers` adapter uses direct exact `get_issue` reads, candidate
 first and then the freshly derived blocker union, and emits a strict targeted envelope
@@ -225,9 +230,6 @@ Bridge responses are values, not raw CLI wrappers. Apply these exact projections
 
 - `acquireDispatchLock` returns the direct successful `project-lock acquire` value;
   `releaseDispatchLock` returns the direct `{ "released": true }` value.
-- `refreshControl` validates the loader envelope with `records resolve-controls`, requires
-  `{ "ok": true, "authority": { "status": "valid" } }`, and returns
-  `authority.control` only. It never returns the CLI wrapper or the authority object.
 - `refreshCandidateAndBlockers` and `refreshAfterWorkerEvent` return the strict raw
   targeted Linear snapshot envelope, after the required candidate-first/blocker-union
   reads. `inspectExactRuntime` returns the strict raw candidate-only runtime envelope.
@@ -244,15 +246,21 @@ Bridge responses are values, not raw CLI wrappers. Apply these exact projections
 {
   "schemaVersion": 1,
   "state": "verified",
+  "action": "create | reuse",
   "lockVerification": "<exact inner verification object>",
   "runtimeSnapshot": "<strict raw one-issue envelope; one workspace and one active terminal>",
   "record": { "status": "written" }
 }
 ```
 
-For verified runtime with failed telemetry, `record` is
+`action` is the live outcome after the exact duplicate check, not the pre-lock planner
+hint. A `create` request may therefore return `reuse` when the inventory found an existing
+workspace. A `reuse` request must return `reuse` whose runtime snapshot is bound to the
+exact requested workspace id; any other action or workspace binding is a rejected
+envelope, not an adopted fact. For verified runtime with failed telemetry, `record` is
 `{ "status": "failed", "detail": "<non-empty reason>" }`. A `partial` response uses the
-same fields, changes state to `partial`, adds non-empty `failedPhase`, requires exactly
+same fields including the actual action, changes state to `partial`, adds non-empty
+`failedPhase`, requires exactly
 one workspace and at most one active terminal, and permits record status `written`,
 `failed`, or `not-attempted`. If partial evidence contains one exact active terminal,
 monitor it after verified lock release. `ambiguous` and `failed` responses contain no runtime
@@ -301,7 +309,7 @@ live token/owner/lease verification
   -> workspace create when absent
   -> exact workspace verification
   -> terminal snapshot
-  -> agent create
+  -> agent create only when no active terminal exists
   -> exact terminal correlation
   -> best-effort Linear execution record
 ```
@@ -314,9 +322,10 @@ Never fabricate verification from the acquisition receipt. Expired, changed, or 
 ownership refuses mutation.
 
 Acquire the short project dispatch lock only after every human decision. Under the lock,
-revalidate the latest exact control, refresh candidates then their live blockers, and
-repeat exact workspace checks. A stop or configuration race refuses mutation. Release in
-`finally` before monitoring, follow-ups, waits, or questions.
+refresh each candidate and its live direct blockers once, then let `dispatchIssue` perform
+the one live task/workspace duplicate check that chooses create or reuse. The validated
+control is fixed for this batch; a later batch starts with a fresh control read. Release
+in `finally` before monitoring, follow-ups, waits, or questions.
 
 An ambiguous mutation response gets one exact inspection and no blind retry. A workspace
 created before agent or record failure is preserved and reused on a later invocation.

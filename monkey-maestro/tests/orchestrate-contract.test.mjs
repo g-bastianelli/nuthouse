@@ -142,7 +142,7 @@ test("AC-001/002/003: one full bootstrap feeds only targeted Linear refreshes", 
     /scripts\/linear-snapshot\.mjs hydrate.*run planlinearfrontier on the normalized cache through scripts\/linear-frontier\.mjs.*do not pass control history, records, waivers, github, or superset data into the planner/,
   );
   expect(normalized).toMatch(
-    /targeted-load every batch candidate first.*derive blocker ids only from those fresh relations.*targeted-load the deduplicated exact live blocker set.*apply them to the cache, and re-run planlinearfrontier/,
+    /for every selected candidate, dispatch project-snapshot-loader once with mode: candidate-blockers.*fetches the candidate first and its freshly discovered direct blocker union second inside the same retrieval turn.*validate that envelope, apply it through scripts\/linear-snapshot\.mjs, and re-run planlinearfrontier with the confirmed force ids.*never authorize from the cached blocker set/,
   );
   expect(normalized).toMatch(
     /after a worker event, targeted-load the affected issue plus cached candidates whose decision depends on it.*derive their current blockers from those fresh rows.*refresh that exact blocker union.*validate each returned snapshot against the expected project id and its exact requested targeted scope.*only validated candidate and blocker snapshots are applied before re-planning/,
@@ -202,20 +202,22 @@ test("AC-012: the short lock contains live refresh and duplicate checking, not m
   expectInOrder(normalized, [
     "human input is complete before this step",
     "acquire the project dispatch lock",
-    "in try/finally, re-run control-loader plus deterministic resolution",
-    "require the same project/run/transport configuration and active: true",
-    "targeted-load every batch candidate first",
-    "derive blocker ids only from those fresh relations",
-    "targeted-load the deduplicated exact live blocker set",
-    "re-run candidate-only runtime inspection for surviving ids and repeat the exact workspace duplicate check",
+    "treat the control validated for this batch as its authority",
+    "do not paginate the same control comments again under the lock",
+    "for every selected candidate, dispatch project-snapshot-loader once with",
+    "MODE: candidate-blockers",
     "execute independent issue sequences concurrently with all-settled semantics",
+    "perform one exact task/workspace inventory",
     "release the token-matched lock in finally before monitoring or follow-up",
     "read every exact active terminal together",
   ]);
 
   expect(normalized).toMatch(/projectid, hostid: control\.targethostid/);
   expect(normalized).toMatch(/drop any candidate that became terminal/);
-  expect(normalized).toMatch(/never reuse the pre-lock absence as creation authority/);
+  expect(normalized).toMatch(
+    /a workspace or active terminal that appeared after step 3 is reused, never duplicated/,
+  );
+  expect(normalized).toMatch(/agent create only when no active terminal exists/);
 });
 
 test("dispatch is deterministic, per-issue idempotent, and all-settled", () => {
@@ -232,13 +234,19 @@ test("dispatch is deterministic, per-issue idempotent, and all-settled", () => {
     /exact deterministic candidate\/runtime batch as selectedissueids.*blocker or unrelated frontier rows are context only and never widen (?:the )?runtime (?:action )?scope/,
   );
   expect(normalized).toMatch(
-    /effect wiring is fixed: refreshcontrol is control-loader.*refreshcandidateandblockers is the two-phase targeted linear read.*inspectexactruntime is the candidate-only inspector.*dispatchissue is the exact superset sequence.*monitor\/event-refresh effects use step 5 and the targeted loader/,
+    /effect wiring is fixed: refreshcandidateandblockers is one project-snapshot-loader dispatch in mode: candidate-blockers.*lock effects use scripts\/project-lock\.mjs.*dispatchissue owns the live task\/workspace duplicate check.*inspectexactruntime is used only once after ambiguous mutation evidence.*monitor\/event-refresh effects use step 5 and the targeted loader/,
+  );
+  expect(normalized).toMatch(
+    /the normal path never re-dispatches control-loader or runtime-inspector under the lock/,
   );
   expect(normalized).toMatch(
     /for each needs-effects response, execute exactly the returned effects.*never synthesize an adapter result, execute an unrequested provider action.*authorize from anything except the final state: complete result/,
   );
   expect(normalized).toMatch(
-    /follow the shared contract's adapter response envelopes exactly.*refreshcontrol returns resolveoutput\.authority\.control, never the cli wrapper.*dispatchissue returns one of the four strict identity\/runtime\/record forms/,
+    /follow the shared contract's adapter response envelopes exactly.*dispatchissue returns one of the four strict identity\/runtime\/record forms and includes the actual live action/,
+  );
+  expect(normalized).toMatch(
+    /a create request may legitimately come back reuse when the inventory found a workspace; a reuse request must come back reuse bound to the exact requested workspace/,
   );
   expect(normalized).toMatch(
     /select new actions in deterministic issue-id order up to remaining capacity/,
@@ -273,7 +281,13 @@ test("AC-017/018/019: monitoring is exact, event-driven, and exits idle without 
   expect(normalized).toMatch(
     /after a worker event, targeted-load the affected issue plus cached candidates whose decision depends on it.*refresh that exact blocker union.*validate each returned snapshot against the expected project id and its exact requested targeted scope.*before any cache merge or promotion/,
   );
-  expect(normalized).toMatch(/return to steps 3-4 without a full linear reload/);
+  expect(normalized).toMatch(/refresh the control once for the new batch/);
+  expect(normalized).toMatch(
+    /an inactive, unusable, or reconfigured control ends the loop: report stopped without dispatching, leaving existing workers untouched/,
+  );
+  expect(normalized).toMatch(
+    /otherwise return to steps 3-4 with that control and without a full linear reload/,
+  );
   expect(normalized).toMatch(
     /when no exact active worker and no ready\/confirmed force candidate remain, report idle immediately/,
   );
@@ -291,7 +305,7 @@ test("AC-002/003/018: event refresh validates a newly discovered blocker before 
   });
   expect(refreshAfterWorkerEvent.mock.calls[0][0]).toMatchObject({
     issueIds: ["NOT-B"],
-    refreshMode: "candidates-then-live-blockers",
+    refreshMode: "candidate-blockers",
   });
   expect(promoteAfterRefresh.mock.calls[0][0]).toMatchObject({
     issueIds: ["NOT-B", "NOT-C"],

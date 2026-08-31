@@ -147,8 +147,6 @@ function responseFor(effect) {
       };
     case "releaseDispatchLock":
       return { released: true };
-    case "refreshControl":
-      return control;
     case "refreshCandidateAndBlockers":
       return targetedSnapshot(issueId);
     case "inspectExactRuntime":
@@ -157,6 +155,7 @@ function responseFor(effect) {
       return {
         schemaVersion: 1,
         state: "verified",
+        action: effect.input.action,
         lockVerification: {
           directory: effect.input.lockReceipt.directory,
           projectId: effect.input.lockReceipt.projectId,
@@ -254,9 +253,7 @@ describe("production orchestration effects bridge", () => {
     expect(epoch?.state).toBe("complete");
     expect(adapters).toEqual([
       "acquireDispatchLock",
-      "refreshControl",
       "refreshCandidateAndBlockers",
-      "inspectExactRuntime",
       "dispatchIssue",
       "releaseDispatchLock",
       "monitorWorker",

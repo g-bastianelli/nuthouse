@@ -128,19 +128,19 @@ test("confirmation precedes the lock, live refresh, duplicate check, and mutatio
   expectInOrder(normalized, [
     "ask once",
     "acquire the project/manual lock only after confirmation",
-    "in try/finally, for a project-bound issue re-run the control loader and deterministic resolver",
-    "require the same project/run/transport configuration and active: true",
-    "re-fetch the candidate first",
-    "derive and fetch its exact fresh blocker set",
+    "re-resolve the project control once immediately after confirmation and before acquiring the lock",
+    "an inactive, newly written, or conflicting control refuses the launch without mutation",
+    "make one project-snapshot-loader dispatch with",
+    "MODE: candidate-blockers",
     "re-plan with the confirmed force overlay",
-    "re-run exact task/workspace/terminal inspection",
+    "performs the exact task/workspace/terminal duplicate check itself",
     "task -> exact workspace check -> create if absent -> verify workspace",
     "release the token-matched lock in finally",
   ]);
   expect(normalized).toMatch(/project\/manual scope as projectid.*selected host as hostid/);
   expect(normalized).toMatch(/reject a newly terminal candidate/);
   expect(normalized).toMatch(
-    /re-run exact task\/workspace\/terminal inspection.*active runtime appeared during the confirmation wait, adopt and monitor it.*multiplicity appeared, isolate it/,
+    /zero exact workspaces selects create; one selects reuse; multiplicity is ambiguous.*if an active terminal appeared during confirmation, reuse and monitor it without launching a second agent/,
   );
 });
 
@@ -161,7 +161,10 @@ test("the shared dispatch primitive preserves order and partial evidence", () =>
     /never execute an effect that the bridge did not request or treat a partial transcript as authorization/,
   );
   expect(normalized).toMatch(
-    /follow the shared contract's adapter response envelopes exactly.*refreshcontrol returns resolveoutput\.authority\.control, never the cli wrapper.*dispatchissue returns one of the four strict identity\/runtime\/record forms/,
+    /dispatchissue returns one of the four strict identity\/runtime\/record forms and includes the actual live action, create or reuse/,
+  );
+  expect(normalized).toMatch(
+    /a create request may come back reuse; a reuse request must come back reuse bound to the exact requested workspace/,
   );
   expectInOrder(normalized, [
     "live token/owner/lease verification",
@@ -175,7 +178,7 @@ test("the shared dispatch primitive preserves order and partial evidence", () =>
     "best-effort record",
   ]);
   expect(normalized).toMatch(
-    /inspect one time after ambiguous mutation output and never retry create blindly/,
+    /inspect one time only after ambiguous or invalid mutation evidence and never retry create blindly/,
   );
   expect(normalized).toMatch(/preserve partial workspace success/);
   expect(normalized).toMatch(

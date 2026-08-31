@@ -9,7 +9,6 @@ import { runOrchestrationEpoch } from "./orchestration-epoch.mjs";
 const EFFECT_ADAPTERS = Object.freeze([
   "acquireDispatchLock",
   "releaseDispatchLock",
-  "refreshControl",
   "refreshCandidateAndBlockers",
   "inspectExactRuntime",
   "dispatchIssue",

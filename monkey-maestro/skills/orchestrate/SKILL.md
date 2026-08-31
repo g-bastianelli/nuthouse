@@ -128,7 +128,7 @@ Terminal rows are final immediately and never enter runtime inspection or capaci
    exact context map for every surviving mutation action and no key for any other action;
    never let one branch/title/prompt failure abort the batch.
 
-## Step 4 — Refresh and dispatch under the short lock
+## Step 4 — Revalidate once and dispatch under the short lock
 
 Human input is complete before this step. Drive the production state machine through
 `scripts/orchestration-epoch.mjs`; that executable bridge calls
@@ -151,16 +151,19 @@ adapter result, execute an unrequested provider action, reuse a transcript in an
 invocation, or authorize from anything except the final `state: complete` result. Remove
 the temporary transcript after verified release or terminal failure.
 
-Effect wiring is fixed: `refreshControl` is control-loader + records;
-`refreshCandidateAndBlockers` is the two-phase targeted Linear read;
-`inspectExactRuntime` is the candidate-only inspector; lock effects use
-`scripts/project-lock.mjs`; `dispatchIssue` is the exact Superset sequence; and
-monitor/event-refresh effects use Step 5 and the targeted loader.
+Effect wiring is fixed: `refreshCandidateAndBlockers` is one
+`project-snapshot-loader` dispatch in `MODE: candidate-blockers`; lock effects use
+`scripts/project-lock.mjs`; `dispatchIssue` owns the live task/workspace duplicate check;
+`inspectExactRuntime` is used only once after ambiguous mutation evidence; and
+monitor/event-refresh effects use Step 5 and the targeted loader. The normal path never
+re-dispatches `control-loader` or `runtime-inspector` under the lock.
 
 For every effect, follow the shared contract's **Adapter response envelopes** exactly.
-In particular, `refreshControl` returns `resolveOutput.authority.control`, never the CLI
-wrapper, and `dispatchIssue` returns one of the four strict identity/runtime/record forms;
-an invalid form is a rejected effect, not a value to reshape from memory.
+`dispatchIssue` returns one of the four strict identity/runtime/record forms and includes
+the actual live `action: "create" | "reuse"` on verified or partial evidence. A `create`
+request may legitimately come back `reuse` when the inventory found a workspace; a
+`reuse` request must come back `reuse` bound to the exact requested workspace. An invalid
+form or an unbound reuse is a rejected effect, not a value to reshape from memory.
 
 The `dispatchIssue` effect must echo the bound branch name, workspace name, and complete
 worker prompt in its input. Use those exact values for workspace/agent creation; a
@@ -178,14 +181,18 @@ ownership rejects the effect without transport mutation.
    only through the helper: pass the observed owner token for `LOCK_STALE`, no token for
    recoverable `LOCK_EMPTY` or stale `LEGACY_TRANSITION`, then retry acquisition exactly
    once. `LOCK_CHANGED`, a non-stale artifact, or a new owner returns `busy`.
-2. In `try/finally`, re-run `control-loader` plus deterministic resolution. Require the
-   same project/run/transport configuration and `active: true`; a stop or configuration
-   race refuses the batch without mutation.
-3. Targeted-load every batch candidate first, derive blocker ids only
-   from those fresh relations, then targeted-load the deduplicated exact live blocker set.
-   Validate both exact scopes, combine the fresh candidate/blocker rows, apply them to the
-   cache, and re-run `planLinearFrontier` with the confirmed force ids. Never authorize
-   from the pre-lock blocker set.
+2. Treat the control validated for this batch as its authority: Step 0 on the first
+   batch, the Step 5.4 refresh on every later one. Do not paginate the same control
+   comments again under the lock. Because each batch starts from its own control read, an
+   explicit stop prevents future batches while an already-authorized locked batch runs to
+   release.
+3. For every selected candidate, dispatch `project-snapshot-loader` once with
+   `MODE: candidate-blockers`. It fetches the candidate first and its freshly discovered
+   direct blocker union second inside the same retrieval turn, then returns one strict
+   targeted envelope containing both. Validate that envelope, apply it through
+   `scripts/linear-snapshot.mjs`, and re-run `planLinearFrontier` with the confirmed force
+   ids. Never authorize from the cached blocker set or dispatch a second loader when the
+   stable candidate/blocker scope is already complete.
 4. Drop any candidate that became terminal. Drop a normal candidate that is no longer
    ready. A ready candidate that became `started` returns `confirmation required` after
    lock release; its earlier normal authorization is not a started-launch confirmation.
@@ -193,10 +200,12 @@ ownership rejects the effect without transport mutation.
    canonical blocker/uncertainty scope is a subset of the exact confirmed fields on its
    runtime action. A newly added
    bypass requirement returns `force scope changed` after lock release.
-5. Re-run candidate-only runtime inspection for surviving ids and repeat the exact
-   workspace duplicate check. Never reuse the pre-lock absence as creation authority.
-6. Execute independent issue sequences concurrently with all-settled semantics. Failure
-   of A never cancels B or C. Within each issue preserve this exact order:
+5. Execute independent issue sequences concurrently with all-settled semantics. Failure
+   of A never cancels B or C. The initial runtime action is only a hint. In each
+   `dispatchIssue`, verify the live lock first, then perform one exact task/workspace
+   inventory: zero workspace means create, one means reuse, and multiple means ambiguous.
+   A workspace or active terminal that appeared after Step 3 is reused, never duplicated.
+   Return the actual action in the verified/partial result. Preserve this exact order:
 
 ```text
 live token/owner/lease verification
@@ -205,16 +214,16 @@ live token/owner/lease verification
   -> workspace create when absent
   -> workspace get and exact host/project/task verification
   -> terminal snapshot
-  -> agent create
+  -> agent create only when no active terminal exists
   -> exact terminal correlation
   -> best-effort execution record
 ```
 
-7. A mutation with ambiguous output gets one exact task/workspace inspection. Adopt one
+6. A mutation with ambiguous output gets one exact task/workspace inspection. Adopt one
    exact correlated result; otherwise isolate the issue. Never repeat create blindly.
-8. Workspace success plus agent/record failure is partial evidence. Preserve and reuse
+7. Workspace success plus agent/record failure is partial evidence. Preserve and reuse
    the workspace. Record-write failure is a telemetry warning, never redispatch authority.
-9. Release the token-matched lock in `finally` before monitoring or follow-up.
+8. Release the token-matched lock in `finally` before monitoring or follow-up.
 
 Every worker prompt starts with `linear-devotee:greet <issueId>` and includes objective,
 scope, Acceptance, verification, ownership constraints, and one exact envelope:
@@ -254,12 +263,13 @@ Maestro never changes the issue lifecycle itself.
    any cache merge or promotion. A malformed/mismatched response is retried once in the
    same scope, then isolated; only validated candidate and blocker snapshots are applied
    before re-planning.
-4. If newly ready work exists and capacity is free, return to Steps 3–4 without a full
-   Linear reload.
+4. If newly ready work exists and capacity is free, refresh the control once for the new
+   batch. An inactive, unusable, or reconfigured control ends the loop: report `stopped`
+   without dispatching, leaving existing workers untouched. Otherwise return to Steps 3–4
+   with that control and without a full Linear reload.
 5. When no exact active worker and no ready/confirmed force candidate remain, report
    `idle` immediately. If a worker finished while Linear remains `started`, report
    `awaiting Linear` and exit; do not poll or ask to relaunch it again in this invocation.
-6. Observe a freshly inactive control before every new dispatch batch and exit `stopped`.
 
 ## Failure scope
 
