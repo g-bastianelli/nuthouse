@@ -1,34 +1,17 @@
-import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
-const WORKFLOW_CONFIG_FILES = [
-  "capability-resolver.mjs",
-  "classification.mjs",
-  "configuration.mjs",
-  "manifest-handoff.mjs",
-  "manifest-schema.mjs",
-  "manifest-store.mjs",
-  "policy-resolution.mjs",
-  "risk-evaluator.mjs",
-  "workflow-resolution.mjs",
-  "worktree-overrides.mjs",
-  "index.mjs",
-];
+import { buildWorkflowBundles } from "./workflow-bundles.mjs";
 
 export function buildWorkflowConfig(repoRoot = path.resolve(import.meta.dirname, "..")) {
-  const sourceRoot = path.join(repoRoot, "_shared", "workflow", "src");
-  const destinationRoot = path.join(repoRoot, "warden", "lib", "workflow");
-
-  fs.mkdirSync(destinationRoot, { recursive: true });
-  for (const filename of WORKFLOW_CONFIG_FILES) {
-    fs.copyFileSync(path.join(sourceRoot, filename), path.join(destinationRoot, filename));
-  }
+  return buildWorkflowBundles(repoRoot);
 }
 
 function main() {
-  buildWorkflowConfig();
-  console.log("Warden workflow configuration bundle built.");
+  const result = buildWorkflowConfig();
+  console.log(
+    `Built ${result.plugins.length} workflow bundles at canonical source hash ${result.sourceHash}.`,
+  );
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();

@@ -2,25 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
-const WORKFLOW_MIRRORS = [
-  "capability-resolver.mjs",
-  "classification.mjs",
-  "configuration.mjs",
-  "manifest-handoff.mjs",
-  "manifest-schema.mjs",
-  "manifest-store.mjs",
-  "policy-resolution.mjs",
-  "risk-evaluator.mjs",
-  "workflow-resolution.mjs",
-  "worktree-overrides.mjs",
-  "index.mjs",
-].map((filename) => ({
-  source: `_shared/workflow/src/${filename}`,
-  mirror: `warden/lib/workflow/${filename}`,
-}));
-
 const REQUIRED_PATHS = [
-  ...WORKFLOW_MIRRORS.flatMap(({ source, mirror }) => [source, mirror]),
   "linear-devotee/agents/project-graph-loader.md",
   "linear-devotee/lib/project-graph.mjs",
   "linear-devotee/scripts/project-graph.mjs",
@@ -156,15 +138,6 @@ export function checkWorkflowMigration(repoRoot) {
       problems.push(`legacy path remains ${filename}`);
   }
 
-  for (const { source, mirror } of WORKFLOW_MIRRORS) {
-    const sourcePath = path.join(repoRoot, source);
-    const mirrorPath = path.join(repoRoot, mirror);
-    if (!fs.existsSync(sourcePath) || !fs.existsSync(mirrorPath)) continue;
-    if (!fs.readFileSync(sourcePath).equals(fs.readFileSync(mirrorPath))) {
-      problems.push(`stale workflow mirror ${mirror} (differs from ${source})`);
-    }
-  }
-
   for (const filename of sourceFiles(repoRoot)) {
     const body = fs.readFileSync(path.join(repoRoot, filename), "utf8");
     for (const [label, pattern] of LEGACY_PATTERNS) {
@@ -174,7 +147,7 @@ export function checkWorkflowMigration(repoRoot) {
 
   const maestroFiles = filesBelow(repoRoot, "monkey-maestro")
     .filter((filename) => SOURCE_EXTENSIONS.has(path.extname(filename)))
-    .filter((filename) => !filename.includes("/tests/"));
+    .filter((filename) => !filename.includes("/tests/") && !filename.includes("/lib/workflow/"));
   for (const filename of maestroFiles) {
     const body = fs.readFileSync(path.join(repoRoot, filename), "utf8");
     const lines = body.split("\n");
