@@ -530,7 +530,7 @@ test("AC-026: every consumer validates agent schema and exact scope before using
   const spawn = normalize(skills.spawn);
   const reconcile = normalize(skills.reconcile);
 
-  for (const name of ["status", "start", "orchestrate", "reconcile", "stop"]) {
+  for (const name of ["status", "start", "reconcile", "stop"]) {
     expect(
       normalize(skills[name]),
       `${name} must bind raw control evidence to its project`,
@@ -539,16 +539,16 @@ test("AC-026: every consumer validates agent schema and exact scope before using
   expect(spawn).toMatch(/validate its exact project\/provider\/schema envelope/);
 
   expect(orchestrate).toMatch(
-    /scripts\/linear-snapshot\.mjs hydrate with the exact expected project and full snapshot.*reject invalid output before cache mutation/,
+    /complete control-loader envelope plus exact expectedprojectid.*scripts\/records\.mjs resolve-controls/,
+  );
+  expect(orchestrate).toMatch(
+    /exact expected project and full snapshot to scripts\/linear-snapshot\.mjs hydrate; reject invalid output before using its facts/,
   );
   expect(orchestrate).toMatch(
     /global schema\/scope or project-wide failure retries the same full retrieval once/,
   );
   expect(orchestrate).toMatch(
-    /validation identifies malformed issue ids, retry exactly those ids once with mode: targeted.*validated cache with scoped unknowns, retry only those ids and use refresh.*persistent per-issue failure stays unknown only for that component/,
-  );
-  expect(orchestrate).toMatch(
-    /validate its schema, exact project\/host context, and exact scope through scripts\/runtime-actions\.mjs.*retry only those ids once; never expand to a full project scan.*scripts\/runtime-snapshot\.mjs merge-targeted.*only its returned full raw runtimesnapshot enters scripts\/runtime-actions\.mjs.*merge-targeted-unknown/,
+    /validate each response independently.*exact linear task binding, project id, provider branch, and usable task state/,
   );
   expect(spawn).toMatch(
     /validate the exact project\/host context and scope with scripts\/runtime-actions\.mjs/,

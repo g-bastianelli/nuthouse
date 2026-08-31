@@ -2,7 +2,7 @@
   "name": "monkey-maestro",
   "displayName": "Monkey Maestro",
   "description": "Plan from live Linear statuses and blockedBy links, then dispatch selected Superset workers in parallel with issue-scoped failures.",
-  "version": "1.0.18",
+  "version": "1.0.19",
   "author": {
     "name": "g-bastianelli"
   },

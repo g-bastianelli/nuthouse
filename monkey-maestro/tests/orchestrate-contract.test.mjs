@@ -1,8 +1,6 @@
-import { expect, mock, test } from "bun:test";
+import { expect, test } from "bun:test";
 import fs from "node:fs";
 import path from "node:path";
-
-import { runOrchestrationEpoch } from "../lib/orchestration-epoch.mjs";
 
 const ROOT = path.resolve(import.meta.dir, "..", "..");
 const orchestrate = fs.readFileSync(
@@ -20,19 +18,6 @@ function normalize(document) {
     .toLowerCase();
 }
 
-function expectInOrder(document, fragments) {
-  let cursor = 0;
-
-  for (const fragment of fragments) {
-    const normalizedFragment = normalize(fragment);
-    const index = document.indexOf(normalizedFragment, cursor);
-    expect(index, `missing or out-of-order workflow invariant: ${fragment}`).toBeGreaterThanOrEqual(
-      cursor,
-    );
-    cursor = index + normalizedFragment.length;
-  }
-}
-
 function frontmatter(document) {
   const match = document.match(/^---\n([\s\S]*?)\n---/);
   expect(match).not.toBeNull();
@@ -47,303 +32,105 @@ function allowedTools(document) {
 
 const normalized = normalize(orchestrate);
 
-function eventSnapshot({ includeDiscoveredBlocker }) {
-  const requestedIssueIds = includeDiscoveredBlocker ? ["NOT-B", "NOT-C"] : ["NOT-B"];
-  return {
-    schemaVersion: 1,
-    projectId: "linear-project",
-    scope: { mode: "targeted", requestedIssueIds },
-    issues: [
-      {
-        issueId: "NOT-B",
-        projectId: "linear-project",
-        statusType: "backlog",
-        blockerIssueIds: ["NOT-C"],
-        dataState: "known",
-      },
-      ...(includeDiscoveredBlocker
-        ? [
-            {
-              issueId: "NOT-C",
-              projectId: "linear-project",
-              statusType: "completed",
-              blockerIssueIds: [],
-              dataState: "known",
-            },
-          ]
-        : []),
-    ],
-    unknown: [],
-  };
-}
-
-function monitorEvent(snapshot) {
-  const refreshAfterWorkerEvent = mock(async () => snapshot);
-  const promoteAfterRefresh = mock(async () => ({ applied: true }));
-  const result = runOrchestrationEpoch({
-    frontierPlan: {
-      rows: [
-        {
-          issueId: "NOT-B",
-          blockerIssueIds: [],
-          classification: "started",
-          linearStatusType: "started",
-          forced: false,
-        },
-      ],
-      readyIssueIds: [],
-      startedIssueIds: ["NOT-B"],
-      confirmationIssueIds: [],
-      unknownIssueIds: [],
-    },
-    runtimePlan: {
-      actions: [
-        {
-          issueId: "NOT-B",
-          action: "monitor",
-          taskId: "task-NOT-B",
-          workspaceId: "workspace-NOT-B",
-          terminalId: "terminal-NOT-B",
-          forced: false,
-          linearClassification: "started",
-          linearStatusType: "started",
-        },
-      ],
-      selectedIssueIds: ["NOT-B"],
-      capacityUsed: 1,
-    },
-    selectedIssueIds: ["NOT-B"],
-    lockDirectory: "/tmp/maestro-test-locks",
-    control: {
-      projectId: "linear-project",
-      runId: "run-1",
-      active: true,
-      targetHostId: "host-1",
-      supersetProjectId: "superset-project",
-      defaultAgent: "codex",
-      maxConcurrency: 1,
-      revision: 1,
-    },
-    adapters: {
-      monitorWorker: mock(async () => ({
-        event: { type: "worker-finished", refreshIssueIds: [] },
-      })),
-      refreshAfterWorkerEvent,
-      promoteAfterRefresh,
-    },
-  });
-  return { promoteAfterRefresh, refreshAfterWorkerEvent, result };
-}
-
-test("AC-001/002/003: one full bootstrap feeds only targeted Linear refreshes", () => {
-  expect(orchestrate.match(/MODE:\s*full/g) ?? []).toHaveLength(1);
-  expect(normalized).toMatch(/mode: full exactly once for this invocation/);
+test("the hot path loads Linear authority once and plans before Superset", () => {
   expect(normalized).toMatch(
-    /scripts\/linear-snapshot\.mjs hydrate.*run planlinearfrontier on the normalized cache through scripts\/linear-frontier\.mjs.*do not pass control history, records, waivers, github, or superset data into the planner/,
+    /dispatch monkey-maestro:control-loader and monkey-maestro:project-snapshot-loader mode: full in parallel/,
   );
   expect(normalized).toMatch(
-    /for every selected candidate, dispatch project-snapshot-loader once with mode: candidate-blockers.*fetches the candidate first and its freshly discovered direct blocker union second inside the same retrieval turn.*validate that envelope, apply it through scripts\/linear-snapshot\.mjs, and re-run planlinearfrontier with the confirmed force ids.*never authorize from the cached blocker set/,
+    /resolve-controls.*linear-snapshot\.mjs hydrate.*linear-frontier\.mjs/,
   );
-  expect(normalized).toMatch(
-    /after a worker event, targeted-load the affected issue plus cached candidates whose decision depends on it.*derive their current blockers from those fresh rows.*refresh that exact blocker union.*validate each returned snapshot against the expected project id and its exact requested targeted scope.*only validated candidate and blocker snapshots are applied before re-planning/,
-  );
-  expect(normalized).toMatch(/never invoke reconcile because a relation changed/);
-  expect(normalized).not.toContain("reconcile_required");
+  expect(normalized).toMatch(/linear remains the only scheduling authority/);
+  expect(normalized).toMatch(/terminal rows never enter superset/);
+  expect(normalized).toMatch(/if both pools are empty, return idle immediately/);
 });
 
-test("AC-013: Linear selects candidates before candidate-only Superset inspection", () => {
-  expectInOrder(normalized, [
-    "call scripts/linear-snapshot.mjs hydrate",
-    "run planLinearFrontier on the normalized cache through scripts/linear-frontier.mjs",
-    "re-run planLinearFrontier with the requested force ids to create an unconfirmed force overlay",
-    "build the selected id set from normal ready/started rows plus ready rows in the unconfirmed force overlay",
-    "dispatch monkey-maestro:runtime-inspector once with that exact sorted set",
-    "run planRuntimeActions",
-  ]);
-
+test("task validation backfills failed ready candidates without slowing the healthy wave", () => {
   expect(normalized).toMatch(
-    /terminal rows are final immediately and never enter runtime inspection or capacity/,
+    /run superset tasks get <issueid> --json for every candidate in a wave in parallel/,
   );
-  expect(normalized).toMatch(/persistent global failure returns degraded without superset calls/);
   expect(normalized).toMatch(
-    /if it is empty, return idle immediately: do not call superset, wait, sleep, or refresh linear a second time/,
+    /require the exact linear task binding, project id, provider branch, and usable task state/,
+  );
+  expect(normalized).toMatch(
+    /a failed ready row is non-transportable but consumes no dispatch slot: backfill it from the next deferred ready row/,
+  );
+  expect(normalized).toMatch(
+    /repeat only after a failure until capacity is full or the ready pool is exhausted/,
+  );
+  expect(normalized).toMatch(/the healthy path is one wave/);
+  expect(normalized).toMatch(
+    /select at most maxconcurrency transportable candidates in stable issue-id order/,
   );
 });
 
-test("AC-008/009/010: started and forced launches share one invocation-scoped gate", () => {
+test("the hot path delegates idempotence to branch-scoped workspace create", () => {
   expect(normalized).toMatch(
-    /unconfirmed force overlay.*only to select otherwise blocked\/relation-unknown candidates for scoped runtime inspection; it authorizes no mutation/,
+    /call superset workspaces create once per candidate, in parallel, with the exact project, host, task id, provider branch, deterministic name, --skip-branch-prefix, and --json/,
   );
+  expect(normalized).toMatch(/do not pass --agent or --prompt to workspaces create/);
+  expect(normalized).toMatch(/alreadyexists: false.*created/);
+  expect(normalized).toMatch(/alreadyexists: true.*reused/);
+  expect(normalized).toMatch(/never pre-list workspaces/);
+});
+
+test("reused workspaces preserve exact task ownership before agent launch", () => {
+  expect(normalized).toMatch(/before using a reused workspace, fetch that exact workspace once/);
+  expect(normalized).toMatch(/require its exact host, superset project, and provider branch/);
+  expect(normalized).toMatch(/if its taskid matches the resolved task, continue/);
+  expect(normalized).toMatch(/if its task binding is absent, repair it exactly once/);
   expect(normalized).toMatch(
-    /record which force requests would bypass blockers or uncertain relations, but defer the single combined preview/,
-  );
-  expect(normalized).toMatch(
-    /present one grouped confirmation for started rows with no exact runtime, combined with every unconfirmed force mutation/,
-  );
-  expect(normalized).toMatch(
-    /run planruntimeactions with .*but no force authorization yet.*unconfirmed forced mutations and started rows without an active terminal return confirm/,
-  );
-  expect(normalized).toMatch(
-    /on confirmation, build the invocation-scoped force authorization.*then re-run the runtime planner/,
-  );
-  expect(normalized).toMatch(
-    /authorization copies the forced frontier row's exact forcebypassedblockerissueids and canonical forcebypasseduncertainties tokens.*never parse concatenated reason text/,
-  );
-  expect(normalized).toMatch(
-    /bypassedblockerissueids, and bypasseduncertainties maps copied exactly from each forced frontier row, including empty arrays.*preview both scopes to the user/,
-  );
-  expect(normalized).toMatch(/refusal does not affect ordinary ready siblings/);
-  expect(normalized).toMatch(
-    /force cannot override missing identity\/configuration, multiple runtimes, inactive control, or a held lock/,
+    /a different non-empty task binding is an ownership conflict: fail only that candidate and never overwrite it/,
   );
 });
 
-test("AC-012: the short lock contains live refresh and duplicate checking, not monitoring", () => {
-  expectInOrder(normalized, [
-    "human input is complete before this step",
-    "acquire the project dispatch lock",
-    "treat the control validated for this batch as its authority",
-    "do not paginate the same control comments again under the lock",
-    "for every selected candidate, dispatch project-snapshot-loader once with",
-    "MODE: candidate-blockers",
-    "execute independent issue sequences concurrently with all-settled semantics",
-    "perform one exact task/workspace inventory",
-    "release the token-matched lock in finally before monitoring or follow-up",
-    "read every exact active terminal together",
-  ]);
-
-  expect(normalized).toMatch(/projectid, hostid: control\.targethostid/);
-  expect(normalized).toMatch(/drop any candidate that became terminal/);
+test("agent launch is separate, duplicate-safe, and immediately returns", () => {
+  expect(normalized).toMatch(/for a newly created workspace, call superset agents create once/);
   expect(normalized).toMatch(
-    /a workspace or active terminal that appeared after step 3 is reused, never duplicated/,
-  );
-  expect(normalized).toMatch(/agent create only when no active terminal exists/);
-});
-
-test("dispatch is deterministic, per-issue idempotent, and all-settled", () => {
-  expect(normalized).toMatch(
-    /scripts\/orchestration-epoch\.mjs.*calls lib\/orchestration-epoch\.mjs runorchestrationepoch and is the sole authorization, locking, all-settled dispatch, and monitoring-order path/,
+    /for a binding-verified reused workspace, list its live terminals exactly once/,
   );
   expect(normalized).toMatch(
-    /exact outer envelope \{ schemaversion: 1, request: \{\s*\.\.\.\s*\}, transcript: \[\.\.\.\] \}.*inside request/,
+    /one or more live terminals means already-running; do not launch another agent/,
   );
+  expect(normalized).toMatch(/zero live terminals means call superset agents create once/);
+  expect(normalized).toMatch(/require a non-empty sessionid from agents create/);
   expect(normalized).toMatch(
-    /successful cli output is directly \{ schemaversion: 1, state: "needs-effects"\s+"complete",\s*\.\.\.\s*\}; there is no ok or epoch success wrapper/,
-  );
-  expect(normalized).toMatch(
-    /exact deterministic candidate\/runtime batch as selectedissueids.*blocker or unrelated frontier rows are context only and never widen (?:the )?runtime (?:action )?scope/,
-  );
-  expect(normalized).toMatch(
-    /effect wiring is fixed: refreshcandidateandblockers is one project-snapshot-loader dispatch in mode: candidate-blockers.*lock effects use scripts\/project-lock\.mjs.*dispatchissue owns the live task\/workspace duplicate check.*inspectexactruntime is used only once after ambiguous mutation evidence.*monitor\/event-refresh effects use step 5 and the targeted loader/,
-  );
-  expect(normalized).toMatch(
-    /the normal path never re-dispatches control-loader or runtime-inspector under the lock/,
-  );
-  expect(normalized).toMatch(
-    /for each needs-effects response, execute exactly the returned effects.*never synthesize an adapter result, execute an unrequested provider action.*authorize from anything except the final state: complete result/,
-  );
-  expect(normalized).toMatch(
-    /follow the shared contract's adapter response envelopes exactly.*dispatchissue returns one of the four strict identity\/runtime\/record forms and includes the actual live action/,
-  );
-  expect(normalized).toMatch(
-    /a create request may legitimately come back reuse when the inventory found a workspace; a reuse request must come back reuse bound to the exact requested workspace/,
-  );
-  expect(normalized).toMatch(
-    /select new actions in deterministic issue-id order up to remaining capacity/,
-  );
-  expect(normalized).toMatch(
-    /if one issue still lacks valid dispatch context, record that issue as non-transportable: dispatch_context_unavailable, remove only it from the bridge's execution-batch runtimeplan and selectedissueids.*consider the next deferred create\/reuse action.*keep active monitor actions and valid siblings/,
-  );
-  expect(normalized).toMatch(/never let one branch\/title\/prompt failure abort the batch/);
-  expect(normalized).toMatch(/failure of a never cancels b or c/);
-  expectInOrder(normalized, [
-    "task identity",
-    "exact workspace check",
-    "workspace create when absent",
-    "workspace get and exact host/project/task verification",
-    "terminal snapshot",
-    "agent create",
-    "exact terminal correlation",
-    "best-effort execution record",
-  ]);
-  expect(normalized).toMatch(/ambiguous output gets one exact task\/workspace inspection/);
-  expect(normalized).toMatch(/never repeat create blindly/);
-  expect(normalized).toMatch(
-    /record-write failure is a telemetry warning, never redispatch authority/,
+    /return busy immediately after launches.*never poll or wait for workers/,
   );
 });
 
-test("AC-017/018/019: monitoring is exact, event-driven, and exits idle without polling", () => {
-  expect(normalized).toMatch(/read every exact active terminal together/);
-  expect(normalized).toMatch(
-    /terminal text and worker envelopes as coordination evidence only.*never infer linear completion/,
-  );
-  expect(normalized).toMatch(
-    /after a worker event, targeted-load the affected issue plus cached candidates whose decision depends on it.*refresh that exact blocker union.*validate each returned snapshot against the expected project id and its exact requested targeted scope.*before any cache merge or promotion/,
-  );
-  expect(normalized).toMatch(/refresh the control once for the new batch/);
-  expect(normalized).toMatch(
-    /an inactive, unusable, or reconfigured control ends the loop: report stopped without dispatching, leaving existing workers untouched/,
-  );
-  expect(normalized).toMatch(
-    /otherwise return to steps 3-4 with that control and without a full linear reload/,
-  );
-  expect(normalized).toMatch(
-    /when no exact active worker and no ready\/confirmed force candidate remain, report idle immediately/,
-  );
-  expect(normalized).toMatch(/report awaiting linear and exit; do not poll/);
-});
-
-test("AC-002/003/018: event refresh validates a newly discovered blocker before promotion", async () => {
-  const { promoteAfterRefresh, refreshAfterWorkerEvent, result } = monitorEvent(
-    eventSnapshot({ includeDiscoveredBlocker: true }),
-  );
-
-  expect((await result).monitoring.settled[0]).toMatchObject({
-    status: "fulfilled",
-    value: { outcome: "event", issueIds: ["NOT-B", "NOT-C"] },
-  });
-  expect(refreshAfterWorkerEvent.mock.calls[0][0]).toMatchObject({
-    issueIds: ["NOT-B"],
-    refreshMode: "candidate-blockers",
-  });
-  expect(promoteAfterRefresh.mock.calls[0][0]).toMatchObject({
-    issueIds: ["NOT-B", "NOT-C"],
-    refreshed: {
-      scope: { mode: "targeted", requestedIssueIds: ["NOT-B", "NOT-C"] },
-    },
-  });
-});
-
-test("AC-018/026: event refresh never promotes an unvalidated blocker scope", async () => {
-  const { promoteAfterRefresh, result } = monitorEvent(
-    eventSnapshot({ includeDiscoveredBlocker: false }),
-  );
-
-  expect((await result).monitoring.settled[0]).toMatchObject({ status: "rejected" });
-  expect(promoteAfterRefresh).toHaveBeenCalledTimes(0);
-});
-
-test("AC-020: authorization exposes no GitHub or legacy reconciliation capability", () => {
-  const declaredTools = allowedTools(orchestrate);
-  expect(declaredTools).not.toMatch(/bash\(gh(?::|\))/i);
-  expect(declaredTools).not.toMatch(/github/i);
-  expect(normalized).toMatch(/never call github/);
-
+test("normal orchestration contains no replay bridge, force, or custom lock ceremony", () => {
   for (const forbidden of [
-    "reconcile_required",
-    "decisionBaseline",
-    "decisionHash",
-    "graphHash",
-    "EXPECTED_DECISION_HASH",
-    "confirmedRunnableExpansions",
-    "executionIssueIds",
-    "exitedExecutionIssueIds",
-    "scripts/reconcile-state.mjs",
-    "nuthouse:project-graph-receipt",
+    "invocationId",
+    "orchestration-epoch",
+    "needs-effects",
+    "transcript",
+    "effectId",
+    "candidate-blockers",
+    "runtime-inspector",
+    "runtime-actions",
+    "project-lock",
+    "--force",
+    "monitorWorker",
   ]) {
-    expect(orchestrate, `legacy scheduler authority must stay absent: ${forbidden}`).not.toContain(
+    expect(orchestrate, `hot-path ceremony must stay absent: ${forbidden}`).not.toContain(
       forbidden,
     );
   }
+
+  const tools = allowedTools(orchestrate);
+  expect(tools).toMatch(/workspaces get/i);
+  expect(tools).toMatch(/workspaces update/i);
+  expect(tools).not.toMatch(/superset --version|superset status|workspaces list/i);
+  expect(tools).not.toMatch(/terminals read|terminals send/i);
+  expect(tools).not.toMatch(/github|bash\(gh/i);
+});
+
+test("failure isolation and worker ownership remain explicit", () => {
+  expect(normalized).toMatch(/one candidate failure never cancels a sibling/);
+  expect(normalized).toMatch(/complete linear failure prevents every superset mutation/);
+  expect(normalized).toMatch(/inactive or unusable control returns stopped/);
+  expect(normalized).toMatch(/linear-devotee:greet <issueid>/);
+  expect(normalized).toMatch(/maestro never changes linear lifecycle or dependency relations/);
+  expect(normalized).toMatch(/superset_worker_done/);
+  expect(normalized).toMatch(/superset_worker_blocked/);
 });

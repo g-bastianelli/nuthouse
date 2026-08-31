@@ -22,8 +22,8 @@ or many residual runtimes remain alive.
 
 `backlog`, `triage`, and `unstarted` are startable. A startable issue is ready exactly
 when every current blocker is terminal. `started` means Linear already considers the
-issue claimed; one exact runtime is monitored, while no exact runtime requires user
-confirmation before a worker is created.
+issue claimed and remains eligible for runtime transport. Each public entry point owns
+its confirmation and launch policy without changing that Linear classification.
 
 ## Disposable Linear cache
 
@@ -40,10 +40,10 @@ isolates retry-exhausted ids after a cache exists. The CLI returns
 the next normalized cache to invocation memory and never persists it. No skill manually
 splices issue or unknown arrays.
 
-After worker events, refresh only affected issues, cached candidates, and their blockers.
-Immediately before mutation, one `candidate-blockers` loader invocation reads candidates
-first, derives blocker ids from those fresh relations, then reads that exact live blocker
-union. Fresh facts replace cached facts directly. Relation additions, removals, or
+Fast project orchestration performs no event loop or second dispatch batch. It plans from
+the validated full bootstrap, transports one deterministic batch, and returns. Manual
+`spawn` may refresh its one candidate and blockers at its stronger confirmation boundary;
+fresh facts then replace cached facts directly. Relation additions, removals, or
 reversals never require historical adoption or `reconcile`.
 
 Lost context or a new invocation performs a new full bootstrap. Never store the cache in
@@ -70,7 +70,8 @@ schema-valid scoped
 unknown is likewise retried once for only that scope; persistent failure becomes a scoped
 unknown and cannot fabricate facts. A project-wide unknown prevents dispatch.
 
-`runtime-inspector` receives only selected non-terminal issue ids after Linear planning.
+`runtime-inspector` is reserved for `spawn` and `reconcile`; fast `orchestrate` does not
+use it. When invoked, it receives only selected non-terminal issue ids after Linear planning.
 It echoes the exact Linear project, host, and Superset project context, resolves exact
 task/workspace/terminal evidence, and never calls GitHub or decides readiness. Runtime
 validation binds all echoed context plus the exact issue scope before planning.
@@ -112,13 +113,11 @@ explicit transport, agent, or concurrency override was supplied. An active v1 co
 any explicit override follows the normal grouped preview and writes one verified v2
 successor, so migration and configuration updates never require a stop/start cycle.
 
-An inactive control prevents normal and forced dispatch. One validated active control
-authorizes one dispatch batch; it is not redundantly paginated again under that batch's
-short lock. Each batch is instead preceded by its own control read: the loop refreshes
-before advancing, and a one-issue spawn re-resolves after its confirmation gate, so a
-freshly inactive, reconfigured, or conflicting control ends the run `stopped` before any
-mutation. `stop` is Linear-only, prevents the next batch, and never touches existing or
-already-locked workers.
+An inactive control prevents dispatch. One validated active control authorizes one fast
+orchestration batch. A one-issue `spawn` re-resolves control after its confirmation gate,
+so a freshly inactive, reconfigured, or conflicting control ends that run `stopped`
+before mutation. `stop` is Linear-only, prevents the next invocation, and never touches
+existing workers.
 
 ## Pure planners
 
@@ -130,8 +129,9 @@ selected for runtime monitoring and capacity accounting when only its relations 
 defective; unknown identity, membership, data, or status still makes the row unknown.
 An absent blocker becomes a canonical force uncertainty instead of aborting planning.
 
-`planRuntimeActions` accepts the selected frontier rows plus validated candidate-scoped
-runtime evidence. It returns:
+`planRuntimeActions` is the stronger one-issue planning boundary used by `spawn`. It
+accepts selected frontier rows plus validated candidate-scoped runtime evidence and
+returns:
 
 - zero exact workspace: `create`;
 - one exact workspace: `reuse` or `monitor`;
@@ -142,7 +142,7 @@ runtime evidence. It returns:
 Runtime planning cannot reclassify Linear facts. Inputs and outputs use stable issue-id
 ordering.
 
-## Force
+## One-issue spawn force
 
 Force is an explicit escape hatch for named issues. Show one preview of bypassed blockers
 or uncertain relations and require one confirmation; multiple issues may share that
@@ -180,18 +180,55 @@ with concurrency one and a `manual:<invocationId>` run. That validated invocatio
 authorizes one locked batch while live Linear candidate/blocker refresh remains
 mandatory. An inactive or unusable durable control is never bypassed.
 
-## Runtime idempotence and dispatch
+## Fast project orchestration
+
+`orchestrate` treats started rows as capacity-consuming, then fills remaining
+`maxConcurrency` slots with ready rows. Ordering is stable by issue id. Task lookup runs
+in one parallel wave sized to the available capacity. A failed started lookup retains
+its reserved capacity; a failed ready lookup does not. Only then does orchestration query
+the next deferred ready rows needed to backfill open slots. The healthy path stays one
+wave, while failures cannot permanently starve later valid ready work.
+
+For each transportable candidate, orchestration calls branch-scoped
+`superset workspaces create` once without first listing workspaces. The call includes the
+exact project, host, task id, provider branch, deterministic workspace name,
+`--skip-branch-prefix`, and JSON output. It never embeds an agent launch in workspace
+creation.
+
+Superset's `alreadyExists` result is the workspace idempotence boundary:
+
+- `false` records a newly created workspace and immediately launches one agent;
+- `true` records a reused workspace and triggers one exact workspace read;
+- a reused workspace with a live terminal is already running;
+- a reused workspace without a live terminal launches one agent.
+
+Before terminal inspection, a reused workspace must match the exact host, project,
+provider branch, and task. An absent task binding is repaired once with
+`superset workspaces update --task-id`; a different non-empty task binding is an
+issue-scoped ownership conflict and is never overwritten. No project-wide workspace list
+is needed.
+
+Agent launch uses `superset agents create` and must return a non-empty session id. One
+candidate failure never cancels siblings. A created workspace survives an agent-launch
+failure and is reused by a later invocation. After launch and reuse decisions,
+`orchestrate` returns immediately; it does not poll workers, refresh Linear, or promote a
+second batch.
+
+Branch-scoped creation prevents duplicate workspaces. Terminal inspection avoids the
+ordinary retry duplicate-agent case, but agent launch is not an atomic cross-invocation
+claim. Do not run two `orchestrate` invocations concurrently for the same project.
+
+## One-issue spawn runtime idempotence and dispatch
 
 `lib/orchestration-epoch.mjs` exports the normative `runOrchestrationEpoch` state machine.
 `scripts/orchestration-epoch.mjs` is its production transcript/effect bridge.
-`orchestrate` and `spawn` drive provider adapters through that executable bridge rather
-than maintaining separate dispatch rules. Every public bridge invocation mints a fresh
+`spawn` drives provider adapters through that executable bridge. Every public bridge invocation mints a fresh
 UUID v4 `invocationId`; it is never accepted from a user, derived from a durable run id,
 or reused. Effect ids bind that invocation id, adapter name, exact input, and occurrence;
 forged, duplicate, cross-invocation, stale, or unused transcript responses are rejected.
 Only a final `state: complete` result authorizes the reported outcome.
 
-Adapter wiring is fixed: project-lock helpers acquire/release; project-snapshot-loader
+Adapter wiring for `spawn` is fixed: project-lock helpers acquire/release; project-snapshot-loader
 refreshes each candidate and its live direct blockers in one invocation; the Superset
 sequence below is `dispatchIssue`; runtime-inspector is reserved for one ambiguous
 mutation recovery; exact terminal reads are `monitorWorker`; targeted Linear reads after
@@ -346,9 +383,9 @@ For an expired owner, recovery requires the exact token observed during inspecti
 and stale legacy-transition artifacts need no token. After one successful recovery,
 acquisition may be retried once; a changed artifact or new live owner returns `busy`.
 
-## Monitoring and exit
+## One-issue spawn monitoring and exit
 
-Monitor only exact active terminals. Read active workers together at a measured cadence
+`spawn` monitors only its exact active terminal. Read the worker at a measured cadence
 and send follow-ups to the same terminal when needed. A worker DONE/BLOCKED envelope is
 coordination evidence only and never changes Linear lifecycle.
 
@@ -364,16 +401,17 @@ automation. A later Linear change needs a new invocation.
 - `status`: Linear-only, read-only control and live frontier report. Never inspect runtime
   and never require reconciliation.
 - `start`: preview and write minimal control v2, verify it, then enter `orchestrate`.
-- `orchestrate`: bootstrap/cache, plan, confirm, inspect selected runtime, lock/dispatch,
-  monitor active workers, targeted-refresh, and exit idle.
+- `orchestrate`: load control and the full Linear snapshot in parallel, plan one stable
+  batch, branch-idempotently create or reuse workspaces, launch only missing agents, and
+  return immediately.
 - `reconcile`: optional runtime audit and exact telemetry repair. It never owns, adopts,
   or gates the Linear graph and never dispatches work. Before proposing any repair it
   reads every page of the issue's existing telemetry comments; incomplete comment
   evidence disables repair for that issue. Exact post-write pagination verifies an
   accepted repair, and an equivalent pre-existing record is never duplicated.
-- `spawn`: one issue through the same planners, force rules, lock, and idempotent primitive
-  as orchestration. An active project control supplies configuration rather than causing
-  redirection.
+- `spawn`: one issue through the stronger runtime planner, force rules, confirmation,
+  lock, and provider-effect bridge. An active project control supplies configuration
+  rather than causing redirection.
 - `stop`: preview and write `active:false` using Linear only.
 
 `linear-devotee:greet` remains the sole owner of the `In Progress` mutation inside worker
