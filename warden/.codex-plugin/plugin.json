@@ -1,6 +1,6 @@
 {
   "name": "warden",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Workflow routing, mode controls, and centralized persona-line dispatch for nuthouse plugins in Codex.",
   "author": {
     "name": "g-bastianelli"

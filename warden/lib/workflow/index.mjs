@@ -84,3 +84,18 @@ export {
 export { WorkflowDecisionError, resolveWorkflowDecision } from "./workflow-resolution.mjs";
 
 export { ManifestHandoffError, consumeManifestHandoff } from "./manifest-handoff.mjs";
+
+export {
+  WORKFLOW_RUNTIME_ADAPTERS,
+  normalizeDecisionJson,
+  normalizeRuntimeWorkflowInput,
+  normalizeWorkflowDecision,
+  resolveClaudeWorkflow,
+  resolveCodexWorkflow,
+  resolveRuntimeWorkflow,
+} from "./runtime-adapters.mjs";
+
+export {
+  NATIVE_VERIFICATION_SOURCES,
+  resolveVerificationStrategy,
+} from "./verification-resolution.mjs";

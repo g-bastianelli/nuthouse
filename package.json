@@ -5,6 +5,7 @@
   "scripts": {
     "prepare": "lefthook install",
     "build:runtime": "cp _shared/runtime/src/claude.mjs linear-devotee/claudecode/lib/runtime.mjs && cp _shared/runtime/src/claude.mjs saucy-status/lib/runtime.mjs",
+    "build:workflow": "node scripts/build-workflow-bundles.mjs",
     "build:workflow-config": "node scripts/build-workflow-config.mjs",
     "check:runtime": "rc=0; for bundle in linear-devotee/claudecode/lib/runtime.mjs saucy-status/lib/runtime.mjs; do diff -q _shared/runtime/src/claude.mjs $bundle || rc=1; done; exit $rc",
     "lint": "oxlint .",
@@ -19,7 +20,7 @@
     "install:codex-agents": "node scripts/sync-codex-agents.mjs --install",
     "check:codex-agents": "node scripts/sync-codex-agents.mjs --check",
     "check:installed-codex-agents": "node scripts/sync-codex-agents.mjs --install --check",
-    "check:workflow": "node scripts/check-workflow-migration.mjs",
+    "check:workflow": "node scripts/check-workflow-bundles.mjs && node scripts/check-workflow-migration.mjs",
     "test:scripts": "bun test scripts/tests"
   },
   "devDependencies": {

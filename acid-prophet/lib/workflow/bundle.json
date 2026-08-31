@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "sourceHash": "sha256:bf37aca59decbc950c30fabe798dfda85446cc77bddbf969ec2bbb81c7a04dd6",
+  "files": [
+    {
+      "path": "capability-resolver.mjs",
+      "hash": "sha256:afbb5c6878b7abf689839602f9ce761327a8178f47c1ef9c964d1715b70330df"
+    },
+    {
+      "path": "classification.mjs",
+      "hash": "sha256:3e43254fee543cc93c7d07a74f2adcf2f5581e175d1679ae5c9d9acc235223ce"
+    },
+    {
+      "path": "configuration.mjs",
+      "hash": "sha256:594a80bece8703fadefa93d92a59e567eb390c1ba7de9c1b859a82d7f9a084ec"
+    },
+    {
+      "path": "fixtures/runtime-parity.json",
+      "hash": "sha256:80b054d219e7f83a053364da79ea86d85df9ddb496ef35850583e679a565538f"
+    },
+    {
+      "path": "fixtures/verification-fallbacks.json",
+      "hash": "sha256:518025ebdc85e7ad21ce3d1aeab4c6d93aeba38f94836ed6c512923edb079132"
+    },
+    {
+      "path": "index.mjs",
+      "hash": "sha256:a53f46a23f44bd94e714e0e66d0dda4a240da0310568faa01f0e244864eb3bd6"
+    },
+    {
+      "path": "manifest-handoff.mjs",
+      "hash": "sha256:efa2a1a6886e1b5b4afb0a8b4ce8ae7bd88f947451196bb65a2b33170f46a4b8"
+    },
+    {
+      "path": "manifest-schema.mjs",
+      "hash": "sha256:d79171027097f1ee01df92ca06c734e7ddb1edc4e5780f8d82e1353b26e40447"
+    },
+    {
+      "path": "manifest-store.mjs",
+      "hash": "sha256:97ae98d470deae493c827c2f87f0093ae2c346f52ad946c6275d7f9159d01116"
+    },
+    {
+      "path": "policy-resolution.mjs",
+      "hash": "sha256:af760fb5a085a54ab4500cdad8ba75b7ec96cf0b0cb2bce462109dd8ed960b8e"
+    },
+    {
+      "path": "README.md",
+      "hash": "sha256:1f242a9f3eb6d8bd897c049c1d8d749638ad71602d3cf11fac316221d59a3f53"
+    },
+    {
+      "path": "risk-evaluator.mjs",
+      "hash": "sha256:353e577dbcb20d848a0f007fb625a5e96169d56a6ec2fef2be5100a56ddb4c8a"
+    },
+    {
+      "path": "runtime-adapters.mjs",
+      "hash": "sha256:59453297a5091d706fc050241f36112a3e8cc9f69f4e9f4c09675259560ae9cc"
+    },
+    {
+      "path": "verification-resolution.mjs",
+      "hash": "sha256:73bbd747dc9fd52253060a90bc8c9dfffe635a04e23193b7684f83480e66f584"
+    },
+    {
+      "path": "workflow-resolution.mjs",
+      "hash": "sha256:50a0ce5d44ee038307d60bc18728818922ef8193ec72aeea07804eecc059ffac"
+    },
+    {
+      "path": "worktree-overrides.mjs",
+      "hash": "sha256:13fb17195fd12453c0e09c2aee1f0821959ac182e330e4dbefa4e98a9bbfb9db"
+    }
+  ]
+}
