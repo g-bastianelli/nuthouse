@@ -62,6 +62,27 @@ Use this skill for an explicit `warden:route` invocation or a request for Warden
 6. Report the result:
    - Render every field in the final report.
    - A non-null target is a declarative handoff descriptor only. End the skill without invoking it.
+   - A `{ kind: "current-turn", name: "direct-task" }` target returns the exact task, branch, and
+     validated `linearTeamKeys` as `target.input`, plus the mandatory continuation order
+     `resolveWorkflowDecision`, `prepareDirectTask`, `evaluateDirectTaskCompletion`. Warden ends
+     before this continuation and never writes its state.
+   - Before calling `prepareDirectTask`, the caller must import `discoverGitContext`,
+     `readWorktreeOverride`, `normalizeRuntimeWorkflowInput`, `classifyWorkflow`,
+     `resolveConfiguration`, and `resolveWorkflowDecision` from one available participating
+     plugin's install-local `lib/workflow/index.mjs`, and read that same bundle's `bundle.json`.
+     Preserve `target.input.task` verbatim as the request/prompt, reuse its branch and validated team
+     keys, resolve the complete personal/repository/worktree configuration stack, and build the
+     canonical risk/capability policy input. Mint one UUID v4 `runId`, use the bundle `sourceHash` as
+     `policyHash`, and set expiry to the earlier of the active override expiry and 24 hours from the
+     canonical `now`. Call `resolveWorkflowDecision(...)` exactly once and require its persisted
+     `currentRun.decision.workflow === "direct-task"`, non-blocked decision, valid
+     `effectiveProfile`, and enabled immutable `verification` gate.
+   - Only then call `prepareDirectTask` with `task: target.input.task`,
+     `decision: currentRun.decision`, and `decisionHandoff: currentRun.handoff`. Never pass the
+     classification result itself as a decision and never synthesize a handoff descriptor. Continue
+     with profile preparation, Moon/native scope, Acid Prophet artifact ownership, and snapshot-bound
+     executed verification evidence outside Warden. This same install-local decision-resolution
+     boundary is mandatory when Warden was never invoked.
 
 ## Final Report
 

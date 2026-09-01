@@ -48,7 +48,7 @@ export function discoverCurrentBranch(cwd = process.cwd()) {
   }).trim();
 }
 
-function targetFor(workflow, issueIdentifiers) {
+function targetFor(workflow, issueIdentifiers, continuationInput) {
   switch (workflow) {
     case "project-creation":
       return { kind: "skill", name: "linear-devotee:create-project" };
@@ -59,7 +59,16 @@ function targetFor(workflow, issueIdentifiers) {
         arguments: [issueIdentifiers[0]],
       };
     case "direct-task":
-      return { kind: "current-turn", name: "direct-task" };
+      return {
+        kind: "current-turn",
+        name: "direct-task",
+        continuation: [
+          "resolveWorkflowDecision",
+          "prepareDirectTask",
+          "evaluateDirectTaskCompletion",
+        ],
+        input: continuationInput,
+      };
     case "ambiguous":
       return null;
     default:
@@ -159,7 +168,11 @@ export function runRoute(taskOrInput, injected = {}) {
     classification,
     input.projectIntent,
     issueIdentifiers,
-    targetFor(classification, issueIdentifiers),
+    targetFor(classification, issueIdentifiers, {
+      task: input.task,
+      branch,
+      linearTeamKeys: input.linearTeamKeys ?? null,
+    }),
     classification === "ambiguous" ? ambiguityDiagnostics(input.projectIntent, evidence) : [],
   );
 }

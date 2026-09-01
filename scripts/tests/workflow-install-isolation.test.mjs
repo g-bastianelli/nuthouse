@@ -66,6 +66,8 @@ describe("independent workflow bundle installations", () => {
         decisions: 3,
         fallbacks: 4,
         verificationCases: 3,
+        directTaskProfiles: 3,
+        directTaskCompletion: "completed",
       });
     });
   }

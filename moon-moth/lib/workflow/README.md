@@ -21,6 +21,19 @@ Run `bun run build:workflow` at the repository root to regenerate every particip
   Otherwise it uses non-empty commands derived from repository-owned instructions or build
   metadata. If neither strategy is reliable, completion is blocked with
   `verification-strategy-unavailable`.
+- Direct tasks use `prepareDirectTask` before implementation and `evaluateDirectTaskCompletion`
+  afterward. `quick` needs only an ephemeral bounded scope, `standard` additionally needs a compact
+  plan covering scope/checks/risks, and `strict` emits ordered `acid-prophet:write-spec` then
+  `acid-prophet:write-plan` handoffs that preserve the decision manifest identity.
+- A declared Moon workspace must carry the canonical `moon-moth:scope` map. A clean `_dark_` map
+  produces a planned-path handoff so Moon can derive projects from the approved paths before edits;
+  changed and planned maps both bind approved paths and verifier targets to the affected graph. A
+  non-Moon workspace ignores Moon candidates and accepts only commands with source paths attributed
+  to repository-owned `AGENTS.md`, `CLAUDE.md`, `package.json`, or other build metadata. Scope
+  entries are segment-aware path boundaries, and approved/protected ancestors or descendants may
+  not overlap. Completion revalidates the full ready preparation and remains blocked until executed
+  evidence matches every selected command and target with exit status zero, carries the same run and
+  decision hashes, and matches a freshly captured Git HEAD/worktree snapshot and verified-file set.
 
 The JSON files below `fixtures/` are generated with the bundle so release-isolation tests can prove
 the same decisions and fallbacks from each plugin's copied installation directory.

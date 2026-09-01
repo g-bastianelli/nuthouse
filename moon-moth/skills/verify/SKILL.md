@@ -36,6 +36,63 @@ A change is made and needs verifying before it ships. The moon-moth checks its
 wings on exactly the affected projects — never the whole repo when a scoped set
 exists — and refuses to call the flight clean on assertion alone.
 
+## Direct-task verification contract
+
+When the caller supplies `DIRECT_TASK_VERIFICATION`, require this closed input instead of an
+issue-delivery packet:
+
+```text
+DIRECT_TASK_VERIFICATION: {
+  "schemaVersion": 1,
+  "preparation": <exact ready prepareDirectTask result>,
+  "changedPaths": ["<normalized repository-relative path>"],
+  "returnTarget": { "kind": "current-turn", "name": "direct-task" }
+}
+```
+
+Import `discoverGitContext`, `consumeManifestHandoff`, and
+`evaluateDirectTaskCompletion` only from this plugin's install-local `lib/workflow/index.mjs`; use
+the adjacent `bundle.json` source hash as `policyHash`. Consume
+`preparation.decisionHandoff` against the current Git context without reclassification or recovery,
+and require the same `run_id` and `content_hash`, a persisted `direct-task` decision, and enabled
+immutable `verification`. Require a non-empty `changedPaths` set inside the preparation's
+segment-aware approved boundaries and outside every protected boundary. Require the complete ready
+preparation contract, a canonical affected or planned Moon map, `verifier: "moon-moth:verify"`,
+and exact target equality with the affected ids plus downstream ids. Any malformed or stale input
+blocks before commands run.
+
+Run every exact command in `preparation.verification.commands` against those targets. Capture the
+Step 0 pre-check and post-check Git snapshots exactly as below and rerun if they differ. On success,
+write and re-read `${CLAUDE_PLUGIN_DATA}/direct-task-verification-<run_id>.json` with this canonical
+evidence object:
+
+```text
+DIRECT_TASK_EVIDENCE: {
+  "run_id": "<preparation.decisionHandoff.run_id>",
+  "decision_content_hash": "<preparation.decisionHandoff.content_hash>",
+  "head_oid": "<lowercase Git object id>",
+  "worktree_snapshot_hash": "sha256:<64 lowercase hex>",
+  "changed_paths": ["<every path in the verified worktree snapshot>"],
+  "verified_files": [{ "path": "<path>", "type": "regular-file | symlink | deleted", "mode": "0644 | 0755 | 120000 | null", "before_hash": "sha256:<hex> | null", "verified_content_hash": "sha256:<hex> | null" }],
+  "results": [{ "command": "<exact selected command>", "targets": ["<exact selected target>"], "exitStatus": 0, "summary": "<bounded real-output summary>" }]
+}
+CURRENT_SNAPSHOT: {
+  "head_oid": "<same post-check oid>",
+  "worktree_snapshot_hash": "<same post-check hash>",
+  "changed_paths": ["<same exact worktree snapshot paths>"],
+  "verified_files": [<same exact verified-file records>]
+}
+RETURN_TARGET: { "kind": "current-turn", "name": "direct-task" }
+```
+
+`verified_files` must contain every snapshot path exactly once. Every implementation `changedPaths`
+entry must be present; any additional dirty path must sit inside a declared protected boundary so
+unrelated user work remains represented without becoming implementation scope. Use the HEAD content
+hash as `before_hash` when available and null for a path absent at HEAD. Deleted files use type
+`deleted`, null mode, and null `verified_content_hash`. Before returning, call
+`evaluateDirectTaskCompletion({ preparation, changedPaths, evidence, currentSnapshot })` and return
+only when it reports `completed`. Do not expose a clean handoff on any block or failure.
+
 ## Step 0 — Preconditions
 
 1. When invoked from issue delivery, require `ISSUE_DELIVERY_PACKET` with the named
@@ -50,6 +107,9 @@ exists — and refuses to call the flight clean on assertion alone.
      bytes to `before_hash` after implementation. Instead rebind every existing target
      to `verified_content_hash: sha256:<hex>` and record a deletion marker for a removed
      target. A path outside the repository or a mutated packet path set blocks.
+     A `DIRECT_TASK_VERIFICATION` input is mutually exclusive with issue delivery. Validate its
+     complete contract above and preserve its exact decision identity, path boundaries, command set,
+     target set, and changed-path set throughout verification.
 2. Confirm a moon workspace (`.moon/` up-tree); capture `PROJECT_ROOT` = moon root.
    When Moon is absent, use `resolveVerificationStrategy` from the install-local bundle
    to select non-empty repository-native commands sourced only from repository
@@ -66,6 +126,9 @@ exists — and refuses to call the flight clean on assertion alone.
    `verified_content_hash`, or an explicit deletion marker, then hash the canonical
    JSON as `PRECHECK_WORKTREE_SNAPSHOT_HASH`. Do not run any verification command
    before this pre-check snapshot is complete.
+   For direct tasks, require every `DIRECT_TASK_VERIFICATION.changedPaths` entry in the snapshot;
+   every additional snapshot path must be protected context. Build `verified_files` from the entire
+   snapshot so unrelated user work remains hash-bound without entering implementation scope.
 
 ## Step 1 — Run checks (evidence)
 
@@ -175,6 +238,10 @@ VERIFICATION_EVIDENCE: { path: <absolute path>, content_hash: sha256:<hex>, stat
 
 Never include complete logs, source contents, prompts, Linear bodies, or secrets in the
 evidence artifact. A write/read/hash failure changes the verdict to a torn wing.
+
+When `DIRECT_TASK_VERIFICATION` exists, write and validate `DIRECT_TASK_EVIDENCE` plus
+`CURRENT_SNAPSHOT` using the direct-task contract above, then return immediately to its exact
+current-turn target. Skip the commit/PR menu; the caller owns completion and any later handoff.
 
 On a clean flight, present the hand-off menu:
 

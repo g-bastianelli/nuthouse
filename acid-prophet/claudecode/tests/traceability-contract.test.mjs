@@ -26,6 +26,29 @@ test("plans and checklists preserve acceptance ids", () => {
   expect(checklist).toContain("**[AC-001]");
 });
 
+test("strict direct tasks have consumable spec and plan owner return contracts", () => {
+  const spec = read("acid-prophet/skills/write-spec/SKILL.md");
+  const plan = read("acid-prophet/skills/write-plan/SKILL.md");
+
+  for (const [skill, owner, status] of [
+    [spec, "acid-prophet:write-spec", '"status": "ratified"'],
+    [plan, "acid-prophet:write-plan", '"status": "validated"'],
+  ]) {
+    expect(skill).toContain("Direct-task artifact handoff");
+    expect(skill).toContain("consumeManifestHandoff");
+    expect(skill).toContain('"workflow": "direct-task"');
+    expect(skill).toContain('"effectiveProfile": "strict"');
+    expect(skill).toContain('"returnTarget": { "kind": "current-turn", "name": "direct-task" }');
+    expect(skill).toContain(owner);
+    expect(skill).toContain(status);
+    expect(skill).toContain("Return no project inventory");
+    expect(skill).toContain("perform no Linear mutation");
+  }
+
+  expect(spec).toContain('"upstreamArtifacts": []');
+  expect(plan).toContain('"upstreamArtifacts": [<exact ratified spec artifact>]');
+});
+
 test("automatic commits are replaced by an explicit commit choice", () => {
   for (const relativePath of [
     "acid-prophet/skills/write-spec/SKILL.md",
