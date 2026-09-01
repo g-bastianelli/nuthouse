@@ -27,6 +27,54 @@ Read `../../persona.md` at the start of this skill. That persona is canonical fo
 
 ## Workflow
 
+### Project-creation artifact handoff
+
+When the invocation contains project-creation return fields, treat them as one named contract:
+
+```text
+WORKFLOW_HANDOFF:
+  run_id: <uuid>
+  path: <absolute manifest path>
+  content_hash: sha256:<64 lowercase hex>
+WORKFLOW_EXPIRES_AT: <canonical ISO timestamp>
+ARTIFACT_INVENTORY: <canonical JSON array or absolute JSON path>
+ARTIFACT_INVENTORY_HASH: sha256:<64 lowercase hex>
+REQUESTED_ARTIFACTS: <sorted subset of audited-spec, guided-spec-review>
+SPEC_FILE: <candidate spec path | _none_>
+ACCEPTANCE_REGISTER: <absolute register path>
+ACCEPTANCE_REGISTER_HASH: sha256:<64 lowercase hex>
+RETURN_TARGET: linear-devotee:create-project
+```
+
+Import `consumeManifestHandoff` and `writeDecisionManifest` only from
+`${CLAUDE_PLUGIN_ROOT}/lib/workflow/index.mjs`, use the
+install-local `bundle.json` source hash as the consumer policy hash, and require a valid
+`project-creation` decision. Reuse that decision without reclassification. Preserve the exact
+`run_id`, hash-bound inventory, exact Acceptance register, and explicit return target throughout
+the spec interview, audit, and user review. Consume recoverable missing/expired/corrupt/out-of-scope
+state with one synchronous `resolveAuthoritatively` plus
+`replacement: { expiresAt: <future WORKFLOW_EXPIRES_AT renewed by the canonical 24-hour rule when expired>, artifacts }`; a second fallback, different run,
+`runtime-drift`, or return target other than
+`RETURN_TARGET: linear-devotee:create-project` blocks the return. Never require Warden.
+Malformed descriptors (including a non-schema `content_hash`) block as
+`invalid-manifest-handoff`; a schema-valid descriptor whose hash does not match the manifest is
+`content-hash-mismatch` and may use the single authoritative recovery above.
+Assign the consumed or recovered result to `currentRun` before any artifact read. Parse a
+path-backed inventory, validate the closed entry schema, serialize the ordered fields as one
+no-whitespace JSON array sorted by `artifact_type`, and verify
+`ARTIFACT_INVENTORY_HASH` against only those canonical UTF-8 bytes.
+
+This skill owns `audited-spec` and `guided-spec-review`. Neither is complete merely because a file
+exists: `audited-spec` requires the parsed auditor gates to pass, and `guided-spec-review` requires
+the user's ratification in step 8. On completion, hash the exact ratified spec bytes, update those
+entries in `ARTIFACT_INVENTORY`, attach their id/path/content-hash references to the same decision
+manifest through `writeDecisionManifest`, preserving `currentRun.manifest.decision`,
+`currentRun.manifest.expiresAt`, and existing artifact refs while passing
+`expectedRevision: currentRun.manifest.revision` and
+`observedContentHash: currentRun.contentHash`. Assign the refreshed result back to `currentRun` and
+return its refreshed `WORKFLOW_HANDOFF`. Do not mark or
+return an artifact that failed its owning gate.
+
 1. Preconditions:
    - Verify git repo (`git rev-parse --git-dir`). Warn if not found — repository context and optional commit will be skipped but the trip continues.
 2. Explore context:
@@ -36,6 +84,8 @@ Read `../../persona.md` at the start of this skill. That persona is canonical fo
    - **Scope check first**: if the request describes multiple independent subsystems, flag and propose decomposition. Each sub-project gets its own trip.
    - Extract: who uses this and why, what problem it uniquely solves, where it fits, constraints (stack, timeline), observable success and definition of done.
    - **Uncertainty rule**: when a section needs a value the user hasn't provided and you cannot infer it from applicable `AGENTS.md`, `CLAUDE.md`, `package.json`, or the codebase — **never invent**. Emit a literal marker `[NEEDS CLARIFICATION: <one-line question>]` inline at that position. The spec is finishable with markers; the auditor will flag each one and the user will resolve them before the spec leaves draft.
+   - When `REQUESTED_ARTIFACTS` is present, limit this run to the spec artifacts this skill owns. Keep all clarifications and approvals, but do not open a second project interview or replace the upstream Acceptance register with independently renumbered criteria.
+   - If `SPEC_FILE` names an existing candidate, preserve its active Acceptance section and compare it exactly with `ACCEPTANCE_REGISTER_HASH`. For an `audited-spec`-only request, skip the new-spec interview and run the candidate through the current auditor gate; do not claim or run the strict guided-review artifact. If no candidate exists, create one from the supplied brief/register through the normal workflow while preserving every accepted id.
 4. Propose 2–3 approaches with trade-offs. Lead with your recommendation. One message for the full option set.
 5. Present spec sections one at a time; wait for user approval before the next. Revise on rejection.
    - Sections: Problem & Why, Solution, Architecture, Components / data flow, Error handling, Acceptance, Acceptance history, Testing approach, Non-goals.
@@ -70,7 +120,19 @@ Read `../../persona.md` at the start of this skill. That persona is canonical fo
    - Ask the user to review `<path>`. Wait. If changes: update the spec and re-run step 7.
    - On approval with `handoffEligible === true`, patch frontmatter to `status: ratified`, `verified-by: spec-auditor`, and `last-reviewed: <today ISO>`. Preserve every accepted `AC-###` id.
    - Ask exactly: `Commit the artifact? (y / no)`. On `y`, run `git add <path> && git commit -m "docs(acid-prophet): ratify spec for <topic>"`. On `no`, leave the ratified artifact uncommitted and continue. Skip the question outside a git repo and report `Commits: 0`.
+   - For a project-creation handoff, mark only requested, gate-passing entries complete with the exact spec path and `content_hash`. `audited-spec` requires the parsed auditor pass. `guided-spec-review` additionally requires that it was requested by the strict profile and that the guided section-by-section review plus ratification actually ran; never mark it complete merely because the spec exists or standard requested an audit. Recompute and return `ARTIFACT_INVENTORY_HASH`, then update the same run manifest. If the manifest revision changed unexpectedly, stop with `workflow-state-conflict` instead of overwriting another owner.
 9. Handoff: ask the user if they want to push the ratified spec to Linear.
+   - If `RETURN_TARGET: linear-devotee:create-project` was supplied, do not ask the generic Linear question. Return immediately to that target with the named block below and no Linear mutation:
+     ```text
+     WORKFLOW_HANDOFF:
+       run_id: <unchanged run id>
+       path: <same-run manifest path>
+       content_hash: <refreshed manifest content hash>
+     WORKFLOW_EXPIRES_AT: <current canonical expiry>
+     ARTIFACT_INVENTORY: <updated canonical inventory JSON or absolute path>
+     ARTIFACT_INVENTORY_HASH: <updated canonical inventory hash>
+     RETURN_TARGET: linear-devotee:create-project
+     ```
    - Yes:
      - Session store: if `$CLAUDE_SESSION_ID` is set, write to `<PROJECT_ROOT>/.claude/nuthouse/sessions/${CLAUDE_SESSION_ID}.json` before invoking `create-project`:
        ```json

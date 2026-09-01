@@ -1,6 +1,6 @@
 ---
 name: create-milestone
-description: Use to add a single Milestone to an existing Linear Project (standalone add-on) or to resume a partially-committed create-project cascade. Reads chain-state to detect resume mode and pick the next milestone whose `id` is still null. Drafts via milestone-drafter when needed, clarifies, previews, creates on approval, updates chain state.
+description: Use to add a single Milestone to an existing Linear Project (standalone add-on) or to resume a legacy partially-committed create-project cascade. Adaptive cascades resume only through create-project. Reads chain-state to detect legacy resume mode and pick the next milestone whose `id` is still null. Drafts via milestone-drafter when needed, clarifies, previews, creates on approval, updates chain state.
 effort: high
 allowed-tools: Read, Glob, Grep, Bash(node:*), Write, Agent, mcp__claude_ai_Linear__list_projects, mcp__claude_ai_Linear__save_milestone
 ---
@@ -24,6 +24,7 @@ Rigid runbook. Match the user's language; keep technical identifiers unchanged.
    - Verify git repo.
    - Ensure `${CLAUDE_PLUGIN_DATA}`.
 2. Detect mode from `${CLAUDE_PLUGIN_DATA}/chain-${CLAUDE_SESSION_ID}.json`:
+   - **Adaptive guard**: if chain-state contains any adaptive identity field—`workflow_handoff`, `artifact_inventory_hash`, or `acceptance_register_hash`—require all adaptive fields to be present, make no Linear read or write, and stop `adaptive_resume_requires_create_project`. Tell the user to reinvoke `linear-devotee:create-project` in the same session. This skill never consumes or repairs adaptive state, so it cannot bypass source re-hashing or approval revalidation.
    - **Resume**: chain-state exists with `phase: "partial_failure"`, `project.id != null`, and at least one `drafts.milestones[].id == null`.
    - **Chained**: chain-state exists with `project.id != null` and `phase` is `committing` or absent legacy value (pre-resume schema).
    - **Standalone**: no chain-state, or `phase: "committed" | "cancelled"`.
