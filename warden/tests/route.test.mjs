@@ -111,7 +111,20 @@ describe("warden route adapter", () => {
       workflow: "direct-task",
       projectIntent: "absent",
       issueIdentifiers: [],
-      target: { kind: "current-turn", name: "direct-task" },
+      target: {
+        kind: "current-turn",
+        name: "direct-task",
+        continuation: [
+          "resolveWorkflowDecision",
+          "prepareDirectTask",
+          "evaluateDirectTaskCompletion",
+        ],
+        input: {
+          task: "Refactor the local parser",
+          branch: "feature/plain-task",
+          linearTeamKeys: ["NOT"],
+        },
+      },
       diagnostics: [],
       blocked: false,
     });
@@ -131,7 +144,20 @@ describe("warden route adapter", () => {
       workflow: "direct-task",
       projectIntent: "absent",
       issueIdentifiers: [],
-      target: { kind: "current-turn", name: "direct-task" },
+      target: {
+        kind: "current-turn",
+        name: "direct-task",
+        continuation: [
+          "resolveWorkflowDecision",
+          "prepareDirectTask",
+          "evaluateDirectTaskCompletion",
+        ],
+        input: {
+          task: "Implement AC-001 and convert ISO-8601 to RFC-3339",
+          branch: "feature/plain-task",
+          linearTeamKeys: ["NOT"],
+        },
+      },
       diagnostics: [],
       blocked: false,
     });

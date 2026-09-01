@@ -27,6 +27,56 @@ Read `../../persona.md` at the start of this skill. That persona is canonical fo
 
 ## Workflow
 
+### Direct-task artifact handoff
+
+When `prepareDirectTask` selects this owner, treat the returned handoff descriptor's exact `input`
+object as `DIRECT_TASK_HANDOFF` and consume it before the project-creation contract or the normal
+entry-point flow:
+
+```text
+DIRECT_TASK_HANDOFF: {
+  "schemaVersion": 1,
+  "workflow": "direct-task",
+  "effectiveProfile": "strict",
+  "task": "<exact non-empty request>",
+  "scope": <validated direct-task scope>,
+  "verification": <ready reliable verification strategy>,
+  "decisionHandoff": { "run_id": "<id>", "path": "<absolute path>", "content_hash": "sha256:<64 lowercase hex>" },
+  "upstreamArtifacts": [],
+  "returnTarget": { "kind": "current-turn", "name": "direct-task" }
+}
+```
+
+Reject unknown/missing fields, any upstream artifact, any non-strict profile, or simultaneous
+project-creation return fields. Import `discoverGitContext` and `consumeManifestHandoff` only from
+`${CLAUDE_PLUGIN_ROOT}/lib/workflow/index.mjs`; use the same install-local `bundle.json` source hash
+as `policyHash`. Consume `decisionHandoff` against the current Git context without reclassification
+or recovery, require the persisted decision to have `workflow === "direct-task"`,
+`effectiveProfile === "strict"`, and enabled immutable `verification`, and require the returned
+handoff to equal the input descriptor. A stale, expired, corrupt, out-of-scope, drifted, or
+mismatched descriptor blocks. Never invoke or require Warden.
+
+Use `task` as the exact spec request and run the normal writing, auditor, ratification, and optional
+commit gates. Do not update the workflow manifest: the direct-task preparation owner contract binds
+the artifact to the unchanged descriptor. After ratification, hash the exact spec bytes and return
+immediately to `returnTarget`, before the generic Linear question, with this consumable object:
+
+```text
+DIRECT_TASK_ARTIFACT: {
+  "id": "<safe spec id>",
+  "path": "<repository-relative spec path>",
+  "contentHash": "sha256:<64 lowercase hex>",
+  "status": "ratified",
+  "audited": true,
+  "owner": "acid-prophet:write-spec",
+  "decisionHandoff": <exact unchanged DIRECT_TASK_HANDOFF.decisionHandoff>
+}
+RETURN_TARGET: { "kind": "current-turn", "name": "direct-task" }
+```
+
+Return no project inventory and perform no Linear mutation. The caller inserts this exact object as
+`artifacts.spec` and resumes `prepareDirectTask` in the same run.
+
 ### Project-creation artifact handoff
 
 When the invocation contains project-creation return fields, treat them as one named contract:
@@ -122,6 +172,9 @@ return an artifact that failed its owning gate.
    - Ask exactly: `Commit the artifact? (y / no)`. On `y`, run `git add <path> && git commit -m "docs(acid-prophet): ratify spec for <topic>"`. On `no`, leave the ratified artifact uncommitted and continue. Skip the question outside a git repo and report `Commits: 0`.
    - For a project-creation handoff, mark only requested, gate-passing entries complete with the exact spec path and `content_hash`. `audited-spec` requires the parsed auditor pass. `guided-spec-review` additionally requires that it was requested by the strict profile and that the guided section-by-section review plus ratification actually ran; never mark it complete merely because the spec exists or standard requested an audit. Recompute and return `ARTIFACT_INVENTORY_HASH`, then update the same run manifest. If the manifest revision changed unexpectedly, stop with `workflow-state-conflict` instead of overwriting another owner.
 9. Handoff: ask the user if they want to push the ratified spec to Linear.
+   - If `DIRECT_TASK_HANDOFF` was supplied, return the exact `DIRECT_TASK_ARTIFACT` contract above
+     immediately. Do not ask the generic Linear question, invoke `linear-devotee:create-project`, or
+     refresh the manifest descriptor.
    - If `RETURN_TARGET: linear-devotee:create-project` was supplied, do not ask the generic Linear question. Return immediately to that target with the named block below and no Linear mutation:
      ```text
      WORKFLOW_HANDOFF:

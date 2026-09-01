@@ -45,6 +45,48 @@ know _which projects the change touches_ before reading code or running tasks.
 This is the moon-moth's first move: follow the lamp, find the affected graph,
 land only there.
 
+## Direct-task planned scope contract
+
+When `prepareDirectTask` selects this owner, treat the returned handoff descriptor's exact `input`
+object as `DIRECT_TASK_SCOPE_HANDOFF` and require this closed install-local owner input:
+
+```text
+DIRECT_TASK_SCOPE_HANDOFF: {
+  "schemaVersion": 1,
+  "workflow": "direct-task",
+  "mode": "affected-or-planned | planned-paths",
+  "approvedPaths": ["<normalized repository-relative path boundary>"],
+  "decisionHandoff": { "run_id": "<id>", "path": "<absolute path>", "content_hash": "sha256:<64 lowercase hex>" },
+  "returnTarget": { "kind": "current-turn", "name": "direct-task" }
+}
+```
+
+Reject unknown/missing fields or an empty/unsafe/duplicate `approvedPaths` set. Import
+`discoverGitContext` and `consumeManifestHandoff` only from this plugin's install-local
+`lib/workflow/index.mjs`, use the adjacent `bundle.json` source hash as `policyHash`, consume the
+descriptor against the current Git context without reclassification or recovery, and require the
+persisted decision to have `workflow === "direct-task"` and enabled immutable `verification`.
+Require the returned descriptor to equal the input. Any stale, expired, corrupt, out-of-scope,
+drifted, or mismatched state blocks; never require Warden.
+
+`affected-or-planned` first computes the ordinary affected map. If that map is `_dark_`, or when
+the mode is already `planned-paths`, enumerate the current graph with `moon query projects` and
+derive a planned map from `approvedPaths`:
+
+1. Compare paths on complete slash-delimited segments and select the unique deepest project source
+   containing each approved path boundary. A repository-root `source: "."` is a valid fallback from
+   Moon, not an invented project. Zero matches or tied deepest matches block as
+   `planned-scope-unresolved`; ask the caller to narrow an approved ancestor that spans projects.
+2. Copy each selected project's id, source, layer, stack, tags, and verification-relevant tasks
+   directly from Moon and set only `reason: "planned"`. Compute the transitive downstream id closure
+   by reversing only the dependency edges returned by the same project graph. Never infer an id,
+   task, source, or edge.
+3. Return the canonical map with `base: "planned-paths"`, `changedFiles: []`, a non-empty
+   `affected`, the derived `downstream`, and a non-`_dark_` summary.
+
+Return the map inline with the exact unchanged `decisionHandoff` and `returnTarget`. The caller puts
+it at `scope.moon` and resumes `prepareDirectTask`; this skill does not implement the task.
+
 ## Step 0 — Preconditions
 
 1. When the caller supplies an `ISSUE_DELIVERY_PACKET`, require its named
@@ -53,6 +95,8 @@ land only there.
    artifact `content_hash` values, and require every relevant target's current bytes to
    match its pre-implementation `before_hash` before querying Moon. A missing artifact
    or hash mismatch blocks; never silently downgrade the packet to prose.
+   When `DIRECT_TASK_SCOPE_HANDOFF` is supplied instead, validate and consume the direct-task
+   contract above before any Moon query. The two packet types are mutually exclusive.
 2. Find the moon workspace root: the `Workspace check` line in `## Context`
    already answers for cwd — `moon workspace` means cwd is the root. On
    `no .moon here`, walk up from cwd for a directory containing `.moon/`.
@@ -69,6 +113,11 @@ land only there.
    `${PROJECT_ROOT}/docs/moon-moth/scope/` exists.
 
 ## Step 1 — Pick the base
+
+For direct-task `mode: "planned-paths"`, set the base to `planned-paths`, skip changed-file and
+affected queries, and continue with the project-graph derivation above. For
+`mode: "affected-or-planned"`, use the ordinary base rules below and fall back to that derivation
+only when the canonical result is `_dark_`.
 
 Decide what "changed" means: if `$ARGUMENTS` contains a base (`working-tree`, `default-branch`, or a `<base>..<head>` revision pair), use it; otherwise infer from the user's intent:
 
@@ -98,7 +147,8 @@ the scope map yourself.
 From the returned scope map:
 
 - If `affected` is empty (`summary: _dark_`) → say the dark stays dark: nothing
-  changed, no projects to scope. Skip to the menu with only `(s) stop`.
+  changed. With `DIRECT_TASK_SCOPE_HANDOFF`, derive and return the planned-path map instead of
+  stopping. Without it, skip to the menu with only `(s) stop`.
 - Otherwise summarise: the changed files count, the affected projects (id +
   layer + stack), their verification-relevant tasks, and the downstream
   blast radius (what else could break).
@@ -111,6 +161,10 @@ implementation turn and `verify` can read it without recomputing. Skip for a
 quick one-off scope.
 
 ## Step 5 — Final report + hand-off
+
+When `DIRECT_TASK_SCOPE_HANDOFF` was supplied, return its canonical affected or planned map inline
+to the exact current-turn target immediately after the report. Skip the generic menu and do not
+start implementation or verification.
 
 ```text
 moon-moth:scope report

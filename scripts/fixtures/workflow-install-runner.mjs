@@ -79,6 +79,7 @@ for (const fixture of verification.cases) {
 
 for (const profile of directTask.profiles) {
   const preparation = workflow.prepareDirectTask({
+    task: directTask.task,
     decision: profile.decision,
     decisionHandoff: directTask.decisionHandoff,
     scope: directTask.scope,
@@ -94,6 +95,7 @@ for (const profile of directTask.profiles) {
 const quickProfile = directTask.profiles.find((profile) => profile.id === "quick");
 assert.ok(quickProfile);
 const moonPreparation = workflow.prepareDirectTask({
+  task: directTask.task,
   decision: quickProfile.decision,
   decisionHandoff: directTask.decisionHandoff,
   scope: directTask.moonScope,
@@ -103,6 +105,7 @@ const moonPreparation = workflow.prepareDirectTask({
 assert.equal(moonPreparation.status, "ready");
 assert.deepEqual(moonPreparation.verification.targets, directTask.moonVerifier.targets);
 const mismatchedMoonVerifier = workflow.prepareDirectTask({
+  task: directTask.task,
   decision: quickProfile.decision,
   decisionHandoff: directTask.decisionHandoff,
   scope: directTask.moonScope,
@@ -112,6 +115,7 @@ const mismatchedMoonVerifier = workflow.prepareDirectTask({
 assert.equal(mismatchedMoonVerifier.status, "blocked");
 assert.equal(mismatchedMoonVerifier.diagnostics[0].code, "moon-verifier-target-mismatch");
 const unprovenNative = workflow.prepareDirectTask({
+  task: directTask.task,
   decision: quickProfile.decision,
   decisionHandoff: directTask.decisionHandoff,
   scope: directTask.scope,
@@ -121,21 +125,41 @@ const unprovenNative = workflow.prepareDirectTask({
 assert.equal(unprovenNative.status, "blocked");
 assert.equal(unprovenNative.diagnostics[0].code, "native-verification-provenance-required");
 const quickPreparation = workflow.prepareDirectTask({
+  task: directTask.task,
   decision: quickProfile.decision,
   decisionHandoff: directTask.decisionHandoff,
   scope: directTask.scope,
   artifacts: quickProfile.artifacts,
   nativeVerification: directTask.nativeVerification,
 });
-const completion = workflow.evaluateDirectTaskCompletion({
-  preparation: quickPreparation,
-  changedPaths: directTask.scope.approvedPaths,
-  evidence: quickPreparation.verification.commands.map((command) => ({
+const snapshot = {
+  head_oid: "1111111111111111111111111111111111111111",
+  worktree_snapshot_hash: "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+  changed_paths: directTask.scope.approvedPaths,
+  verified_files: directTask.scope.approvedPaths.map((filePath, index) => ({
+    path: filePath,
+    type: "regular-file",
+    mode: "0644",
+    before_hash: null,
+    verified_content_hash: `sha256:${String(index + 1).repeat(64)}`,
+  })),
+};
+const evidence = {
+  run_id: quickPreparation.decisionHandoff.run_id,
+  decision_content_hash: quickPreparation.decisionHandoff.content_hash,
+  ...snapshot,
+  results: quickPreparation.verification.commands.map((command) => ({
     command,
     targets: quickPreparation.verification.targets,
     exitStatus: 0,
     summary: `${command} passed`,
   })),
+};
+const completion = workflow.evaluateDirectTaskCompletion({
+  preparation: quickPreparation,
+  changedPaths: directTask.scope.approvedPaths,
+  evidence,
+  currentSnapshot: snapshot,
 });
 assert.equal(completion.status, "completed");
 assert.equal(completion.blocked, false);
@@ -145,7 +169,8 @@ const forgedCompletion = workflow.evaluateDirectTaskCompletion({
     verification: { ...quickPreparation.verification, commands: [], targets: [], provenance: [] },
   },
   changedPaths: directTask.scope.approvedPaths,
-  evidence: [],
+  evidence,
+  currentSnapshot: snapshot,
 });
 assert.equal(forgedCompletion.status, "blocked");
 assert.equal(forgedCompletion.diagnostics[0].code, "invalid-direct-task-preparation");

@@ -15,6 +15,7 @@ const FIXTURE = JSON.parse(
 function prepare(overrides = {}) {
   const profile = FIXTURE.profiles.find((entry) => entry.id === "quick");
   return prepareDirectTask({
+    task: FIXTURE.task,
     decision: profile.decision,
     decisionHandoff: FIXTURE.decisionHandoff,
     scope: FIXTURE.scope,
@@ -24,13 +25,34 @@ function prepare(overrides = {}) {
   });
 }
 
-function completionEvidence(preparation) {
-  return preparation.verification.commands.map((command) => ({
-    command,
-    targets: preparation.verification.targets,
-    exitStatus: 0,
-    summary: `${command} passed`,
-  }));
+function completionPacket(preparation, changedPaths = FIXTURE.scope.approvedPaths) {
+  const snapshot = {
+    head_oid: "1111111111111111111111111111111111111111",
+    worktree_snapshot_hash:
+      "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    changed_paths: changedPaths,
+    verified_files: changedPaths.map((filePath, index) => ({
+      path: filePath,
+      type: "regular-file",
+      mode: "0644",
+      before_hash: null,
+      verified_content_hash: `sha256:${String(index + 1).repeat(64)}`,
+    })),
+  };
+  return {
+    currentSnapshot: structuredClone(snapshot),
+    evidence: {
+      run_id: preparation.decisionHandoff.run_id,
+      decision_content_hash: preparation.decisionHandoff.content_hash,
+      ...snapshot,
+      results: preparation.verification.commands.map((command) => ({
+        command,
+        targets: preparation.verification.targets,
+        exitStatus: 0,
+        summary: `${command} passed`,
+      })),
+    },
+  };
 }
 
 function moonScope() {
@@ -41,6 +63,7 @@ describe("direct-task profile preparation", () => {
   for (const profile of FIXTURE.profiles) {
     test(`${profile.id} requires only its profile preparation (AC-031–AC-033)`, () => {
       const result = prepareDirectTask({
+        task: FIXTURE.task,
         decision: profile.decision,
         decisionHandoff: FIXTURE.decisionHandoff,
         scope: FIXTURE.scope,
@@ -91,11 +114,21 @@ describe("direct-task profile preparation", () => {
     const specHandoff = prepare({ decision: strict.decision, artifacts: {} });
     expect(specHandoff).toMatchObject({ status: "handoff-required", blocked: true });
     expect(specHandoff.handoffs).toEqual([
-      {
+      expect.objectContaining({
         skill: "acid-prophet:write-spec",
         artifact: "spec",
         decisionHandoff: FIXTURE.decisionHandoff,
-      },
+        input: expect.objectContaining({
+          schemaVersion: 1,
+          workflow: "direct-task",
+          effectiveProfile: "strict",
+          task: FIXTURE.task,
+          scope: FIXTURE.scope,
+          decisionHandoff: FIXTURE.decisionHandoff,
+          upstreamArtifacts: [],
+          returnTarget: { kind: "current-turn", name: "direct-task" },
+        }),
+      }),
     ]);
 
     const planHandoff = prepare({
@@ -103,11 +136,19 @@ describe("direct-task profile preparation", () => {
       artifacts: { spec: strict.artifacts.spec },
     });
     expect(planHandoff.handoffs).toEqual([
-      {
+      expect.objectContaining({
         skill: "acid-prophet:write-plan",
         artifact: "plan",
         decisionHandoff: FIXTURE.decisionHandoff,
-      },
+        input: expect.objectContaining({
+          schemaVersion: 1,
+          workflow: "direct-task",
+          effectiveProfile: "strict",
+          task: FIXTURE.task,
+          upstreamArtifacts: [strict.artifacts.spec],
+          returnTarget: { kind: "current-turn", name: "direct-task" },
+        }),
+      }),
     ]);
 
     const changedIdentity = {
@@ -144,6 +185,10 @@ describe("direct-task profile preparation", () => {
     expect(prepareDirectTask(null)).toMatchObject({
       status: "blocked",
       diagnostics: [expect.objectContaining({ code: "invalid-direct-task-input" })],
+    });
+    expect(prepareDirectTask({})).toMatchObject({
+      status: "blocked",
+      diagnostics: [expect.objectContaining({ code: "invalid-direct-task-request" })],
     });
   });
 });
@@ -211,6 +256,45 @@ describe("direct-task scope and verification", () => {
     });
   });
 
+  test("turns a clean Moon scope into a planned-path scope handoff (AC-034)", () => {
+    const handoff = prepare({
+      scope: FIXTURE.darkMoonScope,
+      specializedVerifier: undefined,
+      nativeVerification: undefined,
+    });
+    expect(handoff).toMatchObject({
+      status: "handoff-required",
+      handoffs: [
+        {
+          skill: "moon-moth:scope",
+          artifact: "planned-affected-scope",
+          decisionHandoff: FIXTURE.decisionHandoff,
+          input: {
+            schemaVersion: 1,
+            workflow: "direct-task",
+            mode: "planned-paths",
+            approvedPaths: FIXTURE.darkMoonScope.approvedPaths,
+            decisionHandoff: FIXTURE.decisionHandoff,
+            returnTarget: { kind: "current-turn", name: "direct-task" },
+          },
+        },
+      ],
+    });
+
+    const plannedVerifier = { ...FIXTURE.moonVerifier, targets: ["app", "web"] };
+    expect(
+      prepare({
+        scope: FIXTURE.plannedMoonScope,
+        specializedVerifier: plannedVerifier,
+        nativeVerification: undefined,
+      }),
+    ).toMatchObject({
+      status: "ready",
+      scope: { moon: { base: "planned-paths", changedFiles: [] } },
+      verification: { targets: ["app", "web"] },
+    });
+  });
+
   test("non-Moon workspaces use native checks and never require Moon (AC-034, AC-035)", () => {
     const result = prepare({
       specializedVerifier: {
@@ -250,6 +334,16 @@ describe("direct-task scope and verification", () => {
         moonWorkspace: false,
       },
       {
+        approvedPaths: ["src"],
+        protectedPaths: ["src/generated"],
+        moonWorkspace: false,
+      },
+      {
+        approvedPaths: ["src/generated/task.mjs"],
+        protectedPaths: ["src/generated"],
+        moonWorkspace: false,
+      },
+      {
         approvedPaths: ["../outside.mjs"],
         protectedPaths: [],
         moonWorkspace: false,
@@ -263,31 +357,50 @@ describe("direct-task scope and verification", () => {
 describe("direct-task completion evidence", () => {
   test("completes only with passing evidence for every selected command (AC-031, AC-035)", () => {
     const preparation = prepare();
+    const packet = completionPacket(preparation);
     const result = evaluateDirectTaskCompletion({
       preparation,
       changedPaths: ["src/task.mjs", "tests/task.test.mjs"],
-      evidence: completionEvidence(preparation),
+      ...packet,
     });
 
     expect(result).toMatchObject({ status: "completed", blocked: false });
-    expect(result.evidence).toHaveLength(2);
+    expect(result.evidence.results).toHaveLength(2);
   });
 
   test("blocks missing, failed, malformed, or synthetic evidence (AC-035)", () => {
     const preparation = prepare();
-    const valid = completionEvidence(preparation);
+    const packet = completionPacket(preparation, ["src/task.mjs"]);
+    const valid = packet.evidence;
     for (const evidence of [
-      [],
-      valid.slice(0, 1),
-      valid.map((entry, index) => (index === 0 ? { ...entry, exitStatus: 1 } : entry)),
-      valid.map((entry, index) => (index === 0 ? { ...entry, summary: "" } : entry)),
-      valid.map((entry, index) => (index === 0 ? { ...entry, command: "model guessed" } : entry)),
+      null,
+      { ...valid, results: [] },
+      { ...valid, results: valid.results.slice(0, 1) },
+      {
+        ...valid,
+        results: valid.results.map((entry, index) =>
+          index === 0 ? { ...entry, exitStatus: 1 } : entry,
+        ),
+      },
+      {
+        ...valid,
+        results: valid.results.map((entry, index) =>
+          index === 0 ? { ...entry, summary: "" } : entry,
+        ),
+      },
+      {
+        ...valid,
+        results: valid.results.map((entry, index) =>
+          index === 0 ? { ...entry, command: "model guessed" } : entry,
+        ),
+      },
     ]) {
       expect(
         evaluateDirectTaskCompletion({
           preparation,
           changedPaths: ["src/task.mjs"],
           evidence,
+          currentSnapshot: packet.currentSnapshot,
         }),
       ).toMatchObject({ status: "blocked", blocked: true });
     }
@@ -296,16 +409,150 @@ describe("direct-task completion evidence", () => {
   test("blocks implementation scope expansion and protected-path mutation", () => {
     const preparation = prepare();
     for (const changedPaths of [[], ["src/other.mjs"], ["README.md"]]) {
+      const packet = completionPacket(
+        preparation,
+        changedPaths.length === 0 ? ["src/task.mjs"] : changedPaths,
+      );
       const result = evaluateDirectTaskCompletion({
         preparation,
         changedPaths,
-        evidence: completionEvidence(preparation),
+        ...packet,
       });
 
       expect(result).toMatchObject({ status: "blocked", blocked: true });
       expect(["invalid-changed-paths", "implementation-scope-expanded"]).toContain(
         result.diagnostics[0].code,
       );
+    }
+  });
+
+  test("treats approved and protected entries as segment-aware path boundaries", () => {
+    const preparation = prepare({
+      scope: {
+        approvedPaths: ["src"],
+        protectedPaths: ["docs"],
+        moonWorkspace: false,
+      },
+    });
+    const packet = completionPacket(preparation, ["src/nested/task.mjs"]);
+    expect(
+      evaluateDirectTaskCompletion({
+        preparation,
+        changedPaths: ["src/nested/task.mjs"],
+        ...packet,
+      }),
+    ).toMatchObject({ status: "completed", blocked: false });
+
+    const protectedFile = {
+      path: "docs/local-notes.md",
+      type: "regular-file",
+      mode: "0644",
+      before_hash: "sha256:7777777777777777777777777777777777777777777777777777777777777777",
+      verified_content_hash:
+        "sha256:7777777777777777777777777777777777777777777777777777777777777777",
+    };
+    const protectedContext = {
+      evidence: {
+        ...packet.evidence,
+        worktree_snapshot_hash:
+          "sha256:abababababababababababababababababababababababababababababababab",
+        changed_paths: [...packet.evidence.changed_paths, protectedFile.path],
+        verified_files: [...packet.evidence.verified_files, protectedFile],
+      },
+      currentSnapshot: {
+        ...packet.currentSnapshot,
+        worktree_snapshot_hash:
+          "sha256:abababababababababababababababababababababababababababababababab",
+        changed_paths: [...packet.currentSnapshot.changed_paths, protectedFile.path],
+        verified_files: [...packet.currentSnapshot.verified_files, protectedFile],
+      },
+    };
+    expect(
+      evaluateDirectTaskCompletion({
+        preparation,
+        changedPaths: ["src/nested/task.mjs"],
+        ...protectedContext,
+      }),
+    ).toMatchObject({ status: "completed", blocked: false });
+
+    const protectedPacket = completionPacket(preparation, ["docs/generated/task.mjs"]);
+    expect(
+      evaluateDirectTaskCompletion({
+        preparation,
+        changedPaths: ["docs/generated/task.mjs"],
+        ...protectedPacket,
+      }),
+    ).toMatchObject({
+      status: "blocked",
+      diagnostics: [expect.objectContaining({ code: "implementation-scope-expanded" })],
+    });
+  });
+
+  test("rejects stale or cross-run verification snapshots", () => {
+    const preparation = prepare();
+    const packet = completionPacket(preparation, ["src/task.mjs"]);
+    for (const mutation of [
+      {
+        evidence: packet.evidence,
+        currentSnapshot: {
+          ...packet.currentSnapshot,
+          worktree_snapshot_hash:
+            "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        },
+      },
+      {
+        evidence: { ...packet.evidence, run_id: "another-run" },
+        currentSnapshot: packet.currentSnapshot,
+      },
+      {
+        evidence: {
+          ...packet.evidence,
+          decision_content_hash:
+            "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        },
+        currentSnapshot: packet.currentSnapshot,
+      },
+      {
+        evidence: {
+          ...packet.evidence,
+          verified_files: [
+            ...packet.evidence.verified_files,
+            {
+              path: "src/unrelated.mjs",
+              type: "regular-file",
+              mode: "0644",
+              before_hash: null,
+              verified_content_hash:
+                "sha256:9999999999999999999999999999999999999999999999999999999999999999",
+            },
+          ],
+        },
+        currentSnapshot: {
+          ...packet.currentSnapshot,
+          verified_files: [
+            ...packet.currentSnapshot.verified_files,
+            {
+              path: "src/unrelated.mjs",
+              type: "regular-file",
+              mode: "0644",
+              before_hash: null,
+              verified_content_hash:
+                "sha256:9999999999999999999999999999999999999999999999999999999999999999",
+            },
+          ],
+        },
+      },
+    ]) {
+      expect(
+        evaluateDirectTaskCompletion({
+          preparation,
+          changedPaths: ["src/task.mjs"],
+          ...mutation,
+        }),
+      ).toMatchObject({
+        status: "blocked",
+        diagnostics: [expect.objectContaining({ code: "verification-snapshot-mismatch" })],
+      });
     }
   });
 
@@ -316,15 +563,17 @@ describe("direct-task completion evidence", () => {
       nativeVerification: undefined,
     });
 
-    const evidence = completionEvidence(preparation).map((entry) => ({
-      ...entry,
-      targets: ["other"],
-    }));
+    const packet = completionPacket(preparation, ["apps/app/src/task.mjs"]);
+    const evidence = {
+      ...packet.evidence,
+      results: packet.evidence.results.map((entry) => ({ ...entry, targets: ["other"] })),
+    };
     expect(
       evaluateDirectTaskCompletion({
         preparation,
         changedPaths: ["apps/app/src/task.mjs"],
         evidence,
+        currentSnapshot: packet.currentSnapshot,
       }),
     ).toMatchObject({ status: "blocked", blocked: true });
   });
@@ -372,13 +621,14 @@ describe("direct-task completion evidence", () => {
         },
       },
     ];
+    const packet = completionPacket(validPreparation, ["src/task.mjs"]);
 
     for (const preparation of cases) {
       expect(
         evaluateDirectTaskCompletion({
           preparation,
           changedPaths: ["src/task.mjs"],
-          evidence: [],
+          ...packet,
         }),
       ).toMatchObject({
         status: "blocked",
@@ -399,14 +649,7 @@ describe("direct-task completion evidence", () => {
       evaluateDirectTaskCompletion({
         preparation: staleMoonPreparation,
         changedPaths: ["apps/app/src/task.mjs"],
-        evidence: [
-          {
-            command: validMoonPreparation.verification.commands[0],
-            targets: ["other"],
-            exitStatus: 0,
-            summary: "unrelated target passed",
-          },
-        ],
+        ...completionPacket(validMoonPreparation, ["apps/app/src/task.mjs"]),
       }),
     ).toMatchObject({
       status: "blocked",

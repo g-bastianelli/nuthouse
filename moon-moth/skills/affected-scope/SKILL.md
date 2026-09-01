@@ -21,7 +21,7 @@ affected projects found — the working tree is clean or untracked".
 ```json
 {
   "moonRoot": "/abs/path/to/workspace",
-  "base": "working-tree | default-branch | <sha>..<sha>",
+  "base": "working-tree | default-branch | <sha>..<sha> | planned-paths",
   "changedFiles": ["apps/atlas/api/src/foo.ts", "libs/types/src/bar.ts"],
   "affected": [
     {
@@ -31,7 +31,7 @@ affected projects found — the working tree is clean or untracked".
       "stack": "backend",
       "tags": ["buildable-image"],
       "tasks": ["typecheck", "lint", "test"],
-      "reason": "changed | upstream-of-changed | downstream-of-changed"
+      "reason": "changed | upstream-of-changed | downstream-of-changed | planned"
     }
   ],
   "downstream": ["atlas-app"],
@@ -47,11 +47,17 @@ affected projects found — the working tree is clean or untracked".
 - `affected[].reason` distinguishes a directly-changed project from one pulled
   in by `--upstream`/`--downstream`. The scout records why each project is in
   scope so the implementer/verifier can reason about blast radius.
+- `base: "planned-paths"` is reserved for a direct task prepared on a clean
+  worktree. Its `changedFiles` is empty and every `affected[].reason` is
+  `planned`. Each project and downstream relation must still come from the
+  current `moon query projects` graph; the caller's approved paths select
+  projects but never invent them.
 - `tasks` lists only tasks the project actually defines (from the query),
   filtered to the verification-relevant ones (`typecheck`, `lint`, `test`,
   `build`) unless the caller asks for more.
 - An empty `affected` array → set `summary` to `_dark_` and let the caller
-  decide (usually: nothing to do, hand back).
+  decide. A direct-task caller may answer with a `planned-paths` map derived
+  from its approved path boundaries; all other callers usually hand back.
 
 ## Usage
 

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceHash": "sha256:494c89dd654d7c0a21789906ce85af157d40da420e0702df898768087bc48efb",
+  "sourceHash": "sha256:6d17fbbf3b3977de95e3d546d3182444c06db3fa40367c1ed182c82cc0eed4f6",
   "files": [
     {
       "path": "capability-resolver.mjs",
@@ -16,11 +16,11 @@
     },
     {
       "path": "direct-task-delivery.mjs",
-      "hash": "sha256:56fd5c22f3f74b9a4ed095208171eb3dc4d6e3894dbf0d38cc8b1c85496c7883"
+      "hash": "sha256:f4c352f207f5e6426805e9ced330c319b1b9d60e7f081c0cca93f027c222719f"
     },
     {
       "path": "fixtures/direct-task-delivery.json",
-      "hash": "sha256:e34be3c25b235a2c4b8559d8fecfdfa61bc7095dded3ad798151ef617822ba28"
+      "hash": "sha256:ba6e987fedf66da424fc693b5fd9c7a103a3b4f96ce2e0841f859407c2ba866a"
     },
     {
       "path": "fixtures/runtime-parity.json",
@@ -52,7 +52,7 @@
     },
     {
       "path": "README.md",
-      "hash": "sha256:1524686771ffa27656e0c4c08c31cb15204013b21445ed840cd6107d095d656a"
+      "hash": "sha256:40f057e82c6e74e62164c72f22565f0bc132cf940371cedb278c5b0f05877127"
     },
     {
       "path": "risk-evaluator.mjs",

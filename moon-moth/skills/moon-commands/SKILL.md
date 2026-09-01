@@ -27,6 +27,7 @@ commands run from the moon workspace root (the dir containing `.moon/`).
 | Affected incl. downstream dependents       | `moon query affected --downstream deep`                            |
 | Affected incl. upstream dependencies first | `moon query affected --upstream deep`                              |
 | Affected projects only, via project graph  | `moon query projects --affected`                                   |
+| Enumerate the complete project graph       | `moon query projects`                                              |
 | Enumerate projects by metadata             | `moon query projects --layer <layer> --stack <stack> --tags <tag>` |
 | One project's id/source/deps               | `moon query projects --id <id>`                                    |
 

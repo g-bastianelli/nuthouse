@@ -25,14 +25,15 @@ Run `bun run build:workflow` at the repository root to regenerate every particip
   afterward. `quick` needs only an ephemeral bounded scope, `standard` additionally needs a compact
   plan covering scope/checks/risks, and `strict` emits ordered `acid-prophet:write-spec` then
   `acid-prophet:write-plan` handoffs that preserve the decision manifest identity.
-- A declared Moon workspace must carry the canonical `moon-moth:scope` map (`changedFiles` plus
-  `affected[]`). Approved paths must sit below an affected project's `source`, and
-  `moon-moth:verify` targets must exactly match the affected project ids plus declared downstream
-  dependents. A non-Moon workspace ignores Moon candidates and accepts only commands with source
-  paths attributed to repository-owned `AGENTS.md`, `CLAUDE.md`, `package.json`, or other build
-  metadata. Completion revalidates the full ready preparation, including profile artifacts, and
-  remains blocked until executed evidence matches every selected command and affected target with
-  exit status zero and the changed paths stay inside the approved boundary.
+- A declared Moon workspace must carry the canonical `moon-moth:scope` map. A clean `_dark_` map
+  produces a planned-path handoff so Moon can derive projects from the approved paths before edits;
+  changed and planned maps both bind approved paths and verifier targets to the affected graph. A
+  non-Moon workspace ignores Moon candidates and accepts only commands with source paths attributed
+  to repository-owned `AGENTS.md`, `CLAUDE.md`, `package.json`, or other build metadata. Scope
+  entries are segment-aware path boundaries, and approved/protected ancestors or descendants may
+  not overlap. Completion revalidates the full ready preparation and remains blocked until executed
+  evidence matches every selected command and target with exit status zero, carries the same run and
+  decision hashes, and matches a freshly captured Git HEAD/worktree snapshot and verified-file set.
 
 The JSON files below `fixtures/` are generated with the bundle so release-isolation tests can prove
 the same decisions and fallbacks from each plugin's copied installation directory.

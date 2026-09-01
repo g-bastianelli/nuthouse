@@ -5,8 +5,15 @@ const CONTENT_HASH_PATTERN = /^sha256:[a-f0-9]{64}$/u;
 const SAFE_ID_PATTERN = /^[a-z0-9](?:[a-z0-9_-]{0,126}[a-z0-9])?$/u;
 const SPEC_OWNER = "acid-prophet:write-spec";
 const PLAN_OWNER = "acid-prophet:write-plan";
-const MOON_REASONS = new Set(["changed", "upstream-of-changed", "downstream-of-changed"]);
+const MOON_REASONS = new Set([
+  "changed",
+  "upstream-of-changed",
+  "downstream-of-changed",
+  "planned",
+]);
 const NATIVE_SOURCES = new Set(["repository-instructions", "repository-build-metadata"]);
+const GIT_OID_PATTERN = /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/u;
+const VERIFIED_FILE_TYPES = new Set(["regular-file", "symlink", "deleted"]);
 
 function isRecord(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -56,6 +63,14 @@ function isSafeRelativePath(value) {
   }
   const segments = value.split("/");
   return !segments.includes("") && !segments.includes(".") && !segments.includes("..");
+}
+
+function pathContains(boundary, candidate) {
+  return candidate === boundary || candidate.startsWith(`${boundary}/`);
+}
+
+function pathsOverlap(left, right) {
+  return pathContains(left, right) || pathContains(right, left);
 }
 
 function isSafeAbsolutePath(value) {
@@ -121,21 +136,33 @@ function normalizeMoonScopeMap(value) {
     !isRecord(value) ||
     !isSafeAbsolutePath(value.moonRoot) ||
     !isNormalizedNonEmptyString(value.base) ||
-    !isNormalizedNonEmptyString(value.summary) ||
-    value.summary === "_dark_"
+    !isNormalizedNonEmptyString(value.summary)
   ) {
     return null;
   }
-  const changedFiles = normalizePaths(value.changedFiles, { allowEmpty: false });
+  const changedFiles = normalizePaths(value.changedFiles);
   const downstream = normalizeNonEmptyStrings(value.downstream);
-  if (
-    changedFiles === null ||
-    downstream === null ||
-    !Array.isArray(value.affected) ||
-    value.affected.length === 0
-  ) {
+  if (changedFiles === null || downstream === null || !Array.isArray(value.affected)) {
     return null;
   }
+
+  if (value.summary === "_dark_") {
+    if (changedFiles.length !== 0 || value.affected.length !== 0 || downstream.length !== 0) {
+      return null;
+    }
+    return {
+      status: "dark",
+      map: {
+        moonRoot: value.moonRoot,
+        base: value.base,
+        changedFiles,
+        affected: [],
+        downstream,
+        summary: value.summary,
+      },
+    };
+  }
+  if (value.affected.length === 0) return null;
 
   const affected = [];
   const projectIds = new Set();
@@ -168,13 +195,27 @@ function normalizeMoonScopeMap(value) {
     });
   }
 
+  const planned = affected.some((project) => project.reason === "planned");
+  if (
+    (planned &&
+      (value.base !== "planned-paths" ||
+        changedFiles.length !== 0 ||
+        affected.some((project) => project.reason !== "planned"))) ||
+    (!planned && changedFiles.length === 0)
+  ) {
+    return null;
+  }
+
   return {
-    moonRoot: value.moonRoot,
-    base: value.base,
-    changedFiles,
-    affected,
-    downstream,
-    summary: value.summary,
+    status: "ready",
+    map: {
+      moonRoot: value.moonRoot,
+      base: value.base,
+      changedFiles,
+      affected,
+      downstream,
+      summary: value.summary,
+    },
   };
 }
 
@@ -221,8 +262,13 @@ function normalizeScope(value) {
   const approvedPaths = normalizePaths(value.approvedPaths, { allowEmpty: false });
   const protectedPaths = normalizePaths(value.protectedPaths ?? []);
   if (approvedPaths === null || protectedPaths === null) return null;
-  const protectedSet = new Set(protectedPaths);
-  if (approvedPaths.some((entry) => protectedSet.has(entry))) return null;
+  if (
+    approvedPaths.some((approved) =>
+      protectedPaths.some((protectedPath) => pathsOverlap(approved, protectedPath)),
+    )
+  ) {
+    return null;
+  }
 
   const normalized = {
     approvedPaths,
@@ -231,10 +277,17 @@ function normalizeScope(value) {
   };
   if (!value.moonWorkspace) return { status: "ready", scope: normalized };
   if (value.moon === undefined) return { status: "handoff", scope: normalized };
-  const moon = normalizeMoonScopeMap(value.moon);
-  if (moon === null) {
+  const moonResult = normalizeMoonScopeMap(value.moon);
+  if (moonResult === null) {
     return { status: "blocked", scope: normalized, code: "moon-scope-invalid" };
   }
+  if (moonResult.status === "dark") {
+    return {
+      status: "planned-handoff",
+      scope: { ...normalized, moon: moonResult.map },
+    };
+  }
+  const moon = moonResult.map;
   if (
     approvedPaths.some(
       (entry) => !moon.affected.some((project) => pathIsInsideProject(entry, project.source)),
@@ -387,10 +440,50 @@ function hasExactKeys(value, expectedKeys) {
   return keys.length === expectedKeys.length && expectedKeys.every((key) => keys.includes(key));
 }
 
+function directTaskReturnTarget() {
+  return { kind: "current-turn", name: "direct-task" };
+}
+
+function moonScopeHandoff(scopedBase, mode) {
+  return {
+    skill: "moon-moth:scope",
+    artifact: mode === "planned-paths" ? "planned-affected-scope" : "affected-scope",
+    decisionHandoff: scopedBase.decisionHandoff,
+    input: {
+      schemaVersion: 1,
+      workflow: "direct-task",
+      mode,
+      approvedPaths: scopedBase.scope.approvedPaths,
+      decisionHandoff: scopedBase.decisionHandoff,
+      returnTarget: directTaskReturnTarget(),
+    },
+  };
+}
+
+function strictOwnerHandoff(strictBase, skill, artifact, upstreamArtifacts = []) {
+  return {
+    skill,
+    artifact,
+    decisionHandoff: strictBase.decisionHandoff,
+    input: {
+      schemaVersion: 1,
+      workflow: "direct-task",
+      effectiveProfile: "strict",
+      task: strictBase.task,
+      scope: strictBase.scope,
+      verification: strictBase.verification,
+      decisionHandoff: strictBase.decisionHandoff,
+      upstreamArtifacts,
+      returnTarget: directTaskReturnTarget(),
+    },
+  };
+}
+
 export function prepareDirectTask(input = {}) {
   const emptyBase = {
     workflow: "direct-task",
     profile: null,
+    task: null,
     decisionHandoff: null,
     scope: null,
     preparation: null,
@@ -404,6 +497,17 @@ export function prepareDirectTask(input = {}) {
     ]);
   }
   emptyBase.profile = isRecord(input.decision) ? input.decision.effectiveProfile : null;
+
+  if (!isNormalizedNonEmptyString(input.task)) {
+    return blockedResult(emptyBase, [
+      diagnostic(
+        "invalid-direct-task-request",
+        "$.task",
+        "Direct-task preparation requires the exact non-empty task request.",
+      ),
+    ]);
+  }
+  emptyBase.task = input.task;
 
   const decisionError = validateDecision(input.decision);
   if (decisionError !== null) {
@@ -439,11 +543,10 @@ export function prepareDirectTask(input = {}) {
   }
   const scopedBase = { ...base, scope: scopeResult.scope };
   if (scopeResult.status === "handoff") {
-    return handoffResult(scopedBase, {
-      skill: "moon-moth:scope",
-      artifact: "affected-scope",
-      decisionHandoff,
-    });
+    return handoffResult(scopedBase, moonScopeHandoff(scopedBase, "affected-or-planned"));
+  }
+  if (scopeResult.status === "planned-handoff") {
+    return handoffResult(scopedBase, moonScopeHandoff(scopedBase, "planned-paths"));
   }
   if (scopeResult.status === "blocked") {
     return blockedResult(scopedBase, [
@@ -544,11 +647,7 @@ export function prepareDirectTask(input = {}) {
     ]);
   }
   if (specState !== "ready") {
-    return handoffResult(strictBase, {
-      skill: SPEC_OWNER,
-      artifact: "spec",
-      decisionHandoff,
-    });
+    return handoffResult(strictBase, strictOwnerHandoff(strictBase, SPEC_OWNER, "spec"));
   }
 
   const planState = artifactState(artifacts.plan, {
@@ -566,11 +665,10 @@ export function prepareDirectTask(input = {}) {
     ]);
   }
   if (planState !== "ready") {
-    return handoffResult(strictBase, {
-      skill: PLAN_OWNER,
-      artifact: "plan",
-      decisionHandoff,
-    });
+    return handoffResult(
+      strictBase,
+      strictOwnerHandoff(strictBase, PLAN_OWNER, "plan", [normalizeArtifact(artifacts.spec)]),
+    );
   }
 
   return {
@@ -586,9 +684,9 @@ export function prepareDirectTask(input = {}) {
   };
 }
 
-function normalizeEvidence(value) {
+function normalizeVerificationResults(value) {
   if (!Array.isArray(value)) return null;
-  const evidence = [];
+  const results = [];
   const seen = new Set();
   for (const entry of value) {
     if (!isRecord(entry) || seen.has(entry.command)) return null;
@@ -609,14 +707,114 @@ function normalizeEvidence(value) {
       return null;
     }
     seen.add(entry.command);
-    evidence.push({
+    results.push({
       command: entry.command,
       targets,
       exitStatus: entry.exitStatus,
       summary: entry.summary,
     });
   }
-  return evidence;
+  return results;
+}
+
+function normalizeVerifiedFiles(value) {
+  if (!Array.isArray(value) || value.length === 0) return null;
+  const files = [];
+  const seen = new Set();
+  for (const entry of value) {
+    if (!isRecord(entry) || !isSafeRelativePath(entry.path) || seen.has(entry.path)) return null;
+    const deleted = entry.type === "deleted";
+    const validMode =
+      (entry.type === "regular-file" && (entry.mode === "0644" || entry.mode === "0755")) ||
+      (entry.type === "symlink" && entry.mode === "120000") ||
+      (deleted && entry.mode === null);
+    const validContentHash = deleted
+      ? entry.verified_content_hash === null
+      : CONTENT_HASH_PATTERN.test(entry.verified_content_hash);
+    if (
+      !VERIFIED_FILE_TYPES.has(entry.type) ||
+      !validMode ||
+      !validContentHash ||
+      !(
+        entry.before_hash === null ||
+        (typeof entry.before_hash === "string" && CONTENT_HASH_PATTERN.test(entry.before_hash))
+      )
+    ) {
+      return null;
+    }
+    seen.add(entry.path);
+    files.push({
+      path: entry.path,
+      type: entry.type,
+      mode: entry.mode,
+      before_hash: entry.before_hash,
+      verified_content_hash: entry.verified_content_hash,
+    });
+  }
+  return files;
+}
+
+function normalizeSnapshot(value) {
+  if (
+    !isRecord(value) ||
+    typeof value.head_oid !== "string" ||
+    !GIT_OID_PATTERN.test(value.head_oid) ||
+    typeof value.worktree_snapshot_hash !== "string" ||
+    !CONTENT_HASH_PATTERN.test(value.worktree_snapshot_hash)
+  ) {
+    return null;
+  }
+  const changedPaths = normalizePaths(value.changed_paths, { allowEmpty: false });
+  const verifiedFiles = normalizeVerifiedFiles(value.verified_files);
+  if (
+    changedPaths === null ||
+    verifiedFiles === null ||
+    changedPaths.some((changedPath) => !verifiedFiles.some((file) => file.path === changedPath))
+  ) {
+    return null;
+  }
+  return {
+    head_oid: value.head_oid,
+    worktree_snapshot_hash: value.worktree_snapshot_hash,
+    changed_paths: changedPaths,
+    verified_files: verifiedFiles,
+  };
+}
+
+function normalizeEvidence(value) {
+  if (
+    !isRecord(value) ||
+    typeof value.run_id !== "string" ||
+    !SAFE_ID_PATTERN.test(value.run_id) ||
+    typeof value.decision_content_hash !== "string" ||
+    !CONTENT_HASH_PATTERN.test(value.decision_content_hash)
+  ) {
+    return null;
+  }
+  const snapshot = normalizeSnapshot(value);
+  const results = normalizeVerificationResults(value.results);
+  if (snapshot === null || results === null) return null;
+  return {
+    run_id: value.run_id,
+    decision_content_hash: value.decision_content_hash,
+    ...snapshot,
+    results,
+  };
+}
+
+function sameVerifiedFiles(left, right) {
+  if (left.length !== right.length) return false;
+  const expected = new Map(right.map((entry) => [entry.path, entry]));
+  return left.every((entry) => {
+    const match = expected.get(entry.path);
+    return (
+      match !== undefined &&
+      entry.type === match.type &&
+      entry.mode === match.mode &&
+      entry.before_hash === match.before_hash &&
+      entry.verified_content_hash === match.verified_content_hash
+    );
+  });
 }
 
 function validateReadyPreparation(value) {
@@ -627,6 +825,7 @@ function validateReadyPreparation(value) {
     value.blocked !== false ||
     value.workflow !== "direct-task" ||
     !PROFILES.has(value.profile) ||
+    !isNormalizedNonEmptyString(value.task) ||
     decisionHandoff === null ||
     !Array.isArray(value.handoffs) ||
     value.handoffs.length !== 0 ||
@@ -696,11 +895,11 @@ function validateReadyPreparation(value) {
   ) {
     return null;
   }
-  return { scope: scopeResult.scope, commands, targets };
+  return { decisionHandoff, scope: scopeResult.scope, commands, targets };
 }
 
 export function evaluateDirectTaskCompletion(input = {}) {
-  const base = { status: "blocked", evidence: [], diagnostics: [], blocked: true };
+  const base = { status: "blocked", evidence: null, diagnostics: [], blocked: true };
   if (!isRecord(input) || !isRecord(input.preparation) || input.preparation.status !== "ready") {
     return {
       ...base,
@@ -740,9 +939,13 @@ export function evaluateDirectTaskCompletion(input = {}) {
       ],
     };
   }
-  const approved = new Set(preparation.scope.approvedPaths);
-  const protectedPaths = new Set(preparation.scope.protectedPaths);
-  if (changedPaths.some((entry) => !approved.has(entry) || protectedPaths.has(entry))) {
+  if (
+    changedPaths.some(
+      (entry) =>
+        !preparation.scope.approvedPaths.some((boundary) => pathContains(boundary, entry)) ||
+        preparation.scope.protectedPaths.some((boundary) => pathsOverlap(boundary, entry)),
+    )
+  ) {
     return {
       ...base,
       diagnostics: [
@@ -768,11 +971,42 @@ export function evaluateDirectTaskCompletion(input = {}) {
       ],
     };
   }
+  const currentSnapshot = normalizeSnapshot(input.currentSnapshot);
+  const snapshotPaths =
+    currentSnapshot === null ? [] : currentSnapshot.verified_files.map((file) => file.path);
+  if (
+    currentSnapshot === null ||
+    evidence.run_id !== preparation.decisionHandoff.run_id ||
+    evidence.decision_content_hash !== preparation.decisionHandoff.content_hash ||
+    evidence.head_oid !== currentSnapshot.head_oid ||
+    evidence.worktree_snapshot_hash !== currentSnapshot.worktree_snapshot_hash ||
+    !sameMembers(evidence.changed_paths, currentSnapshot.changed_paths) ||
+    !sameMembers(currentSnapshot.changed_paths, snapshotPaths) ||
+    changedPaths.some((path) => !currentSnapshot.changed_paths.includes(path)) ||
+    currentSnapshot.changed_paths.some(
+      (path) =>
+        !changedPaths.includes(path) &&
+        !preparation.scope.protectedPaths.some((boundary) => pathContains(boundary, path)),
+    ) ||
+    !sameVerifiedFiles(evidence.verified_files, currentSnapshot.verified_files)
+  ) {
+    return {
+      ...base,
+      evidence,
+      diagnostics: [
+        diagnostic(
+          "verification-snapshot-mismatch",
+          "$.currentSnapshot",
+          "Verification evidence must bind the same workflow run and exact current Git snapshot.",
+        ),
+      ],
+    };
+  }
   const expectedCommands = preparation.commands;
   const expectedTargets = preparation.targets;
-  const byCommand = new Map(evidence.map((entry) => [entry.command, entry]));
+  const byCommand = new Map(evidence.results.map((entry) => [entry.command, entry]));
   const complete =
-    evidence.length === expectedCommands.length &&
+    evidence.results.length === expectedCommands.length &&
     expectedCommands.every((command) => {
       const entry = byCommand.get(command);
       return entry !== undefined && sameMembers(entry.targets, expectedTargets);
@@ -791,7 +1025,7 @@ export function evaluateDirectTaskCompletion(input = {}) {
     };
   }
 
-  if (evidence.some((entry) => entry.exitStatus !== 0)) {
+  if (evidence.results.some((entry) => entry.exitStatus !== 0)) {
     return {
       ...base,
       evidence,

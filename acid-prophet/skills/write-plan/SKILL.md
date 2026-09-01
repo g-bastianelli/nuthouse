@@ -33,6 +33,60 @@ Adapt all output to match the user's language. Technical identifiers (file paths
 
 The user has an approved spec under `docs/acid-prophet/specs/` and wants to lock the architecture, contracts, and validation scenario before implementation begins. Typically called between `write-spec` and the implementation turn / `linear-devotee:create-project`. If invoked on an unapproved spec (`status != ratified | approved | ready | implementing`), warn and require explicit user confirmation.
 
+## Direct-task artifact handoff
+
+When `prepareDirectTask` selects this owner, treat the returned handoff descriptor's exact `input`
+object as `DIRECT_TASK_HANDOFF` and consume it before the project-creation contract or normal
+entry-point flow:
+
+```text
+DIRECT_TASK_HANDOFF: {
+  "schemaVersion": 1,
+  "workflow": "direct-task",
+  "effectiveProfile": "strict",
+  "task": "<exact non-empty request>",
+  "scope": <validated direct-task scope>,
+  "verification": <ready reliable verification strategy>,
+  "decisionHandoff": { "run_id": "<id>", "path": "<absolute path>", "content_hash": "sha256:<64 lowercase hex>" },
+  "upstreamArtifacts": [<exact ratified spec artifact>],
+  "returnTarget": { "kind": "current-turn", "name": "direct-task" }
+}
+```
+
+Reject unknown/missing fields, simultaneous project-creation return fields, or anything except one
+upstream artifact with `status: "ratified"`, `audited: true`,
+`owner: "acid-prophet:write-spec"`, and the exact same `decisionHandoff`. Import
+`discoverGitContext` and `consumeManifestHandoff` only from the install-local
+`${CLAUDE_PLUGIN_ROOT}/lib/workflow/index.mjs`; use that bundle's `bundle.json` source hash as
+`policyHash`. Consume the descriptor against the current Git context without reclassification or
+recovery. Require the persisted decision to have `workflow === "direct-task"`,
+`effectiveProfile === "strict"`, and enabled immutable `verification`, and require the returned
+handoff to equal the input. Any stale, expired, corrupt, out-of-scope, drifted, or mismatched state
+blocks. Never invoke or require Warden.
+
+Resolve the source spec only from `upstreamArtifacts[0]`, re-hash its exact bytes, require the hash
+and owner gates to match, and run the normal report-only spec audit and Acceptance traceability
+checks. For this bounded direct-task mode, produce and validate only `plan.md`; it must cover the
+input scope and exact verification commands. Do not create the project-only inventory, contracts,
+quickstart, codebase map, or constitution artifacts, and do not update the workflow manifest. After
+validation, hash the exact plan bytes and return immediately to `returnTarget` with:
+
+```text
+DIRECT_TASK_ARTIFACT: {
+  "id": "<safe plan id>",
+  "path": "<repository-relative plan path>",
+  "contentHash": "sha256:<64 lowercase hex>",
+  "status": "validated",
+  "audited": true,
+  "owner": "acid-prophet:write-plan",
+  "decisionHandoff": <exact unchanged DIRECT_TASK_HANDOFF.decisionHandoff>
+}
+RETURN_TARGET: { "kind": "current-turn", "name": "direct-task" }
+```
+
+Return no project inventory and perform no Linear mutation. The caller inserts this exact object as
+`artifacts.plan` beside the unchanged spec artifact and resumes `prepareDirectTask` in the same run.
+
 ## Project-creation artifact handoff
 
 When the invocation includes the fields below, this skill is an artifact owner inside an existing
@@ -99,7 +153,12 @@ checks needed to validate them. Never mark an unrequested artifact complete.
    - Verify git repo: `PROJECT_ROOT = $(git rev-parse --show-toplevel)`. Abort if not in a repo.
    - Ensure `${PROJECT_ROOT}/docs/acid-prophet/plans/` exists; create if missing.
    - For a project-creation handoff, assign `currentRun = consumeManifestHandoff(...)` before reading artifacts and verify that every already-complete inventory path still matches its `content_hash`. A changed upstream spec or inventory invalidates this plan attempt and returns to `linear-devotee:create-project` for cascade rebuild.
+   - For a direct-task handoff, consume and validate the closed contract above before reading the
+     upstream spec. Keep its descriptor unchanged throughout the owner run.
 2. Resolve the spec:
+   - For a direct-task handoff, resolve the spec only from `upstreamArtifacts[0]`; require its exact
+     path, content hash, owner, status, audit flag, and decision identity. Do not select by branch or
+     filename.
    - For a project-creation handoff, resolve the spec only from the complete `audited-spec` inventory entry. Require its path/hash to match; do not choose another spec by branch or filename.
    - If `$ARGUMENTS` contains a spec path, use it. Resolve to absolute; verify file exists.
    - Otherwise, scan `docs/acid-prophet/specs/`. Match by current branch's Linear identifier, then by closest filename slug, then ask if still ambiguous.
@@ -241,6 +300,9 @@ checks needed to validate them. Never mark an unrequested artifact complete.
     - Ask exactly: `Commit the artifact? (y / no)`. On `y`, run `git add docs/acid-prophet/plans/<slug>/ && git commit -m "docs(acid-prophet): plan for <slug>"`. On `no`, leave the validated artifact set uncommitted and continue. Never use `--no-verify`.
     - For a project-creation handoff, hash only the requested validated outputs (and applicable constitution bytes) in canonical relative-path order. Mark only requested, gate-passing entries complete in `ARTIFACT_INVENTORY`, recompute `ARTIFACT_INVENTORY_HASH`, and attach their id/path/content-hash references to the same manifest through `writeDecisionManifest`. Preserve `currentRun.manifest.decision`, `currentRun.manifest.expiresAt`, and extra valid refs; pass `expectedRevision: currentRun.manifest.revision` plus `observedContentHash: currentRun.contentHash`, then assign the refreshed persisted result back to `currentRun`. A stale revision stops with `workflow-state-conflict`.
 12. Handoff:
+    - If `DIRECT_TASK_HANDOFF` was supplied, return the exact `DIRECT_TASK_ARTIFACT` contract above
+      immediately. Do not show the generic next-step menu, invoke `linear-devotee:create-project`,
+      or refresh the manifest descriptor.
     - If `RETURN_TARGET: linear-devotee:create-project` was supplied, skip the generic next-step menu and return immediately with no Linear mutation:
       ```text
       WORKFLOW_HANDOFF:

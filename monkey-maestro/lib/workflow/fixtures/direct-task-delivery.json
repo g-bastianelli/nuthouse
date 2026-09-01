@@ -1,4 +1,5 @@
 {
+  "task": "Implement adaptive direct-task delivery",
   "decisionHandoff": {
     "run_id": "direct-task-fixture",
     "path": "/tmp/nuthouse/workflow/runs/direct-task-fixture.json",
@@ -53,6 +54,42 @@
       ],
       "downstream": ["web"],
       "summary": "2 changed files → 2 affected projects, 1 downstream dependent"
+    }
+  },
+  "darkMoonScope": {
+    "approvedPaths": ["apps/app/src/task.mjs"],
+    "protectedPaths": ["README.md"],
+    "moonWorkspace": true,
+    "moon": {
+      "moonRoot": "/workspace",
+      "base": "working-tree",
+      "changedFiles": [],
+      "affected": [],
+      "downstream": [],
+      "summary": "_dark_"
+    }
+  },
+  "plannedMoonScope": {
+    "approvedPaths": ["apps/app/src/task.mjs"],
+    "protectedPaths": ["README.md"],
+    "moonWorkspace": true,
+    "moon": {
+      "moonRoot": "/workspace",
+      "base": "planned-paths",
+      "changedFiles": [],
+      "affected": [
+        {
+          "id": "app",
+          "source": "apps/app",
+          "layer": "application",
+          "stack": "frontend",
+          "tags": [],
+          "tasks": ["typecheck", "lint", "test"],
+          "reason": "planned"
+        }
+      ],
+      "downstream": ["web"],
+      "summary": "1 approved path → 1 planned affected project, 1 downstream dependent"
     }
   },
   "moonVerifier": {
