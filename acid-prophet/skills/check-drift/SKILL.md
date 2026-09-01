@@ -1,10 +1,11 @@
 ---
 name: check-drift
-description: Use on a feature branch before or during PR creation — detects drift between the PR diff and the SDD Acceptance/Constraints of the linked project. Prefers the repo spec markdown as primary truth, falls back to Linear project context only when no spec markdown is found, generates a structured drift report, and optionally posts it as a PR comment.
+description: Use during strict issue planning or on a feature branch before/during PR creation to detect drift against the authoritative SDD Acceptance and constraints. Planned-intent mode emits hash-bound local evidence; branch mode can optionally post the report as a PR comment.
+argument-hint: "[--plan <path> --spec <path> --workflow-decision <handoff>]"
 effort: high
-allowed-tools: Bash(git diff:*), Bash(git log:*), Bash(git branch:*), Read, Glob, Grep, Agent
+allowed-tools: Bash(git diff:*), Bash(git log:*), Bash(git branch:*), Bash(node:*), Read, Write, Glob, Grep, Agent
 paths: ["docs/acid-prophet/**"]
-disallowed-tools: Write, Edit, NotebookEdit
+disallowed-tools: Edit, NotebookEdit
 ---
 
 > Workflow kernel: When this skill needs a workflow/profile decision and no valid parent manifest is supplied, use this plugin's install-local `lib/workflow/index.mjs` explicit-skill resolver. Claude hooks are optional accelerators; a missing or failed hook falls back once to that local path. Warden must not be required. When verification is required and Moon Moth is unavailable, use non-empty commands from repository-owned instructions or build metadata, or block completion.
@@ -27,6 +28,44 @@ Rigid drift-detection gate. Match the user's language; keep technical identifier
 - Recent commits: !`git log --oneline -15`
 
 ## Workflow
+
+### Strict issue-delivery mode
+
+Use this mode when Linear Devotee supplies all three named inputs before implementation:
+
+```text
+PLAN_FILE: { path: <absolute path>, content_hash: sha256:<hex> }
+SPEC_FILE: { path: <absolute path>, content_hash: sha256:<hex> }
+WORKFLOW_DECISION: { run_id: <id>, path: <absolute manifest path>, content_hash: sha256:<hex> }
+EFFECTIVE_PROFILE: strict
+```
+
+1. Validate `WORKFLOW_DECISION` through Acid Prophet's install-local
+   `lib/workflow/index.mjs` consumer. Require `issue-delivery`, effective `strict`, an
+   in-scope manifest, and exact content/policy hashes. Warden is not required.
+2. Read `PLAN_FILE` and `SPEC_FILE`, recompute their exact `sha256:` hashes, and refuse
+   stale, missing, or mismatched inputs. This analysis is read-only with respect to the
+   plan, source spec, repository code, Linear, and GitHub.
+3. Compare planned intent (Files, Acceptance traceability, Steps, Verify, Risks, and Out
+   of scope) against the source spec's Problem/Solution, Architecture, Constraints,
+   Error handling, active Acceptance, Testing approach, and Non-goals. Classify every
+   active `AC-###` and normative constraint as `CLEAN | DRIFT | AMBIGUOUS | UNRELATED`.
+   A project-plan conflict is `DRIFT`; missing evidence is `AMBIGUOUS`.
+4. Canonicalize the result as version-one JSON and write only the report artifact to
+   `${CLAUDE_PLUGIN_DATA}/issue-delivery-drift-<run_id>.json`. Include plan/spec/decision
+   paths and hashes, stable findings, counts, and `status: clean | blocked`; never include
+   prompt text, source contents, Linear bodies, secrets, or complete logs.
+5. Re-read the bytes and return:
+
+   ```text
+   DRIFT_EVIDENCE: { path: <absolute report path>, content_hash: sha256:<hex>, status: <clean | blocked> }
+   ```
+
+   Any `DRIFT`/`AMBIGUOUS` finding produces `status: blocked`. Never patch the spec or
+   offer a PR comment in this mode. Return after the evidence report; do not continue to
+   branch mode.
+
+### Branch / PR mode
 
 1. Preconditions:
    - Verify git repo (`git rev-parse --git-dir`). Abort if not in a repo.
@@ -66,6 +105,7 @@ acid-prophet:check-drift report
 ## Never
 
 - Mutate Linear issues, projects, or spec files.
+- Patch the spec, plan, or repository code while producing `DRIFT_EVIDENCE`.
 - Post a PR comment without explicit user confirmation.
 - Skip step 1 preconditions.
 - Run `git push`, `git rebase`, or `git commit`.

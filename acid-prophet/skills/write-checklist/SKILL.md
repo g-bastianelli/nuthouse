@@ -1,10 +1,10 @@
 ---
 name: write-checklist
-description: Use when a feature is approaching QA or PR review and the team needs a derived, per-spec acceptance checklist — reads an approved spec, generates a concrete `- [ ]` checklist of verifications drawn from its Acceptance / Constraints / Non-goals sections, writes it to docs/acid-prophet/checklists/<slug>.md, and optionally posts it as a PR comment. Complements `check-drift` (drift = spec↔code mismatch · checklist = did we actually validate the AC).
-argument-hint: [spec-path]
+description: Use during strict issue planning or when a feature approaches QA/PR review to derive a per-spec acceptance checklist. It preserves source AC ids, writes an open checklist, and never treats checklist generation as human feature acceptance.
+argument-hint: "[spec-path] [--plan <path> --workflow-decision <handoff>]"
 model: sonnet
 effort: high
-allowed-tools: Read, Glob, Grep, Bash
+allowed-tools: Read, Glob, Grep, Bash, Bash(node:*)
 disallowed-tools: Edit, NotebookEdit
 ---
 
@@ -35,6 +35,34 @@ Adapt all output to match the user's language. Technical identifiers (file paths
 The user has a spec under `docs/acid-prophet/specs/` and wants a concrete validation checklist before merging the implementing PR. Typically called: at PR-open, right before a manual QA pass, or when `check-drift` returns DRIFT / AMBIGUOUS findings the user wants to systematically verify.
 
 ## Workflow
+
+### Strict issue-delivery mode
+
+Use this mode when Linear Devotee supplies `PLAN_FILE`, `SPEC_FILE`,
+`WORKFLOW_DECISION`, and named `DRIFT_EVIDENCE: { path, content_hash, status: clean }`:
+
+1. Validate the workflow manifest through this plugin's install-local resolver. Require
+   `issue-delivery`, effective `strict`, and exact run/path/content hash. Warden is not
+   required.
+2. Recompute the plan, spec, and drift-evidence `sha256:` hashes. Require the plan to be
+   validated and the supplied drift evidence to be `clean` and bound to those same
+   plan/spec/decision hashes.
+3. Continue through the ordinary extraction, draft, and user review gate below, using
+   the explicit `SPEC_FILE`. Strict mode does not skip review, auto-check an item, or
+   accept the feature.
+4. Write the accepted checklist with `status: open` and record the exact decision, plan,
+   spec, and drift-evidence hashes it derives from. Re-read its final bytes and return
+   the named result:
+
+   ```text
+   CHECKLIST_EVIDENCE: { path: <absolute checklist path>, content_hash: sha256:<hex>, status: open }
+   ```
+
+   The artifact is required verification guidance. Human feature acceptance remains a
+   later explicit gate, and manual merge remains outside this skill. Never mark the
+   checklist or feature accepted merely because the artifact was generated.
+
+### Ordinary QA / PR mode
 
 1. Preconditions:
    - Verify git repo: `PROJECT_ROOT = $(git rev-parse --show-toplevel)`. Abort if not in a repo.
@@ -107,6 +135,8 @@ acid-prophet:write-checklist report
 ## Never
 
 - Invent a verification step the spec doesn't support — emit `[NEEDS CLARIFICATION: ...]` instead.
+- Mark a checklist item, checklist, or feature accepted automatically; generated
+  checklists always start with `status: open`.
 - Renumber or synthesize an `AC-###` id outside the source spec.
 - Mutate the source spec.
 - Post a PR comment without explicit user choice of `(p)`.

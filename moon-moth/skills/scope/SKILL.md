@@ -3,7 +3,7 @@ name: scope
 description: Use at the start of any task in a moon monorepo to scope work to the affected project graph — runs `moon query changed-files`/`affected`, dispatches the affected-scout subagent, and returns a structured scope map (affected projects, layers, tasks, downstream blast radius). Prefer this over blindly scanning the repo when working in a repo with a `.moon/` workspace.
 argument-hint: [working-tree|default-branch|<base>..<head>]
 effort: high
-allowed-tools: Bash(moon query:*), Bash(git status:*), Bash(git diff:*), Read, Agent
+allowed-tools: Bash(moon query:*), Bash(git status:*), Bash(git diff:*), Bash(node:*), Read, Agent
 ---
 
 > Workflow kernel: When this skill needs a workflow/profile decision and no valid parent manifest is supplied, use this plugin's install-local `lib/workflow/index.mjs` explicit-skill resolver. Claude hooks are optional accelerators; a missing or failed hook falls back once to that local path. Warden must not be required. When verification is required and Moon Moth is unavailable, use non-empty commands from repository-owned instructions or build metadata, or block completion.
@@ -47,16 +47,25 @@ land only there.
 
 ## Step 0 — Preconditions
 
-1. Find the moon workspace root: the `Workspace check` line in `## Context`
+1. When the caller supplies an `ISSUE_DELIVERY_PACKET`, require its named
+   `PLAN_FILE`, `SPEC_FILE`, `RELEVANT_FILES`, and `WORKFLOW_DECISION`. Validate the
+   decision through this plugin's install-local manifest consumer, recompute immutable
+   artifact `content_hash` values, and require every relevant target's current bytes to
+   match its pre-implementation `before_hash` before querying Moon. A missing artifact
+   or hash mismatch blocks; never silently downgrade the packet to prose.
+2. Find the moon workspace root: the `Workspace check` line in `## Context`
    already answers for cwd — `moon workspace` means cwd is the root. On
    `no .moon here`, walk up from cwd for a directory containing `.moon/`.
-   If none is found, abort: _"pas de lampe ici — ce n'est pas un
-   workspace moon (`.moon/` introuvable). rien à éclairer."_ and suggest the
-   caller proceed without moon scoping.
-2. Capture `PROJECT_ROOT` = the moon workspace root (it is the git root in a
+   If none is found and an issue-delivery packet exists, preserve the complete packet
+   as a repository-native **terminal handoff** for `moon-moth:verify` after
+   implementation, then return immediately. Do not continue to the Moon-root,
+   `moon --version`, base-selection, or affected-scout steps. Without such a packet,
+   abort: _"pas de lampe ici — ce n'est pas un workspace moon (`.moon/` introuvable).
+   rien à éclairer."_ and suggest the caller proceed without Moon.
+3. Capture `PROJECT_ROOT` = the moon workspace root (it is the git root in a
    standard moon repo). Run `moon --version` to confirm the binary is reachable;
    if it fails, abort and tell the user moon is not installed/on PATH.
-3. If the artifact will be persisted (Step 4), ensure
+4. If the artifact will be persisted (Step 4), ensure
    `${PROJECT_ROOT}/docs/moon-moth/scope/` exists.
 
 ## Step 1 — Pick the base
@@ -136,7 +145,16 @@ TASK: <what to implement, from the user's intent>
 SCOPE_MAP:
 <full scope map JSON from Step 2, verbatim>
 SCOPE_MAP_FILE: ${PROJECT_ROOT}/docs/moon-moth/scope/<file>.json | _not-persisted_
+ISSUE_DELIVERY_PACKET:
+  PLAN_FILE: { path: <abs path>, content_hash: sha256:<hex> }
+  SPEC_FILE: { path: <abs path>, content_hash: sha256:<hex> }
+  RELEVANT_FILES: [{ path: <abs path>, before_hash: sha256:<hex> }]
+  WORKFLOW_DECISION: { run_id: <id>, path: <abs path>, content_hash: sha256:<hex> }
+  EFFECTIVE_PROFILE: <quick | standard | strict>
 ```
+
+When the packet was supplied, pass it verbatim after validation. Moon Moth appends scope;
+it never replaces Linear Devotee's named authority.
 
 Branch on the response. Exit the skill when the chosen branch finishes.
 

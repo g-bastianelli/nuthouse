@@ -31,6 +31,12 @@ Maestro never changes Linear lifecycle or dependency relations.
 Require one exact Linear project id. Do not accept extra execution modes. Run one bounded
 dispatch pass and return; a later Linear change needs a new invocation.
 
+When the caller explicitly enters relay mode, require `WORKFLOW_DECISION` with the parent
+manifest `run_id`, path, content hash, and effective profile. Validate it through this
+plugin's install-local consumer and project the shared workflow baton before Linear or
+Superset mutation. A missing field or mismatch launches nothing. Ordinary non-relay
+orchestration does not invent a baton.
+
 ## Step 1 — Load and plan once
 
 1. Dispatch `monkey-maestro:control-loader` and
@@ -81,7 +87,9 @@ not `idle`.
 
 For every valid task, derive one deterministic workspace name from the issue identifier
 and render the complete worker prompt before any creation call. The prompt is immutable
-for this pass.
+for this pass. In relay mode bind the validated baton into that immutable worker prompt
+as exact `WORKFLOW_RUN_ID`, `WORKFLOW_PROFILE`, and `WORKFLOW_DECISION_HASH` fields. A
+missing value or mismatch launches nothing for that candidate.
 
 ## Step 3 — Create or reuse workspaces directly
 
@@ -168,11 +176,22 @@ orchestration invocations for the same project concurrently.
 Every worker prompt starts with `linear-devotee:greet <issueId>` and includes the issue
 objective, scope, Acceptance, required verification, and these ownership constraints:
 
+```text
+WORKFLOW_RUN_ID: <parent run_id>              # relay mode only
+WORKFLOW_PROFILE: <parent effective profile> # relay mode only
+WORKFLOW_DECISION_HASH: sha256:<hex>          # relay mode only
+```
+
+These fields are decision identity, not a claim that the parent worktree manifest is
+valid in the child worktree. Greet validates/resolves the child's local decision.
+
 - own only this issue and its task-linked workspace;
 - inspect repository instructions before editing;
 - do not revert edits made by others;
 - do not merge, push, or mutate dependencies;
 - leave Linear lifecycle changes to `linear-devotee:greet` and the user workflow.
+- retain human feature acceptance and manual merge as mandatory gates;
+- never infer Linear completion from verification, a worker envelope, commit, or PR.
 
 Require exactly one terminal handoff envelope:
 

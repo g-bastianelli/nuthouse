@@ -2,7 +2,7 @@
 name: pr
 description: Use automatically when the user asks to create, open, draft, or publish a GitHub PR, pull request, review request, "ouvre une PR", "fais la PR", "crée une pull request", or says the branch is ready for review. Drafts from branch history and, after confirmation, publishes the branch before creating the PR. Do not use for commits, plain git status, diff, log, push-only, rebase, or non-GitHub merge requests.
 effort: high
-allowed-tools: Bash(git log:*), Bash(git branch:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(gh auth status:*), Bash(gh repo view:*), Bash(cat:*), Read, Agent, mcp__claude_ai_Linear__get_issue
+allowed-tools: Bash(git log:*), Bash(git branch:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(gh auth status:*), Bash(gh repo view:*), Bash(cat:*), Bash(node:*), Read, Agent, mcp__claude_ai_Linear__get_issue
 ---
 
 > Workflow kernel: When this skill needs a workflow/profile decision and no valid parent manifest is supplied, use this plugin's install-local `lib/workflow/index.mjs` explicit-skill resolver. Claude hooks are optional accelerators; a missing or failed hook falls back once to that local path. Warden must not be required. When verification is required and Moon Moth is unavailable, use non-empty commands from repository-owned instructions or build metadata, or block completion.
@@ -37,6 +37,25 @@ is printed, revert to the session default voice immediately.
 ## Workflow
 
 1. Preconditions:
+   - Resolve the workflow decision before applying any Git gate. When a named
+     `WORKFLOW_DECISION` handoff exists, validate it through this plugin's install-local
+     manifest consumer. When the handoff is missing, perform at most one authoritative
+     local explicit-skill resolution from the current request, branch, Linear issue
+     evidence, and repository configuration, persist the result, then validate its exact
+     three-field handoff. An ambiguous, blocked, invalid, or policy-drifting resolution
+     refuses publication; never treat absent session context as `direct-task`.
+   - When the resolved workflow is `issue-delivery`, validate the exact manifest handoff
+     and re-hash the named
+     `VERIFICATION_EVIDENCE`, require `status: clean`, and require it to bind the same
+     decision plus immutable issue artifacts and rebound mutable targets. Evidence from
+     before a commit is stale: require evidence `head_oid` to equal the current HEAD and
+     require fresh verification whenever it does not. Recompute the index-independent
+     `worktree_snapshot_hash` and require an exact match before PR drafting. Require the
+     verified changed-path set to be empty: PR evidence must describe the committed
+     `HEAD`, not uncommitted working-tree content. Missing, failed, stale, dirty, or
+     mismatched verification must refuse PR drafting and publication. An issue-delivery
+     operation with missing verification evidence must refuse the PR even when it
+     entered this skill directly.
    - Verify `gh` is available and authenticated: `gh auth status`. Abort with `gh auth login` instruction if not.
    - Infer base branch: `gh repo view --json defaultBranchRef` or fallback `main`.
    - Abort on a detached `HEAD`; branch publication requires a named current branch.
@@ -50,12 +69,23 @@ is printed, revert to the session default voice immediately.
    - Display the proposed title, description, branch, base, and exact `HEAD_OID`, then wait for confirmation or an edit request. State that confirmation authorizes publishing only that commit to the same-named branch on the resolved Git remote, then creating the PR. A Maestro project control record is not PR approval.
 3. Create PR:
    - On confirmation: re-dispatch the same agent with `action: execute`, including the approved base, branch, `HEAD_OID`, title, and body.
+   - Immediately before that publication dispatch, re-read `VERIFICATION_EVIDENCE`,
+     recompute `HEAD_OID` and `WORKTREE_SNAPSHOT_HASH` from the current source state,
+     and require exact equality with both the evidence and approved proposal. Any change
+     requires fresh verification and a newly confirmed proposal; do not push.
    - Before any mutation, the agent must verify that the current branch and `git rev-parse HEAD` still equal the approved values. If either changed, return to step 2 with fresh context and require a new confirmation.
    - The agent must publish the approved commit to `refs/heads/<BRANCH>` before `gh pr create`; this is part of the confirmed mutation, not a separate prompt.
    - Receive `{ url: string, branch: string, headOid: string, remote: string }`.
    - On rejection: offer to regenerate or cancel. Never create PR silently.
 4. Report and hand off:
    - Return result.
+   - In issue-delivery relay mode, report `Human feature acceptance: pending
+(mandatory)` unless explicit human acceptance evidence already exists. This gate is
+     distinct from PR approval and can never be inferred from checklist generation,
+     passing checks, review approval, or an open PR.
+   - Always report `Merge: manual`. Manual merge remains mandatory; neither this skill,
+     GitHub review state, nor Maestro may merge the PR. PR creation also does not
+     authorize Linear completion.
    - Stop after the report. If the issue belongs to an active Maestro project, mention only this optional next action: after Linear records the issue completed, the user or a known workflow may invoke `monkey-maestro:orchestrate <project-id>`. Never invoke it automatically and never treat the PR as Linear completion. Reserve `monkey-maestro:reconcile <project-id>` for an explicit Superset runtime-correlation audit or telemetry repair.
 
 ## Final Report
@@ -67,6 +97,8 @@ git-gremlin:pr report
   Base:   <base branch>
   Branch: <branch> published via <remote>
   HEAD:   <approved HEAD_OID>
+  Human feature acceptance: pending (mandatory) | accepted (explicit human evidence)
+  Merge:  manual
   Project execution: optional monkey-maestro:orchestrate <project-id> after Linear completion | n/a
 ```
 
@@ -80,6 +112,11 @@ git-gremlin:pr report
 - Create a PR without explicit user confirmation.
 - Skip the `gh auth status` check.
 - Retry silently after `git push` or `gh pr create` failure — surface stderr verbatim and stop.
+- Automatically invoke `monkey-maestro`, accept a feature, merge, or claim Linear
+  completion from PR creation, review state, verification, or checklist evidence.
+- Treat a PR as Linear completion; Linear lifecycle remains external and explicit.
+- Reuse pre-commit or otherwise stale verification when `head_oid` or
+  `worktree_snapshot_hash` no longer matches the source being published.
 
 ## Subagent dispatch (Steps 2-3)
 

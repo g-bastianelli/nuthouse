@@ -1,8 +1,8 @@
 ---
 name: verify
-description: Use after editing code in a moon monorepo, before commit or PR, to verify the change — runs affected :typecheck/:lint/:test via the verify-runner subagent, dispatches change-auditor for an adversarial review of the diff against scope, reports evidence (not assertion), and loops back on a torn wing (failing check). Prefer this over a blind repo-wide test run.
+description: Use after editing, before commit or PR, to verify an issue-delivery packet. Uses Moon's affected graph when present and documented repository-native commands otherwise; returns hash-bound evidence and loops back on failure.
 effort: high
-allowed-tools: Bash(moon run:*), Bash(moon query:*), Bash(git diff:*), Bash(git branch --show-current), Bash(git rev-parse:*), Bash(cat:*), Read, Agent, mcp__claude_ai_Linear__get_issue
+allowed-tools: Bash, Read, Write, Agent, mcp__claude_ai_Linear__get_issue
 ---
 
 > Workflow kernel: When this skill needs a workflow/profile decision and no valid parent manifest is supplied, use this plugin's install-local `lib/workflow/index.mjs` explicit-skill resolver. Claude hooks are optional accelerators; a missing or failed hook falls back once to that local path. Warden must not be required. When verification is required and Moon Moth is unavailable, use non-empty commands from repository-owned instructions or build metadata, or block completion.
@@ -38,17 +38,43 @@ exists — and refuses to call the flight clean on assertion alone.
 
 ## Step 0 — Preconditions
 
-1. Confirm a moon workspace (`.moon/` up-tree); capture `PROJECT_ROOT` = moon
-   root. If not a moon repo, abort and suggest running the repo's own checks.
-2. Obtain the affected scope: read a persisted scope map under
+1. When invoked from issue delivery, require `ISSUE_DELIVERY_PACKET` with the named
+   `PLAN_FILE`, `SPEC_FILE`, `RELEVANT_FILES`, and `WORKFLOW_DECISION`.
+   - Treat the plan, spec, workflow decision, project plan, drift evidence, and checklist
+     evidence as **immutable inputs**. Validate the decision through this plugin's
+     install-local consumer and recompute each immutable `content_hash`; any mismatch
+     blocks verification.
+   - Treat `RELEVANT_FILES` as **mutable targets**. Preserve each supplied
+     `before_hash` as provenance, require its canonical absolute path, and require the
+     `RELEVANT_FILES` path set to remain distinct and unchanged. Do not compare current
+     bytes to `before_hash` after implementation. Instead rebind every existing target
+     to `verified_content_hash: sha256:<hex>` and record a deletion marker for a removed
+     target. A path outside the repository or a mutated packet path set blocks.
+2. Confirm a moon workspace (`.moon/` up-tree); capture `PROJECT_ROOT` = moon root.
+   When Moon is absent, use `resolveVerificationStrategy` from the install-local bundle
+   to select non-empty repository-native commands sourced only from repository
+   instructions or build metadata. If no reliable native command exists, block; never
+   claim verification from narrative guidance.
+3. In a Moon workspace, obtain the affected scope: read a persisted scope map under
    `${PROJECT_ROOT}/docs/moon-moth/scope/`, else run `moon-moth:scope` first.
    The set of `tasks` per affected project tells you which targets to run.
+4. Immediately before Step 1, capture the **pre-check Git snapshot** as
+   `PRECHECK_HEAD_OID = git rev-parse HEAD` plus an index-independent canonical
+   `PRECHECK_WORKTREE_SNAPSHOT`. Build it from the bytewise-sorted
+   repository-relative path union of tracked paths changed from `HEAD` and non-ignored
+   untracked paths. For each changed path record its file type/mode plus
+   `verified_content_hash`, or an explicit deletion marker, then hash the canonical
+   JSON as `PRECHECK_WORKTREE_SNAPSHOT_HASH`. Do not run any verification command
+   before this pre-check snapshot is complete.
 
-## Step 1 — Run the affected checks (evidence)
+## Step 1 — Run checks (evidence)
 
-Dispatch the logical `moon-moth:verify-runner` agent (see `## Subagent dispatch`). It executes the
-affected tasks via the commands in the `moon-moth:moon-commands` knowledge
-skill (`${CLAUDE_PLUGIN_ROOT}/skills/moon-commands/SKILL.md`) — typically:
+### Moon branch
+
+Only when `.moon/` exists, dispatch the logical `moon-moth:verify-runner` agent (see
+`## Subagent dispatch`). It executes the affected tasks via the commands in the
+`moon-moth:moon-commands` knowledge skill
+(`${CLAUDE_PLUGIN_ROOT}/skills/moon-commands/SKILL.md`) — typically:
 
 ```
 moon run :typecheck :lint :test --affected --downstream deep
@@ -61,13 +87,23 @@ stdout/stderr yourself.
 **Evidence over assertion:** never report a check as passing without the actual
 command result. Quote failing output.
 
+### Repository-native branch
+
+When `.moon/` is absent, do not dispatch `moon-moth:verify-runner` and do not apply its
+Moon-only command restrictions. Execute every exact command returned by the install-local
+`resolveVerificationStrategy` in the repository root using the unrestricted Bash
+capability declared by this skill. The resolver may select `bun`, `npm`, `pnpm`, `yarn`,
+or another repository-owned executable; never rewrite or approximate a declared command.
+Capture each exit status and concise output. Do not mix a failed native command with
+successful Moon evidence or skip a declared command.
+
 ## Step 2 — Adversarial review (change-auditor)
 
-In parallel with — or right after — Step 1, dispatch `moon-moth:change-auditor`
-to review the diff against the affected scope: scope creep (edits outside the
-affected set), missing tests for new behaviour, repo-convention violations the
-linter can't catch (e.g. boundary leaks between layers). It returns findings,
-each marked real/uncertain.
+In the Moon branch, in parallel with — or right after — Step 1, dispatch
+`moon-moth:change-auditor` to review the diff against the affected scope: scope creep,
+missing tests for new behaviour, and repo-convention violations. In the repository-native
+branch, perform the equivalent review against the issue plan and repository instructions
+without inventing a Moon scope. Both branches return findings marked real/uncertain.
 
 ## Step 3 — Loop on a torn wing
 
@@ -86,12 +122,17 @@ If any check fails or the auditor flags a real blocker:
    SCOPE: <affected project ids>
    ```
 
-3. Re-run only the affected task that failed (`moon run <project>:<task>`) until
-   green. Do not declare a clean flight while a wing is torn.
+3. In the Moon branch, re-run only the affected task that failed
+   (`moon run <project>:<task>`). In the repository-native branch, re-run only the exact
+   failed resolver command. Continue until green; do not declare a clean flight while a
+   wing is torn.
 
 On a torn wing, report the failing evidence verbatim and do not offer commit/PR until the
 user fixes and re-verifies. Verification owns no Maestro state and never stops or starts
 project execution.
+
+This applies equally to repository-native verification: when verification fails, do not
+offer commit/PR.
 
 ## Step 4 — Final report + hand-off
 
@@ -107,6 +148,33 @@ moon-moth:verify report
 
 A `clean flight 🌙` line is allowed **only** when every affected check passed on
 real output and the auditor found no real blocker.
+
+Before the hand-off menu, write canonical version-one evidence to
+`${CLAUDE_PLUGIN_DATA}/issue-delivery-verification-<run_id>.json` when an
+`ISSUE_DELIVERY_PACKET` exists. Bind the exact workflow decision hash, input artifact
+hashes, rebound mutable targets, Moon scope or repository-native command list, exit
+results, auditor verdict, and the exact verified Git state:
+
+1. Use the pre-check Git snapshot captured in Step 0; never create the first snapshot
+   here. `verified_files` is the union of its changed paths and every mutable target,
+   preserving each target's `before_hash`. Treat `PRECHECK_HEAD_OID` and
+   `PRECHECK_WORKTREE_SNAPSHOT_HASH` as the exact state the checks evaluated.
+2. After all checks and review, recompute the same `HEAD_OID`, changed path set,
+   per-path file type/mode/content hashes, and canonical snapshot hash. Compare the
+   pre-check Git snapshot with this post-check snapshot. If either snapshot differs,
+   discard the results and rerun verification on the new state.
+3. Persist lowercase wire fields `head_oid`, `worktree_snapshot_hash`, and
+   `verified_files` alongside the evidence. Staging alone does not affect this snapshot;
+   editing, adding, deleting, changing mode, or committing does.
+
+Re-read the artifact and emit:
+
+```text
+VERIFICATION_EVIDENCE: { path: <absolute path>, content_hash: sha256:<hex>, status: clean }
+```
+
+Never include complete logs, source contents, prompts, Linear bodies, or secrets in the
+evidence artifact. A write/read/hash failure changes the verdict to a torn wing.
 
 On a clean flight, present the hand-off menu:
 
@@ -150,5 +218,7 @@ violations. Return findings marked real | uncertain.`,
 - Run `git push`, `git commit`, or `git rebase`.
 - Declare a check passing without real command output (evidence over assertion).
 - Run repo-wide `:test` when a scoped affected set exists.
-- Run raw `tsc`/`eslint`/`vitest`/`bun test` directly — always via `moon run`.
+- In the Moon branch, run raw `tsc`/`eslint`/`vitest`/`bun test` directly — use
+  `moon run`. Raw `bun test` and other package-manager commands are forbidden only in
+  the Moon branch; the repository-native branch must run the resolver's exact commands.
 - Mutate external services without explicit user confirmation.

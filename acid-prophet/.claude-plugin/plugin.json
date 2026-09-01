@@ -2,7 +2,7 @@
   "name": "acid-prophet",
   "displayName": "Acid Prophet",
   "description": "Spec-driven development pipeline with stable AC traceability. Constitution → EARS spec with AC-### ids → audit gates → dependency-ordered plan and quickstart evidence → acceptance checklist → PR drift check. Blocks Linear handoff until every gate passes.",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "author": {
     "name": "g-bastianelli"
   },
