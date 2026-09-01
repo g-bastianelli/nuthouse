@@ -62,6 +62,12 @@ Use this skill for an explicit `warden:route` invocation or a request for Warden
 6. Report the result:
    - Render every field in the final report.
    - A non-null target is a declarative handoff descriptor only. End the skill without invoking it.
+   - A `{ kind: "current-turn", name: "direct-task" }` target returns control to the caller. The
+     caller continues through `prepareDirectTask` and `evaluateDirectTaskCompletion` from an
+     available participating plugin's install-local `lib/workflow/index.mjs`; `quick`, `standard`,
+     and `strict` preparation, Moon/native scope, Acid Prophet artifact ownership, and executed
+     verification evidence remain outside Warden. This current-turn contract also works when Warden
+     was never invoked.
 
 ## Final Report
 

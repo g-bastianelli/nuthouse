@@ -1,0 +1,146 @@
+{
+  "decisionHandoff": {
+    "run_id": "direct-task-fixture",
+    "path": "/tmp/nuthouse/workflow/runs/direct-task-fixture.json",
+    "content_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "scope": {
+    "approvedPaths": ["src/task.mjs", "tests/task.test.mjs"],
+    "protectedPaths": ["README.md"],
+    "moonWorkspace": false
+  },
+  "nativeVerification": {
+    "sources": [
+      {
+        "source": "repository-instructions",
+        "path": "CLAUDE.md",
+        "commands": ["bun run lint"]
+      },
+      {
+        "source": "repository-build-metadata",
+        "path": "package.json",
+        "commands": ["bun test", "bun run lint"]
+      }
+    ]
+  },
+  "moonScope": {
+    "approvedPaths": ["apps/app/src/task.mjs", "packages/shared/tests/task.test.mjs"],
+    "protectedPaths": ["README.md"],
+    "moonWorkspace": true,
+    "moon": {
+      "moonRoot": "/workspace",
+      "base": "working-tree",
+      "changedFiles": ["apps/app/src/task.mjs", "packages/shared/tests/task.test.mjs"],
+      "affected": [
+        {
+          "id": "app",
+          "source": "apps/app",
+          "layer": "application",
+          "stack": "frontend",
+          "tags": [],
+          "tasks": ["typecheck", "lint", "test"],
+          "reason": "changed"
+        },
+        {
+          "id": "shared",
+          "source": "packages/shared",
+          "layer": "library",
+          "stack": "frontend",
+          "tags": [],
+          "tasks": ["typecheck", "test"],
+          "reason": "downstream-of-changed"
+        }
+      ],
+      "downstream": ["web"],
+      "summary": "2 changed files → 2 affected projects, 1 downstream dependent"
+    }
+  },
+  "moonVerifier": {
+    "id": "moon-moth:verify",
+    "available": true,
+    "source": "moon-moth:verify",
+    "commands": ["moon run :typecheck :lint :test --affected --downstream deep"],
+    "targets": ["app", "shared", "web"]
+  },
+  "profiles": [
+    {
+      "id": "quick",
+      "decision": {
+        "workflow": "direct-task",
+        "effectiveProfile": "quick",
+        "enabledCapabilities": ["verification"],
+        "blocked": false
+      },
+      "artifacts": {},
+      "expected": {
+        "status": "ready",
+        "preparation": "ephemeral-scope",
+        "blocked": false
+      }
+    },
+    {
+      "id": "standard",
+      "decision": {
+        "workflow": "direct-task",
+        "effectiveProfile": "standard",
+        "enabledCapabilities": ["verification"],
+        "blocked": false
+      },
+      "artifacts": {
+        "compactPlan": {
+          "affectedPaths": ["src/task.mjs", "tests/task.test.mjs"],
+          "steps": ["Change the task", "Add observable coverage"],
+          "verificationCommands": ["bun run lint", "bun test"],
+          "risks": ["The command set must stay repository-owned"]
+        }
+      },
+      "expected": {
+        "status": "ready",
+        "preparation": "compact-plan",
+        "blocked": false
+      }
+    },
+    {
+      "id": "strict",
+      "decision": {
+        "workflow": "direct-task",
+        "effectiveProfile": "strict",
+        "enabledCapabilities": ["verification"],
+        "blocked": false
+      },
+      "artifacts": {
+        "spec": {
+          "id": "direct-task-spec",
+          "path": "docs/acid-prophet/specs/direct-task-spec.md",
+          "contentHash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "status": "ratified",
+          "audited": true,
+          "owner": "acid-prophet:write-spec",
+          "decisionHandoff": {
+            "run_id": "direct-task-fixture",
+            "path": "/tmp/nuthouse/workflow/runs/direct-task-fixture.json",
+            "content_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        },
+        "plan": {
+          "id": "direct-task-plan",
+          "path": "docs/acid-prophet/plans/direct-task-spec/plan.md",
+          "contentHash": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "status": "validated",
+          "audited": true,
+          "owner": "acid-prophet:write-plan",
+          "decisionHandoff": {
+            "run_id": "direct-task-fixture",
+            "path": "/tmp/nuthouse/workflow/runs/direct-task-fixture.json",
+            "content_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        }
+      },
+      "expected": {
+        "status": "ready",
+        "preparation": "audited-artifacts",
+        "blocked": false
+      }
+    }
+  ]
+}

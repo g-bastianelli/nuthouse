@@ -100,6 +100,13 @@ describe("warden:route skill contract", () => {
     expect(ROUTE_SKILL).toContain("natural-language phrase dictionary");
   });
 
+  test("hands direct tasks back to the current turn without making Warden an owner", () => {
+    expect(ROUTE_SKILL).toContain("prepareDirectTask");
+    expect(ROUTE_SKILL).toContain("evaluateDirectTaskCompletion");
+    expect(ROUTE_SKILL).toContain("install-local `lib/workflow/index.mjs`");
+    expect(ROUTE_SKILL).toContain("was never invoked");
+  });
+
   test("publishes matching Codex UI metadata", () => {
     expect(ROUTE_OPENAI).toContain('display_name: "Warden Route"');
     expect(ROUTE_OPENAI).toContain("$warden:route");

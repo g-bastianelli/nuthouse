@@ -2,7 +2,7 @@
   "name": "warden",
   "displayName": "Warden",
   "description": "Workflow routing, mode controls, and centralized persona-line dispatch for nuthouse plugins.",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "author": {
     "name": "g-bastianelli"
   },

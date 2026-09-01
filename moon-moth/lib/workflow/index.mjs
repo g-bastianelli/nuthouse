@@ -99,3 +99,5 @@ export {
   NATIVE_VERIFICATION_SOURCES,
   resolveVerificationStrategy,
 } from "./verification-resolution.mjs";
+
+export { evaluateDirectTaskCompletion, prepareDirectTask } from "./direct-task-delivery.mjs";

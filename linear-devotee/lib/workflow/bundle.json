@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceHash": "sha256:bf37aca59decbc950c30fabe798dfda85446cc77bddbf969ec2bbb81c7a04dd6",
+  "sourceHash": "sha256:494c89dd654d7c0a21789906ce85af157d40da420e0702df898768087bc48efb",
   "files": [
     {
       "path": "capability-resolver.mjs",
@@ -15,6 +15,14 @@
       "hash": "sha256:594a80bece8703fadefa93d92a59e567eb390c1ba7de9c1b859a82d7f9a084ec"
     },
     {
+      "path": "direct-task-delivery.mjs",
+      "hash": "sha256:56fd5c22f3f74b9a4ed095208171eb3dc4d6e3894dbf0d38cc8b1c85496c7883"
+    },
+    {
+      "path": "fixtures/direct-task-delivery.json",
+      "hash": "sha256:e34be3c25b235a2c4b8559d8fecfdfa61bc7095dded3ad798151ef617822ba28"
+    },
+    {
       "path": "fixtures/runtime-parity.json",
       "hash": "sha256:80b054d219e7f83a053364da79ea86d85df9ddb496ef35850583e679a565538f"
     },
@@ -24,7 +32,7 @@
     },
     {
       "path": "index.mjs",
-      "hash": "sha256:a53f46a23f44bd94e714e0e66d0dda4a240da0310568faa01f0e244864eb3bd6"
+      "hash": "sha256:642a13fb0b3fda389847dfdb4b578f3f325e7dab13e056f5dd58f924bc1fd58d"
     },
     {
       "path": "manifest-handoff.mjs",
@@ -44,7 +52,7 @@
     },
     {
       "path": "README.md",
-      "hash": "sha256:1f242a9f3eb6d8bd897c049c1d8d749638ad71602d3cf11fac316221d59a3f53"
+      "hash": "sha256:1524686771ffa27656e0c4c08c31cb15204013b21445ed840cd6107d095d656a"
     },
     {
       "path": "risk-evaluator.mjs",
@@ -56,7 +64,7 @@
     },
     {
       "path": "verification-resolution.mjs",
-      "hash": "sha256:73bbd747dc9fd52253060a90bc8c9dfffe635a04e23193b7684f83480e66f584"
+      "hash": "sha256:f08db732b4dcd140d0aadf9fb77bb3cbb5a5fa229ae90ad409bd9ab89915935e"
     },
     {
       "path": "workflow-resolution.mjs",

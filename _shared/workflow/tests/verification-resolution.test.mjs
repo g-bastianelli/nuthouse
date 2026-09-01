@@ -57,4 +57,175 @@ describe("verification fallback resolution", () => {
 
     expect(result.commands).toEqual(["bun run lint", "bun test"]);
   });
+
+  test("merges native commands with exact repository-owned provenance", () => {
+    const result = resolveVerificationStrategy({
+      moonWorkspace: false,
+      nativeVerification: {
+        sources: [
+          {
+            source: "repository-instructions",
+            path: "AGENTS.md",
+            commands: ["bun run lint"],
+          },
+          {
+            source: "repository-instructions",
+            path: "packages/app/CLAUDE.md",
+            commands: ["bun test"],
+          },
+          {
+            source: "repository-build-metadata",
+            path: "package.json",
+            commands: ["bun run lint", "bun run typecheck"],
+          },
+          {
+            source: "repository-build-metadata",
+            path: "Taskfile.yml",
+            commands: ["task verify"],
+          },
+        ],
+      },
+    });
+
+    expect(result).toMatchObject({
+      status: "ready",
+      strategy: "native",
+      verifier: "repository-owned",
+      commands: ["bun run lint", "bun test", "bun run typecheck", "task verify"],
+      targets: ["repository"],
+    });
+    expect(result.provenance).toEqual([
+      { command: "bun run lint", source: "repository-instructions", path: "AGENTS.md" },
+      {
+        command: "bun test",
+        source: "repository-instructions",
+        path: "packages/app/CLAUDE.md",
+      },
+      {
+        command: "bun run typecheck",
+        source: "repository-build-metadata",
+        path: "package.json",
+      },
+      {
+        command: "task verify",
+        source: "repository-build-metadata",
+        path: "Taskfile.yml",
+      },
+    ]);
+  });
+
+  test("uses Moon Moth only for a declared Moon workspace and affected targets", () => {
+    const specializedVerifier = {
+      id: "moon-moth:verify",
+      available: true,
+      source: "moon-moth:verify",
+      commands: ["moon run :test --affected"],
+      targets: ["app"],
+    };
+    const nativeVerification = {
+      sources: [
+        {
+          source: "repository-build-metadata",
+          path: "package.json",
+          commands: ["bun test"],
+        },
+      ],
+    };
+
+    expect(
+      resolveVerificationStrategy({
+        moonWorkspace: true,
+        specializedVerifier,
+        nativeVerification,
+      }),
+    ).toMatchObject({
+      strategy: "specialized",
+      verifier: "moon-moth:verify",
+      targets: ["app"],
+    });
+    expect(
+      resolveVerificationStrategy({
+        moonWorkspace: false,
+        specializedVerifier,
+        nativeVerification,
+      }),
+    ).toMatchObject({
+      strategy: "native",
+      commands: ["bun test"],
+      targets: ["repository"],
+    });
+  });
+
+  test("blocks unknown native provenance, traversal, multiline commands, and incomplete Moon data", () => {
+    const cases = [
+      {
+        moonWorkspace: false,
+        nativeVerification: {
+          sources: [{ source: "model-guess", path: "CLAUDE.md", commands: ["bun test"] }],
+        },
+      },
+      {
+        moonWorkspace: false,
+        nativeVerification: {
+          sources: [
+            {
+              source: "repository-instructions",
+              path: "README.md",
+              commands: ["bun test"],
+            },
+          ],
+        },
+      },
+      {
+        moonWorkspace: false,
+        nativeVerification: {
+          sources: [
+            {
+              source: "repository-build-metadata",
+              path: "../package.json",
+              commands: ["bun test"],
+            },
+          ],
+        },
+      },
+      {
+        moonWorkspace: false,
+        nativeVerification: {
+          sources: [
+            {
+              source: "repository-build-metadata",
+              path: "package.json",
+              commands: ["bun test\nbun run lint"],
+            },
+          ],
+        },
+      },
+      {
+        moonWorkspace: true,
+        specializedVerifier: {
+          id: "moon-moth:verify",
+          available: true,
+          commands: ["moon run :test --affected"],
+          targets: [],
+        },
+        nativeVerification: {
+          sources: [
+            {
+              source: "repository-build-metadata",
+              path: "package.json",
+              commands: ["bun test"],
+            },
+          ],
+        },
+      },
+    ];
+
+    for (const input of cases) {
+      expect(resolveVerificationStrategy(input)).toMatchObject({
+        status: "blocked",
+        strategy: "none",
+        blocked: true,
+      });
+    }
+  });
 });
