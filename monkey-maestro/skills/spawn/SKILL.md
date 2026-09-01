@@ -26,6 +26,11 @@ consumer of the same Linear/runtime planners and dispatch primitive as `orchestr
 Never redirect merely because an active control exists. Never create a branch in place or
 change Linear lifecycle.
 
+When the caller explicitly enters relay mode, require the parent `WORKFLOW_DECISION`,
+validate it with this plugin's install-local manifest consumer, and project the shared
+workflow baton. A missing field or mismatch launches nothing. Ordinary manual spawn may
+omit the baton and must not synthesize one from control `runId` or `invocationId`.
+
 ## Step 0 — Read live Linear first
 
 1. Require one exact Linear issue identifier and fetch it with
@@ -174,8 +179,19 @@ live token/owner/lease verification
    create blindly. Preserve partial workspace success. Release the token-matched lock in
    `finally`.
 7. Worker prompt starts with `linear-devotee:greet <issueId>` and includes the shared
-   DONE/BLOCKED envelope. Only greet may claim the issue; spawn never changes Linear
-   status.
+   DONE/BLOCKED envelope. In relay mode, bind the validated baton into the same immutable
+   worker prompt before preview and carry it unchanged through
+   `dispatchContextByIssueId`:
+
+   ```text
+   WORKFLOW_RUN_ID: <parent run_id>
+   WORKFLOW_PROFILE: <parent effective profile>
+   WORKFLOW_DECISION_HASH: sha256:<hex>
+   ```
+
+   A missing value or mismatch launches nothing. The baton never authorizes human
+   feature acceptance, manual merge, or Linear completion. Only greet may claim the
+   issue; spawn never changes Linear status or dependencies.
 
 ## Report
 
