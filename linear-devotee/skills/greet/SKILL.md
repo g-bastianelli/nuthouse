@@ -96,10 +96,20 @@ Rigid context gate. Match the user's language; keep technical identifiers unchan
      the resolver or a precondition for this step.
 6. Resolve Acid Prophet spec:
    - Search `<PROJECT_ROOT>/docs/acid-prophet/specs/`.
-   - Choose only unambiguous matches, priority:
-     1. `linear-project:` equals issue project id.
-     2. Spec body contains exact issue id.
-     3. Body or filename matches project slug/name.
+   - Choose only unambiguous matches, in this priority order:
+     1. An explicit repository-relative spec path named by the issue context or Linear
+        issue, provided it resolves to an existing file inside the specs directory.
+     2. A spec body containing the exact issue id.
+     3. A spec whose `linear-project:` equals the issue project id. When that match is a
+        workflow kernel that explicitly delegates the resolved `issue-delivery`
+        workflow to exactly one existing repository-relative path, select that
+        issue-delivery child spec instead of the kernel.
+     4. A body or filename matching the project slug/name.
+   - Select the child spec before any downstream strict evidence gate. The parent
+     kernel remains the governing authority through the validated workflow decision;
+     it is not the source acceptance document passed to drift or checklist owners.
+   - Never let a project-id match override an explicit issue source or the kernel's
+     unambiguous workflow-child delegation.
    - Ask if multiple candidates; use `_none_` if none.
    - Never compare drift or patch specs here.
 7. Resolve project plan authority:

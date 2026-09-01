@@ -58,11 +58,25 @@ Rigid planning gate. Match the user's language; keep technical identifiers uncha
      lower than the parent profile. This ancestry does not replace or validate the
      child-local manifest. Record `_none_` outside relay mode.
 4. Resolve source spec:
-   - Use `spec_file` from greet context if it still exists.
-   - Otherwise search `docs/acid-prophet/specs/`, choosing only unambiguous matches:
-     1. `linear-project:` equals issue project id.
-     2. Spec body contains exact issue id.
-     3. Body or filename matches project slug/name.
+   - Treat `spec_file` from greet context as a candidate when it still exists, then
+     confirm it against the same authority rules below; do not blindly reuse a cached
+     project-level kernel as the issue's source acceptance document.
+   - Search `docs/acid-prophet/specs/` and choose only unambiguous matches, in this
+     priority order:
+     1. An explicit repository-relative spec path named by the issue context or Linear
+        issue, provided it resolves to an existing file inside the specs directory.
+     2. A spec body containing the exact issue id.
+     3. A spec whose `linear-project:` equals the issue project id. When that match is a
+        workflow kernel that explicitly delegates the resolved `issue-delivery`
+        workflow to exactly one existing repository-relative path, select that
+        issue-delivery child spec instead of the kernel.
+     4. A body or filename matching the project slug/name.
+   - Select the child spec before drafting, auditing, or entering any strict evidence
+     gate. The parent kernel remains the governing authority through the validated
+     workflow decision; it is not `SPEC_FILE` for drift/checklist evaluation.
+   - Never let a cached or newly discovered project-id match override an explicit issue
+     source or the kernel's unambiguous workflow-child delegation. Re-hash the final
+     selected spec before continuing.
    - Ask if multiple candidates; use `_none_` if none.
 5. Resolve project plan authority:
    - Prefer `project_plan` from greet and re-hash its exact bytes. Otherwise search

@@ -70,6 +70,19 @@ describe("Linear Devotee issue-delivery planning and handoff", () => {
     expect(greet).toContain("do not require warden");
   });
 
+  test("source resolution prefers explicit issue authority and follows workflow child ownership", () => {
+    for (const document of [greet, plan]) {
+      expectInOrder(document, [
+        "explicit repository-relative spec path",
+        "exact issue id",
+        "linear-project:",
+        "issue-delivery child spec",
+      ]);
+      expect(document).toMatch(/child spec.*before.*strict.*gate/s);
+      expect(document).toMatch(/parent.*kernel.*govern/s);
+    }
+  });
+
   test("quick, standard, and strict share the audit gate and differ only by required evidence", () => {
     expect(plan).toContain("effectiveprofile");
     expect(plan).toContain("linear-devotee:plan-auditor");
@@ -219,6 +232,17 @@ describe("verification and Git delivery gates", () => {
     expect(pr).toMatch(/head_oid.*current head.*fresh verification/s);
     expect(pr).toMatch(/changed-path set.*empty.*committed head/s);
     expect(pr).toMatch(/recompute.*worktree_snapshot_hash.*before.*publication/s);
+  });
+
+  test("verification snapshots the Git state before any check can mutate it", () => {
+    expectInOrder(verify, [
+      "step 0 - preconditions",
+      "pre-check git snapshot",
+      "step 1 - run checks",
+      "step 4 - final report",
+      "compare the pre-check git snapshot",
+    ]);
+    expect(verify).toMatch(/do not run.*verification command.*before.*pre-check.*snapshot/s);
   });
 
   test("commit and PR refuse missing verification and keep acceptance and merge manual", () => {

@@ -58,6 +58,14 @@ exists — and refuses to call the flight clean on assertion alone.
 3. In a Moon workspace, obtain the affected scope: read a persisted scope map under
    `${PROJECT_ROOT}/docs/moon-moth/scope/`, else run `moon-moth:scope` first.
    The set of `tasks` per affected project tells you which targets to run.
+4. Immediately before Step 1, capture the **pre-check Git snapshot** as
+   `PRECHECK_HEAD_OID = git rev-parse HEAD` plus an index-independent canonical
+   `PRECHECK_WORKTREE_SNAPSHOT`. Build it from the bytewise-sorted
+   repository-relative path union of tracked paths changed from `HEAD` and non-ignored
+   untracked paths. For each changed path record its file type/mode plus
+   `verified_content_hash`, or an explicit deletion marker, then hash the canonical
+   JSON as `PRECHECK_WORKTREE_SNAPSHOT_HASH`. Do not run any verification command
+   before this pre-check snapshot is complete.
 
 ## Step 1 — Run checks (evidence)
 
@@ -147,15 +155,13 @@ Before the hand-off menu, write canonical version-one evidence to
 hashes, rebound mutable targets, Moon scope or repository-native command list, exit
 results, auditor verdict, and the exact verified Git state:
 
-1. Capture `HEAD_OID = git rev-parse HEAD` and an index-independent canonical snapshot
-   immediately before checks. Build it from the bytewise-sorted repository-relative path
-   union of tracked paths changed from `HEAD` and non-ignored untracked paths. For each
-   changed path record its file type/mode plus `verified_content_hash`, or an explicit
-   deletion marker. `verified_files` is the union of these changed paths and every
-   mutable target, preserving each target's `before_hash`. Hash the canonical JSON as
-   `WORKTREE_SNAPSHOT_HASH`.
-2. Recompute the same `HEAD_OID`, changed path set, per-path content hashes, and
-   `WORKTREE_SNAPSHOT_HASH` after all checks and review. If either snapshot differs,
+1. Use the pre-check Git snapshot captured in Step 0; never create the first snapshot
+   here. `verified_files` is the union of its changed paths and every mutable target,
+   preserving each target's `before_hash`. Treat `PRECHECK_HEAD_OID` and
+   `PRECHECK_WORKTREE_SNAPSHOT_HASH` as the exact state the checks evaluated.
+2. After all checks and review, recompute the same `HEAD_OID`, changed path set,
+   per-path file type/mode/content hashes, and canonical snapshot hash. Compare the
+   pre-check Git snapshot with this post-check snapshot. If either snapshot differs,
    discard the results and rerun verification on the new state.
 3. Persist lowercase wire fields `head_oid`, `worktree_snapshot_hash`, and
    `verified_files` alongside the evidence. Staging alone does not affect this snapshot;
