@@ -1,6 +1,6 @@
 ---
 name: create-issue
-description: Use to create a single Linear Issue with a strict SDD-formatted description or resume a partially committed create-project cascade. Standalone mode drafts and previews via issue-drafter; resume mode reuses the exact pre-approved issue packet and dependency metadata from chain-state, then updates progress and recommends the next issue.
+description: Use to create a single Linear Issue with a strict SDD-formatted description or resume a legacy partially committed create-project cascade. Adaptive cascades resume only through create-project. Standalone mode drafts and previews via issue-drafter; legacy resume mode reuses the exact pre-approved issue packet and dependency metadata from chain-state, then updates progress and recommends the next issue.
 effort: high
 allowed-tools: Read, Glob, Grep, Bash(node:*), Write, Agent, mcp__claude_ai_Linear__list_projects, mcp__claude_ai_Linear__list_milestones, mcp__claude_ai_Linear__list_issue_labels, mcp__claude_ai_Linear__save_issue
 ---
@@ -24,6 +24,7 @@ Rigid runbook. Match the user's language; keep technical identifiers unchanged.
    - Verify git repo.
    - Ensure `${CLAUDE_PLUGIN_DATA}`.
 2. Detect mode from `${CLAUDE_PLUGIN_DATA}/chain-${CLAUDE_SESSION_ID}.json`:
+   - **Adaptive guard**: if chain-state contains any adaptive identity field—`workflow_handoff`, `artifact_inventory_hash`, or `acceptance_register_hash`—require all adaptive fields to be present, make no Linear read or write, and stop `adaptive_resume_requires_create_project`. Tell the user to reinvoke `linear-devotee:create-project` in the same session. This skill never consumes or repairs adaptive state, so it cannot bypass source re-hashing or approval revalidation.
    - **Resume**: chain-state exists with `phase: "partial_failure"`, `project.id != null`, all required `drafts.milestones[].id` set, and at least one `drafts.issues[].id == null`.
    - **Chained (legacy)**: chain-state exists with project, created milestone, and uncreated suggested issue.
    - **Standalone**: no chain-state, or `phase: "committed" | "cancelled"`.
