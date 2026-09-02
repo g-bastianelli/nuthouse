@@ -93,7 +93,9 @@ hash as `before_hash` when available and null for a path absent at HEAD. Deleted
 `evaluateDirectTaskCompletion({ preparation, changedPaths, evidence, currentSnapshot })` and return
 only when it reports `completed`. Do not expose a clean handoff on any block or failure.
 
-## Step 0 — Preconditions
+## Workflow
+
+### Step 0 — Preconditions
 
 1. When invoked from issue delivery, require `ISSUE_DELIVERY_PACKET` with the named
    `PLAN_FILE`, `SPEC_FILE`, `RELEVANT_FILES`, and `WORKFLOW_DECISION`.
@@ -130,7 +132,7 @@ only when it reports `completed`. Do not expose a clean handoff on any block or 
    every additional snapshot path must be protected context. Build `verified_files` from the entire
    snapshot so unrelated user work remains hash-bound without entering implementation scope.
 
-## Step 1 — Run checks (evidence)
+### Step 1 — Run checks (evidence)
 
 ### Moon branch
 
@@ -160,7 +162,7 @@ or another repository-owned executable; never rewrite or approximate a declared 
 Capture each exit status and concise output. Do not mix a failed native command with
 successful Moon evidence or skip a declared command.
 
-## Step 2 — Adversarial review (change-auditor)
+### Step 2 — Adversarial review (change-auditor)
 
 In the Moon branch, in parallel with — or right after — Step 1, dispatch
 `moon-moth:change-auditor` to review the diff against the affected scope: scope creep,
@@ -168,7 +170,7 @@ missing tests for new behaviour, and repo-convention violations. In the reposito
 branch, perform the equivalent review against the issue plan and repository instructions
 without inventing a Moon scope. Both branches return findings marked real/uncertain.
 
-## Step 3 — Loop on a torn wing
+### Step 3 — Loop on a torn wing
 
 If any check fails or the auditor flags a real blocker:
 
@@ -197,7 +199,7 @@ project execution.
 This applies equally to repository-native verification: when verification fails, do not
 offer commit/PR.
 
-## Step 4 — Final report + hand-off
+### Step 4 — Final report + hand-off
 
 ```text
 moon-moth:verify report

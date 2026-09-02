@@ -46,7 +46,9 @@ training knowledge — prefer this skill over a bare `WebSearch` whenever the an
 sourced rather than recalled from memory. Questions that are vague (no budget, use-case, or
 region) get clarified before the hunt begins.
 
-## Step 0 — Preconditions
+## Workflow
+
+### Step 0 — Preconditions
 
 1. Verify the runtime can search and fetch the web. On Claude Code that's the `WebSearch` +
    `WebFetch` tools; on Codex it's the native web search tool (enabled by default — pass
@@ -56,7 +58,7 @@ region) get clarified before the hunt begins.
    `WebSearch` calls, then concurrent `Agent` dispatches) — no special orchestration tool is
    required.
 
-## Step 1 — Clarify the research question
+### Step 1 — Clarify the research question
 
 Treat `$ARGUMENTS` as the research question when non-empty; otherwise take the question
 from the user's message. If the question is vague or under-specified (e.g., "what's a good API?" without
@@ -69,7 +71,7 @@ Once clarified, state the hound's opening rule aloud:
 > No training data, no guesses. Every claim comes with a citation. If nothing's fetched,
 > I'll mark it `[NEEDS SOURCE]` and groan about the gap — no invention.
 
-## Step 2 — Fan-out web search (concurrent execution)
+### Step 2 — Fan-out web search (concurrent execution)
 
 Generate **3–5 search angles** based on the clarified question. Execute them in parallel
 via `WebSearch` (do NOT loop sequentially). Angles should be:
@@ -83,7 +85,7 @@ via `WebSearch` (do NOT loop sequentially). Angles should be:
 
 Collect all results and URLs.
 
-## Step 3 — Fetch + summarize (parallel source-fetcher dispatch)
+### Step 3 — Fetch + summarize (parallel source-fetcher dispatch)
 
 For each promising source URL from Step 2 (cap at ~8 sources per run), dispatch the
 logical `lore-hound:source-fetcher` agent **in parallel** — issue all agent calls in one
@@ -99,7 +101,7 @@ Each `source-fetcher` call:
 Keep the parsed results in context (do not discard the raw claims); if synthesis fails later,
 re-reason over the cached claims instead of re-fetching.
 
-## Step 4 — Adversarial verification (parallel claim-verifier dispatch)
+### Step 4 — Adversarial verification (parallel claim-verifier dispatch)
 
 Select the **key claims** that matter for the answer (cap at ~10 claims per run — prioritize
 the load-bearing ones, skip trivia). Dispatch the logical `lore-hound:claim-verifier` agent
@@ -119,7 +121,7 @@ Verifier behavior:
 - Hostile: if stale sources or contradictions exist, prefer the recent/reliable source.
 - Default to `refuted` if uncertain — the hound doesn't guess.
 
-## Step 5 — Synthesize with citations
+### Step 5 — Synthesize with citations
 
 Compose the final report from verified claims only:
 
@@ -186,7 +188,7 @@ lore-hound:research report
 (grounded in <N> verified sources, <M> gaps marked [NEEDS SOURCE])
 ```
 
-## Hard rules
+## Never
 
 - **Never `git commit`, `git push`, or `git rebase`.**
 - **Never mutate external services** without explicit user confirmation.

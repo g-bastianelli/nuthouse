@@ -37,7 +37,9 @@ plan-by-default, a moon-command allowlist (fewer permission prompts), and a shor
 loop contract that tells any agent (Claude Code or Codex) to use the moon-moth
 loop. Run once per repo; safe to re-run (idempotent merge).
 
-## Step 0 — Preconditions
+## Workflow
+
+### Step 0 — Preconditions
 
 1. Find the moon workspace root (`.moon/` up-tree). Abort if absent: this skill
    only wires moon repos.
@@ -49,7 +51,7 @@ loop. Run once per repo; safe to re-run (idempotent merge).
    - Read the repo's existing agent contract so the generated content matches its
      conventions (do not duplicate rules already stated there).
 
-## Step 1 — Build the wiring plan (preview, no writes yet)
+### Step 1 — Build the wiring plan (preview, no writes yet)
 
 Compose the set of changes, each shown as a unified-diff-style preview. Components:
 
@@ -79,19 +81,19 @@ Compose the set of changes, each shown as a unified-diff-style preview. Componen
    `moon-moth:verify`. It never runs tasks itself (no slow/expensive auto-runs).
    Only write it if the user opts in.
 
-## Step 2 — Approval gate
+### Step 2 — Approval gate
 
 Present the full preview and ask: _"j'écris ce câblage ? (y / décris quoi
 retirer / stop)"_. Do not write anything until the user approves. This is the
 single mutation gate.
 
-## Step 3 — Apply (merge, idempotent)
+### Step 3 — Apply (merge, idempotent)
 
 On approval, write/merge each approved component. For `settings.json`, parse the
 existing JSON, merge arrays without duplicating entries, and re-validate it
 parses before finishing. Never clobber an existing key's value.
 
-## Step 4 — Final report
+### Step 4 — Final report
 
 ```text
 moon-moth:init report

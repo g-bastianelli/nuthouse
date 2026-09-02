@@ -45,13 +45,15 @@ the health of any notom-platform resource on Scaleway staging or prod.
 **Core principle: investigate first, ask later.** All tools are available via CLI —
 never ask the user to open Grafana for something you can query yourself.
 
-## Step 0 — Preconditions
+## Workflow
+
+### Step 0 — Preconditions
 
 1. Verify `scw` CLI is available and authenticated (`scw config get` or `scw account project list`).
 2. Verify `curl` and `python3` are available (used to query Loki/Prometheus).
 3. Read `../../shared/infra-map.md` — the single source of truth for endpoints, SSH aliases, and Loki `resource_name` values. Substitute its values wherever a step references an infra-map key (`LOKI_ENDPOINT`, `PROM_ENDPOINT`, `LOKI_RESOURCE_*`, `SSH_AUTHENTIK_*`, ...).
 
-## Step 1 — Classify the issue
+### Step 1 — Classify the issue
 
 Start from `$ARGUMENTS` (a service name or issue description) when non-empty;
 otherwise classify from the user's report.
@@ -60,7 +62,7 @@ otherwise classify from the user's report.
 - **Performance / usage?** → query Prometheus metrics (Step 4)
 - **Resource state unclear?** → Scaleway CLI state (Step 5)
 
-## Step 2 — Create a temporary cockpit token (REQUIRED for Loki & Prometheus)
+### Step 2 — Create a temporary cockpit token (REQUIRED for Loki & Prometheus)
 
 The cockpit token secret is only returned at creation — never stored. Always create
 a temporary token, query, then delete.
@@ -82,7 +84,7 @@ scw cockpit token delete $TOKEN_ID
 
 Use only the scopes you need: `read_only_logs`, `read_only_metrics`, `write_only_logs`, `write_only_metrics`.
 
-## Step 3 — Loki (logs)
+### Step 3 — Loki (logs)
 
 **Endpoint:** `LOKI_ENDPOINT` (see infra-map)
 **Auth header:** `X-Token: $TOKEN` · **API path:** `/loki/api/v1/`
@@ -121,7 +123,7 @@ curl -s -H "X-Token: $TOKEN" "$LOKI/loki/api/v1/labels"
 curl -s -H "X-Token: $TOKEN" "$LOKI/loki/api/v1/label/resource_name/values"
 ```
 
-## Step 4 — Prometheus (metrics)
+### Step 4 — Prometheus (metrics)
 
 **Endpoint:** `PROM_ENDPOINT` (see infra-map)
 **Auth header:** `X-Token: $TOKEN` · **API path:** `/prometheus/api/v1/`
@@ -168,7 +170,7 @@ instance_server_agent_up                                                      # 
 instance_server_memory_used / instance_server_memory_total                    # VM memory
 ```
 
-## Step 5 — Scaleway CLI (management plane — no token needed)
+### Step 5 — Scaleway CLI (management plane — no token needed)
 
 ```bash
 scw containers container list -o json | jq '[.[] | {name, status, min_scale, max_scale}]'  # Container status & scaling
@@ -178,7 +180,7 @@ scw instance server list -o json | jq '[.[] | {name, state, public_ip}]'        
 scw cockpit data-source list -o json | jq '[.[] | {name, type, synchronized_with_grafana}]'  # Cockpit datasources
 ```
 
-## Step 6 — SSH into Authentik VMs (when logs/metrics aren't enough)
+### Step 6 — SSH into Authentik VMs (when logs/metrics aren't enough)
 
 The Authentik instances are plain Scaleway VMs (Ubuntu 24.04). SSH in as `root` to
 inspect docker, journald, or disk directly. Host aliases and IPs: see
@@ -210,7 +212,7 @@ stack-golem:observe-platform report
   Token:        deleted ✓
 ```
 
-## Hard rules
+## Never
 
 - **Always delete the temporary cockpit token** after querying — even on error paths.
 - **Use only the scopes you need** when creating tokens.

@@ -87,7 +87,9 @@ derive a planned map from `approvedPaths`:
 Return the map inline with the exact unchanged `decisionHandoff` and `returnTarget`. The caller puts
 it at `scope.moon` and resumes `prepareDirectTask`; this skill does not implement the task.
 
-## Step 0 — Preconditions
+## Workflow
+
+### Step 0 — Preconditions
 
 1. When the caller supplies an `ISSUE_DELIVERY_PACKET`, require its named
    `PLAN_FILE`, `SPEC_FILE`, `RELEVANT_FILES`, and `WORKFLOW_DECISION`. Validate the
@@ -112,7 +114,7 @@ it at `scope.moon` and resumes `prepareDirectTask`; this skill does not implemen
 4. If the artifact will be persisted (Step 4), ensure
    `${PROJECT_ROOT}/docs/moon-moth/scope/` exists.
 
-## Step 1 — Pick the base
+### Step 1 — Pick the base
 
 For direct-task `mode: "planned-paths"`, set the base to `planned-paths`, skip changed-file and
 affected queries, and continue with the project-graph derivation above. For
@@ -131,7 +133,7 @@ Decide what "changed" means: if `$ARGUMENTS` contains a base (`working-tree`, `d
 
 State the chosen base in one line before dispatching.
 
-## Step 2 — Dispatch the affected-scout subagent
+### Step 2 — Dispatch the affected-scout subagent
 
 Dispatch the logical `moon-moth:affected-scout` agent (see `## Subagent dispatch`). It runs the
 `moon query` commands from the `moon-moth:moon-commands` knowledge skill
@@ -142,7 +144,7 @@ map defined in the `moon-moth:affected-scope` contract
 If subagents are unavailable, run the same `moon query` commands inline and build
 the scope map yourself.
 
-## Step 3 — Read the field of light
+### Step 3 — Read the field of light
 
 From the returned scope map:
 
@@ -153,14 +155,14 @@ From the returned scope map:
   layer + stack), their verification-relevant tasks, and the downstream
   blast radius (what else could break).
 
-## Step 4 — Persist the scope map (optional)
+### Step 4 — Persist the scope map (optional)
 
 When the task is non-trivial or will be handed off, write the scope map to
 `${PROJECT_ROOT}/docs/moon-moth/scope/<branch-or-timestamp>.json` so the
 implementation turn and `verify` can read it without recomputing. Skip for a
 quick one-off scope.
 
-## Step 5 — Final report + hand-off
+### Step 5 — Final report + hand-off
 
 When `DIRECT_TASK_SCOPE_HANDOFF` was supplied, return its canonical affected or planned map inline
 to the exact current-turn target immediately after the report. Skip the generic menu and do not

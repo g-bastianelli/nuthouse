@@ -44,13 +44,15 @@ runtime error, service not starting, auth/OIDC failure, missing env vars.
 command you can run yourself. Read `.env` files, run `docker compose ps`, and
 check logs yourself before reporting.
 
-## Step 0 — Preconditions
+## Workflow
+
+### Step 0 — Preconditions
 
 1. Verify you are inside a notom-platform worktree or the main project (presence of `docker-compose.yml` at the worktree root).
 2. Verify `docker` / `docker compose` is available.
 3. Read `../../shared/infra-map.md` — the single source of truth for machine-specific paths (e.g. `ROOT_ENV`). Substitute its values wherever a step references an infra-map key.
 
-## Step 1 — Classify the symptom
+### Step 1 — Classify the symptom
 
 Inspect what the user reported (start from `$ARGUMENTS` when non-empty) and route:
 
@@ -58,7 +60,7 @@ Inspect what the user reported (start from `$ARGUMENTS` when non-empty) and rout
 - **Service not reachable / auth redirect failing** → Step 2b
 - **Auth/OIDC error** (`client_id missing`, `JWKSInvalid`, `invalid_grant`) → Step 2c
 
-## Step 2a — Missing env var (e.g. `VITE_API_URL`, `AUTHENTIK_ISSUER_URL`)
+### Step 2a — Missing env var (e.g. `VITE_API_URL`, `AUTHENTIK_ISSUER_URL`)
 
 1. Read `apps/atlas/api/src/env.ts` or `apps/atlas/app/src/env.ts` to see what's required.
 2. Read the root `.env` (source of truth) for the values — path: `ROOT_ENV`, see infra-map.
@@ -68,7 +70,7 @@ Inspect what the user reported (start from `$ARGUMENTS` when non-empty) and rout
 
 > Worktrees don't inherit `.env` from the main project — create them explicitly.
 
-## Step 2b — Service not reachable / auth redirect failing
+### Step 2b — Service not reachable / auth redirect failing
 
 1. Check which containers are up and healthy — start from the `Docker` snapshot in `## Context`; re-run `docker compose ps` if it shows `docker unavailable` or may be stale.
    Services: `postgres`, `redis`, `authentik-server`, `authentik-worker`.
@@ -79,7 +81,7 @@ Inspect what the user reported (start from `$ARGUMENTS` when non-empty) and rout
    Authentik takes ~60s to start. Re-check with `docker compose ps`.
 3. `docker compose logs --tail=30 authentik-server authentik-worker` — check for crashes.
 
-## Step 2c — Auth / OIDC failures
+### Step 2c — Auth / OIDC failures
 
 | Symptom                                 | Diagnosis                                                   | Fix                                                                                   |
 | --------------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------- |
@@ -87,7 +89,7 @@ Inspect what the user reported (start from `$ARGUMENTS` when non-empty) and rout
 | `JWKSInvalid` / token validation failed | Race on first load — JWKS cache not warm                    | Hard-refresh the page; if it persists, check Authentik health via `docker compose ps` |
 | `invalid_grant` on refresh              | Old refresh token from a previous session                   | Normal — frontend redirects to login automatically                                    |
 
-## Step 3 — Fix or instruct
+### Step 3 — Fix or instruct
 
 Apply the fix yourself when possible (write `.env`, start containers). Only instruct
 the user for actions you genuinely cannot perform (e.g. clicking in the browser,
@@ -113,7 +115,7 @@ stack-golem:debug-local report
   Action:       <what was fixed / what the user must do>
 ```
 
-## Hard rules
+## Never
 
 - **Always run `docker compose ps` yourself** before reporting container status.
 - **Always read `.env` files yourself** before saying they're missing.

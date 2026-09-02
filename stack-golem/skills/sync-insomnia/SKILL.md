@@ -38,14 +38,16 @@ Use this skill when:
 
 The skill locates the Insomnia Git repository on disk (`INSOMNIA_GIT_DIR` — see `../../shared/infra-map.md`), edits the YAML collection directly, commits the changes, and tells you to Pull in Insomnia's Git Sync panel.
 
-## Step 0 — Preconditions
+## Workflow
+
+### Step 0 — Preconditions
 
 0. Read `../../shared/infra-map.md` — the single source of truth for machine-specific paths. Substitute its values wherever a step references `INSOMNIA_GIT_DIR`.
 1. Verify Insomnia is installed (the `INSOMNIA_GIT_DIR` directory exists).
 2. Verify the target collection has Git Sync enabled (a subdirectory in the git repos folder).
 3. Verify `git` is available and the collection's git repo is clean or staged.
 
-## Step 1 — Find the collection file
+### Step 1 — Find the collection file
 
 Run:
 
@@ -61,7 +63,7 @@ ls <repo-path>/git/*.yaml
 
 Show the user which collection was found. If multiple collections exist, ask which one to edit.
 
-## Step 2 — Read and understand the structure
+### Step 2 — Read and understand the structure
 
 Read the target YAML file and show the user a summary:
 
@@ -69,7 +71,7 @@ Read the target YAML file and show the user a summary:
 - Existing folders and requests
 - ID generation pattern (prefixes: `req_`, `fld_`, `jar_`, `env_`)
 
-## Step 3 — Add, modify, or remove entries
+### Step 3 — Add, modify, or remove entries
 
 Based on the user's request:
 
@@ -86,7 +88,7 @@ Important YAML rules:
 
 Show the user the changes before committing.
 
-## Step 4 — Commit the changes
+### Step 4 — Commit the changes
 
 ```bash
 cd <repo-path>/git
@@ -96,7 +98,7 @@ git commit -m "feat(insomnia): <description>"
 
 Confirm the commit succeeded.
 
-## Step 5 — Tell the user to Pull
+### Step 5 — Tell the user to Pull
 
 Output a clear message:
 
@@ -115,7 +117,7 @@ stack-golem:sync-insomnia report
   Next step:    Pull in Insomnia Git Sync panel
 ```
 
-## Hard rules
+## Never
 
 - Never `git commit`, `git push`, or `git rebase` in any other repo without explicit user consent.
 - Verify collection path before reading/writing YAML.

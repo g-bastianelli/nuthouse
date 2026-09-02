@@ -37,6 +37,7 @@ Verify `_templates/` exists and contains the required templates:
 
 ```bash
 test -f _templates/skill/claudecode/SKILL.md && \
+test -f _templates/skill/contract/SKILL.md && \
 test -f _templates/agent/AGENT.md && \
 test -f _templates/persona/persona.md && \
 test -f _templates/plugin/BANNER_PROMPT.md && \
@@ -47,16 +48,34 @@ If templates are missing, abort with: _"les formules manquent. `_templates/` est
 
 ## Step 2 — Load template requirements
 
-Read the `<!-- template-meta -->` block from each template:
+Read the `<!-- template-meta -->` block from each template. The block opens with
+`<!-- template-meta` on its own line and closes with a bare `-->`; there is no named
+closing marker.
 
-- `_templates/skill/claudecode/SKILL.md` → for all SKILL.md files
+- `_templates/skill/claudecode/SKILL.md` → workflow skills
+- `_templates/skill/contract/SKILL.md` → contract skills (see genre routing below)
 - `_templates/agent/AGENT.md` → for all AGENT.md files
 - `_templates/persona/persona.md` → for all persona.md files
 - `_templates/plugin/BANNER_PROMPT.md` → for all plugin banner prompts
 
+### Genre routing (do this before checking any SKILL.md)
+
+A SKILL.md is a **contract**, not a workflow, when either holds:
+
+- its text contains the exact phrase `not a user-facing workflow`; or
+- it is a `subroutine/skills/*` ambient discipline.
+
+Contracts are read, not run: they have no ordered steps, no gate, and no report. Check
+only their required frontmatter and never report a missing `## Workflow`, `## Never`, or
+`## Final Report` on them. Reporting those is a genre error, not a finding. List the
+contracts detected at the end of the report so the classification stays visible.
+
+Everything else is a **workflow skill** and takes the full check list below.
+
 Requirements extracted:
 
-- **SKILL.md:** required_frontmatter `[name, description]`, required_sections `["## Workflow", "## Never"]`
+- **SKILL.md (workflow):** required_frontmatter `[name, description]`, required_sections `["## Workflow", "## Never"]`
+- **SKILL.md (contract):** required_frontmatter `[name, description]`, required_sections `[]`
 - **AGENT.md:** required_frontmatter `[name, description]`, required_sections `[]`
 - **persona.md:** required_frontmatter `[name, tagline]`, required_sections `["## Language", "## Hard rule"]`
 - **BANNER_PROMPT.md:** required guidance: README banner, visible mascot/persona, existing nuthouse style, setting from persona world, functional props secondary, user-centered personas keep the user offscreen/implied/abstract, 3:1 target, no readable text unless exact English text is requested, final asset path `assets/banner.png`
@@ -89,12 +108,16 @@ ls */banner.jpeg */banner.jpg */assets/banner-old.* */assets/banner-love.* 2>/de
 
 For each file, check against the matching template's requirements.
 
-**SKILL.md checks (in order):**
+**SKILL.md checks (workflow genre only — skip 3-6 for contracts):**
 
 1. Frontmatter contains `name` field — ❌ CRITIQUE if missing
 2. Frontmatter contains `description` field — ❌ CRITIQUE if missing
 3. `## Workflow` section present — ❌ CRITIQUE if missing (new format)
-4. `## Never` section present — ❌ CRITIQUE if missing (new format)
+4. `## Never` section present, **or** a `## Contract` section pointing at a
+   `shared/*-contract.md` file — ❌ CRITIQUE if neither. A plugin that centralizes its
+   prohibitions in one shared contract satisfies this check: duplicating them into every
+   skill's `## Never` is the drift the repo CLAUDE.md forbids. `monkey-maestro` is the
+   reference for that shape.
 5. `## Voice` section present WITHOUT `## Workflow` — ⚠️ WARNING: old format, migrate to compact `## Workflow` + `## Never`
 6. `## Language` section present WITHOUT `## Workflow` — ⚠️ WARNING: old format artifact, migrate to intro-line pattern
 
@@ -117,7 +140,9 @@ For each file, check against the matching template's requirements.
 1. `<plugin>/assets/BANNER_PROMPT.md` exists — ⚠️ WARNING if missing
 2. Contains guidance that the mascot/persona is visible — ❌ CRITIQUE if missing
 3. Contains guidance to match the existing nuthouse banner style — ❌ CRITIQUE if missing
-4. Contains guidance that the setting comes from the persona's world — ❌ CRITIQUE if missing
+4. Contains guidance that the setting comes from the persona's world — ❌ CRITIQUE if
+   missing. Plugins express this as an explicit `Scene rule:` paragraph; accept that
+   phrasing rather than requiring the word `persona` next to `setting`.
 5. Contains guidance that task/domain props are secondary — ⚠️ WARNING if missing
 6. Contains guidance for user-centered personas: user offscreen/implied/abstract, no competing deity/boss/mascot — ❌ CRITIQUE if missing
 7. Contains the 3:1 README banner target — ❌ CRITIQUE if missing
@@ -155,6 +180,8 @@ Output format:
 
 ---
 <N> critiques · <N> warnings · <N> ok
+
+<N> contrats hors périmètre du template workflow : <plugin>:<skill>, ...
 ```
 
 If zero critiques and zero warnings: _"le labo est propre. toutes les créatures sont conformes. 🧪"_

@@ -38,12 +38,14 @@ or debugging infra failures (Pulumi errors, permission issues).
 `scw ... get` or `scw ... list` before proposing changes. **Never** suggest "go to
 the Scaleway console" for something `scw` can do.
 
-## Step 0 — Preconditions
+## Workflow
+
+### Step 0 — Preconditions
 
 1. Verify `scw` CLI is available and authenticated (`scw account project list -o json`).
 2. For any mutation: confirm the target resource and project with the user first.
 
-## Step 1 — Discover the resource & action
+### Step 1 — Discover the resource & action
 
 ```bash
 scw <service> --help                   # list resources
@@ -57,7 +59,7 @@ Always add `-o json` when piping to `jq`:
 scw ... -o json | jq '.field'
 ```
 
-## Step 2 — Read current state
+### Step 2 — Read current state
 
 Inspect before mutating. Common reads:
 
@@ -98,7 +100,7 @@ scw registry image list namespace-id=<id> -o json
 scw cockpit get -o json    # Grafana URL, endpoints
 ```
 
-## Step 3 — Mutate (only after reading + user confirmation)
+### Step 3 — Mutate (only after reading + user confirmation)
 
 ### IAM rule update (overwrites ALL rules)
 
@@ -138,7 +140,7 @@ stack-golem:drive-scaleway report
   Change:       <what was applied, if any>
 ```
 
-## Hard rules
+## Never
 
 - **Read before write** — always inspect current state before mutating.
 - **Confirm mutations with the user** before applying — IAM rule updates overwrite all rules.
