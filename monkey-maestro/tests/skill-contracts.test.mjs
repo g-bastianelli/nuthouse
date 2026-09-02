@@ -1,11 +1,9 @@
 import { expect, test } from "bun:test";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { validateLinearSnapshot } from "../lib/linear-snapshot.mjs";
 import { validateControlSnapshot } from "../lib/records.mjs";
 import { validateRuntimeSnapshot } from "../lib/runtime-snapshot.mjs";
-import { checkWorkflowMigration } from "../../scripts/check-workflow-migration.mjs";
 
 const ROOT = path.resolve(import.meta.dir, "..", "..");
 const SKILL_NAMES = ["orchestrate", "reconcile", "spawn", "start", "status", "stop"];
@@ -112,34 +110,6 @@ test("legacy scheduler state and GitHub capabilities are forbidden across the pu
   for (const document of allDocuments) expect(document).not.toContain("reconcile_required");
   for (const document of Object.values(agents)) {
     expect(agentTools(document).join(" ")).not.toMatch(/github|\bgh\b/i);
-  }
-});
-
-test("the migration gate rejects removal of every Maestro public entry point", () => {
-  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "maestro-required-paths-"));
-  const requiredPaths = [
-    ...SKILL_NAMES.map((name) => `monkey-maestro/skills/${name}/SKILL.md`),
-    ...AGENT_NAMES.map((name) => `monkey-maestro/agents/${name}.md`),
-    "monkey-maestro/lib/orchestration-effect-signal.mjs",
-    "monkey-maestro/lib/orchestration-effects.mjs",
-    "monkey-maestro/scripts/linear-frontier.mjs",
-    "monkey-maestro/scripts/linear-snapshot.mjs",
-    "monkey-maestro/scripts/orchestration-epoch.mjs",
-    "monkey-maestro/scripts/project-lock.mjs",
-    "monkey-maestro/scripts/records.mjs",
-    "monkey-maestro/scripts/runtime-actions.mjs",
-    "monkey-maestro/scripts/runtime-snapshot.mjs",
-  ];
-
-  try {
-    const problems = checkWorkflowMigration(fixture);
-    for (const filename of requiredPaths) {
-      expect(problems, `migration gate did not require ${filename}`).toContain(
-        `missing required ${filename}`,
-      );
-    }
-  } finally {
-    fs.rmSync(fixture, { recursive: true, force: true });
   }
 });
 

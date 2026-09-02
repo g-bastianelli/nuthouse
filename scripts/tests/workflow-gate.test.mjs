@@ -4,12 +4,12 @@ import os from "node:os";
 import path from "node:path";
 
 import { buildWorkflowConfig } from "../build-workflow-config.mjs";
-import { checkWorkflowMigration } from "../check-workflow-migration.mjs";
+import { checkPluginInvariants } from "../check-plugin-invariants.mjs";
 import { PARTICIPATING_WORKFLOW_PLUGINS } from "../workflow-bundles.mjs";
 
 const REPO_ROOT = path.resolve(import.meta.dir, "..", "..");
 
-describe("workflow migration gate", () => {
+describe("workflow gate", () => {
   test("keeps the legacy build command as a six-plugin bundle alias", () => {
     const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "nuthouse-workflow-build-"));
     const source = Buffer.from("export const profile = 'standard';\r\n");
@@ -41,34 +41,41 @@ describe("workflow migration gate", () => {
     }
   });
 
-  test("accepts the repository ownership migration", () => {
-    expect(checkWorkflowMigration(REPO_ROOT)).toEqual([]);
+  test("the repository satisfies every plugin invariant", () => {
+    expect(checkPluginInvariants(REPO_ROOT)).toEqual([]);
   });
 
-  test("reports a resurrected forbidden artifact", () => {
-    const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "nuthouse-workflow-gate-"));
+  test("reports a manifest version drifting between runtimes", () => {
+    const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "nuthouse-manifest-drift-"));
     try {
-      fs.mkdirSync(path.join(fixture, "git-gremlin", "skills", "spawn"), { recursive: true });
-      fs.writeFileSync(path.join(fixture, "git-gremlin", "skills", "spawn", "SKILL.md"), "old");
-      expect(checkWorkflowMigration(fixture)).toContain(
-        "legacy path remains git-gremlin/skills/spawn/SKILL.md",
+      for (const [runtime, version] of [
+        [".claude-plugin", "1.0.4"],
+        [".codex-plugin", "1.0.3"],
+      ]) {
+        const target = path.join(fixture, "warden", runtime);
+        fs.mkdirSync(target, { recursive: true });
+        fs.writeFileSync(path.join(target, "plugin.json"), JSON.stringify({ version }));
+      }
+      expect(checkPluginInvariants(fixture)).toContain(
+        "warden: Claude/Codex versions differ (1.0.4 != 1.0.3)",
       );
     } finally {
       fs.rmSync(fixture, { recursive: true, force: true });
     }
   });
 
-  test.each([
-    "monkey-maestro/lib/reconciliation-input.mjs",
-    "monkey-maestro/lib/reconciliation-state.mjs",
-    "monkey-maestro/scripts/reconcile-state.mjs",
-  ])("rejects the superseded Maestro scheduling authority: %s", (filename) => {
-    const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "nuthouse-linear-first-gate-"));
+  test("reports durable local state written outside the Maestro lock", () => {
+    const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "nuthouse-maestro-state-"));
     try {
-      const target = path.join(fixture, filename);
-      fs.mkdirSync(path.dirname(target), { recursive: true });
-      fs.writeFileSync(target, "export const legacy = true;\n");
-      expect(checkWorkflowMigration(fixture)).toContain(`legacy path remains ${filename}`);
+      const target = path.join(fixture, "monkey-maestro", "lib");
+      fs.mkdirSync(target, { recursive: true });
+      fs.writeFileSync(
+        path.join(target, "queue.mjs"),
+        'import fs from "node:fs";\nfs.writeFileSync("queue.json", "[]");\n',
+      );
+      expect(checkPluginInvariants(fixture)).toContain(
+        "monkey-maestro/lib/queue.mjs: unexpected durable local-state mutation",
+      );
     } finally {
       fs.rmSync(fixture, { recursive: true, force: true });
     }
