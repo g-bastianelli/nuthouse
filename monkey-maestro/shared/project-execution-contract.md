@@ -133,9 +133,11 @@ revision
 updatedAt
 ```
 
-`maxConcurrency` defaults to four and must be between one and ten. A v1 control is usable
-when these operational values can be projected from it. Malformed obsolete graph, hash,
-or ownership values are ignored warnings. The next explicit control mutation writes v2.
+`maxConcurrency` defaults to four and must be between one and ten. `defaultAgent` has no
+default: it is a selector the target host actually reports, never a runtime name assumed
+by this plugin. A v1 control is usable when these operational values can be projected
+from it. Malformed obsolete graph, hash, or ownership values are ignored warnings. The
+next explicit control mutation writes v2.
 Historical comments are never deleted automatically.
 
 `start` short-circuits an already-active control only when its source schema is v2 and no
@@ -148,6 +150,47 @@ orchestration batch. A one-issue `spawn` re-resolves control after its confirmat
 so a freshly inactive, reconfigured, or conflicting control ends that run `stopped`
 before mutation. `stop` is Linear-only, prevents the next invocation, and never touches
 existing workers.
+
+## Host agent discovery
+
+`superset agents list --host <targetHostId> --json` is the only authority on which agents a
+host can run. Its rows carry a `presetId`, an instance `id`, a `label`, and an `order`; the
+selector passed to `superset agents create --agent` is the `presetId` when present and the
+instance `id` otherwise. `lib/host-agents.mjs` is the single normalizer and decision point,
+reached through `scripts/host-agents.mjs`.
+
+Discovery is best effort at every call site. An offline host, an absent CLI, an error
+payload, a repeated instance id, or any unreadable row is one `unknown` inventory — never a
+partial list, never a throw. Only a complete inventory may reject a selector. A preset
+configured twice is a legitimate host setup, not a defect: those rows survive with their
+instance uuid as the pickable selector, and the shared preset id stays an accepted alias.
+`superset agents create` also accepts the provider's `superset` session selector, which
+`agents list` never reports; Maestro therefore does not accept it as a worker agent.
+
+`resolveDefaultAgent` settles a control's agent without inventing one. An explicit
+`--agent` wins, then a still-configured inherited agent, then the host's only configured
+agent. Several configured agents with nothing else to honour is `choice-required`
+(`AGENT_NO_CONFIGURED_DEFAULT`, or `AGENT_INHERITED_NO_LONGER_CONFIGURED` when a control
+agent left the host): the user picks one reported selector. An unreadable inventory with
+nothing to honour is `input-required` (`HOST_AGENTS_INVENTORY_UNREADABLE`) — the user names
+an agent, because Superset being unreachable is never an activation precondition. Only a
+readable inventory refuses: `AGENT_NOT_CONFIGURED` for an explicit agent the host does not
+configure, `HOST_AGENTS_NONE_CONFIGURED` for a host that configures none. A superseded
+inherited agent is always named, never silently swapped.
+
+`validateLaunchAgent` re-checks that selector against the host in `orchestrate`, which
+launches from a control written in an earlier invocation. `ok` launches, `unverified`
+launches and leaves the provider as the authority, and `blocked` degrades every candidate
+still awaiting a launch with the host's live selectors while preserving created and reused
+workspaces. A blocked agent never substitutes another agent, never touches an
+`already-running` workspace, and never changes Linear state. The check belongs to the
+skill's own sequence, before its per-candidate launches; agent verdicts never enter a
+dispatch result, whose states remain `verified`, `partial`, `ambiguous`, and `failed`.
+`spawn` needs no second check: it resolves the agent against the same host inventory
+inside the one invocation that launches.
+
+Discovery reads Superset without checking transport, so it is the one Superset call
+`start` may make before writing control. It is never an activation precondition.
 
 ## Pure planners
 

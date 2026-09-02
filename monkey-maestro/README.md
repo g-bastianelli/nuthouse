@@ -29,6 +29,18 @@ separate recovery ceremony.
 `status` is the implicit landing point for a Linear project URL. It is read-only and
 never scans GitHub or Superset.
 
+`start` never assumes which coding agent a machine runs. It reads the host's own inventory
+with `superset agents list --host <id> --json`, honours an explicit `--agent` or the
+previous control agent when the host still configures it, takes the only configured agent
+when there is one, and asks you to pick when the host offers several. An agent the host
+does not configure is refused with the real selectors instead of failing later, worker by
+worker. `orchestrate` re-checks that selector before launching, because it runs from a
+control written in an earlier invocation and a host can drop an agent in between.
+
+Discovery is best effort throughout, and Superset never becomes an activation
+prerequisite: an offline host or an unreadable inventory honours an agent you named
+yourself, and asks you to name one when there is nothing to honour.
+
 `orchestrate` computes one deterministic frontier, reserves concurrency for started work,
 then fills remaining slots with ready issues in stable issue-id order. For each selected
 issue, it resolves the exact Superset task and directly calls branch-scoped workspace

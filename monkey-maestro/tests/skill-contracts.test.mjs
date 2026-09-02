@@ -138,10 +138,79 @@ test("AC-021/027: start writes only minimal v2 control, verifies it, then orches
     /re-dispatch control-loader.*require the exact written project\/run\/config\/revision/,
   );
   expect(start).toMatch(/enter monkey-maestro:orchestrate <project-id>/);
-  expect(tools).not.toMatch(/superset|github|bash\(gh/i);
+  expect(tools).toMatch(/Bash\(superset agents list:\*\)/i);
+  expect([...tools.matchAll(/superset [a-z]+(?: [a-z]+)?/gi)].map((entry) => entry[0])).toEqual([
+    "superset agents list",
+  ]);
+  expect(tools).not.toMatch(/github|bash\(gh/i);
   expect(start).toMatch(
-    /do not call github, superset, the project snapshot loader, or the project lock before writing control/,
+    /do not call github, the project snapshot loader, or the project lock before writing control/,
   );
+  expect(start).toMatch(
+    /the only permitted pre-write superset call is the best-effort host agent discovery.*checks no transport/,
+  );
+});
+
+test("host agent discovery replaces the assumed runtime name at both decision points", () => {
+  const contract = normalize(read("monkey-maestro/shared/project-execution-contract.md"));
+  const start = normalize(skills.start);
+  const orchestrate = normalize(skills.orchestrate);
+  const spawn = normalize(skills.spawn);
+
+  expect(contract).toMatch(
+    /superset agents list --host <targethostid> --json.*is the only authority on which agents a host can run/,
+  );
+  expect(contract).toMatch(
+    /defaultagent has no default: it is a selector the target host actually reports, never a runtime name assumed by this plugin/,
+  );
+  expect(contract).toMatch(
+    /discovery is best effort at every call site.*is one unknown inventory.*only a complete inventory may reject a selector/,
+  );
+  expect(contract).toMatch(/a preset configured twice is a legitimate host setup, not a defect/);
+  expect(contract).toMatch(
+    /resolvedefaultagent settles a control's agent without inventing one.*several configured agents with nothing else to honour is choice-required/,
+  );
+  expect(contract).toMatch(
+    /an unreadable inventory with nothing to honour is input-required.*because superset being unreachable is never an activation precondition/,
+  );
+  expect(contract).toMatch(
+    /validatelaunchagent re-checks that selector against the host in orchestrate, which launches from a control written in an earlier invocation/,
+  );
+  expect(contract).toMatch(
+    /a blocked agent never substitutes another agent, never touches an already-running workspace, and never changes linear state/,
+  );
+  expect(contract).toMatch(
+    /agent verdicts never enter a dispatch result, whose states remain verified, partial, ambiguous, and failed/,
+  );
+
+  for (const skill of [start, orchestrate, spawn]) {
+    expect(skill).toMatch(/superset agents list --host <targethostid> --json/);
+    expect(skill).toMatch(/scripts\/host-agents\.mjs/);
+    expect(skill).toMatch(/a non-zero exit or an empty capture is an unknown inventory/);
+  }
+  for (const skill of [start, spawn]) {
+    expect(skill).toMatch(/input-required.*ask(?:s)? the user to name one agent/);
+  }
+  expect(start).toMatch(
+    /defaultagent carries no built-in default: it is settled against the host's own agent inventory/,
+  );
+  expect(start).toMatch(
+    /choice-required.*let the user pick one selector before the preview\. never pick for them/,
+  );
+  expect(start).toMatch(
+    /a resolved agent must be a selector the host reports, never a runtime name assumed by this plugin/,
+  );
+  expect(orchestrate).toMatch(
+    /before the first launch of the invocation, re-check the control's defaultagent against the host once/,
+  );
+  expect(orchestrate).toMatch(
+    /unverified.*launch with validation\.agent and let superset agents create remain the authority/,
+  );
+  expect(spawn).toMatch(/settle the agent against the host inventory rather than a hardcoded name/);
+  expect(spawn).toMatch(
+    /the dispatch sequence below re-resolves the control, not the inventory, so no dispatch result ever carries an agent verdict/,
+  );
+  expect(allowedTools(skills.orchestrate)).toMatch(/Bash\(mktemp:\*\).*Bash\(rm:\*\)/);
 });
 
 test("AC-022: status derives a read-only report from live Linear without runtime inspection", () => {

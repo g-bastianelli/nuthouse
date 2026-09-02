@@ -3,7 +3,7 @@ name: orchestrate
 description: Use when the user wants Monkey Maestro to run an active Linear project. Loads Linear once, creates branch-idempotent Superset workspaces in parallel, launches only missing agents, and returns immediately.
 argument-hint: "<linear-project-id>"
 effort: medium
-allowed-tools: Bash(superset tasks get:*), Bash(superset workspaces create:*), Bash(superset workspaces get:*), Bash(superset workspaces update:*), Bash(superset terminals list:*), Bash(superset agents create:*), Bash(node:*), Read, Agent
+allowed-tools: Bash(superset tasks get:*), Bash(superset agents list:*), Bash(mktemp:*), Bash(rm:*), Bash(superset workspaces create:*), Bash(superset workspaces get:*), Bash(superset workspaces update:*), Bash(superset terminals list:*), Bash(superset agents create:*), Bash(node:*), Read, Agent
 ---
 
 > Workflow kernel: When this skill needs a workflow/profile decision and no valid parent manifest is supplied, use this plugin's install-local `lib/workflow/index.mjs` explicit-skill resolver. Claude hooks are optional accelerators; a missing or failed hook falls back once to that local path. Warden must not be required. When verification is required and Moon Moth is unavailable, use non-empty commands from repository-owned instructions or build metadata, or block completion.
@@ -138,8 +138,35 @@ all candidate sequences use all-settled semantics.
 
 ## Step 4 — Launch only when needed
 
+Before the first launch of the invocation, re-check the control's `defaultAgent` against
+the host once. The host can drop an agent after activation, so launch time is the
+authoritative moment:
+
+```text
+superset agents list --host <targetHostId> --json > "$capture" 2>"$capture.err"
+```
+
+A non-zero exit or an empty capture is an unknown inventory, not a failure. Pass the
+capture path and `defaultAgent` through `scripts/host-agents.mjs validate-launch`; its
+result names the validated agent every launch below uses:
+
+- `ok` — launch with `validation.agent`.
+- `blocked` — launch nothing. `AGENT_NOT_CONFIGURED`, `HOST_AGENTS_NONE_CONFIGURED`, and
+  `AGENT_UNNAMED` affect every candidate that still needs an agent, so report those
+  candidates as degraded with `validation.configuredAgents`, and tell the user to re-run
+  `monkey-maestro:start` with a selector the host reports. Preserve created and reused
+  workspaces, and never substitute another agent.
+- `unverified` — the inventory is unreadable; launch with `validation.agent` and let
+  `superset agents create` remain the authority.
+
+This check runs once in this skill's own sequence, before the per-candidate launches below.
+It is not a per-candidate effect, and it never enters a dispatch result.
+
+A blocked agent never affects a reused workspace whose live terminal already makes it
+`already-running`, and never changes Linear state.
+
 For a newly created workspace, call `superset agents create` once with the exact workspace,
-host, configured agent, complete worker prompt, and `--json`.
+host, validated agent, complete worker prompt, and `--json`.
 
 For a binding-verified reused workspace, list its live terminals exactly once with:
 
@@ -154,7 +181,7 @@ live terminals means call `superset agents create` once. Use:
 superset agents create \
   --workspace <workspaceId> \
   --host <targetHostId> \
-  --agent <defaultAgent> \
+  --agent <validatedAgent> \
   --prompt <workerPrompt> \
   --json
 ```
@@ -219,6 +246,8 @@ Linear.
 ## Failure scope
 
 - One Linear issue, task, workspace, terminal, or agent failure isolates that candidate.
+- An agent the host no longer configures degrades every candidate awaiting a launch, and
+  never substitutes a different agent.
 - Complete Linear failure prevents every Superset mutation.
 - Inactive or unusable control returns `stopped`.
 - A shared Superset outage returns `degraded`; Linear remains unchanged.
@@ -233,6 +262,7 @@ monkey-maestro:orchestrate report
   Linear:      bootstrap 1
   Frontier:    ready <n> · started <n> · blocked <n> · terminal <n> · unknown <n>
   Runtime:     created <n> · reused <n> · already-running <n> · launched <n>
+  Agent:       <selector> · host inventory <ok | unverified | not-configured>
   Failures:    <per-candidate reasons or none>
   Exit:        idle | busy | degraded | stopped
 ```

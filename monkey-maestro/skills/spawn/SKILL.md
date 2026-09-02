@@ -3,7 +3,7 @@ name: spawn
 description: Use when the user explicitly wants one Linear issue in one task-linked Superset workspace. Applies the same live Linear planner, issue-scoped force rules, exact runtime idempotence, and short lock as project orchestration; active controls supply configuration instead of blocking spawn.
 argument-hint: "<linear-issue-id> [--force] [--host <id>] [--superset-project <id>] [--agent <name>]"
 effort: high
-allowed-tools: Bash(superset tasks get:*), Bash(superset workspaces list:*), Bash(superset workspaces create:*), Bash(superset workspaces get:*), Bash(superset terminals list:*), Bash(superset terminals read:*), Bash(superset agents create:*), Bash(node:*), Bash(mktemp:*), Bash(rm:*), Read, Write, Agent, mcp__claude_ai_Linear__get_issue, mcp__claude_ai_Linear__save_comment
+allowed-tools: Bash(superset tasks get:*), Bash(superset agents list:*), Bash(superset workspaces list:*), Bash(superset workspaces create:*), Bash(superset workspaces get:*), Bash(superset terminals list:*), Bash(superset terminals read:*), Bash(superset agents create:*), Bash(node:*), Bash(mktemp:*), Bash(rm:*), Read, Write, Agent, mcp__claude_ai_Linear__get_issue, mcp__claude_ai_Linear__save_comment
 ---
 
 > Workflow kernel: When this skill needs a workflow/profile decision and no valid parent manifest is supplied, use this plugin's install-local `lib/workflow/index.mjs` explicit-skill resolver. Claude hooks are optional accelerators; a missing or failed hook falls back once to that local path. Warden must not be required. When verification is required and Moon Moth is unavailable, use non-empty commands from repository-owned instructions or build metadata, or block completion.
@@ -70,6 +70,24 @@ omit the baton and must not synthesize one from control `runId` or `invocationId
    scope, concurrency `1`, revision `0`, and run id `manual:<invocationId>`; the Superset
    task must have an absent external project id. Normalize absent and `null` Linear
    project ids equally.
+4. Settle the agent against the host inventory rather than a hardcoded name, whether it
+   comes from an explicit `--agent` or from the resolved control. Capture the host agents
+   once, tolerating failure, then resolve:
+
+   ```text
+   superset agents list --host <targetHostId> --json > "$capture" 2>"$capture.err"
+   ```
+
+   A non-zero exit or an empty capture is an unknown inventory, not a failure. Pass the
+   capture path, the explicit `--agent` value, and the control agent through
+   `scripts/host-agents.mjs resolve-default`. `resolved` supplies the agent;
+   `choice-required` asks the user for one `options` selector before the preview;
+   `input-required` shows the captured stderr and asks the user to name one agent, because
+   an unreachable Superset never refuses a launch by itself; `blocked` refuses with the
+   reason and the host's real selectors. Whenever `resolution.replacedAgent` is present,
+   name both agents in the preview instead of swapping the control agent silently. This is
+   the agent decision for the whole invocation: the dispatch sequence below re-resolves the
+   control, not the inventory, so no dispatch result ever carries an agent verdict.
 
 ## Step 2 — Candidate-only runtime and preview
 
