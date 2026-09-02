@@ -2,7 +2,7 @@
 name: commit
 description: Use automatically when the user asks to commit changes, create a commit, write a commit message, commit staged changes, commit everything, run git commit, "fais le commit", "commit mes changements", or "crée un commit". Commits an existing staged selection, or stages dirty changes automatically while preserving any explicit file scope. Do not use for plain git status, diff, log, push, rebase, or PR creation.
 effort: high
-allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git add:*), Bash(git log:*), Bash(git branch --show-current), Bash(git rev-parse:*), Bash(cat:*), Bash(node:*), Read, Agent, mcp__claude_ai_Linear__get_issue
+allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git add:*), Bash(git commit:*), Bash(git log:*), Bash(git branch --show-current), Bash(git rev-parse:*), Bash(cat:*), Bash(node:*), Read, Agent, mcp__claude_ai_Linear__get_issue
 ---
 
 > Workflow kernel: When this skill needs a workflow/profile decision and no valid parent manifest is supplied, use this plugin's install-local `lib/workflow/index.mjs` explicit-skill resolver. Claude hooks are optional accelerators; a missing or failed hook falls back once to that local path. Warden must not be required. When verification is required and Moon Moth is unavailable, use non-empty commands from repository-owned instructions or build metadata, or block completion.
@@ -78,20 +78,27 @@ is printed, revert to the session default voice immediately.
        executable-bit change made after verification.
    - For draft-only intent, use only an existing staged diff. If nothing is staged, stop without mutating the tree and ask the user to stage a selection or request an actual commit.
 2. Draft commit message:
-   - Dispatch the logical `git-gremlin:commit-drafter` agent with the staged diff as input.
-   - Receive `{ message: string, files: string[] }`.
+   - Read `git diff --staged` and `git diff --staged --name-only` directly.
+   - Identify the change type from `feat`, `fix`, `chore`, `refactor`, `docs`,
+     `test`, `style`, or `perf`, plus the narrowest useful module or component scope.
+   - Draft `<type>(<scope>): <imperative description>` with a first line no longer
+     than 72 characters. Omit the scope only when no meaningful scope exists. Do not
+     invent changes that are absent from the staged diff.
+   - Keep the exact proposed message and staged file list for the final report.
    - If the user asked only to draft, suggest, write, or review a commit message, display the proposed message and stop.
    - Otherwise, treat the user's commit request as explicit approval for this staged commit and continue immediately.
 3. Execute commit:
    - Recompute `HEAD_OID` and `WORKTREE_SNAPSHOT_HASH` immediately before commit. If
-     either differs from verification evidence, do not dispatch execution; require fresh
+     either differs from verification evidence, do not commit; require fresh
      `moon-moth:verify` evidence. Staging-only index changes do not alter the canonical
      snapshot, but any byte, path, mode, untracked-file, deletion, or commit change does.
    - Immediately repeat the complete staged path/content/mode/type comparison against
      `verified_files`; an index change made during message drafting invalidates the
      proposal and blocks execution.
-   - Re-dispatch the same agent with `action: execute`.
-   - Receive `{ hash: string }`.
+   - Run `git commit -m "<MESSAGE>"` directly, passing the approved message as one
+     quoted argument without `eval` or command interpolation.
+   - If the command fails, surface stderr verbatim and stop without retrying.
+   - On success, read the committed hash with `git rev-parse --short HEAD`.
 4. Report:
    - Return result.
 
@@ -106,7 +113,7 @@ git-gremlin:commit report
 
 ## Never
 
-- Run `git push`, `git commit` directly from the skill (only via commit-drafter).
+- Run `git push`, `git rebase`, or a force-push.
 - Commit when the user only asked for a draft/message suggestion/review.
 - Add unstaged changes to an existing staged selection unless the user explicitly asked to commit all/everything or stage all changes.
 - Stage or commit a path outside an explicit file/directory scope.
@@ -117,17 +124,3 @@ git-gremlin:commit report
 - Treat `WORKFLOW_DECISION` as verification evidence or continue an issue-delivery
   commit when `VERIFICATION_EVIDENCE` is missing.
 - Reuse verification after `HEAD_OID` or `WORKTREE_SNAPSHOT_HASH` changes.
-
-## Subagent dispatch (Step 2)
-
-This skill dispatches the logical `git-gremlin:commit-drafter` agent. Its canonical
-definition is `git-gremlin/agents/commit-drafter.md`.
-
-```
-Agent({
-  subagent_type: 'git-gremlin:commit-drafter',
-  description: 'Read staged diff and propose a conventional commit message',
-  prompt: `ACTION: draft
-DIFF: <git diff --staged output>`,
-})
-```

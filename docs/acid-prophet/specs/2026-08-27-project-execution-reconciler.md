@@ -9,6 +9,14 @@ last-reviewed: 2026-08-30
 
 # Linear-backed Superset project orchestrator
 
+> **Partially superseded (2026-09-02).** The branch guard is gone. `AC-043` and every
+> passage describing a `PreToolUse` interception of in-place branch creation no longer
+> describe shipped behavior: the hook parsed shell commands as whitespace-separated words,
+> so quoted prose and heredoc bodies mentioning `git branch` were denied as real branch
+> creations, and a false positive misrouted the agent into `monkey-maestro:spawn`. One
+> workspace per issue is now a convention, not an interception. Everything else in this
+> spec still holds.
+
 ## Problem & Why
 
 Nuthouse can create and verify dependency-aware Linear projects, but its first

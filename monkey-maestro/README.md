@@ -73,11 +73,11 @@ GitHub is optional delivery telemetry. Superset is transport and idempotence evi
 Neither provider is required to classify the Linear frontier, and neither can turn a
 Linear-ready issue into a blocked one.
 
-## Branch guard
+## Workspace scope
 
-Inside Superset-managed roots, in-place branch creation is denied and routed to
-`monkey-maestro:spawn`, preserving one workspace per issue. Set
-`MONKEY_MAESTRO_SPAWN_DISABLE=1` to disable that guard explicitly.
+One workspace per issue stays a convention, not an interception. Nothing rewrites or
+denies your Git commands; invoke `monkey-maestro:spawn <LINEAR-ISSUE-ID>` when you want
+an issue placed in its own task-linked Superset workspace.
 
 ## Development
 

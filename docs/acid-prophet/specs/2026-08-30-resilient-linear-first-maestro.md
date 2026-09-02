@@ -188,8 +188,9 @@ requires a new manual or automated invocation.
 | `spawn`       | Run the shared planner and idempotent primitive for one named issue, with normal or explicit forced launch.                                                          |
 | `stop`        | Confirm and write `active:false` in Linear without depending on Superset; existing workers remain untouched.                                                         |
 
-The branch guard continues to route forbidden in-place branch creation to `spawn`, which
-therefore receives the same Linear-first, force, and idempotence behavior.
+`spawn` is invoked explicitly by the user. (This spec originally had the branch guard route
+forbidden in-place branch creation to `spawn`; that `PreToolUse` hook was removed on
+2026-09-02 — see the note in `2026-08-27-project-execution-reconciler.md`.)
 
 ### Agents and deterministic boundaries
 

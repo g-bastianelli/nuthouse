@@ -8,6 +8,15 @@ last-reviewed: 2026-05-06
 
 # git-gremlin
 
+> **Partially superseded (2026-09-02).** The subagent-delegation architecture described
+> below no longer ships: the `commit-drafter` and `pr-drafter` agents were removed and their
+> drafting, HEAD/index binding, and mutation steps were inlined into the `git-gremlin:commit`
+> and `git-gremlin:pr` skills. A dedicated executor agent added a permission boundary and a
+> failure point without keeping the diff out of context, because the approving skill needs
+> that diff anyway. Everything else in this spec — the approval gates, scope rules, and
+> failure handling — still holds. Read `git-gremlin/skills/{commit,pr}/SKILL.md` for the
+> current contract.
+
 A nuthouse plugin for delegating git commit and PR creation to subagents — keeping diffs out of the main context and saving tokens.
 
 ## Problem & Why

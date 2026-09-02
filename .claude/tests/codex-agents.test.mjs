@@ -56,7 +56,6 @@ describe("Codex agent parity", () => {
     expect(renderCodexAgent(byAlias.get("linear-devotee:project-drafter"))).toContain(
       'model = "gpt-5.6-sol"',
     );
-    expect(renderCodexAgent(byAlias.get("git-gremlin:pr-drafter"))).not.toContain("\nmodel =");
     expect(renderCodexAgent(byAlias.get("warden:voice"))).toContain(
       "Spawn with isolated task-local context, never a full-history fork.",
     );
@@ -70,10 +69,6 @@ describe("Codex agent parity", () => {
     expect(render("moon-moth:verify-runner")).toContain('sandbox_mode = "workspace-write"');
     expect(render("moon-moth:verify-runner")).not.toContain(
       "sandbox_workspace_write.network_access",
-    );
-    expect(render("git-gremlin:commit-drafter")).toContain('sandbox_mode = "workspace-write"');
-    expect(render("git-gremlin:pr-drafter")).toContain(
-      "sandbox_workspace_write.network_access = true",
     );
     expect(render("stack-golem:platform-scout")).toContain(
       "sandbox_workspace_write.network_access = true",

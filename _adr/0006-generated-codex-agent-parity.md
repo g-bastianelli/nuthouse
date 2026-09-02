@@ -40,9 +40,10 @@ supports the agent's real command effects:
 | Local verification or commit writes              | `sandbox_mode = "workspace-write"`              |
 | PR creation or remote platform command workflows | `workspace-write` with outbound network enabled |
 
-The explicit network policy is limited to `git-gremlin:pr-drafter` and
-`stack-golem:platform-scout`; `moon-moth:verify-runner` and
-`git-gremlin:commit-drafter` receive local workspace writes only. Parent runtime permission
+The explicit network policy is limited to `stack-golem:platform-scout`;
+`moon-moth:verify-runner` receives local workspace writes only. (The original decision also
+covered `git-gremlin:pr-drafter` and `git-gremlin:commit-drafter`; both agents were later
+removed and their mutations inlined into the `git-gremlin` skills.) Parent runtime permission
 overrides and approval gates still apply. Carry Claude tool allowlists, skill preloads, and
 turn caps into the developer instructions because Codex custom-agent TOML does not provide
 one-to-one fields for all of those Claude settings.
