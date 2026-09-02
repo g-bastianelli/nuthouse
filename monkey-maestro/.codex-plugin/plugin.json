@@ -1,6 +1,6 @@
 {
   "name": "monkey-maestro",
-  "version": "1.0.21",
+  "version": "1.0.22",
   "description": "Linear-first project orchestration with deterministic readiness, parallel Superset dispatch, and issue-scoped recovery.",
   "author": {
     "name": "g-bastianelli"

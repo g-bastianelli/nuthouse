@@ -2,7 +2,7 @@
   "name": "linear-devotee",
   "displayName": "Linear Devotee",
   "description": "Linear workflow plugin for issue intake, AC-traceable planning, dependency-aware next-work selection, and exact verified project graph creation.",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "author": {
     "name": "g-bastianelli"
   },
