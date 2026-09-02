@@ -1,34 +1,20 @@
 ---
 name: write-checklist
-description: Use during strict issue planning or when a feature approaches QA/PR review to derive a per-spec acceptance checklist. It preserves source AC ids, writes an open checklist, and never treats checklist generation as human feature acceptance.
-argument-hint: "[spec-path] [--plan <path> --workflow-decision <handoff>]"
+description: Use during issue planning or when a feature approaches QA/PR review to derive a per-spec acceptance checklist. It preserves source AC ids, writes an open checklist, and never treats checklist generation as human feature acceptance.
+argument-hint: "[spec-path] [--plan <path>]"
 model: sonnet
 effort: high
-allowed-tools: Read, Glob, Grep, Bash, Bash(node:*)
+allowed-tools: Read, Glob, Grep, Bash
 disallowed-tools: Edit, NotebookEdit
 ---
 
-> Workflow kernel: When this skill needs a workflow/profile decision and no valid parent manifest is supplied, use this plugin's install-local `lib/workflow/index.mjs` explicit-skill resolver. Claude hooks are optional accelerators; a missing or failed hook falls back once to that local path. Warden must not be required. When verification is required and Moon Moth is unavailable, use non-empty commands from repository-owned instructions or build metadata, or block completion.
-
 # write-checklist
-
-> Agent resolution: Before any subagent dispatch, read
-> `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md`; select the active runtime name and follow its spawn rule.
 
 Rigid verification gate. Match the user's language; keep technical identifiers unchanged.
 
 ## Voice
 
-Read `../../persona.md` at the start of this skill. That persona is canonical for all output of this skill. Do not restate persona tone, vocabulary, or emoji rules here.
-
-**Scope:** local to this skill's execution only. Once the final report is printed, revert to the session default voice immediately.
-
-> Voice cadence: at every user-visible workflow transition, try to dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Print the returned `line` only when non-empty. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Never make voice dispatch a precondition, never retry it, and never mention missing `warden` to the user.
-> Voice flag: !`cat "$HOME/.claude/nuthouse/voice.state" 2>/dev/null || echo on` — if this resolved to `off`, skip every warden:voice dispatch in this skill; if it shows as literal text, ignore this line and dispatch as usual.
-
-## Language
-
-Adapt all output to match the user's language. Technical identifiers (file paths, code symbols, CLI flags, tool names) stay in their original form regardless of language.
+Read `../../persona.md`; it is canonical for this skill's user-facing output, and its scope ends at the final report.
 
 ## When you're invoked
 
@@ -36,31 +22,28 @@ The user has a spec under `docs/acid-prophet/specs/` and wants a concrete valida
 
 ## Workflow
 
-### Strict issue-delivery mode
+### Issue-delivery mode
 
-Use this mode when Linear Devotee supplies `PLAN_FILE`, `SPEC_FILE`,
-`WORKFLOW_DECISION`, and named `DRIFT_EVIDENCE: { path, content_hash, status: clean }`:
+Use this mode when `linear-devotee:plan` supplies `PLAN_FILE`, `SPEC_FILE`, and a clean
+`DRIFT_EVIDENCE: { path: <absolute report path>, status: clean }`:
 
-1. Validate the workflow manifest through this plugin's install-local resolver. Require
-   `issue-delivery`, effective `strict`, and exact run/path/content hash. Warden is not
-   required.
-2. Recompute the plan, spec, and drift-evidence `sha256:` hashes. Require the plan to be
-   validated and the supplied drift evidence to be `clean` and bound to those same
-   plan/spec/decision hashes.
+1. Require `PLAN_FILE`, `SPEC_FILE`, and the drift report to exist and be readable; a
+   missing artifact blocks. Artifacts travel by absolute path — never reconstruct one from
+   conversation prose.
+2. Require the supplied plan to be validated and the drift report's `status` to be `clean`.
+   A `blocked` drift report stops checklist generation.
 3. Continue through the ordinary extraction, draft, and user review gate below, using
-   the explicit `SPEC_FILE`. Strict mode does not skip review, auto-check an item, or
+   the explicit `SPEC_FILE`. This mode does not skip review, auto-check an item, or
    accept the feature.
-4. Write the accepted checklist with `status: open` and record the exact decision, plan,
-   spec, and drift-evidence hashes it derives from. Re-read its final bytes and return
-   the named result:
+4. Write the accepted checklist with `status: open` and record the plan, spec, and
+   drift-report paths it derives from. Return the named result:
 
    ```text
-   CHECKLIST_EVIDENCE: { path: <absolute checklist path>, content_hash: sha256:<hex>, status: open }
+   CHECKLIST_EVIDENCE: { path: <absolute checklist path>, status: open }
    ```
 
    The artifact is required verification guidance. Human feature acceptance remains a
-   later explicit gate, and manual merge remains outside this skill. Never mark the
-   checklist or feature accepted merely because the artifact was generated.
+   later explicit gate, and manual merge remains outside this skill.
 
 ### Ordinary QA / PR mode
 
@@ -118,6 +101,16 @@ Use this mode when Linear Devotee supplies `PLAN_FILE`, `SPEC_FILE`,
    - `(p)`: `gh pr comment --body "<rendered>"`. On failure: surface error, suggest manual copy, return to menu.
    - `(o)`: print absolute path.
    - `(s)`: exit.
+
+## Generating a checklist is not accepting the feature
+
+**A CHECKLIST IS WRITTEN OPEN AND STAYS OPEN UNTIL A HUMAN CHECKS ITS BOXES.**
+
+| Excuse                                                             | Reality                                                           |
+| ------------------------------------------------------------------ | ----------------------------------------------------------------- |
+| "It derives straight from the spec, so the criteria are satisfied" | Derivation proves the items exist, not that they pass.            |
+| "Drift came back clean, the feature is fine"                       | Clean drift compares intent to intent. Nobody ran the checks yet. |
+| "I verified the items while drafting them"                         | Drafting is reading. The `- [ ]` boxes belong to the reviewer.    |
 
 ## Final Report
 

@@ -9,33 +9,17 @@ allowed-tools: WebSearch, WebFetch, Read, Agent
 
 # research
 
-> Agent resolution: Before any subagent dispatch, read
-> `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md`; select the active runtime name and follow its spawn rule.
+> Agent resolution: before any subagent dispatch, read `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md` and use the active runtime's name.
 
 ## Voice
 
-Read `../../persona.md` at skill start — the lore-hound voice is canonical. The hound is a
-source-diviner: nose to ground, teeth sharp, retrieving only what's fetchable. No training
-data, no invention. All output adapts to the user's language; technical identifiers stay
-original.
-
-**Scope:** local to this skill's execution only. Once the final report is printed, revert to
-the session default voice immediately.
-
-This skill is **rigid** — execute steps in order.
+Read `../../persona.md`; it is canonical for this skill's user-facing output, and its scope ends at the final report.
 
 ## Context
 
 > Auto-injected on Claude Code at skill load. If the lines below still show raw, unexpanded dynamic-context commands, run them manually before step 1.
 
 - Today: !`date +%Y-%m-%d`
-
-## Language
-
-Adapt all output to match the user's language. If the user writes in French, respond in
-French; if English, in English; if mixed, follow their lead. Technical identifiers (file
-paths, code symbols, CLI flags, tool names) stay in their original form regardless of
-language.
 
 ## When you're invoked
 

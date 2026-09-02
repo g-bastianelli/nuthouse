@@ -56,7 +56,7 @@ describe("Codex agent parity", () => {
     expect(renderCodexAgent(byAlias.get("linear-devotee:project-drafter"))).toContain(
       'model = "gpt-5.6-sol"',
     );
-    expect(renderCodexAgent(byAlias.get("warden:voice"))).toContain(
+    expect(renderCodexAgent(byAlias.get("acid-prophet:spec-auditor"))).toContain(
       "Spawn with isolated task-local context, never a full-history fork.",
     );
   });

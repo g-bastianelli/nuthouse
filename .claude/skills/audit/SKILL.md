@@ -103,7 +103,7 @@ For each file, check against the matching template's requirements.
 1. Frontmatter contains `name` field — ❌ CRITIQUE if missing
 2. Frontmatter contains `description` field — ❌ CRITIQUE if missing
 3. Frontmatter contains `tools:` block (non-empty list) — ❌ CRITIQUE if missing or empty (every agent must have an explicit allowlist)
-4. Agent `name` matches a persona/role word (`seer`, `oracle`, `acolyte`, `spirit`, `muse`, `ghost`, `herald`, etc.) AND the agent body does NOT reference `shared/persona-line-contract.md` — ⚠️ WARNING: persona-coded name on a non-voice agent; rename to a functional role
+4. Agent `name` matches a persona/role word (`seer`, `oracle`, `acolyte`, `spirit`, `muse`, `ghost`, `herald`, etc.) — ⚠️ WARNING: persona-coded agent name; rename to a functional role
 
 **persona.md checks:**
 

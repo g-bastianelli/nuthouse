@@ -10,7 +10,12 @@ import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
-const MANIFEST_PLUGINS = ["git-gremlin", "linear-devotee", "monkey-maestro", "moon-moth", "warden"];
+// Every plugin shipped to Codex must keep its two manifests in version parity.
+// Derived from the Codex registry so retiring a plugin never leaves a stale gate.
+function manifestPlugins(repoRoot) {
+  const registry = path.join(repoRoot, ".agents", "plugins", "marketplace.json");
+  return (JSON.parse(fs.readFileSync(registry, "utf8")).plugins ?? []).map((p) => p.name);
+}
 
 const SOURCE_EXTENSIONS = new Set([".json", ".md", ".mjs", ".yaml", ".yml"]);
 const EXCLUDED_SEGMENTS = new Set(["assets", "tests"]);
@@ -62,9 +67,9 @@ function allowedOrchestrateReference(context, section) {
 export function checkPluginInvariants(repoRoot) {
   const problems = [];
 
-  const maestroFiles = filesBelow(repoRoot, "monkey-maestro")
-    .filter((filename) => SOURCE_EXTENSIONS.has(path.extname(filename)))
-    .filter((filename) => !filename.includes("/lib/workflow/"));
+  const maestroFiles = filesBelow(repoRoot, "monkey-maestro").filter((filename) =>
+    SOURCE_EXTENSIONS.has(path.extname(filename)),
+  );
 
   for (const filename of maestroFiles) {
     const body = fs.readFileSync(path.join(repoRoot, filename), "utf8");
@@ -97,7 +102,7 @@ export function checkPluginInvariants(repoRoot) {
     }
   }
 
-  for (const plugin of MANIFEST_PLUGINS) checkManifestPair(repoRoot, plugin, problems);
+  for (const plugin of manifestPlugins(repoRoot)) checkManifestPair(repoRoot, plugin, problems);
 
   return [...new Set(problems)].sort();
 }

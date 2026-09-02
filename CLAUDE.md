@@ -1,6 +1,6 @@
 # nuthouse
 
-Personal Claude Code (sometimes Codex) plugin marketplace. Ten plugins right now: `saucy-status`, `subroutine`, `linear-devotee`, `acid-prophet`, `warden`, `git-gremlin`, `lore-hound`, `stack-golem`, `moon-moth`, `monkey-maestro`.
+Personal Claude Code (sometimes Codex) plugin marketplace. Eight plugins right now: `subroutine`, `linear-devotee`, `acid-prophet`, `git-gremlin`, `lore-hound`, `stack-golem`, `moon-moth`, `monkey-maestro`.
 
 > **Pour créer un nouveau plugin / skill / agent**, invoque les skills locaux :
 > `/scaffold-plugin`, `/scaffold-skill`, `/scaffold-agent`. Ils embarquent
@@ -17,9 +17,8 @@ This marketplace is unapologetically **brainrot-coded**. **Brainrot forever.** E
 
 New plugins follow this energy:
 
-- **Plugin name** = a persona first: a person, creature, role, mythic figure, cultist, monster, or other being that can speak in character. `subroutine` is a gagged latex sub, `linear-devotee` is a feral worshipper, `acid-prophet` is a tripping spec oracle. `saucy-status` is a historical exception. New names must not be abstract effects, modes, or vibes (`acid-vision`, `task-flow`, `idea-engine`) unless the noun clearly points to a character. **Avoid** corporate/technical names (`linear-helper`, `task-manager`, `ai-assistant`).
+- **Plugin name** = a persona first: a person, creature, role, mythic figure, cultist, monster, or other being that can speak in character. `subroutine` is a gagged latex sub, `linear-devotee` is a feral worshipper, `acid-prophet` is a tripping spec oracle. New names must not be abstract effects, modes, or vibes (`acid-vision`, `task-flow`, `idea-engine`) unless the noun clearly points to a character. **Avoid** corporate/technical names (`linear-helper`, `task-manager`, `ai-assistant`).
 - **Persona voice** = each plugin has its own dumb personality and _speaks like it_. Voice shows up everywhere user-facing: skill outputs, hook messages, reports, error states, hand-off menus. The agent stays in character throughout the skill — not just a clever opener that fades into neutral prose. **The canonical voice of each plugin lives in `<plugin>/persona.md`** (frontmatter `name`/`tagline`/`emoji` + body prose). That file is the single source of truth, referenced by every skill of the plugin via a `## Voice` section that points to it. **This CLAUDE.md does not define voices** — it only references them. Read the persona file to know how a plugin sounds.
-  - `saucy-status` → see `saucy-status/persona.md`
   - `subroutine` → see `subroutine/persona.md`
   - `linear-devotee` → see `linear-devotee/persona.md`
   - `acid-prophet` → see `acid-prophet/persona.md`
@@ -29,7 +28,7 @@ New plugins follow this energy:
   - `monkey-maestro` → see `monkey-maestro/persona.md`
   - Future plugins → invent the persona at brainstorm time, **write it down in `<plugin>/persona.md`**, and apply it consistently across the plugin's skills. Do not redeclare the voice in this CLAUDE.md.
 - **Reports follow the voice**. The structure stays plain, the surrounding 1-2 lines are brainrot. Same skill, same voice end-to-end.
-- **Voice cadence matters**. Claude Code skills with `shared/persona-line-contract.md` should try `warden:voice` at every user-visible workflow transition: skill start, context resolved, user decision point, external mutation gate, handoff, recoverable failure, final report, and clean exit. Do not call it for internal shell commands, hidden subagent steps, or inside serious artifacts. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Missing `warden` is never a precondition failure and should never be mentioned to the user during the workflow. Skills check the injected voice flag at load (a dynamic-context `!`-command line in the voice blockquote) and skip every `warden:voice` dispatch when it resolves to `off` — zero subagent cost when voice is disabled.
+- **The voice is read, not dispatched**. A skill speaks in character by reading its plugin's `persona.md` inline, in a `## Voice` section whose scope ends at the final report. There is no voice agent, no persona-line contract, and no voice flag: spending a subagent round-trip on a decorative line is the kind of ceremony this repo exists without.
 - **Hard rule**: actions stay serious, voice stays brainrot. No fantasy side-effects, no joke commits, no "lol whoops" failure modes. Only the _strings_ are fun.
 - **Use emojis sparingly**. 🥺 / 👑 / 😔 / 🔥 land. Anything more is over-emoji and feels AI-slop.
 
@@ -87,9 +86,34 @@ skill. Run `bun run sync:codex-agents` after any agent or dispatch edit,
 `bun run install:codex-agents` when refreshing the personal `~/.codex/agents/` registry.
 Never hand-edit generated TOML agents or runtime maps.
 
+## How skills chain
+
+There is no workflow engine. A skill hands to the next one by naming it, on its own line,
+under a marker the model cannot miss:
+
+```markdown
+**REQUIRED SUB-SKILL:** Use `moon-moth:verify`
+```
+
+That marker is the entire chaining protocol. When the user must choose instead, present a
+hand-off menu and name a skill per branch.
+
+**State that has to survive a compaction** — and only that — goes in one markdown ledger at
+`.nuthouse/<subject>/progress.md`. Its first line names the subject (`# ledger — plan: <path>`),
+and each completed step gets one line. On resume, re-read it and continue at the first step
+without a line. It is git-ignored and disposable. No hashes, no manifests, no signed evidence:
+the threat model is a lost conversation, not a hostile writer.
+
+**Guardrails are named laws, not code.** State the rule in capitals, then a short
+`| Excuse | Reality |` table naming the rationalisations that break it. `git-gremlin/skills/commit/SKILL.md`
+is the reference implementation. A gate that cannot be enforced by a hook is prose — write it as
+prose that is hard to argue with, rather than as a protocol nobody executes.
+
+---
+
 ## Stack & tooling
 
-- **Runtime hooks/scripts**: Node.js, **ESM** (`import` / `export`). **`.mjs`** extension is mandatory for hooks and tests (zero ambiguity for Node, no `package.json` needed in the plugin, plugin is self-contained regardless of install context). `saucy-status` stays on CJS for historical reasons. Every new plugin ships ESM `.mjs`. Reference: `linear-devotee/claudecode/hooks/*.mjs`; Codex discovers plugin hooks through `<plugin>/hooks/hooks.json`, which may point at shared runtime scripts.
+- **Runtime hooks/scripts**: Node.js, **ESM** (`import` / `export`). **`.mjs`** extension is mandatory for hooks and tests (zero ambiguity for Node, no `package.json` needed in the plugin, plugin is self-contained regardless of install context). Every plugin ships ESM `.mjs`. Reference: `linear-devotee/claudecode/hooks/*.mjs`; Codex discovers plugin hooks through `<plugin>/hooks/hooks.json`, which may point at shared runtime scripts.
 - **Package manager**: `bun@1.3.x` (declared in root `package.json`).
 - **Tests**: `bun test` (built-in, no dep added). Claude Code tests live in `<plugin>/claudecode/tests/`; Codex/root helper tests live in `<plugin>/tests/`.
 - **Lint/format**: `oxlint` (config in `.oxlintrc.json`) and `oxfmt` (config in `.oxfmtrc.json`). Local rule: empty blocks are allowed when intentional; use `catch {}` (not `catch (e)`) when the binding is unused.
@@ -111,6 +135,7 @@ node -e "JSON.parse(require('node:fs').readFileSync('.claude-plugin/marketplace.
 node -e "JSON.parse(require('node:fs').readFileSync('.agents/plugins/marketplace.json', 'utf8'))"  # Codex marketplace JSON valid (codex/both plugins MUST be registered here too — else invisible to Codex)
 bun run bump:shas                          # marketplace.json sha pins up-to-date vs origin/main (see _adr/0002-marketplace-sha-pinning.md)
 grep -rn "writing-plans" <plugin>/   # no external workflow artifacts leak
+bun run check:duplication                  # no prose block repeated across two SKILL.md
 ```
 
 ---
@@ -148,11 +173,9 @@ Global guidance — applies everywhere, not just at scaffold time:
 
 | Plugin           | What                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | Hooks                                    | Skills                                                                                                                                                  | Agents                                                                                                           | Persona                     |
 | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | --------------------------- |
-| `saucy-status`   | Saucy/gooning loading messages in statusline                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | SessionStart, UserPromptSubmit           | —                                                                                                                                                       | —                                                                                                                | `saucy-status/persona.md`   |
 | `subroutine`     | Ambient implementation discipline for TS monorepos. A hook injects the discipline (type-safety, Zod validation, code-organisation, React rules, form rules, testing, state machines, Hono pipeline, Result/unwrap) as context whenever matching files are **edited or reviewed** — deterministic delivery the **main agent** implements against natively (model-driven skill auto-load was unreliable and invisible to review subagents; the hook fixes both). SKILL.md files hold the rules; no `implement` skill, no agents; `moon-moth:verify` closes the loop in moon repos. | PostToolUse, SubagentStart, SessionStart | `type-safety`, `validation`, `code-organisation`, `form-rules`, `react-rules`, `testing-discipline`, `state-machine`, `hono-pipeline`, `result-pattern` | —                                                                                                                | `subroutine/persona.md`     |
 | `linear-devotee` | Linear issue detection at session start + AC-traceable planning + dependency-aware next-work selection + recoverable Project/Milestone/Issue cascades. A complete mutation envelope is hash-bound to one gate and replayed exactly; the canonical dependency graph is separately reloaded and verified.                                                                                                                                                                                                                                                                          | SessionStart, UserPromptSubmit           | `greet`, `plan`, `create-project`, `create-milestone`, `create-issue`, `next-issue`                                                                     | `issue-context`, `issue-drafter`, `milestone-drafter`, `plan-auditor`, `project-drafter`, `project-graph-loader` | `linear-devotee/persona.md` |
 | `acid-prophet`   | Spec-driven development pipeline. Q&A → EARS spec with stable `AC-###` ids → `spec-auditor` Phase -1 gates (including traceability) → optional `write-plan` with dependency-ordered AC coverage, contracts, codebase map, and quickstart evidence → handoff to `linear-devotee` or implementation. Project constitution articles become extra gates. PR drift and QA checklists preserve the same AC ids; `[NEEDS CLARIFICATION:...]` markers prevent invention.                                                                                                                 | —                                        | `write-constitution`, `write-spec`, `audit-spec`, `write-plan`, `write-checklist`, `check-drift`                                                        | `spec-auditor`                                                                                                   | `acid-prophet/persona.md`   |
-| `warden`         | Optional workflow classifier plus worktree-scoped profile client and centralized voice agent. `warden:route` returns a declarative workflow target without executing it; `warden:mode` controls `quick` / `standard` / `strict`; `warden:voice` dispatches decorative persona lines and toggles them globally. Domain plugins remain operational without Warden.                                                                                                                                                                                                                 | —                                        | `mode`, `route`, `voice`                                                                                                                                | `voice`                                                                                                          | `warden/persona.md`         |
 | `git-gremlin`    | Contextual review plus commit + PR drafting with scoped mutation gates. The `commit` and `pr` skills read the staged diff / git log, draft the message, and run `git commit` / `git push` + `gh pr create` themselves after approval — no drafter subagent sits between the gate and the mutation. It owns no workspace orchestration or branch guard.                                                                                                                                                                                                                           | —                                        | `commit`, `pr`, `review`, `review-passes`                                                                                                               | `reviewer`                                                                                                       | `git-gremlin/persona.md`    |
 | `lore-hound`     | Source-hunting research harness: fan-out web search → fetch + summarize → adversarial verification → cited synthesis. Zero parametric knowledge — answers only from verified sources.                                                                                                                                                                                                                                                                                                                                                                                            | —                                        | `research`                                                                                                                                              | `source-fetcher`, `claim-verifier`                                                                               | `lore-hound/persona.md`     |
 | `stack-golem`    | Notom-stack ops & debug toolbox — Scaleway resource control (`scw`), platform observability (logs/metrics/health on staging+prod), local dev debugging, Insomnia collection sync. Investigate-first, CLI-driven, never punts to the console.                                                                                                                                                                                                                                                                                                                                     | —                                        | `debug-local`, `observe-platform`, `drive-scaleway`, `sync-insomnia`                                                                                    | `platform-scout`                                                                                                 | `stack-golem/persona.md`    |
@@ -167,6 +190,10 @@ Architecture Decision Records live in `_adr/`, numbered sequentially (`NNNN-keba
 - `_adr/0002-marketplace-sha-pinning.md` — every `git-subdir` entry in `.claude-plugin/marketplace.json` carries an explicit `sha` to stop the install registry from desyncing. Run `bun run bump:shas` after any merge to `main` that touches a plugin subdir.
 - `_adr/0004-plugin-version-bump-on-release.md` — every content release bumps the plugin's patch `version` in both manifests **before** the sha pins move; a sha bump alone is invisible to existing installs (the plugin cache and updater are keyed by version). Use the local `/release` skill (versions → merge → shas), or `bun run bump:versions` manually.
 - `_adr/0005-spec-issue-traceability.md` — stable Acceptance identities join Acid Prophet specs to plans, Linear issue packets, QA checklists, and drift reports. Source ids use `AC-###`; standalone Linear ids use `AC-L###`.
+- `_adr/0007-prose-orchestration-over-a-workflow-kernel.md` — the workflow kernel, the
+  hash-bound evidence protocol, and the `warden` voice indirection are replaced by prose
+  chaining, a markdown ledger, and named laws. Read before adding any orchestration
+  machinery; it records why there is none.
 
 ---
 

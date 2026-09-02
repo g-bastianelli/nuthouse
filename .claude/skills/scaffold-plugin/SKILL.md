@@ -1,6 +1,6 @@
 ---
 name: scaffold-plugin
-description: Use when creating a brand-new plugin in this `nuthouse` marketplace (saucy-status / subroutine / linear-devotee pattern). Asks the user for plugin name (brainrot-check), description, target runtimes (claudecode / codex / both), whether the plugin needs hooks, persona tagline + emoji, and marketplace category. Generates the full folder skeleton: persona.md, plugin.json, README.md, optional hooks/ + data/. Updates root marketplace.json (git-subdir entry) and root README.md plugins table. Embeds all conventions from the legacy CLAUDE.md (naming rules, frontmatter shapes, hook contract, anti-patterns) so they are applied by construction.
+description: Use when creating a brand-new plugin in this `nuthouse` marketplace (subroutine / linear-devotee pattern). Asks the user for plugin name (brainrot-check), description, target runtimes (claudecode / codex / both), whether the plugin needs hooks, persona tagline + emoji, and marketplace category. Generates the full folder skeleton: persona.md, plugin.json, README.md, optional hooks/ + data/. Updates root marketplace.json (git-subdir entry) and root README.md plugins table. Embeds all conventions from the legacy CLAUDE.md (naming rules, frontmatter shapes, hook contract, anti-patterns) so they are applied by construction.
 model: haiku
 ---
 
@@ -60,7 +60,6 @@ phrasing — or if the model already has a name proposal, jump to validation).
 - Must name a **persona first**: a person, creature, role, mythic figure,
   cultist, monster, or other being that can speak in character. Family
   resemblance with `subroutine`, `linear-devotee`, `acid-prophet`.
-  `saucy-status` is a historical exception, not a naming precedent.
   Reject abstract effects, modes, or vibes like `acid-vision`,
   `task-flow`, `idea-engine` unless the noun clearly points to a character.
 - **Avoid** corporate/technical names: `linear-helper`, `task-manager`,
@@ -540,8 +539,8 @@ These are **non-negotiable** regardless of voice intensity:
    `node:fs`, `node:path`, `node:os`, `node:child_process`. If the user
    says "I need axios", panic-correct: _"non non non, pas de dep. on
    reste sur `node:` natif. justifie le besoin avant tout."_
-4. **Always ESM `.mjs`** for hooks. Reject `.js` (CJS) for any new
-   plugin — saucy-status is the historical exception, not a precedent.
+4. **Always ESM `.mjs`** for hooks and tests. Reject `.js` (CJS) in any
+   generated plugin.
 5. **Always English** in README, plugin.json description, banner text
    (no mixed languages).
 6. **Persona file must be created**, even if the user resists. The whole

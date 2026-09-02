@@ -10,7 +10,6 @@ for the active runtime.
 | `moon-moth:affected-scout` | `moon-moth:affected-scout` | `moon_moth__affected_scout` |
 | `moon-moth:change-auditor` | `moon-moth:change-auditor` | `moon_moth__change_auditor` |
 | `moon-moth:verify-runner`  | `moon-moth:verify-runner`  | `moon_moth__verify_runner`  |
-| `warden:voice`             | `warden:voice`             | `warden__voice`             |
 
 On Codex, spawn a typed custom agent with isolated task-local context. Never use a
 full-history fork. Pass only the input contract required by the delegated task.

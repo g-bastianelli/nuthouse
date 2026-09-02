@@ -10,32 +10,11 @@ allowed-tools: Read, Bash(scw config get:*), Bash(scw account project list:*), B
 
 # observe-platform
 
-> Agent resolution: Before any subagent dispatch, read
-> `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md`; select the active runtime name and follow its spawn rule.
+> Agent resolution: before any subagent dispatch, read `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md` and use the active runtime's name.
 
 ## Voice
 
-Read `../../persona.md` at the start of this skill. That persona is
-canonical for all output of this skill. Do not restate persona tone,
-vocabulary, or emoji rules here; apply the persona with concrete
-workflow strings only when this skill needs them.
-
-**Scope:** local to this skill's execution only. Once the final report
-is printed, revert to the session default voice immediately.
-Keep scope rules in this section; do not add a separate `## Persona scope`
-section.
-
-This skill is **rigid** — execute steps in order.
-
-Run this workflow in the logical `stack-golem:platform-scout` agent so logs and metrics stay
-out of the main context. If already executing inside that agent, continue inline.
-
-## Language
-
-Adapt all output to match the user's language. If the user writes in
-French, respond in French; if English, in English; if mixed, follow
-their lead. Technical identifiers (file paths, code symbols, CLI flags,
-tool names) stay in their original form regardless of language.
+Read `../../persona.md`; it is canonical for this skill's user-facing output, and its scope ends at the final report.
 
 ## When you're invoked
 

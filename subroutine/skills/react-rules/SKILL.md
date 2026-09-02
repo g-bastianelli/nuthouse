@@ -1,5 +1,6 @@
 ---
 name: react-rules
+genre: contract
 description: React implementation discipline — one component per file, folders mirror JSX ownership, children receive stable IDs/primitives, state lives at the highest durable layer, and styling ownership stays explicit.
 user-invocable: false
 paths: ["**/*.tsx", "**/use*.ts", "**/hooks/**/*.ts"]

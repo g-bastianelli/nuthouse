@@ -1,5 +1,6 @@
 ---
 name: type-safety
+genre: contract
 description: Type-safety discipline for all TypeScript work — prove unknown values, avoid any/as/non-null assertions, prefer inference and exhaustive unions. Applies whenever editing or creating TypeScript files.
 user-invocable: false
 paths: ["**/*.ts", "**/*.tsx"]

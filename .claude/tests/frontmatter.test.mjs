@@ -108,3 +108,30 @@ describe("skill + agent frontmatter values", () => {
     });
   }
 });
+
+// A skill either speaks to the user or it is a contract the model reads. The first kind
+// must name where its voice comes from; the second declares `genre: contract` and has no
+// user-facing output at all. Asserting the property this way means no exception list to
+// maintain when a skill is added or its genre changes.
+describe("every user-facing skill names its voice", () => {
+  const skills = listTrackedFiles()
+    .filter((file) => /^[^/.][^/]*\/skills\/[^/]+\/SKILL\.md$/.test(file))
+    // git still lists a path deleted in the working tree; only judge what is on disk.
+    .filter((file) => fs.existsSync(path.join(REPO_ROOT, file)))
+    .sort();
+
+  test("the skill inventory is non-empty", () => {
+    expect(skills.length).toBeGreaterThan(0);
+  });
+
+  for (const file of skills) {
+    const body = fs.readFileSync(path.join(REPO_ROOT, file), "utf8");
+    const block = extractFrontmatterBlock(body);
+    const genre = block ? parseTopLevelScalar(block, "genre") : undefined;
+    if (genre === "contract") continue;
+
+    test(`${file}: reads its plugin persona`, () => {
+      expect(body).toContain("persona.md");
+    });
+  }
+});

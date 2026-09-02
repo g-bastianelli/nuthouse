@@ -13,17 +13,5 @@
     "./agents/affected-scout.md",
     "./agents/verify-runner.md",
     "./agents/change-auditor.md"
-  ],
-  "hooks": {
-    "SessionStart": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/claudecode/hooks/session-start.mjs\""
-          }
-        ]
-      }
-    ]
-  }
+  ]
 }

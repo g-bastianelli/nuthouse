@@ -8,40 +8,15 @@ agent: git-gremlin:reviewer
 allowed-tools: Bash(node:*), Bash(git diff:*), Bash(git log:*), Read, Glob, Grep, Agent
 ---
 
-> Workflow kernel: When this skill needs a workflow/profile decision and no valid parent manifest is supplied, use this plugin's install-local `lib/workflow/index.mjs` explicit-skill resolver. Claude hooks are optional accelerators; a missing or failed hook falls back once to that local path. Warden must not be required. When verification is required and Moon Moth is unavailable, use non-empty commands from repository-owned instructions or build metadata, or block completion.
-
 # git-gremlin:review
 
-> Agent resolution: Before any subagent dispatch, read
-> `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md`; select the active runtime name and follow its spawn rule.
+> Agent resolution: before any subagent dispatch, read `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md` and use the active runtime's name.
 
 Context-first review orchestrator. Match the user's language; keep technical identifiers unchanged.
 
-> Voice cadence: at every user-visible workflow transition, try to dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Visible transitions are skill start, context resolved, recoverable failure, final report, and clean exit. Print the returned `line` only when non-empty. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Never make voice dispatch a precondition, never retry it, and never mention missing `warden` to the user.
-> Voice flag: !`cat "$HOME/.claude/nuthouse/voice.state" 2>/dev/null || echo on` — if this resolved to `off`, skip every warden:voice dispatch in this skill; if it shows as literal text, ignore this line and dispatch as usual.
-
 ## Voice
 
-Read `../../persona.md` at the start of this skill. That persona is
-canonical for all output of this skill. Do not restate persona tone,
-vocabulary, or emoji rules here; apply the persona with concrete
-workflow strings only when this skill needs them.
-
-**Scope:** local to this skill's execution only. Once the final report
-is printed, revert to the session default voice immediately.
-Keep scope rules in this section; do not add a separate `## Persona scope`
-section.
-
-This skill is **rigid** — execute steps in order. Its job is to compile the
-right context, delegate review work to the strongest available backend, and
-render only substantiated findings.
-
-## Language
-
-Adapt all output to match the user's language. If the user writes in
-French, respond in French; if English, in English; if mixed, follow
-their lead. Technical identifiers (file paths, code symbols, CLI flags,
-tool names) stay in their original format regardless of language.
+Read `../../persona.md`; it is canonical for this skill's user-facing output, and its scope ends at the final report.
 
 ## When you're invoked
 

@@ -6,19 +6,13 @@ effort: medium
 allowed-tools: Read, Write, Agent, Bash(node:*), Bash(mktemp:*), Bash(rm:*), mcp__claude_ai_Linear__get_project
 ---
 
-> Workflow kernel: When this skill needs a workflow/profile decision and no valid parent manifest is supplied, use this plugin's install-local `lib/workflow/index.mjs` explicit-skill resolver. Claude hooks are optional accelerators; a missing or failed hook falls back once to that local path. Warden must not be required. When verification is required and Moon Moth is unavailable, use non-empty commands from repository-owned instructions or build metadata, or block completion.
-
 # status
 
-> Agent resolution: Before any subagent dispatch, read
-> `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md`; select the active runtime name and follow its spawn rule.
-
-> At visible transitions, try `warden:voice` with `SUMMARY: <≤15 words, user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Print only a non-empty line. Skip failure or disabled voice without mention or retry.
+> Agent resolution: before any subagent dispatch, read `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md` and use the active runtime's name.
 
 ## Voice
 
-Read `../../persona.md`. Use it only around the concise final report; provider evidence
-and machine data stay neutral. Restore the session voice afterward.
+Read `../../persona.md`; it is canonical for this skill's user-facing output, and its scope ends at the final report.
 
 ## Contract
 

@@ -36,11 +36,10 @@ description: {{description}}
 
 Rigid [gate type]. Match the user's language; keep technical identifiers unchanged.
 
-[IF plugin has persona-line-contract.md — warden voice]
+## Voice
 
-> Voice cadence: at every user-visible workflow transition, try to dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Visible transitions are skill start, context resolved, user decision point, external mutation gate, handoff, recoverable failure, final report, and clean exit. Print the returned `line` only when non-empty. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Never make voice dispatch a precondition, never retry it, and never mention missing `warden` to the user.
-> Voice flag: !`cat "$HOME/.claude/nuthouse/voice.state" 2>/dev/null || echo on` — if this resolved to `off`, skip every warden:voice dispatch in this skill; if it shows as literal text, ignore this line and dispatch as usual.
-> [/ENDIF]
+Read `../../persona.md` at the start of this skill. It is canonical for every
+user-facing string this skill emits, and its scope ends with the final report.
 
 [IF the skill needs dynamic context — optional section, repo-wide convention]
 
@@ -75,6 +74,12 @@ Present numbered options after the final action:
 ```
 
 Branch on response. Exit skill when the chosen branch finishes.
+[/ENDIF]
+
+[IF this skill hands to a specific next skill]
+Name the next skill explicitly, on its own line, so the chain cannot be guessed:
+
+**REQUIRED SUB-SKILL:** Use `<plugin>:<skill>`
 [/ENDIF]
 
 ## Final Report

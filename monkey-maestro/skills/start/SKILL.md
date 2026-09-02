@@ -6,19 +6,13 @@ effort: high
 allowed-tools: Bash(node:*), Bash(mktemp:*), Bash(rm:*), Read, Write, Agent, mcp__claude_ai_Linear__get_project, mcp__claude_ai_Linear__save_comment
 ---
 
-> Workflow kernel: When this skill needs a workflow/profile decision and no valid parent manifest is supplied, use this plugin's install-local `lib/workflow/index.mjs` explicit-skill resolver. Claude hooks are optional accelerators; a missing or failed hook falls back once to that local path. Warden must not be required. When verification is required and Moon Moth is unavailable, use non-empty commands from repository-owned instructions or build metadata, or block completion.
-
 # start
 
-> Agent resolution: Before any subagent dispatch, read
-> `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md`; select the active runtime name and follow its spawn rule.
-
-> At visible transitions, try `warden:voice` through the shared persona-line contract. Print only a non-empty line; voice failure is never a precondition and is never retried or mentioned.
+> Agent resolution: before any subagent dispatch, read `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md` and use the active runtime's name.
 
 ## Voice
 
-Read `../../persona.md`. Apply it to wrapper messages only. Keep previews, records, and
-reports neutral. Restore the session voice after the report.
+Read `../../persona.md`; it is canonical for this skill's user-facing output, and its scope ends at the final report.
 
 ## Contract
 
@@ -40,7 +34,11 @@ Superset, the project snapshot loader, or the project lock before writing contro
    the preview and verified v2 write below.
 4. Resolve configuration from explicit arguments first, then the latest usable active or
    inactive control: `targetHostId`, `supersetProjectId`, `defaultAgent`, and
-   `maxConcurrency`. Default agent is `codex`; default concurrency is `4`. Require host
+   `maxConcurrency`. Record `defaultAgent` from an explicit `--agent` or the latest control,
+   and leave it unset when neither names one — activation never contacts the host, so it
+   never assumes an agent name either. `orchestrate` and `spawn` settle it against the
+   host inventory at launch, which is the only authoritative moment.
+   Default concurrency is `4`. Require host
    and Superset project ids rather than guessing them. Concurrency must be 1–10.
 5. Build a schema-v2 successor through `scripts/records.mjs build-control` with a fresh
    `runId`, `active: true`, revision one above the latest usable control or `1`, and now as

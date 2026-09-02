@@ -1,10 +1,9 @@
 ---
 name: affected-scope
+genre: contract
 description: The scope map JSON contract moon-moth skills and agents exchange — schema and field rules for the affected project set (ids, layers, stacks, tasks, downstream blast radius) computed from `moon query`. Background knowledge contract, preloaded into moon-moth agents; not a user-facing workflow.
 user-invocable: false
 ---
-
-> Workflow kernel: When this skill needs a workflow/profile decision and no valid parent manifest is supplied, use this plugin's install-local `lib/workflow/index.mjs` explicit-skill resolver. Claude hooks are optional accelerators; a missing or failed hook falls back once to that local path. Warden must not be required. When verification is required and Moon Moth is unavailable, use non-empty commands from repository-owned instructions or build metadata, or block completion.
 
 # moon-moth — affected scope contract
 

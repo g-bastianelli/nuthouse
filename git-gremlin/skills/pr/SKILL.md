@@ -2,30 +2,16 @@
 name: pr
 description: Use automatically when the user asks to create, open, draft, or publish a GitHub PR, pull request, review request, "ouvre une PR", "fais la PR", "crée une pull request", or says the branch is ready for review. Drafts from branch history and, after confirmation, publishes the branch before creating the PR. Do not use for commits, plain git status, diff, log, push-only, rebase, or non-GitHub merge requests.
 effort: high
-allowed-tools: Bash(git log:*), Bash(git branch:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(git remote:*), Bash(git config:*), Bash(git push:*), Bash(gh auth status:*), Bash(gh repo view:*), Bash(gh pr create:*), Bash(cat:*), Bash(node:*), Read, Agent, mcp__claude_ai_Linear__get_issue
+allowed-tools: Bash(git log:*), Bash(git branch:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(git remote:*), Bash(git config:*), Bash(git push:*), Bash(gh auth status:*), Bash(gh repo view:*), Bash(gh pr create:*), Read
 ---
-
-> Workflow kernel: When this skill needs a workflow/profile decision and no valid parent manifest is supplied, use this plugin's install-local `lib/workflow/index.mjs` explicit-skill resolver. Claude hooks are optional accelerators; a missing or failed hook falls back once to that local path. Warden must not be required. When verification is required and Moon Moth is unavailable, use non-empty commands from repository-owned instructions or build metadata, or block completion.
 
 # git-gremlin:pr
 
-> Agent resolution: Before any subagent dispatch, read
-> `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md`; select the active runtime name and follow its spawn rule.
-
 Rigid approval gate. Match the user's language; keep technical identifiers unchanged.
-
-> Voice cadence: at every user-visible workflow transition, try to dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Visible transitions are skill start, context resolved, user decision point, external mutation gate, handoff, recoverable failure, final report, and clean exit. Print the returned `line` only when non-empty. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Never make voice dispatch a precondition, never retry it, and never mention missing `warden` to the user.
-> Voice flag: !`cat "$HOME/.claude/nuthouse/voice.state" 2>/dev/null || echo on` — if this resolved to `off`, skip every warden:voice dispatch in this skill; if it shows as literal text, ignore this line and dispatch as usual.
 
 ## Voice
 
-Read `../../persona.md` at the start of this skill. That persona is
-canonical for all output of this skill. Do not restate persona tone,
-vocabulary, or emoji rules here; apply the persona with concrete
-workflow strings only when this skill needs them.
-
-**Scope:** local to this skill's execution only. Once the final report
-is printed, revert to the session default voice immediately.
+Read `../../persona.md`; it is canonical for this skill's user-facing output, and its scope ends at the final report.
 
 ## Context
 
@@ -37,25 +23,6 @@ is printed, revert to the session default voice immediately.
 ## Workflow
 
 1. Preconditions:
-   - Resolve the workflow decision before applying any Git gate. When a named
-     `WORKFLOW_DECISION` handoff exists, validate it through this plugin's install-local
-     manifest consumer. When the handoff is missing, perform at most one authoritative
-     local explicit-skill resolution from the current request, branch, Linear issue
-     evidence, and repository configuration, persist the result, then validate its exact
-     three-field handoff. An ambiguous, blocked, invalid, or policy-drifting resolution
-     refuses publication; never treat absent session context as `direct-task`.
-   - When the resolved workflow is `issue-delivery`, validate the exact manifest handoff
-     and re-hash the named
-     `VERIFICATION_EVIDENCE`, require `status: clean`, and require it to bind the same
-     decision plus immutable issue artifacts and rebound mutable targets. Evidence from
-     before a commit is stale: require evidence `head_oid` to equal the current HEAD and
-     require fresh verification whenever it does not. Recompute the index-independent
-     `worktree_snapshot_hash` and require an exact match before PR drafting. Require the
-     verified changed-path set to be empty: PR evidence must describe the committed
-     `HEAD`, not uncommitted working-tree content. Missing, failed, stale, dirty, or
-     mismatched verification must refuse PR drafting and publication. An issue-delivery
-     operation with missing verification evidence must refuse the PR even when it
-     entered this skill directly.
    - Verify `gh` is available and authenticated: `gh auth status`. Abort with `gh auth login` instruction if not.
    - Infer base branch: `gh repo view --json defaultBranchRef` or fallback `main`.
    - Abort on a detached `HEAD`; branch publication requires a named current branch.
@@ -77,10 +44,6 @@ is printed, revert to the session default voice immediately.
    - Immediately before displaying the proposal, re-run `git branch --show-current` and `git rev-parse HEAD`. If either differs from the captured branch or `HEAD_OID`, discard the stale proposal and restart step 2 with fresh log and diff.
    - Display the proposed title, description, branch, base, and exact `HEAD_OID`, then wait for confirmation or an edit request. State that confirmation authorizes publishing only that commit to the same-named branch on the resolved Git remote, then creating the PR. A Maestro project control record is not PR approval.
 3. Create PR:
-   - On confirmation, re-read `VERIFICATION_EVIDENCE`,
-     recompute `HEAD_OID` and `WORKTREE_SNAPSHOT_HASH` from the current source state,
-     and require exact equality with both the evidence and approved proposal. Any change
-     requires fresh verification and a newly confirmed proposal; do not push.
    - Before any mutation, verify that the current branch and `git rev-parse HEAD` still
      equal the approved values. If either changed, return to step 2 with fresh context
      and require a new confirmation.
@@ -101,14 +64,33 @@ is printed, revert to the session default voice immediately.
    - On rejected confirmation, offer to regenerate or cancel. Never create a PR silently.
 4. Report and hand off:
    - Return result.
-   - In issue-delivery relay mode, report `Human feature acceptance: pending
-(mandatory)` unless explicit human acceptance evidence already exists. This gate is
-     distinct from PR approval and can never be inferred from checklist generation,
-     passing checks, review approval, or an open PR.
+   - Report `Human feature acceptance: pending (mandatory)` unless explicit human
+     acceptance evidence already exists. This gate is distinct from PR approval and can
+     never be inferred from checklist generation, passing checks, review approval, or an
+     open PR.
    - Always report `Merge: manual`. Manual merge remains mandatory; neither this skill,
      GitHub review state, nor Maestro may merge the PR. PR creation also does not
      authorize Linear completion.
    - Stop after the report. If the issue belongs to an active Maestro project, mention only this optional next action: after Linear records the issue completed, the user or a known workflow may invoke `monkey-maestro:orchestrate <project-id>`. Never invoke it automatically and never treat the PR as Linear completion. Reserve `monkey-maestro:reconcile <project-id>` for an explicit Superset runtime-correlation audit or telemetry repair.
+
+## Verification is not optional
+
+**A PR PUBLISHES A COMMIT; THE VERIFICATION MUST HAVE RUN ON THAT EXACT COMMIT.**
+
+| Excuse                                            | Reality                                                                       |
+| ------------------------------------------------- | ----------------------------------------------------------------------------- |
+| "Verification passed before the last commit"      | Earlier evidence describes a tree that no longer exists. Re-run it on `HEAD`. |
+| "The tree is dirty but nothing important changed" | Uncommitted content is not in the PR. Commit or stash it, then verify.        |
+| "CI will run the checks anyway"                   | CI runs after the PR exists. The gate is here.                                |
+
+When this branch closes work that came through `linear-devotee:plan`, require a clean
+flight on the current `HEAD` with no uncommitted changes. If none ran, or commits landed
+after it, say so and verify before drafting.
+
+**REQUIRED SUB-SKILL (issue-delivery only):** Use `moon-moth:verify`. Outside issue
+delivery, or in a repository with no Moon workspace and no `moon-moth` installed, take the
+check commands from the repo's own `AGENTS.md`, `CLAUDE.md`, or `package.json` scripts
+instead. Never block a PR on a verifier the repository does not have.
 
 ## Final Report
 
@@ -133,8 +115,7 @@ git-gremlin:pr report
 - Create a PR without explicit user confirmation.
 - Skip the `gh auth status` check.
 - Retry silently after `git push` or `gh pr create` failure — surface stderr verbatim and stop.
+- Reuse verification that ran before the last commit or on a dirty working tree.
 - Automatically invoke `monkey-maestro`, accept a feature, merge, or claim Linear
   completion from PR creation, review state, verification, or checklist evidence.
 - Treat a PR as Linear completion; Linear lifecycle remains external and explicit.
-- Reuse pre-commit or otherwise stale verification when `head_oid` or
-  `worktree_snapshot_hash` no longer matches the source being published.

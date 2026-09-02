@@ -16,18 +16,16 @@
 
 ## Plugins
 
-| Plugin                             | Runtime             | Purpose                                                                                              |
-| ---------------------------------- | ------------------- | ---------------------------------------------------------------------------------------------------- |
-| [subroutine](./subroutine)         | Claude Code + Codex | Ambient TS discipline knowledge skills that activate on matching files                               |
-| [linear-devotee](./linear-devotee) | Claude Code + Codex | Linear issue intake, planning, hash-bound mutation cascades, and exact post-write graph verification |
-| [acid-prophet](./acid-prophet)     | Claude Code + Codex | Spec writing, spec audit, and PR/spec drift checks                                                   |
-| [warden](./warden)                 | Claude Code + Codex | Worktree workflow-mode controls, persona-line dispatcher, and global voice toggle                    |
-| [git-gremlin](./git-gremlin)       | Claude Code + Codex | Contextual review plus commit and PR drafting with scoped mutation gates                             |
-| [saucy-status](./saucy-status)     | Claude Code         | Statusline and prompt-time fun messages                                                              |
-| [lore-hound](./lore-hound)         | Claude Code + Codex | Source-hunting research harness: fan-out search → fetch → verify → cite                              |
-| [stack-golem](./stack-golem)       | Claude Code + Codex | Notom-stack ops & debug — Scaleway, observability, local dev, Insomnia                               |
-| [moon-moth](./moon-moth)           | Claude Code + Codex | Moon-aware dev loop — scope to affected projects, implement TDD-first, verify                        |
-| [monkey-maestro](./monkey-maestro) | Claude Code + Codex | Linear-first parallel orchestration with scoped Superset runtime recovery                            |
+| Plugin                             | Runtime             | Purpose                                                                                         |
+| ---------------------------------- | ------------------- | ----------------------------------------------------------------------------------------------- |
+| [subroutine](./subroutine)         | Claude Code + Codex | Ambient TS discipline knowledge skills that activate on matching files                          |
+| [linear-devotee](./linear-devotee) | Claude Code + Codex | Linear issue intake, planning, recoverable mutation cascades, and post-write graph verification |
+| [acid-prophet](./acid-prophet)     | Claude Code + Codex | Spec writing, spec audit, and PR/spec drift checks                                              |
+| [git-gremlin](./git-gremlin)       | Claude Code + Codex | Contextual review plus commit and PR drafting with scoped mutation gates                        |
+| [lore-hound](./lore-hound)         | Claude Code + Codex | Source-hunting research harness: fan-out search → fetch → verify → cite                         |
+| [stack-golem](./stack-golem)       | Claude Code + Codex | Notom-stack ops & debug — Scaleway, observability, local dev, Insomnia                          |
+| [moon-moth](./moon-moth)           | Claude Code + Codex | Moon-aware dev loop — scope to affected projects, implement TDD-first, verify                   |
+| [monkey-maestro](./monkey-maestro) | Claude Code + Codex | Linear-first parallel orchestration with scoped Superset runtime recovery                       |
 
 ## Install
 
@@ -77,4 +75,4 @@ bun run lint
 bun run fmt:check
 ```
 
-See [the root layout spec](./docs/acid-prophet/specs/2026-05-12-root-plugin-layout.md) for the current structure contract.
+See the **Plugin Structure** section of [CLAUDE.md](./CLAUDE.md) for the current structure contract.

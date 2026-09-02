@@ -10,30 +10,13 @@ allowed-tools: Read, Glob, Grep, Bash(docker compose ps:*), Bash(docker compose 
 
 ## Voice
 
-Read `../../persona.md` at the start of this skill. That persona is
-canonical for all output of this skill. Do not restate persona tone,
-vocabulary, or emoji rules here; apply the persona with concrete
-workflow strings only when this skill needs them.
-
-**Scope:** local to this skill's execution only. Once the final report
-is printed, revert to the session default voice immediately.
-Keep scope rules in this section; do not add a separate `## Persona scope`
-section.
-
-This skill is **rigid** — execute steps in order.
+Read `../../persona.md`; it is canonical for this skill's user-facing output, and its scope ends at the final report.
 
 ## Context
 
 > Auto-injected on Claude Code at skill load. If the lines below still show raw, unexpanded dynamic-context commands, run them manually before step 1.
 
 - Docker: !`docker compose ps --format "table {{.Name}}\t{{.Status}}" 2>/dev/null | head -15 || echo "docker unavailable"`
-
-## Language
-
-Adapt all output to match the user's language. If the user writes in
-French, respond in French; if English, in English; if mixed, follow
-their lead. Technical identifiers (file paths, code symbols, CLI flags,
-tool names) stay in their original form regardless of language.
 
 ## When you're invoked
 

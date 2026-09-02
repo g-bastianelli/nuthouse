@@ -1,6 +1,6 @@
 ---
 name: scaffold-skill
-description: Use when adding a new skill to an existing plugin in this `nuthouse` marketplace (saucy-status, subroutine, linear-devotee, or any plugin with a `persona.md` at its root). Asks for parent plugin, skill name (action verb, no prefix), description, target runtimes (intersected with parent's runtimes), whether the skill dispatches a subagent, whether it ends with a hand-off menu. Generates one canonical root `skills/<skill>/SKILL.md` with unprefixed frontmatter `name: <skill>`, plus a `## Voice` section pointing to the parent's persona.md, and the standard workflow/final-report/rules skeleton. Embeds all naming and structural conventions from the legacy CLAUDE.md.
+description: Use when adding a new skill to an existing plugin in this `nuthouse` marketplace (subroutine, linear-devotee, or any plugin with a `persona.md` at its root). Asks for parent plugin, skill name (action verb, no prefix), description, target runtimes (intersected with parent's runtimes), whether the skill dispatches a subagent, whether it ends with a hand-off menu. Generates one canonical root `skills/<skill>/SKILL.md` with unprefixed frontmatter `name: <skill>`, plus a `## Voice` section pointing to the parent's persona.md, and the standard workflow/final-report/rules skeleton. Embeds all naming and structural conventions from the legacy CLAUDE.md.
 model: haiku
 ---
 
@@ -140,17 +140,6 @@ AskUserQuestion, single-select. Voice: _"l'organe transmet directement à un aut
 
 [IF Q11 = yes] Follow-up free-text: _"nom du skill aval (ex. `<PLUGIN>:plan`) :"_ → save as `DOWNSTREAM_SKILL`.
 
-### Q12 — Plugin uses warden:voice for decorative persona lines?
-
-Auto-detect first: check whether `<PLUGIN>/shared/persona-line-contract.md` exists. If it does, the plugin is warden-voice-ready — propose `yes` automatically.
-
-Otherwise AskUserQuestion, single-select. Voice: _"le plugin a-t-il un `shared/persona-line-contract.md` pour les lignes décoratives ?"_
-
-- `no` (Recommended for first skills) — skill stays neutral, no persona dispatch
-- `yes` — the skill dispatches `warden:voice` at visible transitions using the plugin's persona-line contract
-
-[IF Q12 = yes] The skill itself stays voice-neutral; it only dispatches `warden:voice` at visible transitions. The PERSONA_CONTRACT_PATH always points to `${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`. The skill never carries persona content beyond this dispatch. If `warden` is not installed, the dispatch fails silently — this is expected behavior.
-
 ### Q13 — Execution context
 
 AskUserQuestion, single-select. Voice: _"où l'organe s'exécute-t-il ?"_
@@ -207,11 +196,6 @@ user-invocable: false # [IF Q13 = knowledge, else omit]
 # <SKILL>
 
 Rigid [gate type]. Match the user's language; keep technical identifiers unchanged.
-
-[IF Q12 = yes — warden voice]
-
-> At visible transitions, dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Print the returned `line` before normal output. Skip on failure.
-> [/ENDIF]
 
 ## Workflow
 
@@ -275,12 +259,6 @@ prompt: '<structured input — see the agent’s ## Input section>',
 ### 2a-bis. Conditional snippets to inject
 
 After substituting variables and filling `[bracketed]` sections in the generated SKILL.md, inject the following snippets **only when the corresponding interview answer enables them**. These snippets are kept here (not in the template file) so the template stays lean and unconditional.
-
-**[IF Q12 = yes — warden voice]** — insert as the callout block before `## Workflow`:
-
-```markdown
-> At visible transitions, dispatch `warden:voice` with `SUMMARY: <≤15 words, in user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Print the returned `line` before normal output. Skip on failure.
-```
 
 **[IF Q9 = yes — project-level artifact]** — append to `## Step 0 — Preconditions`:
 
@@ -390,13 +368,13 @@ After printing the report, present the hand-off menu:
 
 1. **Never `git commit` / `git push` / `git rebase`.** User commits manually.
 2. **Always preserve the root naming rule**: SKILL.md frontmatter uses `name: <skill>` with no plugin prefix. The runtime exposes it as `<plugin>:<skill>`.
-3. **Skill body uses the root nuthouse format**: `## Voice`, `## Language`, workflow steps, final report, and hard rules, matching existing root skills such as `moon-moth/skills/scope/SKILL.md`. If Q12 = yes, inject only the one-liner voice-dispatch callout above `## Voice`.
+3. **Skill body uses the root nuthouse format**: `## Voice`, `## Language`, workflow steps, final report, and hard rules, matching existing root skills such as `moon-moth/skills/scope/SKILL.md`.
 4. **Never invent the persona.** The persona lives in `<plugin>/persona.md`. The skill does not declare or redeclare voice inline.
 5. **Generic agent name reject**: if Q5 = "dedicated agent" and the user
    wants to call it `agent` or `helper`, push back: _"non non non,
    l'agent a un **rôle** précis. nomme-le par sa fonction —
    `scout`, `validator`, `parser` — pas un nom vide."_
-6. **Voice agent name is the one exception**: the plugin's voice-line agent (the one that emits persona lines via `persona-line-contract.md`) MAY have a persona-coded name (`devotee`, `prophet`, etc.). All other dedicated subagents MUST have functional names only.
+6. **Agent names are functional roles only** (`issue-context`, `plan-auditor`). The persona lives in `persona.md`, which the skill reads inline — no agent emits voice.
 7. **Never overwrite** an existing SKILL.md without explicit user
    confirmation. Read first; if it exists, abort or ask.
 8. **Root skill verification**: read an existing root SKILL.md

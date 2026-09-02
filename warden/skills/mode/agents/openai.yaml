@@ -1,5 +1,0 @@
-interface:
-  display_name: "Warden Mode"
-  short_description: "Control workflow rigor for this worktree"
-  icon_large: "../../../assets/banner.png"
-  default_prompt: "Use $warden:mode status to inspect this worktree's workflow profile."

@@ -1,96 +1,75 @@
 ---
 name: create-milestone
-description: Use to add a single Milestone to an existing Linear Project (standalone add-on) or to resume a legacy partially-committed create-project cascade. Adaptive cascades resume only through create-project. Reads chain-state to detect legacy resume mode and pick the next milestone whose `id` is still null. Drafts via milestone-drafter when needed, clarifies, previews, creates on approval, updates chain state.
+description: Use to add a single Milestone to an existing Linear Project. Drafts through milestone-drafter, clarifies open questions one at a time, and creates the milestone only after explicit approval. Use linear-devotee:create-project for a full project cascade or to resume a partially committed one.
 effort: high
-allowed-tools: Read, Glob, Grep, Bash(node:*), Write, Agent, mcp__claude_ai_Linear__list_projects, mcp__claude_ai_Linear__save_milestone
+allowed-tools: Read, Glob, Grep, Bash(git rev-parse:*), Write, Agent, mcp__claude_ai_Linear__list_projects, mcp__claude_ai_Linear__save_milestone
 ---
-
-> Workflow kernel: When this skill needs a workflow/profile decision and no valid parent manifest is supplied, use this plugin's install-local `lib/workflow/index.mjs` explicit-skill resolver. Claude hooks are optional accelerators; a missing or failed hook falls back once to that local path. Warden must not be required. When verification is required and Moon Moth is unavailable, use non-empty commands from repository-owned instructions or build metadata, or block completion.
 
 # linear-devotee:create-milestone
 
-> Agent resolution: Before any subagent dispatch, read
-> `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md`; select the active runtime name and follow its spawn rule.
+> Agent resolution: before any subagent dispatch, read `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md` and use the active runtime's name.
 
-Rigid runbook. Match the user's language; keep technical identifiers unchanged.
+Rigid runbook. One milestone, one approval.
 
-> Voice cadence: at every user-visible workflow transition, try to dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Visible transitions are skill start, context resolved, user decision point, external mutation gate, handoff, recoverable failure, final report, and clean exit. Print the returned `line` only when non-empty. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Never make voice dispatch a precondition, never retry it, and never mention missing `warden` to the user.
-> Voice flag: !`cat "$HOME/.claude/nuthouse/voice.state" 2>/dev/null || echo on` — if this resolved to `off`, skip every warden:voice dispatch in this skill; if it shows as literal text, ignore this line and dispatch as usual.
+## Voice
+
+Read `../../persona.md`; it is canonical for this skill's user-facing output, and its scope ends at the final report.
 
 ## Workflow
 
 1. Preconditions:
    - Verify Linear access with `ToolSearch` query `linear`.
-   - Verify git repo.
-   - Ensure `${CLAUDE_PLUGIN_DATA}`.
-2. Detect mode from `${CLAUDE_PLUGIN_DATA}/chain-${CLAUDE_SESSION_ID}.json`:
-   - **Adaptive guard**: if chain-state contains any adaptive identity field—`workflow_handoff`, `artifact_inventory_hash`, or `acceptance_register_hash`—require all adaptive fields to be present, make no Linear read or write, and stop `adaptive_resume_requires_create_project`. Tell the user to reinvoke `linear-devotee:create-project` in the same session. This skill never consumes or repairs adaptive state, so it cannot bypass source re-hashing or approval revalidation.
-   - **Resume**: chain-state exists with `phase: "partial_failure"`, `project.id != null`, and at least one `drafts.milestones[].id == null`.
-   - **Chained**: chain-state exists with `project.id != null` and `phase` is `committing` or absent legacy value (pre-resume schema).
-   - **Standalone**: no chain-state, or `phase: "committed" | "cancelled"`.
-   - Before any resume retry, require `mutation_envelope`, `approved_payload_hash`, `graph_hash`, `normalized_graph`, the milestone's approved `<!-- nuthouse-client-ref: <client_ref> -->` marker, and `confirmed_operations`. Dispatch `linear-devotee:project-graph-loader`, merge exact marker confirmations, and stop `resume_state_unknown` when the reload is incomplete. Never retry from `id == null` or a title match alone.
-3. Gather context:
-   - **Resume**: project + team come from chain-state. Pick the first `drafts.milestones[]` entry whose `milestone:<client_ref>` is absent from `confirmed_operations`; if none, exit `nothing-to-do`. The entry already has a `client_ref`, `name`, `scope`, `nuthouse-client-ref` marker, and optional `target_date` drafted by `create-project`. Skip the drafter dispatch in step 4 — the draft is already in chain-state.
-   - **Chained (legacy)**: use project fields and next uncreated `drafts.milestones[]`; exit `nothing-to-do` if all created.
-   - **Standalone**: fetch active projects with `list_projects`, ask user to pick, then ask for one-sentence milestone hint.
-4. Draft:
-   - **Resume mode skips this step.** The chain-state entry IS the draft.
-   - Otherwise dispatch the logical `linear-devotee:milestone-drafter` agent with:
-     ```text
-     PROJECT_ID: <id>
-     PARENT_DRAFT: <chain path | _none_>
-     MILESTONE_HINT: <hint | _none_>
-     PROJECT_ROOT: <git root>
-     ```
-   - Capture milestone draft, suggested issues, open decisions, questions.
-5. Clarify:
-   - Ask one blocking question at a time for `_unclear_` or suggested questions.
-   - Patch draft until clean or user ships as-is.
-   - Resume mode usually has no `_unclear_` left (the user validated at create-project's preview gate); skip if clean.
-6. Preview and approve:
-   - In standalone/chained mode, mint a stable `client_ref` and append `<!-- nuthouse-client-ref: <client_ref> -->` to the exact milestone description. Print the full patched draft including that marker.
-   - Ask `Create this milestone? (y / edit / cancel)`.
+   - Verify git repo; capture `PROJECT_ROOT`.
+   - A partially committed cascade is not this skill's job.
+     **REQUIRED SUB-SKILL:** for resume, use `linear-devotee:create-project`.
+2. Gather context — fetch active projects with `list_projects`, ask the user to pick one, then
+   ask for the one-sentence milestone hint.
+3. Draft — dispatch the logical `linear-devotee:milestone-drafter` agent with:
+   ```text
+   PROJECT_ID: <id>
+   MILESTONE_HINT: <hint | _none_>
+   PROJECT_ROOT: <git root>
+   ```
+   Capture the milestone draft, its suggested issues, open decisions, and questions.
+4. Clarify — ask one blocking question at a time for every `_unclear_` field or suggested
+   question. Patch the draft until it is clean, or until the user ships it as is.
+5. Preview and approve:
+   - Mint one stable `client_ref` and append `<!-- nuthouse-client-ref: <client_ref> -->` to the
+     exact milestone description. The marker is part of the approved description and can never be
+     added or changed later.
+   - Print the full patched draft including the marker and ask
+     `Create this milestone? (y / edit / cancel)`.
    - Continue only on `y`.
-7. Create Linear milestone:
-   - In resume mode, run `project-graph.mjs validate-envelope` and require its `payloadHash` to equal `approved_payload_hash`, its `graphHash` to equal `graph_hash`, and its canonical graph to equal `normalized_graph` before mutation.
-   - In resume mode, locate exactly one same-ref milestone in that validated envelope and replay only its exact `name`, resolved `projectId`, `description`, and nullable `targetDate`; duplicated draft fields cannot override it. In standalone/chained mode, use the exact approved marked description and confirmed target date.
-   - On success, persist `milestone:<client_ref>` plus the returned id in `confirmed_operations` before continuing. On timeout or API error, surface verbatim and stop with `linear_error`; the next resume reloads the exact marker before retrying.
-8. Update chain state:
-   - **Resume mode**: update the matched `drafts.milestones[]` entry **in place** (key on `client_ref`). Set `id`, `url`. Do **not** append a new entry. If all `drafts.milestones[]` now have an `id` and all `drafts.issues[]` are also done, set `phase: "committed"`; otherwise leave `phase: "partial_failure"` so the next resume call continues.
-   - **Chained / standalone (legacy)**: parse suggested issues into `{ idx, title, blocked_by }`; drop invalid blocked indices with warning. Append:
-     ```json
-     {
-       "id": "<milestone.id>",
-       "name": "<name>",
-       "url": "<url>",
-       "idx_in_drafts": "<int|null>",
-       "suggested_issues": [{ "idx": 0, "title": "<title>", "blocked_by": [] }]
-     }
-     ```
-     Preserve existing project/draft fields; set `current` and `current_milestone_id`. Backward compatibility: coerce flat suggested issue strings into structured entries.
-9. Handoff:
-   - **Resume**: if any `drafts.issues[]` still have `id == null`, offer `create-issue` to continue the cascade. If everything is now created and `phase: "committed"`, pick the first startable issue (`drafts.issues[]` filtered by `id != null`, sorted by topological commit order, preferring entries with no `blocked_by_refs`; if every issue is blocked, pick the first issue whose blockers all have created Linear identifiers and clearly label that dependency assumption). Print `Recommended next issue: <identifier> - <title> - <url>` and `Start with: linear-devotee:greet <identifier>`. Do **not** write greet state, invoke `linear-devotee:greet`, invoke `linear-devotee:plan`, or continue automatically.
-   - **Chained / standalone**: offer `create-issue`. In chained mode with remaining drafted milestones, also offer next milestone.
-   - Print final report.
+6. Create — call `save_milestone` with the approved description, resolved `projectId`, and the
+   confirmed nullable target date. On timeout or API error, surface it verbatim and stop with
+   `linear_error`; a retry must first reload Linear by the exact marker.
+7. Hand off — report the suggested issues this milestone implies.
+   **REQUIRED SUB-SKILL:** to add one of them, use `linear-devotee:create-issue`.
+
+## Nothing reaches Linear unapproved
+
+**THE PREVIEW IS THE CONTRACT.** What the user approved in step 5 is what gets written, byte for
+byte. Never widen it afterwards.
+
+| Excuse                                              | Reality                                                                 |
+| --------------------------------------------------- | ----------------------------------------------------------------------- |
+| "The target date was obviously meant to shift"      | Then re-preview. An unapproved field is an unapproved write.            |
+| "The user approved the project, this is part of it" | Approval is per milestone, at the preview.                              |
+| "The API rejected a field, I'll adjust and retry"   | Surface the error and stop. A silent adjustment is an unapproved write. |
 
 ## Final Report
 
 ```text
 linear-devotee:create-milestone report
-  Mode:               <resume | chained | standalone>
-  Project:            <project.title> (<project.id>)
-  Milestone:          <name> - <url> | (cancelled) | (linear_error)
-  Suggested issues:   <N>
-  Chain progress:     <created>/<total> milestones · <created>/<total> issues
-  Phase:              committing | partial_failure | committed | n/a
-  Recommended next:   <identifier> - <title> - <url | _none_>
-  Hand-off:           user-starts-greet <identifier> | create-issue | next-milestone | stop | cancelled | linear_error | nothing-to-do
+  Project:           <project.title> (<project.id>)
+  Milestone:         <name> - <url> | (cancelled) | (linear_error)
+  Suggested issues:  <N>
+  Next:              linear-devotee:create-issue | stop
 ```
 
 ## Never
 
-- Mutate Linear without explicit approval.
+- Mutate Linear without explicit approval at the preview.
 - Attach a milestone to the wrong project.
-- Retry failed Linear writes blindly.
-- Retry or resume a cascade entity without the approved `nuthouse-client-ref` marker and `confirmed_operations` reload.
+- Retry a failed Linear write blindly.
 - Run `git push`, `git commit`, or `git rebase`.

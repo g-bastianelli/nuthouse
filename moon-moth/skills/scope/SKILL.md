@@ -6,25 +6,13 @@ effort: high
 allowed-tools: Bash(moon query:*), Bash(git status:*), Bash(git diff:*), Bash(node:*), Read, Agent
 ---
 
-> Workflow kernel: When this skill needs a workflow/profile decision and no valid parent manifest is supplied, use this plugin's install-local `lib/workflow/index.mjs` explicit-skill resolver. Claude hooks are optional accelerators; a missing or failed hook falls back once to that local path. Warden must not be required. When verification is required and Moon Moth is unavailable, use non-empty commands from repository-owned instructions or build metadata, or block completion.
-
 # scope
 
-> Agent resolution: Before any subagent dispatch, read
-> `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md`; select the active runtime name and follow its spawn rule.
-
-> At visible transitions, try to dispatch `warden:voice` with `SUMMARY: <≤15 words, in the user's language>`, `PERSONA_CONTRACT_PATH: ${CLAUDE_PLUGIN_ROOT}/shared/persona-line-contract.md`, and `VOICE_FLAG_PATH: $HOME/.claude/nuthouse/voice.state`. Print the returned `line` only when non-empty. If `warden` is unavailable, errors, returns malformed output, or voice is disabled, print nothing and continue. Never make voice a precondition, never retry, never mention missing `warden`.
+> Agent resolution: before any subagent dispatch, read `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md` and use the active runtime's name.
 
 ## Voice
 
-Read `../../persona.md` at the start of this skill. The moon-moth voice is
-canonical for all output here. Apply it to the wrapper lines around reports;
-keep the report blocks themselves plain.
-
-**Scope:** local to this skill's execution only. Once the final report is
-printed, revert to the session default voice.
-
-This skill is **rigid** — execute steps in order.
+Read `../../persona.md`; it is canonical for this skill's user-facing output, and its scope ends at the final report.
 
 ## Context
 
@@ -33,11 +21,6 @@ This skill is **rigid** — execute steps in order.
 - Workspace check: !`ls .moon 2>/dev/null && echo "moon workspace" || echo "no .moon here"`
 - Changed files: !`git status --porcelain | head -30`
 
-## Language
-
-Adapt all output to match the user's language. Technical identifiers (project
-ids, file paths, CLI flags, task names) stay in their original form.
-
 ## When you're invoked
 
 The agent (or user) is about to work on a task in a moon monorepo and needs to
@@ -45,58 +28,11 @@ know _which projects the change touches_ before reading code or running tasks.
 This is the moon-moth's first move: follow the lamp, find the affected graph,
 land only there.
 
-## Direct-task planned scope contract
-
-When `prepareDirectTask` selects this owner, treat the returned handoff descriptor's exact `input`
-object as `DIRECT_TASK_SCOPE_HANDOFF` and require this closed install-local owner input:
-
-```text
-DIRECT_TASK_SCOPE_HANDOFF: {
-  "schemaVersion": 1,
-  "workflow": "direct-task",
-  "mode": "affected-or-planned | planned-paths",
-  "approvedPaths": ["<normalized repository-relative path boundary>"],
-  "decisionHandoff": { "run_id": "<id>", "path": "<absolute path>", "content_hash": "sha256:<64 lowercase hex>" },
-  "returnTarget": { "kind": "current-turn", "name": "direct-task" }
-}
-```
-
-Reject unknown/missing fields or an empty/unsafe/duplicate `approvedPaths` set. Import
-`discoverGitContext` and `consumeManifestHandoff` only from this plugin's install-local
-`lib/workflow/index.mjs`, use the adjacent `bundle.json` source hash as `policyHash`, consume the
-descriptor against the current Git context without reclassification or recovery, and require the
-persisted decision to have `workflow === "direct-task"` and enabled immutable `verification`.
-Require the returned descriptor to equal the input. Any stale, expired, corrupt, out-of-scope,
-drifted, or mismatched state blocks; never require Warden.
-
-`affected-or-planned` first computes the ordinary affected map. If that map is `_dark_`, or when
-the mode is already `planned-paths`, enumerate the current graph with `moon query projects` and
-derive a planned map from `approvedPaths`:
-
-1. Compare paths on complete slash-delimited segments and select the unique deepest project source
-   containing each approved path boundary. A repository-root `source: "."` is a valid fallback from
-   Moon, not an invented project. Zero matches or tied deepest matches block as
-   `planned-scope-unresolved`; ask the caller to narrow an approved ancestor that spans projects.
-2. Copy each selected project's id, source, layer, stack, tags, and verification-relevant tasks
-   directly from Moon and set only `reason: "planned"`. Compute the transitive downstream id closure
-   by reversing only the dependency edges returned by the same project graph. Never infer an id,
-   task, source, or edge.
-3. Return the canonical map with `base: "planned-paths"`, `changedFiles: []`, a non-empty
-   `affected`, the derived `downstream`, and a non-`_dark_` summary.
-
-Return the map inline with the exact unchanged `decisionHandoff` and `returnTarget`. The caller puts
-it at `scope.moon` and resumes `prepareDirectTask`; this skill does not implement the task.
-
 ## Step 0 — Preconditions
 
-1. When the caller supplies an `ISSUE_DELIVERY_PACKET`, require its named
-   `PLAN_FILE`, `SPEC_FILE`, `RELEVANT_FILES`, and `WORKFLOW_DECISION`. Validate the
-   decision through this plugin's install-local manifest consumer, recompute immutable
-   artifact `content_hash` values, and require every relevant target's current bytes to
-   match its pre-implementation `before_hash` before querying Moon. A missing artifact
-   or hash mismatch blocks; never silently downgrade the packet to prose.
-   When `DIRECT_TASK_SCOPE_HANDOFF` is supplied instead, validate and consume the direct-task
-   contract above before any Moon query. The two packet types are mutually exclusive.
+1. When the caller supplies an `ISSUE_DELIVERY_PACKET`, require it to name a
+   `PLAN_FILE` that exists and is readable, plus `RELEVANT_FILES` and the issue id.
+   A missing artifact blocks; never silently downgrade the packet to prose.
 2. Find the moon workspace root: the `Workspace check` line in `## Context`
    already answers for cwd — `moon workspace` means cwd is the root. On
    `no .moon here`, walk up from cwd for a directory containing `.moon/`.
@@ -147,8 +83,7 @@ the scope map yourself.
 From the returned scope map:
 
 - If `affected` is empty (`summary: _dark_`) → say the dark stays dark: nothing
-  changed. With `DIRECT_TASK_SCOPE_HANDOFF`, derive and return the planned-path map instead of
-  stopping. Without it, skip to the menu with only `(s) stop`.
+  changed. Skip to the menu with only `(s) stop`.
 - Otherwise summarise: the changed files count, the affected projects (id +
   layer + stack), their verification-relevant tasks, and the downstream
   blast radius (what else could break).
@@ -161,10 +96,6 @@ implementation turn and `verify` can read it without recomputing. Skip for a
 quick one-off scope.
 
 ## Step 5 — Final report + hand-off
-
-When `DIRECT_TASK_SCOPE_HANDOFF` was supplied, return its canonical affected or planned map inline
-to the exact current-turn target immediately after the report. Skip the generic menu and do not
-start implementation or verification.
 
 ```text
 moon-moth:scope report
@@ -200,11 +131,10 @@ SCOPE_MAP:
 <full scope map JSON from Step 2, verbatim>
 SCOPE_MAP_FILE: ${PROJECT_ROOT}/docs/moon-moth/scope/<file>.json | _not-persisted_
 ISSUE_DELIVERY_PACKET:
-  PLAN_FILE: { path: <abs path>, content_hash: sha256:<hex> }
-  SPEC_FILE: { path: <abs path>, content_hash: sha256:<hex> }
-  RELEVANT_FILES: [{ path: <abs path>, before_hash: sha256:<hex> }]
-  WORKFLOW_DECISION: { run_id: <id>, path: <abs path>, content_hash: sha256:<hex> }
-  EFFECTIVE_PROFILE: <quick | standard | strict>
+  ISSUE:          <issue id>
+  PLAN_FILE:      <abs path>
+  SPEC_FILE:      <abs path> | _none_
+  RELEVANT_FILES: [<abs path>, ...]
 ```
 
 When the packet was supplied, pass it verbatim after validation. Moon Moth appends scope;

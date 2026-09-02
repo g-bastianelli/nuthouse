@@ -13,7 +13,6 @@ for the active runtime.
 | `linear-devotee:plan-auditor`         | `linear-devotee:plan-auditor`         | `linear_devotee__plan_auditor`         |
 | `linear-devotee:project-drafter`      | `linear-devotee:project-drafter`      | `linear_devotee__project_drafter`      |
 | `linear-devotee:project-graph-loader` | `linear-devotee:project-graph-loader` | `linear_devotee__project_graph_loader` |
-| `warden:voice`                        | `warden:voice`                        | `warden__voice`                        |
 
 On Codex, spawn a typed custom agent with isolated task-local context. Never use a
 full-history fork. Pass only the input contract required by the delegated task.

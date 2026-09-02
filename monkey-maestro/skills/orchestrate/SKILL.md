@@ -3,23 +3,16 @@ name: orchestrate
 description: Use when the user wants Monkey Maestro to run an active Linear project. Loads Linear once, creates branch-idempotent Superset workspaces in parallel, launches only missing agents, and returns immediately.
 argument-hint: "<linear-project-id>"
 effort: medium
-allowed-tools: Bash(superset tasks get:*), Bash(superset workspaces create:*), Bash(superset workspaces get:*), Bash(superset workspaces update:*), Bash(superset terminals list:*), Bash(superset agents create:*), Bash(node:*), Read, Agent
+allowed-tools: Bash(superset tasks get:*), Bash(superset agents list:*), Bash(mktemp:*), Bash(rm:*), Bash(superset workspaces create:*), Bash(superset workspaces get:*), Bash(superset workspaces update:*), Bash(superset terminals list:*), Bash(superset agents create:*), Bash(node:*), Read, Agent
 ---
-
-> Workflow kernel: When this skill needs a workflow/profile decision and no valid parent manifest is supplied, use this plugin's install-local `lib/workflow/index.mjs` explicit-skill resolver. Claude hooks are optional accelerators; a missing or failed hook falls back once to that local path. Warden must not be required. When verification is required and Moon Moth is unavailable, use non-empty commands from repository-owned instructions or build metadata, or block completion.
 
 # orchestrate
 
-> Agent resolution: Before any subagent dispatch, read
-> `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md`; select the active runtime name and follow its spawn rule.
-
-> At visible transitions, try `warden:voice` through the shared persona-line contract. Print only a non-empty line. Skip failure or disabled voice without retry or mention.
+> Agent resolution: before any subagent dispatch, read `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md` and use the active runtime's name.
 
 ## Voice
 
-Read `../../persona.md`. Apply it only to short progress and final-report lines. Provider
-evidence, commands, tables, and worker prompts remain neutral. Restore the session voice
-afterward.
+Read `../../persona.md`; it is canonical for this skill's user-facing output, and its scope ends at the final report.
 
 ## Contract
 
@@ -30,12 +23,6 @@ Maestro never changes Linear lifecycle or dependency relations.
 
 Require one exact Linear project id. Do not accept extra execution modes. Run one bounded
 dispatch pass and return; a later Linear change needs a new invocation.
-
-When the caller explicitly enters relay mode, require `WORKFLOW_DECISION` with the parent
-manifest `run_id`, path, content hash, and effective profile. Validate it through this
-plugin's install-local consumer and project the shared workflow baton before Linear or
-Superset mutation. A missing field or mismatch launches nothing. Ordinary non-relay
-orchestration does not invent a baton.
 
 ## Step 1 — Load and plan once
 
@@ -87,9 +74,7 @@ not `idle`.
 
 For every valid task, derive one deterministic workspace name from the issue identifier
 and render the complete worker prompt before any creation call. The prompt is immutable
-for this pass. In relay mode bind the validated baton into that immutable worker prompt
-as exact `WORKFLOW_RUN_ID`, `WORKFLOW_PROFILE`, and `WORKFLOW_DECISION_HASH` fields. A
-missing value or mismatch launches nothing for that candidate.
+for this pass.
 
 ## Step 3 — Create or reuse workspaces directly
 
@@ -138,8 +123,26 @@ all candidate sequences use all-settled semantics.
 
 ## Step 4 — Launch only when needed
 
+Before the first launch of this invocation, settle the agent against the host once — the
+host can drop an agent after activation, so launch time is the authoritative moment:
+
+```text
+superset agents list --host <targetHostId> --json > "$capture" 2>/dev/null
+node ${CLAUDE_PLUGIN_ROOT}/scripts/host-agents.mjs validate-launch <payload-with-inventoryPath-and-defaultAgent>
+```
+
+A non-zero exit or empty capture is an unknown inventory, not a failure. Branch on
+`validation.status` only, and print the returned `message` verbatim:
+
+- `ok` / `unverified` — launch with `validation.agent`.
+- anything else — launch nothing, report every candidate still awaiting an agent as
+  degraded, and preserve created or reused workspaces. Never substitute another agent.
+
+This runs once per invocation, before the per-candidate launches, and never enters a
+dispatch result.
+
 For a newly created workspace, call `superset agents create` once with the exact workspace,
-host, configured agent, complete worker prompt, and `--json`.
+host, validated agent, complete worker prompt, and `--json`.
 
 For a binding-verified reused workspace, list its live terminals exactly once with:
 
@@ -154,7 +157,7 @@ live terminals means call `superset agents create` once. Use:
 superset agents create \
   --workspace <workspaceId> \
   --host <targetHostId> \
-  --agent <defaultAgent> \
+  --agent <validatedAgent> \
   --prompt <workerPrompt> \
   --json
 ```
@@ -175,15 +178,6 @@ orchestration invocations for the same project concurrently.
 
 Every worker prompt starts with `linear-devotee:greet <issueId>` and includes the issue
 objective, scope, Acceptance, required verification, and these ownership constraints:
-
-```text
-WORKFLOW_RUN_ID: <parent run_id>              # relay mode only
-WORKFLOW_PROFILE: <parent effective profile> # relay mode only
-WORKFLOW_DECISION_HASH: sha256:<hex>          # relay mode only
-```
-
-These fields are decision identity, not a claim that the parent worktree manifest is
-valid in the child worktree. Greet validates/resolves the child's local decision.
 
 - own only this issue and its task-linked workspace;
 - inspect repository instructions before editing;

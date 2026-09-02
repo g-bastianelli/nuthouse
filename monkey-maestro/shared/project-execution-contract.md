@@ -16,34 +16,14 @@ envelopes, terminals, execution records, result records, waivers, historical gra
 receipts, and obsolete control fields never make an issue ready, blocked, terminal, or
 capacity-consuming.
 
-## Workflow baton
+## What orchestration never authorizes
 
-A relay invocation may carry one validated parent issue-delivery decision without making
-it scheduling authority. The closed baton is:
-
-```text
-workflowRunId
-workflowProfile
-workflowDecisionHash
-```
-
-`workflowRunId` is the parent manifest `run_id`; `workflowProfile` is its exact effective
-profile; `workflowDecisionHash` is the manifest handoff `content_hash`. Before rendering
-any relay worker prompt, consume the parent handoff through Monkey Maestro's install-local
-workflow bundle and require `issue-delivery`, a non-blocked decision, exact repository
-scope, policy agreement, and matching run/profile/hash. The source manifest remains
-worktree-scoped: the child receives parent identity as a baton and runs
-`linear-devotee:greet` to validate or resolve its own local decision.
-
-Relay mode must be explicit. A missing baton field, hash mismatch, profile mismatch, or
-invalid parent manifest refuses only the affected relay launch; it never falls back to
-control `runId`, prompt prose, GitHub, or remembered state. An ordinary non-relay
-orchestration invocation may omit the baton and retains existing behavior.
-
-The workflow baton does not authorize feature acceptance. It does not authorize merge.
+Dispatching an issue does not authorize feature acceptance. It does not authorize merge.
 It does not authorize Linear completion, dependency mutation, readiness, or a second
 dispatch batch. Human feature acceptance and manual merge remain mandatory outside
 Maestro, and Linear remains the only lifecycle authority.
+
+## Linear state semantics
 
 `completed` and `canceled` are terminal. Terminal Linear state wins before any Superset
 lookup, satisfies a blocker relation, and consumes no logical concurrency even when one
@@ -76,8 +56,7 @@ fresh facts then replace cached facts directly. Relation additions, removals, or
 reversals never require historical adoption or `reconcile`.
 
 Lost context or a new invocation performs a new full bootstrap. Never store the Linear
-cache in a queue, workflow baton, relay file, project comment, or hidden daemon; the
-baton carries decision identity only.
+cache in a queue, relay file, project comment, or hidden daemon.
 
 ## Retrieval boundaries
 

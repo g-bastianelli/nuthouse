@@ -6,4 +6,6 @@ node_modules/
 !.agents/plugins/
 .agents/plugins/**
 !.agents/plugins/marketplace.json
-docs/superpowers/
+
+# Workflow ledgers — disposable, survive compaction only
+.nuthouse/

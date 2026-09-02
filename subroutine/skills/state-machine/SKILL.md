@@ -1,5 +1,6 @@
 ---
 name: state-machine
+genre: contract
 description: State-machine discipline for TypeScript lifecycle, workflow, reducer, and state-machine files — make illegal states unrepresentable, keep transitions pure and exhaustive, and design for replay and concurrency.
 user-invocable: false
 paths:

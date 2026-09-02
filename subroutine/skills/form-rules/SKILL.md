@@ -1,5 +1,6 @@
 ---
 name: form-rules
+genre: contract
 description: Form discipline for TypeScript — the schema is the only converter, input and output are different types, a required field is seeded blank not absent, submit is never gated on validity, and each failure names itself.
 user-invocable: false
 paths:

@@ -7,11 +7,6 @@
   },
   "plugins": [
     {
-      "name": "saucy-status",
-      "source": "./saucy-status",
-      "category": "fun"
-    },
-    {
       "name": "subroutine",
       "source": {
         "source": "git-subdir",
@@ -37,16 +32,6 @@
         "source": "git-subdir",
         "url": "https://github.com/g-bastianelli/nuthouse",
         "path": "acid-prophet",
-        "sha": "94e2d42bc5474c2fa0f3acf57e5b0dafd09e0e7b"
-      },
-      "category": "productivity"
-    },
-    {
-      "name": "warden",
-      "source": {
-        "source": "git-subdir",
-        "url": "https://github.com/g-bastianelli/nuthouse",
-        "path": "warden",
         "sha": "94e2d42bc5474c2fa0f3acf57e5b0dafd09e0e7b"
       },
       "category": "productivity"

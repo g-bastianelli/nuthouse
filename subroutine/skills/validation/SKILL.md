@@ -1,5 +1,6 @@
 ---
 name: validation
+genre: contract
 description: Validation discipline for TypeScript — one schema source of truth, parse data once at each trust boundary, and derive static types from schemas. Applies whenever editing or creating TypeScript files.
 user-invocable: false
 paths: ["**/*.ts", "**/*.tsx"]

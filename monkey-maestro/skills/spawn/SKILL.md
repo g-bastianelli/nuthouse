@@ -3,21 +3,16 @@ name: spawn
 description: Use when the user explicitly wants one Linear issue in one task-linked Superset workspace. Applies the same live Linear planner, issue-scoped force rules, exact runtime idempotence, and short lock as project orchestration; active controls supply configuration instead of blocking spawn.
 argument-hint: "<linear-issue-id> [--force] [--host <id>] [--superset-project <id>] [--agent <name>]"
 effort: high
-allowed-tools: Bash(superset tasks get:*), Bash(superset workspaces list:*), Bash(superset workspaces create:*), Bash(superset workspaces get:*), Bash(superset terminals list:*), Bash(superset terminals read:*), Bash(superset agents create:*), Bash(node:*), Bash(mktemp:*), Bash(rm:*), Read, Write, Agent, mcp__claude_ai_Linear__get_issue, mcp__claude_ai_Linear__save_comment
+allowed-tools: Bash(superset tasks get:*), Bash(superset agents list:*), Bash(superset workspaces list:*), Bash(superset workspaces create:*), Bash(superset workspaces get:*), Bash(superset terminals list:*), Bash(superset terminals read:*), Bash(superset agents create:*), Bash(node:*), Bash(mktemp:*), Bash(rm:*), Read, Write, Agent, mcp__claude_ai_Linear__get_issue, mcp__claude_ai_Linear__save_comment
 ---
-
-> Workflow kernel: When this skill needs a workflow/profile decision and no valid parent manifest is supplied, use this plugin's install-local `lib/workflow/index.mjs` explicit-skill resolver. Claude hooks are optional accelerators; a missing or failed hook falls back once to that local path. Warden must not be required. When verification is required and Moon Moth is unavailable, use non-empty commands from repository-owned instructions or build metadata, or block completion.
 
 # spawn
 
-> Agent resolution: Before any subagent dispatch, read
-> `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md`; select the active runtime name and follow its spawn rule.
-
-> At visible transitions, try `warden:voice` through the shared persona-line contract. Print only a non-empty line; skip failure or disabled voice without mention.
+> Agent resolution: before any subagent dispatch, read `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md` and use the active runtime's name.
 
 ## Voice
 
-Read `../../persona.md`. Apply it to wrapper lines only; commands and evidence stay neutral.
+Read `../../persona.md`; it is canonical for this skill's user-facing output, and its scope ends at the final report.
 
 ## Contract
 
@@ -25,11 +20,6 @@ Read `${CLAUDE_PLUGIN_ROOT}/shared/project-execution-contract.md`. This is the o
 consumer of the same Linear/runtime planners and dispatch primitive as `orchestrate`.
 Never redirect merely because an active control exists. Never create a branch in place or
 change Linear lifecycle.
-
-When the caller explicitly enters relay mode, require the parent `WORKFLOW_DECISION`,
-validate it with this plugin's install-local manifest consumer, and project the shared
-workflow baton. A missing field or mismatch launches nothing. Ordinary manual spawn may
-omit the baton and must not synthesize one from control `runId` or `invocationId`.
 
 ## Step 0 — Read live Linear first
 
@@ -169,6 +159,19 @@ live token/owner/lease verification
      -> terminal snapshot -> create agent -> correlate terminal -> best-effort record
 ```
 
+Before the launch, settle the agent against the host once — the host can drop an agent
+after activation, so launch time is the authoritative moment:
+
+```text
+superset agents list --host <targetHostId> --json > "$capture" 2>/dev/null
+node ${CLAUDE_PLUGIN_ROOT}/scripts/host-agents.mjs validate-launch <payload-with-inventoryPath-and-defaultAgent>
+```
+
+A non-zero exit or empty capture is an unknown inventory, not a failure. Branch on
+`validation.status` only, and print the returned `message` verbatim: `ok` and `unverified`
+launch with `validation.agent`; anything else launches nothing, preserves the created or
+reused workspace, and never substitutes another agent.
+
 5. The `dispatchIssue` adapter must run `scripts/project-lock.mjs verify` against its
    exact `lockReceipt` as its first sub-step, immediately before any Superset call.
    Require `verifyOutput.verified === true` and return
@@ -179,19 +182,10 @@ live token/owner/lease verification
    create blindly. Preserve partial workspace success. Release the token-matched lock in
    `finally`.
 7. Worker prompt starts with `linear-devotee:greet <issueId>` and includes the shared
-   DONE/BLOCKED envelope. In relay mode, bind the validated baton into the same immutable
-   worker prompt before preview and carry it unchanged through
-   `dispatchContextByIssueId`:
-
-   ```text
-   WORKFLOW_RUN_ID: <parent run_id>
-   WORKFLOW_PROFILE: <parent effective profile>
-   WORKFLOW_DECISION_HASH: sha256:<hex>
-   ```
-
-   A missing value or mismatch launches nothing. The baton never authorizes human
-   feature acceptance, manual merge, or Linear completion. Only greet may claim the
-   issue; spawn never changes Linear status or dependencies.
+   DONE/BLOCKED envelope. It is the immutable prompt previewed in Step 2 and carried
+   unchanged through `dispatchContextByIssueId`; nothing in it authorizes human feature
+   acceptance, manual merge, or Linear completion. Only greet may claim the issue; spawn
+   never changes Linear status or dependencies.
 
 ## Report
 

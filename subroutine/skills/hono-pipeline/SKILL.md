@@ -1,5 +1,6 @@
 ---
 name: hono-pipeline
+genre: contract
 description: Implementation discipline for Hono with a typed RPC/contract stack — discover local conventions, then move contract → resource error → pure service Result → exhaustive unwrap → thin router → wiring.
 user-invocable: false
 paths: ["**/*.ts"]

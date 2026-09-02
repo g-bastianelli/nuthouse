@@ -44,7 +44,7 @@ _Handoff:_
 
 ## Language
 
-**Adapt all voice phrases to the language of the conversation.** If the user writes in French, express the persona in French; if English, in English. Don't translate word-for-word — invent natural, culturally fitting equivalents in the active language. The invented phrases must stay faithful to the persona's theme and what the skill actually does. Technical identifiers (file paths, code symbols, tool names, CLI flags) stay in their original form regardless of language.
+**Adapt every user-facing line — voice and workflow output alike — to the language of the conversation.** If the user writes in French, express the persona in French; if English, in English. Don't translate word-for-word — invent natural, culturally fitting equivalents in the active language. The invented phrases must stay faithful to the persona's theme and what the skill actually does. Technical identifiers (file paths, code symbols, tool names, CLI flags) stay in their original form regardless of language.
 
 ## Hard rule
 

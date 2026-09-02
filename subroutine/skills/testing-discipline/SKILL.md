@@ -1,5 +1,6 @@
 ---
 name: testing-discipline
+genre: contract
 description: Testing discipline for TypeScript test files — reproduce regressions first, test observable behavior and typed failures, keep doubles at owned boundaries, and preserve unexpected rejections.
 user-invocable: false
 paths: ["**/*.test.ts", "**/*.spec.ts", "**/*.test.tsx", "**/*.spec.tsx"]

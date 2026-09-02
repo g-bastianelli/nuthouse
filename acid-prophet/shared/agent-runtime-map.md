@@ -8,7 +8,6 @@ for the active runtime.
 | Logical id                  | Claude Code                 | Codex                        |
 | --------------------------- | --------------------------- | ---------------------------- |
 | `acid-prophet:spec-auditor` | `acid-prophet:spec-auditor` | `acid_prophet__spec_auditor` |
-| `warden:voice`              | `warden:voice`              | `warden__voice`              |
 
 On Codex, spawn a typed custom agent with isolated task-local context. Never use a
 full-history fork. Pass only the input contract required by the delegated task.

@@ -35,7 +35,8 @@ test("greet requires a fresh Linear signal and absent context", () => {
   const skill = fs.readFileSync(GREET_SKILL_PATH, "utf8");
 
   expect(skill).toContain("Never use on resume or compaction");
-  expect(skill).toContain("Silent gate: Run workflow step 1 before any voice dispatch");
+  // The property: greet gates on step 1 before it says anything, whatever the wording.
+  expect(skill).toMatch(/Silent gate:[^\n]*step 1 before any[^\n]*output/);
   expect(skill).toContain("On `main`, `master`, or `staging`");
   expect(skill).toContain("an injected summary, prior turns, or an existing context brief");
 });
