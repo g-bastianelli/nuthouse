@@ -12,7 +12,7 @@ function read(relativePath) {
 
 const commitSkill = read("git-gremlin/skills/commit/SKILL.md");
 const prSkill = read("git-gremlin/skills/pr/SKILL.md");
-const prAgent = read("git-gremlin/agents/pr-drafter.md");
+const pluginManifest = JSON.parse(read("git-gremlin/.claude-plugin/plugin.json"));
 
 function git(repository, args) {
   const result = spawnSync("git", args, { cwd: repository, encoding: "utf8" });
@@ -64,31 +64,35 @@ test("explicit path scope detects an unrelated pre-staged file", () => {
   }
 });
 
+test("commit and PR mutations stay in their skills without a drafter subagent", () => {
+  expect(pluginManifest.agents).toEqual(["./agents/reviewer.md"]);
+  expect(commitSkill).not.toContain("commit-drafter");
+  expect(prSkill).not.toContain("pr-drafter");
+  expect(commitSkill).toContain("Bash(git commit:*)");
+  expect(prSkill).toContain("Bash(git push:*)");
+  expect(prSkill).toContain("Bash(gh pr create:*)");
+  expect(commitSkill).toContain('Run `git commit -m "<MESSAGE>"` directly');
+});
+
 test("PR approval binds HEAD and publishes only a same-named non-base branch", () => {
   expect(prSkill).toContain(
     "confirmation authorizes publishing only that commit to the same-named branch",
   );
   expect(prSkill).toContain("Immediately before displaying the proposal");
-  expect(prSkill).toMatch(
-    /ACTION: execute[\s\S]*BRANCH: <approved current branch>[\s\S]*HEAD_OID: <approved git commit OID>/,
-  );
-  expect(prAgent).toContain("HEAD changed since approval; regenerate the PR proposal");
-  expect(prAgent).toContain("Reject when `BRANCH` equals `BASE`");
-  expect(prAgent).toContain("branch.<BRANCH>.pushRemote");
-  expect(prAgent).toContain("remote.pushDefault");
-  expect(prAgent).toContain('git push "<REMOTE>" "<HEAD_OID>:refs/heads/<BRANCH>"');
-  expect(prAgent).toContain('git config "branch.<BRANCH>.merge" "refs/heads/<BRANCH>"');
+  expect(prSkill).toContain("Abort when the current branch equals the base branch");
+  expect(prSkill).toContain("branch.<BRANCH>.pushRemote");
+  expect(prSkill).toContain("remote.pushDefault");
+  expect(prSkill).toContain('git push "<REMOTE>" "<HEAD_OID>:refs/heads/<BRANCH>"');
+  expect(prSkill).toContain('git config "branch.<BRANCH>.merge" "refs/heads/<BRANCH>"');
 
-  const executeSection = prAgent
-    .split("### 2. On `ACTION: execute`")[1]
-    .split("## Output Format")[0];
+  const executeSection = prSkill.split("3. Create PR:")[1].split("4. Report and hand off:")[0];
   const oidCheckIndex = executeSection.indexOf("git rev-parse HEAD");
   const pushIndex = executeSection.indexOf('git push "<REMOTE>" "<HEAD_OID>');
   const createIndex = executeSection.indexOf('gh pr create --head "<BRANCH>"');
 
+  expect(executeSection).toContain("If either changed, return to step 2 with fresh context");
   expect(oidCheckIndex).toBeGreaterThan(-1);
   expect(pushIndex).toBeGreaterThan(oidCheckIndex);
-  expect(pushIndex).toBeGreaterThan(-1);
   expect(createIndex).toBeGreaterThan(pushIndex);
   expect(executeSection).not.toContain('"HEAD:refs/heads/<BRANCH>"');
   expect(executeSection).not.toContain("HEAD:<MERGE_REF>");

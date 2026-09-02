@@ -19,8 +19,6 @@ const MODEL_MAP = new Map([
 ]);
 
 const SANDBOX_POLICIES = new Map([
-  ["git-gremlin:commit-drafter", { mode: "workspace-write" }],
-  ["git-gremlin:pr-drafter", { mode: "workspace-write", networkAccess: true }],
   ["monkey-maestro:runtime-inspector", { permissionsProfile: "maestro-runtime-read-network" }],
   ["moon-moth:verify-runner", { mode: "workspace-write" }],
   ["stack-golem:platform-scout", { mode: "workspace-write", networkAccess: true }],

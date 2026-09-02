@@ -2,7 +2,7 @@
 name: pr
 description: Use automatically when the user asks to create, open, draft, or publish a GitHub PR, pull request, review request, "ouvre une PR", "fais la PR", "crée une pull request", or says the branch is ready for review. Drafts from branch history and, after confirmation, publishes the branch before creating the PR. Do not use for commits, plain git status, diff, log, push-only, rebase, or non-GitHub merge requests.
 effort: high
-allowed-tools: Bash(git log:*), Bash(git branch:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(gh auth status:*), Bash(gh repo view:*), Bash(cat:*), Bash(node:*), Read, Agent, mcp__claude_ai_Linear__get_issue
+allowed-tools: Bash(git log:*), Bash(git branch:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(git remote:*), Bash(git config:*), Bash(git push:*), Bash(gh auth status:*), Bash(gh repo view:*), Bash(gh pr create:*), Bash(cat:*), Bash(node:*), Read, Agent, mcp__claude_ai_Linear__get_issue
 ---
 
 > Workflow kernel: When this skill needs a workflow/profile decision and no valid parent manifest is supplied, use this plugin's install-local `lib/workflow/index.mjs` explicit-skill resolver. Claude hooks are optional accelerators; a missing or failed hook falls back once to that local path. Warden must not be required. When verification is required and Moon Moth is unavailable, use non-empty commands from repository-owned instructions or build metadata, or block completion.
@@ -63,20 +63,42 @@ is printed, revert to the session default voice immediately.
    - Capture the full commit OID with `git rev-parse HEAD`. This `HEAD_OID` binds the displayed proposal to the exact source content that may later be published.
    - Verify commits exist ahead of base: the `Commits vs main` snapshot in `## Context` covers the common case; re-run `git log <base>...HEAD --oneline` when the base is not `main` or the snapshot is empty. Abort if no commits exist ahead of base.
 2. Draft PR title and description:
-   - Dispatch the logical `git-gremlin:pr-drafter` agent with branch + `HEAD_OID` + log + diff vs base as input.
-   - Receive `{ title: string, body: string, base: string, headOid: string }`; require `base` and `headOid` to equal the captured values.
+   - Read `git log <base>...HEAD --oneline` and `git diff <base>...HEAD` directly.
+   - Detect Linear issue ids with `/\b[A-Z][A-Z0-9]+-[0-9]+\b/`, preferring the
+     branch, then the log, then the diff. When one id is unambiguous, suffix the title
+     with ` [<id>]`; when several ids remain ambiguous, add no suffix.
+   - Draft an imperative title no longer than 72 characters, including any Linear
+     suffix. Preserve the best existing conventional type or scope marker from the
+     branch commits, such as `(fix)`, `chore:`, or `feat(scope):`.
+   - Draft the body with `## Summary` and one to three bullets, then `## Test plan`
+     with a checklist. Append `Closes <id>` on its own line when one unambiguous Linear
+     id was detected. Do not invent changes or verification absent from the inputs.
+   - Bind the proposal to the captured base, branch, and `HEAD_OID`.
    - Immediately before displaying the proposal, re-run `git branch --show-current` and `git rev-parse HEAD`. If either differs from the captured branch or `HEAD_OID`, discard the stale proposal and restart step 2 with fresh log and diff.
    - Display the proposed title, description, branch, base, and exact `HEAD_OID`, then wait for confirmation or an edit request. State that confirmation authorizes publishing only that commit to the same-named branch on the resolved Git remote, then creating the PR. A Maestro project control record is not PR approval.
 3. Create PR:
-   - On confirmation: re-dispatch the same agent with `action: execute`, including the approved base, branch, `HEAD_OID`, title, and body.
-   - Immediately before that publication dispatch, re-read `VERIFICATION_EVIDENCE`,
+   - On confirmation, re-read `VERIFICATION_EVIDENCE`,
      recompute `HEAD_OID` and `WORKTREE_SNAPSHOT_HASH` from the current source state,
      and require exact equality with both the evidence and approved proposal. Any change
      requires fresh verification and a newly confirmed proposal; do not push.
-   - Before any mutation, the agent must verify that the current branch and `git rev-parse HEAD` still equal the approved values. If either changed, return to step 2 with fresh context and require a new confirmation.
-   - The agent must publish the approved commit to `refs/heads/<BRANCH>` before `gh pr create`; this is part of the confirmed mutation, not a separate prompt.
-   - Receive `{ url: string, branch: string, headOid: string, remote: string }`.
-   - On rejection: offer to regenerate or cancel. Never create PR silently.
+   - Before any mutation, verify that the current branch and `git rev-parse HEAD` still
+     equal the approved values. If either changed, return to step 2 with fresh context
+     and require a new confirmation.
+   - Resolve only the push remote. Consider configured remotes other than `.` and prefer,
+     in order: `branch.<BRANCH>.pushRemote`, `remote.pushDefault`,
+     `branch.<BRANCH>.remote`, `origin`, then the sole configured remote. Ignore
+     `branch.<BRANCH>.merge`; if no unique remote can be resolved, stop before mutation.
+   - Publish the immutable approved commit with
+     `git push "<REMOTE>" "<HEAD_OID>:refs/heads/<BRANCH>"`. Never substitute symbolic
+     `HEAD`, publish to a differently named branch, or force-push. If push fails, surface
+     stderr verbatim and do not retry or create the PR.
+   - After a successful push, configure the same-named upstream with
+     `git config "branch.<BRANCH>.remote" "<REMOTE>"` and
+     `git config "branch.<BRANCH>.merge" "refs/heads/<BRANCH>"`.
+   - Run `gh pr create --head "<BRANCH>" --title "<TITLE>" --body "<BODY>" --base "<BASE>"`,
+     passing every value as a separately quoted argument without `eval`. If it fails,
+     surface stderr verbatim and do not retry. On success, capture the PR URL from stdout.
+   - On rejected confirmation, offer to regenerate or cancel. Never create a PR silently.
 4. Report and hand off:
    - Return result.
    - In issue-delivery relay mode, report `Human feature acceptance: pending
@@ -104,7 +126,6 @@ git-gremlin:pr report
 
 ## Never
 
-- Run `gh pr create` directly from the skill (only via pr-drafter).
 - Push during drafting or before the user confirms the displayed PR proposal.
 - Push when the current branch or `HEAD` differs from the approved proposal.
 - Push the base branch or publish `HEAD` to any remote ref other than `refs/heads/<BRANCH>`.
@@ -117,36 +138,3 @@ git-gremlin:pr report
 - Treat a PR as Linear completion; Linear lifecycle remains external and explicit.
 - Reuse pre-commit or otherwise stale verification when `head_oid` or
   `worktree_snapshot_hash` no longer matches the source being published.
-
-## Subagent dispatch (Steps 2-3)
-
-This skill dispatches the logical `git-gremlin:pr-drafter` agent. Its canonical definition
-is `git-gremlin/agents/pr-drafter.md`.
-
-```
-Agent({
-  subagent_type: 'git-gremlin:pr-drafter',
-  description: 'Read git log and diff vs base, propose PR title and description',
-  prompt: `ACTION: draft
-BASE: <base branch>
-BRANCH: <current branch>
-HEAD_OID: <git rev-parse HEAD>
-LOG: <git log base...HEAD>
-DIFF: <git diff base...HEAD>`,
-})
-```
-
-After confirmation, re-dispatch with the complete approved mutation:
-
-```
-Agent({
-  subagent_type: 'git-gremlin:pr-drafter',
-  description: 'Publish the branch and create the approved PR',
-  prompt: `ACTION: execute
-BASE: <approved base branch>
-BRANCH: <approved current branch>
-HEAD_OID: <approved git commit OID>
-TITLE: <approved PR title>
-BODY: <approved PR body>`,
-})
-```

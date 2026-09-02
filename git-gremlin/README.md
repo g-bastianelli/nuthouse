@@ -126,13 +126,14 @@ Ship it as a first-pass review harness, then tune from real reviews:
 - Prefer tightening the finding contract over adding broad prose instructions.
 - Keep helper scripts dependency-free (`node:fs`, `node:path`, `node:child_process` only).
 
-## Agents
+## Agent
 
-| Agent            | Purpose                                                                         |
-| ---------------- | ------------------------------------------------------------------------------- |
-| `commit-drafter` | Read staged diff and produce a commit proposal or approved commit hash          |
-| `pr-drafter`     | Read branch log/diff, publish it, and produce a PR proposal or approved PR URL  |
-| `reviewer`       | Host `git-gremlin:review` forked runs with the review-passes contract preloaded |
+Commit and PR drafting run directly in their skills so the approval context and Git
+permissions stay in one place. The only dedicated agent is the read-only review host.
+
+| Agent      | Purpose                                                                         |
+| ---------- | ------------------------------------------------------------------------------- |
+| `reviewer` | Host `git-gremlin:review` forked runs with the review-passes contract preloaded |
 
 ## Install
 
