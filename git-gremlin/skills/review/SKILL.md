@@ -35,7 +35,6 @@ This skill reviews and reports. It does not implement fixes unless the user expl
    - Verify this is a git repository.
    - Verify `node` is available.
    - Resolve `PLUGIN_ROOT`. Prefer `${CLAUDE_PLUGIN_ROOT}` when set; otherwise infer it from the installed skill path or current repo layout.
-   - The portable pass contract is the `git-gremlin:review-passes` knowledge skill, preloaded into the host agent — do not re-read it. Codex fallback: if the contract is not already in your context, read the `review-passes` skill file (`<PLUGIN_ROOT>/skills/review-passes/SKILL.md`) before continuing.
    - Run the context compiler:
      ```bash
      node <PLUGIN_ROOT>/scripts/review-context.mjs
@@ -53,8 +52,7 @@ This skill reviews and reports. It does not implement fixes unless the user expl
    - Include warnings from the manifest, especially dirty worktree and untracked-file notes.
 4. Choose backend:
    - **Native review backend (optional):** If the current runtime exposes a callable native code-review backend inside this turn (for example a bundled review skill/command that can be invoked with extra context), delegate the review packet to it and request severity-ranked findings using this skill's Finding Contract. Do not stop and ask the user to run a slash command manually.
-   - **Portable multi-pass backend (default):** Otherwise run the passes from the preloaded `review-passes` contract. When subagents are available and permitted by the runtime, dispatch read-only passes in parallel: `correctness-reviewer`, `convention-reviewer`, `tests-reviewer`, and `risk-reviewer` only when the touched surface or user scope makes security/privacy/performance/accessibility relevant. If subagents are unavailable, run the same passes inline in separate sections.
-   - **Small diff fast path:** For tiny, low-risk diffs (one or two human-written files, no risky surface, no explicit deep-review request), one inline pass may cover correctness + conventions + tests. Still use the same Finding Contract.
+   - **Reviewer judgment (default):** Otherwise inspect the review packet, diff, and relevant surrounding code directly. Use the reviewer's own judgment to decide what deserves investigation and how to investigate it. Do not impose a fixed pass taxonomy or require separate correctness, convention, test, or risk reviewers.
 5. Aggregate candidates:
    - Merge duplicate candidates by root cause and keep the clearest evidence.
    - Verify each candidate against local diff/source/rule evidence before promoting it to a final finding.
@@ -101,7 +99,7 @@ Severity meanings:
 git-gremlin:review report
   Target:       <branch | staged | worktree | explicit range>
   Diff:         <git diff command used>
-  Backend:      <native review | portable multi-pass | inline fast path>
+  Backend:      <native review | reviewer judgment>
   Rules loaded: <n applied instruction sources>
   Findings:     <n blockers/high/medium/low/nit/info or "none">
   Residual risk:<tests not run / PR unavailable / generated files scanned only / none>
@@ -113,7 +111,7 @@ git-gremlin:review report
 - Never create or update a PR.
 - Never mutate external services without explicit user confirmation.
 - Never implement fixes during the review unless the user explicitly asks for a fix pass.
-- Never require a runtime-specific reviewer to exist; fall back to the portable multi-pass flow.
+- Never require a particular review decomposition or fixed set of passes.
 - Never ask the user to manually run `/review` or `/code-review` as a substitute for this skill.
 - Never invent rules that were not loaded or evident in local code.
 - Never block on personal preference; mark optional polish as `NIT`.
