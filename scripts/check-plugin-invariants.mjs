@@ -86,11 +86,9 @@ export function checkPluginInvariants(repoRoot) {
       }
     });
 
-    // "No private queue or hidden daemon" is a property, not a file list: Linear stays the
-    // only scheduling truth, so nothing outside the ephemeral lock may persist local state.
+    // Linear stays the only scheduling truth, so Maestro scripts never persist local state.
     if (
       filename.endsWith(".mjs") &&
-      filename !== "monkey-maestro/lib/project-lock.mjs" &&
       /\b(?:writeFileSync|mkdirSync|renameSync|unlinkSync|rmdirSync|rmSync)\b/.test(body)
     ) {
       problems.push(`${filename}: unexpected durable local-state mutation`);

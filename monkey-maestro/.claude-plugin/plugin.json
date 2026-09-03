@@ -8,10 +8,5 @@
   },
   "repository": "https://github.com/g-bastianelli/nuthouse",
   "homepage": "https://github.com/g-bastianelli/nuthouse",
-  "skills": "./skills/",
-  "agents": [
-    "./agents/control-loader.md",
-    "./agents/project-snapshot-loader.md",
-    "./agents/runtime-inspector.md"
-  ]
+  "skills": "./skills/"
 }
