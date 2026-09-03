@@ -2,7 +2,7 @@
 
 ![git-gremlin](./assets/banner.png)
 
-Contextual review, commit, and PR helper for Claude Code and Codex.
+Contextual review, review-comment discipline, commit, and PR helper for Claude Code and Codex.
 
 It recognizes review, commit, or PR intent, compiles repo instructions before review,
 drafts the boring text from the current git state, stages dirty changes when a commit needs
@@ -11,11 +11,17 @@ and branch guards belong to Monkey Maestro.
 
 ## Skills
 
-| Skill                | Purpose                                                                       |
-| -------------------- | ----------------------------------------------------------------------------- |
-| `git-gremlin:commit` | Commit a staged selection, or stage dirty changes when no selection exists    |
-| `git-gremlin:pr`     | Draft a PR, then publish the branch and create it after explicit confirmation |
-| `git-gremlin:review` | Review the current diff/branch with repo instruction files explicitly loaded  |
+| Skill                                | Purpose                                                                       |
+| ------------------------------------ | ----------------------------------------------------------------------------- |
+| `git-gremlin:commit`                 | Commit a staged selection, or stage dirty changes when no selection exists    |
+| `git-gremlin:handle-review-comments` | Reply, then resolve whenever review feedback is dismissed                     |
+| `git-gremlin:pr`                     | Draft a PR, then publish the branch and create it after explicit confirmation |
+| `git-gremlin:review`                 | Review the current diff/branch with repo instruction files explicitly loaded  |
+
+`handle-review-comments` is an ambient discipline, not a triage workflow. It never decides
+whether feedback is valid. Once the acting agent has decided to dismiss a review comment,
+the skill makes an explanatory reply followed by thread resolution part of completing the
+task.
 
 ## Review Skill
 
@@ -65,23 +71,11 @@ Fix: Minimal direction.
 If there is no concrete issue, the skill should say `No blocking findings` and list residual
 risk instead of inventing preferences.
 
-### Review Backends
+### Review Execution
 
-The skill is intentionally portable across Claude Code and Codex:
-
-1. **Native review backend, when callable** — if the runtime exposes a callable bundled
-   review backend inside the current turn, `git-gremlin:review` can pass it the compiled
-   context packet and request findings in the same strict format.
-2. **Portable multi-pass backend, default** — otherwise the skill runs the reusable passes
-   from the `git-gremlin:review-passes` knowledge skill (preloaded into the `reviewer` host
-   agent on Claude Code): correctness, conventions, tests/docs, and risk only when
-   security/privacy/performance/accessibility is relevant. In runtimes with subagents, the
-   passes can run in parallel; without subagents, the same passes run inline.
-3. **Inline fast path** — tiny low-risk diffs can be reviewed in one pass, but still use
-   the same context manifest and finding contract.
-
-This keeps the deterministic repo-context layer while avoiding a hard dependency on
-Claude-only `/code-review` or Codex-only `/review` slash commands.
+After the deterministic repository context is loaded, the reviewer decides for itself what
+to inspect and how deeply to inspect it. It may use a callable native review backend when
+useful, but Git Gremlin does not prescribe a fixed taxonomy of review passes.
 
 ### Review Helpers
 
@@ -104,24 +98,11 @@ cat report.md | node git-gremlin/scripts/validate-findings.mjs
 `validate-findings.mjs` rejects vague review output that lacks severity, file evidence,
 impact, or fix direction.
 
-The portable backend is defined in:
-
-```bash
-git-gremlin/skills/review-passes/SKILL.md
-```
-
-That knowledge skill (`user-invocable: false`) contains the shared packet format,
-candidate finding schema, pass definitions, and aggregation rules used by both subagent
-and inline fallback reviews. On Claude Code it is preloaded into the `reviewer` host
-agent; on Codex the review skill reads it by name as a fallback.
-
 ### Tuning Notes
 
 Ship it as a first-pass review harness, then tune from real reviews:
 
 - Add or adjust instruction-source patterns only when a real repo needs them.
-- Tune `skills/review-passes/SKILL.md` before adding runtime-specific agents; the same
-  pass contract should keep Claude Code and Codex behavior aligned.
 - Keep false positives visible and convert them into examples or validator checks.
 - Prefer tightening the finding contract over adding broad prose instructions.
 - Keep helper scripts dependency-free (`node:fs`, `node:path`, `node:child_process` only).
@@ -131,9 +112,9 @@ Ship it as a first-pass review harness, then tune from real reviews:
 Commit and PR drafting run directly in their skills so the approval context and Git
 permissions stay in one place. The only dedicated agent is the read-only review host.
 
-| Agent      | Purpose                                                                         |
-| ---------- | ------------------------------------------------------------------------------- |
-| `reviewer` | Host `git-gremlin:review` forked runs with the review-passes contract preloaded |
+| Agent      | Purpose                                                                |
+| ---------- | ---------------------------------------------------------------------- |
+| `reviewer` | Host `git-gremlin:review` forked runs after loading repository context |
 
 ## Install
 
