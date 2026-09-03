@@ -19,6 +19,13 @@ Match the user's language. Keep technical identifiers, file paths, and thread UR
 
 The acting agent owns the complete review-comment workflow and uses its normal judgment, repository context, and available tools. This skill adds no triage process, validity criteria, or decision gate.
 
+When the agent does make the change a review comment asked for, the reply announcing it is
+not allowed to precede the code it announces. The order is commit, push, then reply. A reply
+posted before the push claims a correction nobody can see — not a later agent re-reading the
+thread, not a human opening the PR — because a local commit does not exist for the thread's
+reader. Batch the fixes, commit, push, and only then answer thread by thread. If the push
+fails, no reply goes out.
+
 When the agent independently decides not to make the change requested by a review comment, that dismissal is not complete until both actions succeed, in this order:
 
 1. Reply on the GitHub review thread with the concrete reason no change will be made.
@@ -30,6 +37,7 @@ If replying fails, leave the thread unresolved. If resolving fails after a succe
 
 ## Hard rules
 
+- Never announce a fix on a thread before that fix is pushed to the remote.
 - Never silently resolve or ignore a dismissed review comment.
 - Never resolve before the explanatory reply succeeds.
 - Never post a generic reply such as "invalid", "not applicable", or "done" without the reason.
