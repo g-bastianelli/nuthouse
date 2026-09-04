@@ -43,9 +43,11 @@ capacity and readiness. Superset receives selected work but never changes the pl
    from this bounded result and require it to remain ready. In parallel, fetch each exact
    Superset task. A changed, unknown, terminal, or non-ready issue, or a failed detail/task
    read, fails only that selected issue; do not backfill it during this invocation.
-6. Render one deterministic workspace name and complete worker prompt per valid issue.
-   Attempt exactly one branch-scoped workspace create-or-reuse per issue, without an
-   embedded agent launch, with sibling attempts settled independently:
+6. Render the shared deterministic issue workspace name
+   `linear-<lowercaseIssueId>-<taskDigest>`, where `taskDigest` is the first eight
+   hexadecimal characters of SHA-256 over the exact task id. Render the complete worker
+   prompt per valid issue. Attempt exactly one branch-scoped workspace create-or-reuse per
+   issue, without an embedded agent launch, with sibling attempts settled independently:
 
 ```text
 superset workspaces create \
@@ -81,9 +83,12 @@ superset agents create \
 
 ## Worker prompt
 
-Start with `linear-devotee:greet <issueId>`. Include the exact issue objective, scope,
-acceptance criteria, required checks, and the ownership and handoff rules from the shared
-contract. The worker must not merge, push, change dependencies, or infer Linear completion.
+Start with `linear-devotee:greet <issueId>`. Preserve the selected issue's title, branch,
+and description verbatim. Extract scope, acceptance criteria, and required checks only
+when the description states them; otherwise label each missing section
+`not specified in Linear` and never infer it. Include the ownership and handoff rules from
+the shared contract. The worker must not merge, push, change dependencies, or infer
+Linear completion.
 
 ## Report
 
