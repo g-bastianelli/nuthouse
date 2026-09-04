@@ -143,6 +143,7 @@ test("orchestrate uses one Linear capacity calculation and bounded Superset tran
   expect(orchestrate).toMatch(/reclassify every selected issue.*require it to remain ready/);
   expect(orchestrate).toMatch(/linear-reader.*mode: project.*mode: selected/);
   expect(orchestrate).toMatch(/sibling attempts settled independently/);
+  expect(orchestrate).toMatch(/linear-<lowercaseissueid>-<taskdigest>/);
   expect(tools).toMatch(/Bash\(superset workspaces create:\*\)/);
   expect(tools).toMatch(/Bash\(superset agents create:\*\)/);
   expect(tools).not.toMatch(/workspaces (list|get|update)|terminals/i);
@@ -157,15 +158,47 @@ test("status reports the same Linear-only capacity without Superset", () => {
   expect(allowedTools(skills.status)).not.toMatch(/superset|save_comment|github/i);
 });
 
-test("spawn cannot force Linear and performs at most one approved create", () => {
+test("spawn keeps issue dispatch manual and independent from project controls", () => {
   const spawn = normalize(skills.spawn);
   const tools = allowedTools(skills.spawn);
 
   expect(frontmatterField(skills.spawn, "argument-hint")).not.toContain("--force");
   expect(spawn).not.toMatch(/\bforce\b/);
+  expect(spawn).toMatch(/issue mode.*linear issue identifier/);
+  expect(spawn).toMatch(/linear-reader.*mode: selected/);
+  expect(spawn).not.toMatch(/resolve-controls|maxconcurrency|mode: project/);
+  expect(spawn).toMatch(/never read or obey a linear project control/);
   expect(spawn).toMatch(/completed or canceled issue returns already-terminal/);
   expect(spawn).toMatch(/blocked issue or any unknown.*refuses dispatch/);
-  expect(spawn).toMatch(/ready issue may proceed only when.*is positive/);
+  expect(spawn).toMatch(/does not calculate project capacity/);
+  expect(spawn).toMatch(/exact linear issue and project binding/);
+  expect(spawn).toMatch(/linear-<lowercaseissueid>-<taskdigest>/);
+  expect(spawn).toMatch(/not specified in linear.*never infer/);
+  expect(tools).toMatch(/Bash\(superset tasks get:\*\)/);
+});
+
+test("spawn launches deterministic quick fixes without Linear or controls", () => {
+  const spawn = normalize(skills.spawn);
+  const tools = allowedTools(skills.spawn);
+
+  expect(frontmatterField(skills.spawn, "argument-hint")).toMatch(/quick-fix objective/i);
+  expect(spawn).toMatch(/quick-fix mode.*free-form objective/);
+  expect(spawn).toMatch(/do not dispatch linear-reader/);
+  expect(spawn).toMatch(/no linear issue, task, project control, or capacity calculation/);
+  expect(spawn).toMatch(/sha-256.*normalized objective/);
+  expect(spawn).toMatch(/unicode nfkd.*outside a-z0-9/);
+  expect(spawn).toMatch(/quick\/<slug>-<digest>/);
+  expect(spawn).toMatch(/bindingargs = --branch <branchname>/);
+  expect(spawn).toMatch(/worker prompt.*must not invoke linear-devotee:greet/);
+  expect(tools).toMatch(/Bash\(superset status:\*\)/);
+  expect(tools).toMatch(/Bash\(superset projects list:\*\)/);
+  expect(tools).toMatch(/Bash\(superset agents list:\*\)/);
+});
+
+test("spawn performs at most one approved create and one launch in either mode", () => {
+  const spawn = normalize(skills.spawn);
+  const tools = allowedTools(skills.spawn);
+
   expect((skills.spawn.match(/^superset workspaces create/gm) ?? []).length).toBe(1);
   expect((skills.spawn.match(/^superset agents create/gm) ?? []).length).toBe(1);
   expect((skills.spawn.match(/\(y \/ cancel\)/g) ?? []).length).toBe(1);

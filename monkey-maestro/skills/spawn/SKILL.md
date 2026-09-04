@@ -1,15 +1,12 @@
 ---
 name: spawn
-description: Use when the user explicitly wants one Linear-authorized issue launched or safely recovered in one task-linked Superset workspace after checking for an existing worker.
-argument-hint: "<linear-issue-id> [--host <id>] [--superset-project <id>] [--agent <name>]"
+description: Use when the user explicitly wants either one Linear-authorized issue launched or recovered in a task-linked Superset workspace, or one free-form quick fix launched in a branch-bound workspace.
+argument-hint: "<linear-issue-id | quick-fix objective> [--quick] [--host <id>] [--superset-project <id>] [--agent <name>]"
 effort: high
-allowed-tools: Read, Bash(node:*), Bash(superset tasks get:*), Bash(superset workspaces list:*), Bash(superset workspaces create:*), Bash(superset terminals list:*), Bash(superset agents create:*), Agent
+allowed-tools: Read, Bash(node:*), Bash(git rev-parse:*), Bash(superset status:*), Bash(superset projects list:*), Bash(superset agents list:*), Bash(superset tasks get:*), Bash(superset workspaces list:*), Bash(superset workspaces create:*), Bash(superset terminals list:*), Bash(superset agents create:*), Agent
 ---
 
 # spawn
-
-> Agent resolution: before dispatch, read `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md`
-> and select the active runtime name for `monkey-maestro:linear-reader`.
 
 ## Voice
 
@@ -21,61 +18,116 @@ Read `${CLAUDE_PLUGIN_ROOT}/shared/project-execution-contract.md`. This skill ma
 most one workspace-create attempt and one agent-launch attempt after one approval. It
 never changes Linear status or relations, merges, pushes, or changes dependencies.
 
-## Workflow
+`spawn` is a manual dispatch path. Never read or obey a Linear project control, even when
+one exists. Controls belong only to project activation, orchestration, status, stop, and
+project-wide reconciliation.
 
-1. Require one exact project-bound Linear issue identifier. Dispatch
-   `monkey-maestro:linear-reader` in `MODE: selected` for only that issue, deriving its
-   exact project id and returning its title, branch, description, status, and blocker ids.
-2. Dispatch the reader in `MODE: project` for that exact project. Use only its complete
-   marker comments and minimal project status/blocker rows to calculate live capacity and
-   verify the target's current classification.
-3. Pass the marker comments through `scripts/records.mjs resolve-controls`. A usable
-   active control supplies host, Superset project, agent, and
-   `maxConcurrency`. If no control exists, require all three explicit transport values
-   and use concurrency `1`. An inactive or conflicting control refuses dispatch.
-4. A `completed` or `canceled` issue returns `already-terminal`. A blocked issue or any
-   unknown project, status, membership, or blocker fact refuses dispatch. A ready issue
-   may proceed only when `max(0, maxConcurrency - startedCount)` is positive. An
-   explicitly named `started` issue may proceed because it already consumes capacity.
-5. Resolve the exact Superset task with `superset tasks get <issueId> --json`. Require its
-   exact Linear issue and project binding. Render the deterministic workspace name and
-   complete worker prompt. List workspaces once with the configured project plus exact
-   workspace-name search, then keep only exact task-bound matches. Multiple matches are
-   ambiguous and refuse mutation; an unavailable or malformed listing also refuses.
-6. With one matching workspace, list live terminals for that exact workspace. A live
+## Mode selection
+
+1. Use **issue mode** when the positional input is exactly one Linear issue identifier
+   and `--quick` is absent.
+2. Use **quick-fix mode** when `--quick` is present or the positional input is a free-form
+   objective rather than exactly one issue identifier. Remove `--quick` and recognized
+   transport flags from the objective but preserve the user's wording.
+3. If neither mode has a non-empty identifier or objective, ask one concise clarification
+   before any discovery. Never reinterpret an unavailable Linear issue as a quick fix.
+
+## Issue mode
+
+1. Before dispatch, read `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md`, select the
+   active runtime name for `monkey-maestro:linear-reader`, and dispatch it in
+   `MODE: selected` for only the exact Linear issue. Require its exact project id, title,
+   branch, description, status, blocker ids, and current direct blocker rows.
+2. A `completed` or `canceled` issue returns `already-terminal`. A blocked issue or any
+   unknown project, status, membership, or blocker fact refuses dispatch. A ready or
+   explicitly named `started` issue may proceed. Manual issue spawn does not calculate
+   project capacity and does not read the rest of the project.
+3. Resolve the exact Superset task with `superset tasks get <issueId> --json`. Require its
+   exact Linear issue and project binding. Calculate `taskDigest` as the first eight
+   hexadecimal characters of SHA-256 over the exact task id. Set the workspace name to
+   `linear-<lowercaseIssueId>-<taskDigest>` and use `bindingArgs = --task <taskId>`. This is
+   the same issue identity required of project orchestration.
+
+## Quick-fix mode
+
+1. Use the complete non-empty free-form objective as the source of truth. Do not dispatch
+   `linear-reader`. There is no Linear issue, task, project control, or capacity
+   calculation in this mode.
+2. Normalize the objective by trimming it and replacing every whitespace run with one
+   ASCII space. For the slug, lowercase that normalized value, apply Unicode NFKD, remove
+   combining marks, replace every run outside `a-z0-9` with one hyphen, trim hyphens, take
+   the first 48 characters, and trim any final hyphen again. Calculate the first eight
+   hexadecimal characters of SHA-256 over the normalized objective with Node. Use
+   `quick-fix` when the slug would otherwise be empty.
+3. Set the branch name to `quick/<slug>-<digest>` and the workspace name to
+   `quick-<slug>-<digest>`. Use `bindingArgs = --branch <branchName>`. This stable identity
+   makes the same objective recover the same workspace while distinct objectives do not
+   collide merely because their readable slugs match.
+4. Build the worker prompt from the exact objective plus the quick-fix ownership and
+   handoff rules in the shared contract. The worker prompt must not invoke
+   `linear-devotee:greet` or imply that a Linear issue exists.
+
+## Transport discovery
+
+Resolve host, Superset project, and agent independently from an explicit argument, then
+from narrow local discovery. Never consult a project control.
+
+1. For a missing host, run `superset status --json`. Use its non-empty `hostId` only when
+   it reports `running: true` and `healthy: true`.
+2. For a missing project, inspect the current path and
+   `git rev-parse --path-format=absolute --git-common-dir`, then run
+   `superset projects list --local --json`. Prefer the exact id following
+   `.superset/worktrees/` in the current path when present in the list; otherwise use the
+   single project whose path owns the current path or Git common directory; otherwise use
+   the sole listed local project.
+3. For a missing agent, run `superset agents list --host <targetHostId> --json`. Use the
+   active runtime (`codex` or `claude`) only when that exact preset or id is listed;
+   otherwise use the sole listed agent.
+4. Failed, malformed, empty, or ambiguous discovery supplies no value. Gather every
+   unresolved selector and its deterministic available choices into one concise
+   clarification. The reply supplies configuration only; it is not mutation approval.
+
+## Workspace inspection and approval
+
+1. List workspaces once with the resolved Superset project and exact workspace-name
+   search. In issue mode keep only exact task-bound matches. In quick-fix mode keep only
+   exact name-and-branch matches. Multiple exact matches are ambiguous and refuse
+   mutation; an unavailable or malformed listing also refuses.
+2. With one matching workspace, list live terminals for that exact workspace. A live
    terminal returns `already-running` without approval or launch. Zero matches previews
-   `create`; one match with no live terminal previews `recover`. This is the only path that
-   may relaunch an explicitly named `started` issue. An unavailable or malformed terminal
-   result refuses mutation. Treat any live terminal conservatively as an existing worker;
-   the CLI does not expose a stronger agent/shell discriminator.
-7. Show one final preview containing live status, blockers, capacity, task, host, Superset
-   project, agent, create/recover action, workspace name, and worker prompt. Ask exactly
-   once:
+   `create`; one match with no live terminal previews `recover`. An unavailable or
+   malformed terminal result refuses mutation. Treat any live terminal conservatively as
+   an existing worker because the CLI exposes no stronger agent/shell discriminator.
+3. Show one final preview containing mode, issue status and blockers or quick-fix
+   objective, task or branch, host, Superset project, agent, create/recover action,
+   workspace name, and the complete worker prompt. Ask exactly once:
 
 ```text
-Create or recover this issue worker with the displayed authorization? (y / cancel)
+Create or recover this displayed worker? (y / cancel)
 ```
 
-8. On approval, use the existing exact workspace or attempt one create without embedding
-   an agent:
+## Mutation
+
+1. On approval, use the existing exact workspace or attempt one create without embedding
+   an agent. Expand `bindingArgs` to the exact mode-specific argument defined above:
 
 ```text
 superset workspaces create \
   --project <supersetProjectId> \
   --host <targetHostId> \
-  --task <taskId> \
+  <bindingArgs> \
   --name <workspaceName> \
   --json
 ```
 
-9. A `create` action launches only when the response explicitly says `created` and returns
-   the exact task-bound workspace id. If it says `reused`, another invocation won the
-   create race: report `concurrent-reuse` and launch nothing. For `recover`, retain the
-   exact preflight workspace id.
-10. Immediately list the chosen workspace's live terminals once more. If a worker appeared,
-    report `already-running` and stop. If the check is unavailable or malformed, launch
-    nothing. Otherwise attempt one agent launch and require explicit success before
-    reporting `dispatched`:
+2. A `create` action launches only when the response explicitly says `created` and
+   returns the exact mode-bound workspace id. If it says `reused`, another invocation won
+   the create race: report `concurrent-reuse` and launch nothing. For `recover`, retain
+   the exact preflight workspace id.
+3. Immediately list the chosen workspace's live terminals once more. If a worker
+   appeared, report `already-running` and stop. If the check is unavailable or malformed,
+   launch nothing. Otherwise attempt one agent launch and require explicit success before
+   reporting `dispatched`:
 
 ```text
 superset agents create \
@@ -86,25 +138,33 @@ superset agents create \
   --json
 ```
 
-11. Preserve a successfully created or reused workspace when launch explicitly fails and
-    report `launch-failed`. A transport error or malformed response is `launch-unknown`
-    and directs the user to read-only `monkey-maestro:reconcile <projectId> <issueId>`
-    before any later recovery. Never retry ambiguous mutation evidence or write execution
-    telemetry.
+4. Preserve a successfully created or recovered workspace when launch explicitly fails
+   and report `launch-failed`. A transport error or malformed launch response is
+   `launch-unknown`; never retry during the same invocation. In issue mode direct the user
+   to read-only `monkey-maestro:reconcile <projectId> <issueId>`. In quick-fix mode report
+   the exact workspace and require a later identical spawn to repeat both terminal checks
+   before any recovery launch. Never write execution telemetry.
 
-## Worker prompt
+## Worker prompts
 
-Start with `linear-devotee:greet <issueId>`. Include the exact issue objective, scope,
-acceptance criteria, required checks, and the ownership and handoff rules from the shared
-contract.
+An issue worker prompt starts with `linear-devotee:greet <issueId>` and preserves the
+selected issue's title, branch, and description verbatim. Extract scope, acceptance
+criteria, and required checks only when the description states them; otherwise label each
+missing section `not specified in Linear` and never infer it. Include the shared ownership
+rules.
+
+A quick-fix worker prompt starts directly with the exact objective, requires repository
+instructions to be read before editing, scopes ownership to this fix and workspace,
+requires appropriate checks, and forbids reverting others' edits, merging, pushing,
+changing dependencies, or changing Linear. It ends with a concise DONE/BLOCKED handoff.
 
 ## Report
 
 ```text
 monkey-maestro:spawn report
-  Issue:      <id / live status / blockers>
-  Capacity:   <started count> of <maxConcurrency>
-  Task:       <task id>
+  Mode:       issue | quick-fix
+  Work:       <issue id / live status / blockers | quick-fix objective>
+  Binding:    <task id | branch name>
   Workspace:  created | reused | none
-  Result:     dispatched | already-running | concurrent-reuse | launch-failed | launch-unknown | already-terminal | blocked | full | canceled | degraded
+  Result:     dispatched | already-running | concurrent-reuse | launch-failed | launch-unknown | already-terminal | blocked | canceled | degraded
 ```

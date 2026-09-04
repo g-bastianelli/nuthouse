@@ -1,8 +1,8 @@
 {
   "name": "monkey-maestro",
   "displayName": "Monkey Maestro",
-  "description": "Plan from live Linear statuses and blockedBy links, then dispatch selected Superset workers in parallel with issue-scoped failures.",
-  "version": "1.0.23",
+  "description": "Orchestrate live Linear work or manually spawn one control-free quick fix in a Superset workspace.",
+  "version": "1.0.24",
   "author": {
     "name": "g-bastianelli"
   },

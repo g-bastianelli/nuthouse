@@ -4,7 +4,9 @@ This contract is shared by every public Monkey Maestro skill.
 
 ## Authority
 
-Linear is the sole scheduling authority. Superset only transports selected work.
+For Linear-backed work, Linear is the sole scheduling authority. Superset only transports
+selected work. A manual quick fix has no scheduling state and never pretends to be a
+Linear issue.
 
 - `completed` and `canceled` are terminal.
 - Every `started` issue counts against `maxConcurrency`, whether or not a workspace or
@@ -24,13 +26,28 @@ selected = first slots ready issues, sorted by issue identifier
 Started issues reserve capacity but are not redispatched by project orchestration.
 Superset workspace or terminal counts never change this calculation.
 
+## Workspace identities
+
+Issue-backed orchestration and manual issue spawn use the same identity. Calculate the
+first eight hexadecimal characters of SHA-256 over the exact Superset task id and name the
+workspace `linear-<lowercaseIssueId>-<taskDigest>`. Bind it with `--task <taskId>`.
+
+For a quick fix, normalize the exact objective by trimming it and replacing every
+whitespace run with one ASCII space. Build its readable slug by lowercasing, applying
+Unicode NFKD, removing combining marks, replacing every run outside `a-z0-9` with one
+hyphen, trimming hyphens, taking the first 48 characters, and trimming a final hyphen
+again. Use `quick-fix` if empty. Calculate the first eight hexadecimal characters of
+SHA-256 over the normalized objective. Name the branch `quick/<slug>-<digest>` and the
+workspace `quick-<slug>-<digest>`.
+
 ## Linear retrieval boundary
 
-Public skills never hydrate a whole Linear project into their main context. They dispatch
-the read-only `monkey-maestro:linear-reader` and consume only its marker comments,
-status types, blocker identifiers, and scoped unknowns. Full descriptions are returned
-only for exact selected issue ids when rendering worker prompts. The reader never decides
-readiness, capacity, or runtime actions.
+Linear-backed public skills never hydrate a whole Linear project into their main context.
+They dispatch the read-only `monkey-maestro:linear-reader` and consume only its marker
+comments, status types, blocker identifiers, and scoped unknowns. Full descriptions are
+returned only for exact selected issue ids when rendering worker prompts. The reader
+never decides readiness, capacity, or runtime actions. Quick-fix spawn does not dispatch
+the reader at all.
 
 ## Minimal control v2
 
@@ -54,8 +71,8 @@ between one and ten. `scripts/records.mjs` is the only deterministic helper: pas
 `{ projectId, comments }` to `resolve-controls`, and use `build-control` for successors.
 Historical controls remain append-only and are never deleted automatically.
 
-An inactive control prevents future project dispatch. `stop` never touches existing
-Superset work.
+An inactive control prevents future project dispatch. It does not govern manual `spawn`.
+`stop` never touches existing Superset work.
 
 ## Start discovery and approval
 
@@ -113,22 +130,30 @@ terminal, or launch call is reported for that issue and does not cancel successf
 siblings. Do not replace a failed selection in the same invocation or poll workers. A
 later invocation begins from a new Linear read.
 
-## One-issue spawn
+## Manual spawn
 
-`spawn` applies the same live Linear meanings and capacity count to one named issue. A
-terminal, blocked, or unknown issue never launches. A ready issue may proceed only when
-`maxConcurrency - startedIssueCount` leaves a slot. An explicitly named `started` issue
-may proceed because Linear already counts it against capacity.
+`spawn` has two explicit manual modes and never reads a project control or calculates
+project capacity.
 
-Before approval, narrow one workspace listing by deterministic name and require at most
-one exact task-bound match. A matching live terminal returns `already-running`. Otherwise
-preview `create` or `recover` and ask once. After approval, create at most one workspace,
-but launch from a create action only when the response explicitly says `created`; a reuse
-caused by a concurrent winner launches nothing. Recheck the exact chosen workspace's live
-terminals and launch at most one agent only when none exists. Any live terminal
-conservatively blocks a launch because the CLI exposes no stronger agent/shell
-discriminator. A failed launch preserves the workspace and remains recoverable by a later
-explicit `spawn`; ambiguous mutation evidence is inspected before any retry.
+- **Issue mode:** read only the selected Linear issue and its current direct blockers. A
+  terminal, blocked, or unknown issue never launches. A ready or explicitly selected
+  `started` issue may proceed. Require the exact Superset task binding and use it as the
+  workspace identity.
+- **Quick-fix mode:** use a non-empty free-form objective without any Linear read, issue,
+  task, control, or scheduling claim. Derive a stable branch and workspace identity from
+  the objective and bind the workspace with `--branch`.
+
+Both modes resolve transport from explicit values followed by narrow local discovery.
+Before approval, narrow one workspace listing by the deterministic identity and require
+at most one exact task-bound or branch-bound match. A matching live terminal returns
+`already-running`. Otherwise preview `create` or `recover` and ask once. After approval,
+create at most one workspace, but launch from a create action only when the response
+explicitly says `created`; a reuse caused by a concurrent winner launches nothing.
+Recheck the exact chosen workspace's live terminals and launch at most one agent only when
+none exists. Any live terminal conservatively blocks a launch because the CLI exposes no
+stronger agent/shell discriminator. A failed launch preserves the workspace and remains
+recoverable by a later identical `spawn`; ambiguous mutation evidence is never retried in
+the same invocation.
 
 ## Read-only entry points
 
@@ -141,21 +166,26 @@ repairs records or runtime resources and never gates `start`, `orchestrate`, or 
 
 ## Worker boundary
 
-Every worker prompt starts with `linear-devotee:greet <issueId>`, contains the issue scope
-and acceptance criteria, and states:
+An issue worker prompt starts with `linear-devotee:greet <issueId>` and preserves the
+selected issue title, branch, and description verbatim. It extracts scope, acceptance
+criteria, and required checks only when explicitly present; absent sections are labeled
+`not specified in Linear` instead of being inferred. A quick-fix worker prompt starts
+directly with the exact objective, never invokes Linear Devotee, and never implies that an
+issue exists. Both state:
 
-- own only the selected issue and workspace;
+- own only the selected issue or quick fix and its workspace;
 - read repository instructions before editing;
 - do not revert others' edits;
 - do not merge, push, or change dependencies;
-- do not change Linear status or relations outside the greet/user workflow;
+- for issue work, do not change Linear status or relations outside the greet/user
+  workflow; for quick fixes, do not change Linear at all;
 - human feature acceptance and manual merge remain mandatory.
 
 A DONE/BLOCKED worker envelope is a handoff only. It never changes scheduling state.
 
 ## Mutation boundary
 
-Monkey Maestro may append an approved control comment, create an approved Superset
-workspace, and launch its approved worker. It never merges, pushes, changes dependencies,
-changes Linear issue lifecycle or relations, or infers completion from GitHub, commits,
-checks, runtime state, or worker output.
+Monkey Maestro may append an approved control comment during project activation, create
+an approved issue or quick-fix Superset workspace, and launch its approved worker. It
+never merges, pushes, changes dependencies, changes Linear issue lifecycle or relations,
+or infers completion from GitHub, commits, checks, runtime state, or worker output.
