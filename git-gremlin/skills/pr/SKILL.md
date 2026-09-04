@@ -87,10 +87,11 @@ When this branch closes work that came through `linear-devotee:plan`, require a 
 flight on the current `HEAD` with no uncommitted changes. If none ran, or commits landed
 after it, say so and verify before drafting.
 
-**REQUIRED SUB-SKILL (issue-delivery only):** Use `moon-moth:verify`. Outside issue
-delivery, or in a repository with no Moon workspace and no `moon-moth` installed, take the
-check commands from the repo's own `AGENTS.md`, `CLAUDE.md`, or `package.json` scripts
-instead. Never block a PR on a verifier the repository does not have.
+**REQUIRED SUB-SKILL (issue-delivery in a configured Moon workspace only):** Use
+`moon-moth:verify` when it is installed. In every other case — including a non-Moon repo
+where Moon Moth happens to be installed — run the exact check commands documented in the
+repo's `AGENTS.md`, `CLAUDE.md`, or `package.json`. Never block a PR on a verifier the
+repository does not have.
 
 ## Final Report
 

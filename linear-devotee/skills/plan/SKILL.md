@@ -217,7 +217,9 @@ linear-devotee:plan report
   Hand-off:        implementation_ready | blocked | stopped
 ```
 
-**REQUIRED SUB-SKILL:** after implementation, use `moon-moth:verify`
+**REQUIRED SUB-SKILL (configured Moon workspaces only):** after implementation, use
+`moon-moth:verify`. Otherwise run the repository-native verification documented in
+`AGENTS.md`, `CLAUDE.md`, or `package.json`.
 
 ## Never
 

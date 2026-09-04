@@ -66,10 +66,6 @@ describe("Codex agent parity", () => {
     const byAlias = new Map(sources.map((agent) => [`${agent.plugin}:${agent.name}`, agent]));
     const render = (alias) => renderCodexAgent(byAlias.get(alias));
 
-    expect(render("moon-moth:verify-runner")).toContain('sandbox_mode = "workspace-write"');
-    expect(render("moon-moth:verify-runner")).not.toContain(
-      "sandbox_workspace_write.network_access",
-    );
     expect(render("stack-golem:platform-scout")).toContain(
       "sandbox_workspace_write.network_access = true",
     );

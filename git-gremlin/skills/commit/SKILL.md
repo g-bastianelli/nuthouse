@@ -75,9 +75,10 @@ Read `../../persona.md`; it is canonical for this skill's user-facing output, an
 | "Checks passed earlier in the session"                | Earlier is before the last edit. Re-run them.      |
 | "It's a one-line change"                              | One-line changes break builds.                     |
 
-When this commit closes work that came through `linear-devotee:plan`, require a
-`moon-moth:verify` clean flight on the current tree. If none ran, or edits landed after
-it, say so and run it before committing.
+When this commit closes work that came through `linear-devotee:plan`, require fresh
+verification on the current tree. In a configured Moon workspace, use `moon-moth:verify`;
+otherwise run the repository-native checks documented in `AGENTS.md`, `CLAUDE.md`, or
+`package.json`. If none ran, or edits landed afterward, run them before committing.
 
 ## Final Report
 

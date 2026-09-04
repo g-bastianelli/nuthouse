@@ -24,7 +24,7 @@
 | [git-gremlin](./git-gremlin)       | Claude Code + Codex | Contextual review plus commit and PR drafting with scoped mutation gates                        |
 | [lore-hound](./lore-hound)         | Claude Code + Codex | Source-hunting research harness: fan-out search → fetch → verify → cite                         |
 | [stack-golem](./stack-golem)       | Claude Code + Codex | Notom-stack ops & debug — Scaleway, observability, local dev, Insomnia                          |
-| [moon-moth](./moon-moth)           | Claude Code + Codex | Moon-aware dev loop — scope to affected projects, implement TDD-first, verify                   |
+| [moon-moth](./moon-moth)           | Claude Code + Codex | Small Moon helper that reports and verifies affected projects                                   |
 | [monkey-maestro](./monkey-maestro) | Claude Code + Codex | Linear-first parallel orchestration with scoped Superset runtime recovery                       |
 
 ## Install

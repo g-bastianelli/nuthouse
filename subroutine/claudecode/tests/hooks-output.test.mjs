@@ -58,12 +58,6 @@ test("inject-on-review also recognises the subagent_type field name", () => {
   expect(res.hookSpecificOutput.hookEventName).toBe("SubagentStart");
 });
 
-test("inject-on-review briefs moon-moth's change-auditor", () => {
-  const res = runHook("inject-on-review.mjs", { subagent_type: "moon-moth:change-auditor" });
-  expect(res.hookSpecificOutput.hookEventName).toBe("SubagentStart");
-  expect(res.hookSpecificOutput.additionalContext).toContain("type-safety");
-});
-
 test("inject-on-review ignores 'preview' substring and document/plan auditors", () => {
   expect(runHook("inject-on-review.mjs", { agent_type: "preview-generator" })).toBeNull();
   expect(runHook("inject-on-review.mjs", { agent_type: "acid-prophet:spec-auditor" })).toBeNull();

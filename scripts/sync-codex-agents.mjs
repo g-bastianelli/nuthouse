@@ -19,7 +19,6 @@ const MODEL_MAP = new Map([
 ]);
 
 const SANDBOX_POLICIES = new Map([
-  ["moon-moth:verify-runner", { mode: "workspace-write" }],
   ["stack-golem:platform-scout", { mode: "workspace-write", networkAccess: true }],
 ]);
 
