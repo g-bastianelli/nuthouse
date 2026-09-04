@@ -2,7 +2,7 @@
   "name": "git-gremlin",
   "displayName": "Git Gremlin",
   "description": "Git gremlin — auto-triggers contextual review, staged-only commits, and branch-publishing GitHub PR helpers while keeping mutations behind scoped intent gates",
-  "version": "1.0.18",
+  "version": "1.0.19",
   "author": {
     "name": "g-bastianelli"
   },
