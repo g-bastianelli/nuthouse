@@ -10,7 +10,7 @@
   "interface": {
     "displayName": "Git Gremlin",
     "shortDescription": "Review diffs, prepare commits, and publish PR branches safely",
-    "longDescription": "Git Gremlin bundles Codex skills for recognizing review, commit, and GitHub PR intent from natural prompts, compiling repo instructions into contextual review passes, drafting conventional commit messages and PR descriptions from git context, staging dirty changes when an explicit commit needs them, and publishing local branches after the PR confirmation gate.",
+    "longDescription": "Git Gremlin bundles Codex skills for recognizing review, commit, and GitHub PR intent from natural prompts, compiling repo instructions into contextual review passes, drafting conventional commit messages and PR descriptions from git context, committing the current staged selection, and publishing local branches after the PR confirmation gate.",
     "developerName": "g-bastianelli",
     "category": "Developer Tools",
     "capabilities": ["Read", "Write"],

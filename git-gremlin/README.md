@@ -5,15 +5,15 @@
 Contextual review, review-comment discipline, commit, and PR helper for Claude Code and Codex.
 
 It recognizes review, commit, or PR intent, compiles repo instructions before review,
-drafts the boring text from the current git state, stages dirty changes when a commit needs
-them, and publishes local branches after the PR confirmation gate. Workspace orchestration
-and branch guards belong to Monkey Maestro.
+drafts the boring text from the current git state, commits the existing staged selection,
+and publishes local branches after the PR confirmation gate. Verification belongs to hooks
+and CI; workspace orchestration stays outside Git Gremlin.
 
 ## Skills
 
 | Skill                                | Purpose                                                                       |
 | ------------------------------------ | ----------------------------------------------------------------------------- |
-| `git-gremlin:commit`                 | Commit a staged selection, or stage dirty changes when no selection exists    |
+| `git-gremlin:commit`                 | Draft a conventional message and commit exactly the staged selection          |
 | `git-gremlin:handle-review-comments` | Push before announcing a fix; reply, then resolve on dismissal                |
 | `git-gremlin:pr`                     | Draft a PR, then publish the branch and create it after explicit confirmation |
 | `git-gremlin:review`                 | Review the current diff/branch with repo instruction files explicitly loaded  |
