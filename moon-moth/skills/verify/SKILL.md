@@ -24,14 +24,24 @@ present commit/PR menus.
    A bare `.moon/` directory is not a workspace. If none exists, say the skill does not
    apply and stop; repository-native verification belongs to the repository's normal
    workflow.
-2. Run `moon --version`, then `moon query affected --downstream deep` from the workspace
-   root. If moon is unavailable or no project is affected, report that no verification ran;
-   do not claim success.
-3. From the query JSON, collect every affected project id, including downstream projects,
-   and the `typecheck`, `lint`, and `test` tasks each project actually defines. If task
-   metadata is absent, resolve it with `moon query projects --id <project>`. Unless the user
-   requested narrower checks, run the applicable targets explicitly for every project, for
-   example:
+2. Run `moon --version` and `git status --porcelain` from the workspace root. Build the
+   affected project set by piping changed-file JSON into Moon's project query:
+
+   ```sh
+   moon query changed-files | moon query projects --affected --downstream deep
+   ```
+
+   This compares the configured default branch with `HEAD`, so it also works on the clean
+   worktree required before a PR. When the worktree is dirty, additionally run the same
+   pipeline with `moon query changed-files --local` and union both project sets. Honor an
+   explicit revision request with `--base <base> --head <head>` on the first query. If moon
+   is unavailable or the combined set is empty, report that no verification ran; do not
+   claim success.
+
+3. From the project-query JSON, collect every project id, including downstream projects,
+   and the `typecheck`, `lint`, and `test` tasks each project actually defines. Unless the
+   user requested narrower checks, run the applicable targets explicitly for every project,
+   for example:
 
    ```sh
    moon run app-a:typecheck app-a:lint app-a:test app-b:typecheck app-b:test
