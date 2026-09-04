@@ -14,14 +14,17 @@ and branch guards belong to Monkey Maestro.
 | Skill                                | Purpose                                                                       |
 | ------------------------------------ | ----------------------------------------------------------------------------- |
 | `git-gremlin:commit`                 | Commit a staged selection, or stage dirty changes when no selection exists    |
-| `git-gremlin:handle-review-comments` | Reply, then resolve whenever review feedback is dismissed                     |
+| `git-gremlin:handle-review-comments` | Push before announcing a fix; reply, then resolve on dismissal                |
 | `git-gremlin:pr`                     | Draft a PR, then publish the branch and create it after explicit confirmation |
 | `git-gremlin:review`                 | Review the current diff/branch with repo instruction files explicitly loaded  |
 
 `handle-review-comments` is an ambient discipline, not a triage workflow. It never decides
-whether feedback is valid. Once the acting agent has decided to dismiss a review comment,
-the skill makes an explanatory reply followed by thread resolution part of completing the
-task.
+whether feedback is valid, and it orders no `git commit` or `git push` of its own. It adds
+two invariants to whatever workflow the acting agent already has. A reply announcing a fix
+must not precede the push of that fix: until the code is on the remote, the thread would be
+claiming a correction no later agent and no human reader can see. And once the acting agent
+has decided to dismiss a review comment, an explanatory reply followed by thread resolution
+becomes part of completing the task.
 
 ## Review Skill
 
