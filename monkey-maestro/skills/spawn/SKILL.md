@@ -60,7 +60,9 @@ project-wide reconciliation.
    hexadecimal characters of SHA-256 over the normalized objective with Node. Use
    `quick-fix` when the slug would otherwise be empty.
 3. Set the branch name to `quick/<slug>-<digest>` and the workspace name to
-   `quick-<slug>-<digest>`. Use `bindingArgs = --branch <branchName>`. This stable identity
+   `quick-<slug>-<digest>`. Use
+   `bindingArgs = --branch <branchName> --skip-branch-prefix` so Superset preserves that
+   exact branch instead of applying the project's configured prefix. This stable identity
    makes the same objective recover the same workspace while distinct objectives do not
    collide merely because their readable slugs match.
 4. Build the worker prompt from the exact objective plus the quick-fix ownership and

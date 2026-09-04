@@ -38,7 +38,9 @@ Unicode NFKD, removing combining marks, replacing every run outside `a-z0-9` wit
 hyphen, trimming hyphens, taking the first 48 characters, and trimming a final hyphen
 again. Use `quick-fix` if empty. Calculate the first eight hexadecimal characters of
 SHA-256 over the normalized objective. Name the branch `quick/<slug>-<digest>` and the
-workspace `quick-<slug>-<digest>`.
+workspace `quick-<slug>-<digest>`. Bind it with `--branch <branchName>` and
+`--skip-branch-prefix`; the stored branch must remain exactly the derived identity used by
+recovery matching.
 
 ## Linear retrieval boundary
 

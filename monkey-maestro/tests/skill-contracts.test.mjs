@@ -188,7 +188,7 @@ test("spawn launches deterministic quick fixes without Linear or controls", () =
   expect(spawn).toMatch(/sha-256.*normalized objective/);
   expect(spawn).toMatch(/unicode nfkd.*outside a-z0-9/);
   expect(spawn).toMatch(/quick\/<slug>-<digest>/);
-  expect(spawn).toMatch(/bindingargs = --branch <branchname>/);
+  expect(spawn).toMatch(/bindingargs = --branch <branchname> --skip-branch-prefix/);
   expect(spawn).toMatch(/worker prompt.*must not invoke linear-devotee:greet/);
   expect(tools).toMatch(/Bash\(superset status:\*\)/);
   expect(tools).toMatch(/Bash\(superset projects list:\*\)/);
