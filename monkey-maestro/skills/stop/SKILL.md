@@ -3,10 +3,13 @@ name: stop
 description: Use when the user wants to stop future Monkey Maestro dispatches for a Linear project. Appends one approved active:false control while leaving existing Superset work untouched.
 argument-hint: "<linear-project-id>"
 effort: high
-allowed-tools: Bash(node:*), mcp__claude_ai_Linear__get_project, mcp__claude_ai_Linear__list_comments, mcp__claude_ai_Linear__save_comment
+allowed-tools: Read, Bash(node:*), Agent, mcp__claude_ai_Linear__save_comment
 ---
 
 # stop
+
+> Agent resolution: before dispatch, read `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md`
+> and select the active runtime name for `monkey-maestro:linear-reader`.
 
 ## Voice
 
@@ -20,8 +23,9 @@ existing workspace, terminal, or agent.
 
 ## Workflow
 
-1. Require one exact Linear project id. Exhaustively page its comments and resolve the
-   complete marker-bearing set with `scripts/records.mjs resolve-controls`.
+1. Require one exact Linear project id. Dispatch `monkey-maestro:linear-reader` in
+   `MODE: control` and resolve its complete marker-bearing set with
+   `scripts/records.mjs resolve-controls`.
 2. No usable control returns `not-configured`. An inactive usable control returns
    `already-stopped`. Neither writes anything.
 3. Build a minimal schema-v2 successor with `scripts/records.mjs build-control`, retaining
@@ -33,8 +37,9 @@ existing workspace, terminal, or agent.
 Stop future Maestro dispatches? Existing Superset work keeps running. (y / cancel)
 ```
 
-5. On approval, append one Linear project comment. On denial, do nothing. Re-page comments
-   once and require the exact successor; report failed verification without rewriting.
+5. On approval, append one Linear project comment. On denial, do nothing. Dispatch the
+   reader once more in `MODE: control` and require the exact successor; report failed
+   verification without rewriting.
 
 ## Report
 

@@ -1,6 +1,6 @@
 {
   "name": "monkey-maestro",
-  "version": "1.0.22",
+  "version": "1.0.23",
   "description": "Linear-first project orchestration with simple capacity accounting and parallel Superset dispatch.",
   "author": {
     "name": "g-bastianelli"

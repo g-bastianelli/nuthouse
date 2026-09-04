@@ -24,6 +24,14 @@ selected = first slots ready issues, sorted by issue identifier
 Started issues reserve capacity but are not redispatched by project orchestration.
 Superset workspace or terminal counts never change this calculation.
 
+## Linear retrieval boundary
+
+Public skills never hydrate a whole Linear project into their main context. They dispatch
+the read-only `monkey-maestro:linear-reader` and consume only its marker comments,
+status types, blocker identifiers, and scoped unknowns. Full descriptions are returned
+only for exact selected issue ids when rendering worker prompts. The reader never decides
+readiness, capacity, or runtime actions.
+
 ## Minimal control v2
 
 The latest usable Linear project control contains only:
@@ -69,8 +77,9 @@ Local discovery is deliberately narrow:
 
 Never guess an unavailable or ambiguous selector. Gather every unresolved selector into
 one concise clarification. After all values are resolved, show one complete control
-preview and request exactly one Linear mutation approval. Discovery and clarification do
-not authorize the write.
+preview plus the immediate bounded orchestration handoff. Request exactly one approval
+for the Linear control write and that first pass. Discovery and clarification do not
+authorize either mutation.
 
 ## Project orchestration
 
@@ -78,9 +87,9 @@ Load the latest control and one complete live Linear project issue set. Compute 
 and readiness only from that Linear set. If the control is inactive or unusable, stop. If
 Linear is unavailable or incomplete, perform no Superset mutation.
 
-For each selected ready issue, resolve its exact Superset task, render its worker prompt,
-and attempt exactly one branch-scoped workspace creation. Prefer one command containing
-the workspace, task, host, project, agent, and prompt:
+For each selected ready issue, resolve its exact Superset task and selected Linear detail,
+then render its worker prompt. Attempt exactly one branch-scoped workspace creation or
+reuse without embedding an agent launch:
 
 ```text
 superset workspaces create \
@@ -88,16 +97,21 @@ superset workspaces create \
   --host <targetHostId> \
   --task <taskId> \
   --name <workspaceName> \
-  --agent <defaultAgent> \
-  --prompt <workerPrompt> \
   --json
 ```
 
-Run independent issue attempts with all-settled semantics. A failed task lookup or create
-is reported for that issue and does not cancel successful siblings. Do not replace a
-failed selection with another issue in the same invocation. Do not pre-list, adopt,
-repair, delete, or reconcile workspaces; do not inspect terminals; do not poll workers.
-A later invocation begins from a new Linear read.
+Require workspace creation to distinguish `created` from `reused`. Launch only for an
+explicitly `created` workspace; a reused or ambiguous result launches nothing. The
+create-or-reuse decision is the duplicate guard across concurrent orchestration calls.
+Call `superset agents create` once and report `dispatched` only when it confirms success.
+An explicit launch refusal preserves the workspace, receives no retry or backfill, and
+reports `monkey-maestro:spawn <issueId>` as recovery. An unknown launch result instead
+reports read-only `reconcile`, because immediate relaunch could duplicate a delayed worker.
+
+Run independent issue attempts with all-settled semantics. A failed detail, task, create,
+terminal, or launch call is reported for that issue and does not cancel successful
+siblings. Do not replace a failed selection in the same invocation or poll workers. A
+later invocation begins from a new Linear read.
 
 ## One-issue spawn
 
@@ -106,8 +120,15 @@ terminal, blocked, or unknown issue never launches. A ready issue may proceed on
 `maxConcurrency - startedIssueCount` leaves a slot. An explicitly named `started` issue
 may proceed because Linear already counts it against capacity.
 
-After approval, call workspace creation once. Do not inspect existing runtime state or
-retry ambiguous mutation evidence.
+Before approval, narrow one workspace listing by deterministic name and require at most
+one exact task-bound match. A matching live terminal returns `already-running`. Otherwise
+preview `create` or `recover` and ask once. After approval, create at most one workspace,
+but launch from a create action only when the response explicitly says `created`; a reuse
+caused by a concurrent winner launches nothing. Recheck the exact chosen workspace's live
+terminals and launch at most one agent only when none exists. Any live terminal
+conservatively blocks a launch because the CLI exposes no stronger agent/shell
+discriminator. A failed launch preserves the workspace and remains recoverable by a later
+explicit `spawn`; ambiguous mutation evidence is inspected before any retry.
 
 ## Read-only entry points
 
@@ -134,7 +155,7 @@ A DONE/BLOCKED worker envelope is a handoff only. It never changes scheduling st
 
 ## Mutation boundary
 
-Monkey Maestro may append an approved control comment and create an approved Superset
-workspace. It never merges, pushes, changes dependencies, changes Linear issue lifecycle
-or relations, or infers completion from GitHub, commits, checks, runtime state, or worker
-output.
+Monkey Maestro may append an approved control comment, create an approved Superset
+workspace, and launch its approved worker. It never merges, pushes, changes dependencies,
+changes Linear issue lifecycle or relations, or infers completion from GitHub, commits,
+checks, runtime state, or worker output.

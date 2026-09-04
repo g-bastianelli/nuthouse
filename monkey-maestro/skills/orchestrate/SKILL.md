@@ -1,12 +1,15 @@
 ---
 name: orchestrate
-description: Use when the user wants Monkey Maestro to run an active Linear project. Counts live started issues, fills the remaining slots with ready work, and attempts one Superset workspace creation per selected issue.
+description: Use when the user wants Monkey Maestro to run an active Linear project. Counts live started issues, fills remaining slots, and safely creates or reuses one Superset workspace per selected issue.
 argument-hint: "<linear-project-id>"
 effort: medium
-allowed-tools: Bash(node:*), Bash(superset tasks get:*), Bash(superset workspaces create:*), mcp__claude_ai_Linear__get_project, mcp__claude_ai_Linear__list_comments, mcp__claude_ai_Linear__list_issues, mcp__claude_ai_Linear__get_issue
+allowed-tools: Read, Bash(node:*), Bash(superset tasks get:*), Bash(superset workspaces create:*), Bash(superset agents create:*), Agent
 ---
 
 # orchestrate
+
+> Agent resolution: before dispatch, read `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md`
+> and select the active runtime name for `monkey-maestro:linear-reader`.
 
 ## Voice
 
@@ -19,11 +22,11 @@ capacity and readiness. Superset receives selected work but never changes the pl
 
 ## Workflow
 
-1. Require one exact Linear project id. In parallel, exhaustively page its comments and
-   issue membership. Fetch every listed issue with relations; issue detail calls may run
-   in parallel.
-2. Pass the complete marker-bearing comments through `scripts/records.mjs
-resolve-controls`. Require one usable active control for the exact project. Inactive,
+1. Require one exact Linear project id and dispatch `monkey-maestro:linear-reader` in
+   `MODE: project`. Consume only its exact project identity, complete marker comment set,
+   minimal status/blocker rows, and scoped unknowns.
+2. Pass the comments through `scripts/records.mjs resolve-controls`. Require one usable
+   active control for the exact project. Inactive,
    absent, or unusable control creates no workspace.
 3. Require a complete live Linear project issue set. A failed project, page, or issue read
    creates no workspace. Classify only from current status types and `blockedBy`
@@ -35,13 +38,14 @@ resolve-controls`. Require one usable active control for the exact project. Inac
 4. Compute `slots = max(0, maxConcurrency - startedCount)`. Sort ready issues by Linear
    identifier and select the first `slots`. Started issues consume capacity but are never
    redispatched. If no slot or no ready issue exists, return `idle` without Superset.
-5. For every selected issue, fetch its exact current Linear detail and exact Superset task
-   in parallel with sibling issues. Require the task to be bound to that Linear issue and
-   project. A failed issue or task read fails only that selected issue; do not backfill it
-   with another issue during this invocation.
+5. Dispatch the reader once in `MODE: selected` with exactly the selected issue ids. It
+   refreshes those candidates plus their direct blockers. Reclassify every selected issue
+   from this bounded result and require it to remain ready. In parallel, fetch each exact
+   Superset task. A changed, unknown, terminal, or non-ready issue, or a failed detail/task
+   read, fails only that selected issue; do not backfill it during this invocation.
 6. Render one deterministic workspace name and complete worker prompt per valid issue.
-   Attempt exactly one branch-scoped command per issue, with sibling attempts settled
-   independently:
+   Attempt exactly one branch-scoped workspace create-or-reuse per issue, without an
+   embedded agent launch, with sibling attempts settled independently:
 
 ```text
 superset workspaces create \
@@ -49,14 +53,31 @@ superset workspaces create \
   --host <targetHostId> \
   --task <taskId> \
   --name <workspaceName> \
+  --json
+```
+
+7. Require the response to distinguish `created` from `reused` and return one exact
+   task-bound workspace id. Launch only after an explicit `created` result. A `reused` or
+   ambiguous result never launches an agent; report `already-existing` and the confirmed
+   recovery command `monkey-maestro:spawn <issueId>`. This makes workspace creation the
+   atomic duplicate guard across concurrent orchestration invocations. For a newly created
+   workspace, attempt one launch:
+
+```text
+superset agents create \
+  --workspace <workspaceId> \
+  --host <targetHostId> \
   --agent <defaultAgent> \
   --prompt <workerPrompt> \
   --json
 ```
 
-7. Report each command result as created, already existing, or failed and return. Never
-   list or repair workspaces, inspect terminals, launch a second agent command, poll a
-   worker, retry ambiguous creation, or refresh Linear for another batch.
+8. Report `dispatched` only when the agent command confirms success. An explicit launch
+   refusal is `launch-failed`: preserve the workspace, do not retry or backfill, and report
+   `monkey-maestro:spawn <issueId>` as recovery. A transport error or malformed response
+   is `launch-unknown` and must not recommend immediate relaunch; report
+   `monkey-maestro:reconcile <projectId> <issueId>` instead. Never poll a worker or refresh
+   Linear for another batch.
 
 ## Worker prompt
 
@@ -71,6 +92,7 @@ monkey-maestro:orchestrate report
   Project/run: <project id> / <run id>
   Linear:      started <n> · ready <n> · slots <n>
   Selected:    <stable issue ids or none>
-  Superset:    <per-issue created / existing / failed>
+  Superset:    <per-issue dispatched / already-existing / create-failed / launch-failed / launch-unknown>
+  Recovery:    <per-issue spawn / reconcile command or none>
   Exit:        idle | dispatched | degraded | stopped
 ```

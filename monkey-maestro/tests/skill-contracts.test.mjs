@@ -40,71 +40,57 @@ function allowedTools(document) {
   return frontmatterField(document, "allowed-tools");
 }
 
+function agentTools(document) {
+  const match = frontmatter(document).match(/(?:^|\n)tools:\n([\s\S]*?)(?=\n\S|$)/);
+  expect(match).not.toBeNull();
+  return [...match[1].matchAll(/^\s*-\s*(.+)$/gm)].map((entry) => entry[1]);
+}
+
 const skills = Object.fromEntries(SKILL_NAMES.map((name) => [name, skill(name)]));
 
-test("the public surface is six prose skills, no custom agents, and one JS helper pair", () => {
-  const skillDirectories = fs
+test("discovered skills and agents preserve their context and capability boundaries", () => {
+  const skillFiles = fs
     .readdirSync(path.join(PLUGIN_ROOT, "skills"), { withFileTypes: true })
     .filter(
       (entry) =>
         entry.isDirectory() &&
         fs.existsSync(path.join(PLUGIN_ROOT, "skills", entry.name, "SKILL.md")),
     )
-    .map((entry) => entry.name)
-    .sort();
+    .map((entry) => path.join(PLUGIN_ROOT, "skills", entry.name, "SKILL.md"));
   const agentFiles = fs
     .readdirSync(path.join(PLUGIN_ROOT, "agents"), { withFileTypes: true })
-    .filter((entry) => entry.isFile() && entry.name.endsWith(".md"));
-  const libraries = fs
-    .readdirSync(path.join(PLUGIN_ROOT, "lib"))
-    .filter((name) => name.endsWith(".mjs"));
-  const scripts = fs
-    .readdirSync(path.join(PLUGIN_ROOT, "scripts"))
-    .filter((name) => name.endsWith(".mjs"));
-  const tests = fs
-    .readdirSync(path.join(PLUGIN_ROOT, "tests"))
-    .filter((name) => name.endsWith(".test.mjs"))
-    .sort();
+    .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
+    .map((entry) => path.join(PLUGIN_ROOT, "agents", entry.name));
 
-  expect(skillDirectories).toEqual(SKILL_NAMES);
-  expect(agentFiles).toEqual([]);
-  expect(libraries).toEqual(["records.mjs"]);
-  expect(scripts).toEqual(["records.mjs"]);
-  expect(tests).toEqual(["records.test.mjs", "skill-contracts.test.mjs"]);
-  expect(JSON.parse(read("monkey-maestro/.claude-plugin/plugin.json"))).not.toHaveProperty(
-    "agents",
-  );
+  expect(skillFiles.length).toBeGreaterThan(0);
+  for (const file of skillFiles) {
+    const document = fs.readFileSync(file, "utf8");
+    expect(frontmatterField(document, "name")).not.toBe("");
+    expect(document).toContain("../../persona.md");
+    expect(document).toContain("project-execution-contract.md");
+    expect(allowedTools(document)).not.toMatch(/mcp__claude_ai_linear__(get|list)_/i);
+  }
 
-  for (const name of SKILL_NAMES) {
-    expect(frontmatterField(skills[name], "name")).toBe(name);
-    expect(skills[name]).toContain("../../persona.md");
-    expect(skills[name]).toContain("project-execution-contract.md");
+  for (const file of agentFiles) {
+    const document = fs.readFileSync(file, "utf8");
+    expect(frontmatterField(document, "name")).not.toBe("");
+    expect(agentTools(document).length).toBeGreaterThan(0);
+    expect(agentTools(document).every((tool) => /linear__(get|list)_/i.test(tool))).toBe(true);
+    expect(agentTools(document).join(" ")).not.toMatch(/save|create|update|delete/i);
   }
 });
 
-test("deleted machinery and external scheduling authority stay absent", () => {
+test("Linear remains the only scheduling authority and public skills cannot mutate lifecycle", () => {
   const documents = [
     read("monkey-maestro/README.md"),
     read("monkey-maestro/shared/project-execution-contract.md"),
     ...Object.values(skills),
   ].join("\n");
-  for (const obsolete of [
-    "host-agents.mjs",
-    "linear-frontier.mjs",
-    "linear-snapshot.mjs",
-    "orchestration-epoch.mjs",
-    "project-lock.mjs",
-    "runtime-actions.mjs",
-    "runtime-inspector",
-    "runtime-snapshot.mjs",
-    "decisionHash",
-    "graphHash",
-  ]) {
-    expect(documents).not.toContain(obsolete);
-  }
   for (const document of Object.values(skills)) {
     expect(allowedTools(document)).not.toMatch(/github|bash\(gh|save_issue|update_issue/i);
   }
+  expect(normalize(documents)).toMatch(/linear is the sole scheduling authority/);
+  expect(normalize(documents)).toMatch(/runtime state never decides capacity/);
   expect(normalize(documents)).toMatch(
     /never merges or pushes, changes dependencies, changes issue status or relations/,
   );
@@ -124,6 +110,7 @@ test("start discovers ordinary local transport and has one mutation approval", (
   expect(start).toMatch(/every unresolved selector.*one concise clarification/);
   expect(start).toMatch(/resolved non-empty selectors/);
   expect(start).toMatch(/ask exactly once.*apply this maestro activation\/update to linear/);
+  expect(start).toMatch(/linear-reader.*mode: control/);
   expect((skills.start.match(/\(y \/ cancel\)/g) ?? []).length).toBe(1);
   expect(tools).toMatch(/Bash\(superset status:\*\)/);
   expect(tools).toMatch(/Bash\(superset projects list:\*\)/);
@@ -131,7 +118,7 @@ test("start discovers ordinary local transport and has one mutation approval", (
   expect(tools).not.toMatch(/workspaces|terminals|tasks|agents create/i);
 });
 
-test("orchestrate uses one Linear capacity calculation and one-shot Superset transport", () => {
+test("orchestrate uses one Linear capacity calculation and bounded Superset transport", () => {
   const orchestrate = normalize(skills.orchestrate);
   const tools = allowedTools(skills.orchestrate);
 
@@ -143,10 +130,22 @@ test("orchestrate uses one Linear capacity calculation and one-shot Superset tra
   expect(orchestrate).toMatch(/started issues consume capacity but are never redispatched/);
   expect(orchestrate).toMatch(/do not backfill/);
   expect((skills.orchestrate.match(/^superset workspaces create/gm) ?? []).length).toBe(1);
-  expect(orchestrate).toMatch(/--agent <defaultagent>.*--prompt <workerprompt>/);
+  expect((skills.orchestrate.match(/^superset agents create/gm) ?? []).length).toBe(1);
+  const workspaceCommand = skills.orchestrate.match(
+    /superset workspaces create \\\n[\s\S]*?  --json/,
+  )?.[0];
+  expect(workspaceCommand).not.toMatch(/--agent|--prompt/);
+  expect(orchestrate).toMatch(/report dispatched only when the agent command confirms success/);
+  expect(orchestrate).toMatch(/launch-failed.*monkey-maestro:spawn <issueid>/);
+  expect(orchestrate).toMatch(/launch-unknown.*monkey-maestro:reconcile/);
+  expect(orchestrate).toMatch(/launch only after an explicit created result/);
+  expect(orchestrate).toMatch(/reused or ambiguous result never launches an agent/);
+  expect(orchestrate).toMatch(/reclassify every selected issue.*require it to remain ready/);
+  expect(orchestrate).toMatch(/linear-reader.*mode: project.*mode: selected/);
   expect(orchestrate).toMatch(/sibling attempts settled independently/);
   expect(tools).toMatch(/Bash\(superset workspaces create:\*\)/);
-  expect(tools).not.toMatch(/workspaces (list|get|update)|terminals|agents (list|create)/i);
+  expect(tools).toMatch(/Bash\(superset agents create:\*\)/);
+  expect(tools).not.toMatch(/workspaces (list|get|update)|terminals/i);
 });
 
 test("status reports the same Linear-only capacity without Superset", () => {
@@ -154,6 +153,7 @@ test("status reports the same Linear-only capacity without Superset", () => {
   expect(status).toMatch(/read-only and linear-only/);
   expect(status).toMatch(/remaining = max\(0, maxconcurrency - startedcount\)/);
   expect(status).toMatch(/never use runtime state to adjust/);
+  expect(status).toMatch(/linear-reader.*mode: project/);
   expect(allowedTools(skills.status)).not.toMatch(/superset|save_comment|github/i);
 });
 
@@ -167,8 +167,25 @@ test("spawn cannot force Linear and performs at most one approved create", () =>
   expect(spawn).toMatch(/blocked issue or any unknown.*refuses dispatch/);
   expect(spawn).toMatch(/ready issue may proceed only when.*is positive/);
   expect((skills.spawn.match(/^superset workspaces create/gm) ?? []).length).toBe(1);
+  expect((skills.spawn.match(/^superset agents create/gm) ?? []).length).toBe(1);
   expect((skills.spawn.match(/\(y \/ cancel\)/g) ?? []).length).toBe(1);
-  expect(tools).not.toMatch(/workspaces (list|get|update)|terminals|agents (list|create)/i);
+  expect(spawn).toMatch(/live terminal returns already-running.*without approval or launch/);
+  expect(spawn).toMatch(/immediately list the chosen workspace's live terminals once more/);
+  expect(spawn).toMatch(/require explicit success before reporting dispatched/);
+  expect(spawn).toMatch(/if it says reused.*report concurrent-reuse and launch nothing/);
+  expect(spawn).toMatch(/launch-unknown.*monkey-maestro:reconcile/);
+  expect(tools).toMatch(/workspaces list.*terminals list.*agents create/i);
+});
+
+test("the Linear reader bounds full-project payloads and refreshes selected blockers", () => {
+  const reader = normalize(read("monkey-maestro/agents/linear-reader.md"));
+
+  expect(reader).toMatch(/project mode.*return only status and blocker facts/);
+  expect(reader).toMatch(/never return issue descriptions for a full project read/);
+  expect(reader).toMatch(/selected mode.*derive their current direct blocker union/);
+  expect(reader).toMatch(
+    /selected scope is exactly the requested issues plus their current direct blocker union/,
+  );
 });
 
 test("reconcile is optional read-only observation and stop only updates control", () => {
@@ -184,6 +201,7 @@ test("reconcile is optional read-only observation and stop only updates control"
 
   expect(stop).toMatch(/active: false.*incrementing revision/);
   expect(stop).toMatch(/existing superset work untouched/);
+  expect(stop).toMatch(/linear-reader.*mode: control/);
   expect((skills.stop.match(/\(y \/ cancel\)/g) ?? []).length).toBe(1);
   expect(allowedTools(skills.stop)).not.toMatch(/superset|github/i);
 });

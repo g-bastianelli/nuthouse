@@ -3,10 +3,13 @@ name: start
 description: Use when the user wants to activate Monkey Maestro for a Linear project. Resolves ordinary local Superset transport, writes one minimal control after one approval, and enters orchestration.
 argument-hint: "<linear-project-id> [--host <id>] [--superset-project <id>] [--agent <name>] [--max-concurrency <1-10>]"
 effort: high
-allowed-tools: Bash(node:*), Bash(git rev-parse:*), Bash(superset status:*), Bash(superset projects list:*), Bash(superset agents list:*), mcp__claude_ai_Linear__get_project, mcp__claude_ai_Linear__list_comments, mcp__claude_ai_Linear__save_comment
+allowed-tools: Read, Bash(node:*), Bash(git rev-parse:*), Bash(superset status:*), Bash(superset projects list:*), Bash(superset agents list:*), Agent, mcp__claude_ai_Linear__save_comment
 ---
 
 # start
+
+> Agent resolution: before dispatch, read `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md`
+> and select the active runtime name for `monkey-maestro:linear-reader`.
 
 ## Voice
 
@@ -20,9 +23,11 @@ state and never changes Linear issue lifecycle or dependencies.
 
 ## Workflow
 
-1. Resolve one exact Linear project with `get_project`.
-2. Exhaustively page project comments and pass the complete marker-bearing set through
-   `scripts/records.mjs resolve-controls`. If a schema-v2 control is already active and
+1. Dispatch `monkey-maestro:linear-reader` in `MODE: control` for the exact project. It
+   returns only project identity and the complete marker-bearing comment set; reject an
+   unavailable or mismatched result.
+2. Pass those comments through `scripts/records.mjs resolve-controls`. If a source
+   schema-v2 control is already active and
    the invocation has no overrides, report `already-active` and enter
    `monkey-maestro:orchestrate <project-id>` without writing another comment.
 3. Resolve each selector independently: explicit argument, then the latest usable
@@ -45,20 +50,21 @@ state and never changes Linear issue lifecycle or dependencies.
 8. Build the minimal schema-v2 successor with `scripts/records.mjs build-control`: fresh
    run id, `active: true`, revision one above the latest usable control or `1`, and the
    resolved non-empty selectors.
-9. Show the complete project, host, Superset project, agent, concurrency, revision, and
-   source of every value. Then ask exactly once:
+9. Show the complete project, host, Superset project, agent, concurrency, revision, source
+   of every value, and the immediate bounded orchestration handoff. Then ask exactly once:
 
 ```text
-Apply this Maestro activation/update to Linear? (y / cancel)
+Apply this Maestro activation/update to Linear and run its first bounded orchestration pass? (y / cancel)
 ```
 
-10. On `y`, append one Linear project control comment. On denial, do nothing. Re-page the
-    comments once and require the exact successor; report a failed verification without
-    blindly writing again.
+10. On `y`, append one Linear project control comment. On denial, do nothing. Dispatch the
+    reader once more in `MODE: control` and require the exact successor; report a failed
+    verification without blindly writing again.
 11. Enter `monkey-maestro:orchestrate <project-id>`.
 
 The clarification in step 7 is configuration input, not mutation approval. There is
-exactly one final Linear mutation gate after the fully resolved preview.
+exactly one final gate after the fully resolved preview; it authorizes the Linear control
+write and the immediate first orchestration pass named in that preview.
 
 ## Report
 

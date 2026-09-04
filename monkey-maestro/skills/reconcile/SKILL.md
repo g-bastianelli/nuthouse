@@ -3,10 +3,13 @@ name: reconcile
 description: Use when the user explicitly asks Monkey Maestro to inspect Superset transport for a project. Produces an optional read-only issue/runtime correlation report and never repairs or gates scheduling.
 argument-hint: "<linear-project-id> [ISSUE...]"
 effort: medium
-allowed-tools: Bash(node:*), Bash(superset tasks get:*), Bash(superset workspaces list:*), Bash(superset terminals list:*), mcp__claude_ai_Linear__get_project, mcp__claude_ai_Linear__list_comments, mcp__claude_ai_Linear__list_issues, mcp__claude_ai_Linear__get_issue
+allowed-tools: Read, Bash(node:*), Bash(superset tasks get:*), Bash(superset workspaces list:*), Bash(superset terminals list:*), Agent
 ---
 
 # reconcile
+
+> Agent resolution: before dispatch, read `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md`
+> and select the active runtime name for `monkey-maestro:linear-reader`.
 
 ## Voice
 
@@ -20,9 +23,9 @@ dispatches work, calls GitHub, or blocks another skill.
 
 ## Workflow
 
-1. Require one exact Linear project id. In parallel, exhaustively page project comments
-   and issues, then fetch the listed issues with relations. Resolve the complete
-   marker-bearing comment set with `scripts/records.mjs resolve-controls`.
+1. Require one exact Linear project id and dispatch `monkey-maestro:linear-reader` in
+   `MODE: project`. Resolve its complete marker-bearing comment set with
+   `scripts/records.mjs resolve-controls` and use only its minimal status/blocker rows.
 2. Use the user's exact issue identifiers when supplied; otherwise select the stable list
    of current known `started` issues. Exclude terminal issues before Superset inspection.
 3. If the usable control does not provide host and Superset project, report the scope as

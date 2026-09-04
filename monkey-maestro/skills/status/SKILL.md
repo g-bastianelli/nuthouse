@@ -3,10 +3,13 @@ name: status
 description: Use automatically when the user supplies a Linear project URL or asks to inspect one project's Maestro state. Reports the current control, live Linear frontier, and available capacity without inspecting Superset.
 argument-hint: "<linear-project-url-or-id>"
 effort: medium
-allowed-tools: Bash(node:*), mcp__claude_ai_Linear__get_project, mcp__claude_ai_Linear__list_comments, mcp__claude_ai_Linear__list_issues, mcp__claude_ai_Linear__get_issue
+allowed-tools: Read, Bash(node:*), Agent
 ---
 
 # status
+
+> Agent resolution: before dispatch, read `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md`
+> and select the active runtime name for `monkey-maestro:linear-reader`.
 
 ## Voice
 
@@ -20,21 +23,21 @@ status, or relations.
 
 ## Workflow
 
-1. Require one exact Linear project reference.
-2. Exhaustively page the project's comments and issues. Fetch every listed issue with
-   relations; issue detail calls may run in parallel. A failed page makes that provider
-   input unavailable rather than partial.
-3. Pass the complete marker-bearing control comments through
+1. Require one exact Linear project reference and dispatch
+   `monkey-maestro:linear-reader` in `MODE: project`. Consume only its project identity,
+   marker comments, minimal status/blocker rows, and scoped unknowns. A failed page makes
+   the whole project snapshot unavailable rather than partial.
+2. Pass the complete marker-bearing control comments through
    `scripts/records.mjs resolve-controls`. Treat an unavailable or conflicting latest
    control as unusable; do not guess.
-4. Classify the live issues directly:
+3. Classify the live issues directly:
    - terminal: `completed` or `canceled`;
    - started: every known `started` row;
    - ready: `backlog`, `triage`, or `unstarted`, with every current `blockedBy` row
      present and terminal;
    - blocked: a known candidate with a known non-terminal blocker;
    - unknown: any row or dependency decision lacking complete Linear facts.
-5. Compute `remaining = max(0, maxConcurrency - startedCount)` when control is usable.
+4. Compute `remaining = max(0, maxConcurrency - startedCount)` when control is usable.
    Report stable issue-id lists and counts. Never use runtime state to adjust them.
 
 ## Report

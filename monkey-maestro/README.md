@@ -12,27 +12,33 @@ For an active project, Maestro reads the live Linear issues, counts every `start
 issues in stable identifier order. An issue is ready when it is non-terminal, not already
 started, and every current `blockedBy` issue is terminal.
 
-Each selected issue gets one direct `superset workspaces create` attempt with its agent and
-worker prompt. One failure is reported for that issue while the other selected issues keep
-going. Maestro does not inspect workspaces or terminals to decide capacity, maintain a
-private queue, poll workers, reconcile scheduling state, or mutate Linear lifecycle.
+Each selected issue gets one workspace create-or-reuse attempt. Only an explicitly new
+workspace receives a worker; a reused workspace cannot trigger a duplicate launch. One
+failure is reported while siblings continue. A confirmed launch failure stays recoverable
+through one-issue `spawn`; ambiguous launch evidence is inspected through read-only
+`reconcile`. Runtime state never decides capacity, Maestro maintains no private queue,
+does not poll workers, and never mutates Linear lifecycle.
 
 ## Skills
 
-| Skill                        | Responsibility                                                         |
-| ---------------------------- | ---------------------------------------------------------------------- |
-| `monkey-maestro:status`      | Report control and the live Linear counts                              |
-| `monkey-maestro:start`       | Discover local transport, write one control, then orchestrate          |
-| `monkey-maestro:orchestrate` | Fill the slots Linear says are available and attempt workspace creates |
-| `monkey-maestro:spawn`       | Attempt one explicitly selected Linear-authorized issue                |
-| `monkey-maestro:reconcile`   | Read-only report of runtime transport for requested issues             |
-| `monkey-maestro:stop`        | Disable future dispatch without touching existing work                 |
+| Skill                        | Responsibility                                                      |
+| ---------------------------- | ------------------------------------------------------------------- |
+| `monkey-maestro:status`      | Report control and the live Linear counts                           |
+| `monkey-maestro:start`       | Discover local transport, write one control, then orchestrate       |
+| `monkey-maestro:orchestrate` | Fill Linear slots and safely create/reuse then launch selected work |
+| `monkey-maestro:spawn`       | Launch or recover one explicitly selected Linear-authorized issue   |
+| `monkey-maestro:reconcile`   | Read-only report of runtime transport for requested issues          |
+| `monkey-maestro:stop`        | Disable future dispatch without touching existing work              |
 
 ## Control and discovery
 
 Control records are append-only v2 Linear project comments containing activation,
 Superset host/project/agent selectors, `maxConcurrency`, and a monotonic revision. They
 do not copy the issue graph or runtime state.
+
+One read-only `linear-reader` keeps exhaustive Linear pagination and large issue responses
+out of the public skill context. It returns only control comments and minimal
+status/blocker facts, then selected issue details only when a prompt must be rendered.
 
 On first start, selectors resolve in this order: explicit argument, usable prior control,
 then simple local Superset discovery. The host comes from a healthy `superset status
