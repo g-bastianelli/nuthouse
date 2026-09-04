@@ -1,17 +1,12 @@
 {
   "name": "moon-moth",
   "displayName": "Moon Moth",
-  "description": "Moon-aware agentic dev loop for TypeScript monorepos — scopes work to affected projects via `moon query`, implements TDD-first, verifies via affected :typecheck/:lint/:test before handoff. Cross-runtime (Claude Code + Codex).",
-  "version": "1.0.9",
+  "description": "Small moon helper that reports affected projects and runs their typecheck, lint, and test tasks. Cross-runtime (Claude Code + Codex).",
+  "version": "1.0.10",
   "author": {
     "name": "g-bastianelli"
   },
   "repository": "https://github.com/g-bastianelli/nuthouse",
   "homepage": "https://github.com/g-bastianelli/nuthouse",
-  "skills": "./skills/",
-  "agents": [
-    "./agents/affected-scout.md",
-    "./agents/verify-runner.md",
-    "./agents/change-auditor.md"
-  ]
+  "skills": "./skills/"
 }

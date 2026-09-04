@@ -56,6 +56,4 @@ workflow, however short.
 Existing contracts in this marketplace:
 
 - `subroutine/skills/*` — ambient implementation disciplines injected by a hook
-- `moon-moth/skills/affected-scope` — the scope map JSON contract
-- `moon-moth/skills/moon-commands` — canonical `moon` CLI invocations
 -->

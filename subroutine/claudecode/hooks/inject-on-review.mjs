@@ -15,11 +15,10 @@ import { buildInjection, discoverSkills } from "./lib/skills.mjs";
 const exit0 = () => process.exit(0);
 
 // Code/diff reviewers that should receive the discipline. Matches `review` only
-// at a token boundary (so `preview-generator` is excluded, `git-gremlin:reviewer`
-// /`code-reviewer`/`reviewer` are not) plus moon-moth's `change-auditor` (a real
-// diff reviewer). Document/plan reviewers like `spec-auditor` / `plan-auditor`
-// are deliberately NOT matched — they don't review TypeScript code.
-const REVIEW_AGENT = /(?:^|[-_:/])(?:review|change-auditor)/i;
+// at a token boundary (so `preview-generator` is excluded). Document/plan
+// reviewers like `spec-auditor` / `plan-auditor` are deliberately NOT matched —
+// they don't review TypeScript code.
+const REVIEW_AGENT = /(?:^|[-_:/])review/i;
 
 let input;
 try {
