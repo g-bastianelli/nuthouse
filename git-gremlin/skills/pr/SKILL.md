@@ -28,7 +28,7 @@ Read `../../persona.md`; it is canonical for this skill's user-facing output, an
      `main`.
    - Stop on a detached `HEAD`, when the current branch is the base branch, or when no
      commits exist ahead of the base.
-   - Capture the current branch and `git rev-parse HEAD`.
+   - Capture the current branch and `HEAD_OID = git rev-parse HEAD`.
 2. Read `git log <base>...HEAD --oneline` and `git diff <base>...HEAD`. Draft an
    imperative title no longer than 72 characters, preserving a useful conventional type or
    scope from the commits. Draft a body with `## Summary` and one to three bullets, then
@@ -37,12 +37,14 @@ Read `../../persona.md`; it is canonical for this skill's user-facing output, an
 3. If the user asked only for PR text, display it and stop. Otherwise display the title,
    body, and `<branch> → <base>`, then wait for confirmation or edits. This is the only
    extra approval gate.
-4. After confirmation, verify that the branch and commit still match the proposal. If they
+4. After confirmation, verify that the branch and `HEAD_OID` still match the proposal. If they
    changed, regenerate it and ask again.
-5. Resolve the branch's configured push remote, otherwise `origin`, otherwise the sole
-   configured remote. Stop if the result is missing or ambiguous.
-6. Run `git push -u "<REMOTE>" "<BRANCH>"`. Never force-push. If it fails, surface stderr
-   verbatim and do not retry or create the PR.
+5. Resolve the push remote in this order: `branch.<BRANCH>.pushRemote`,
+   `remote.pushDefault`, `branch.<BRANCH>.remote`, `origin`, then the sole configured remote.
+   Stop if the result is local (`.`), missing, or ambiguous.
+6. Run `git push "<REMOTE>" "<HEAD_OID>:refs/heads/<BRANCH>"`. Never substitute a mutable
+   branch ref or force-push. If it fails, surface stderr verbatim and do not retry or create
+   the PR.
 7. Run
    `gh pr create --head "<BRANCH>" --title "<TITLE>" --body "<BODY>" --base "<BASE>"`,
    passing every value as a separately quoted argument without `eval`. If it fails,
