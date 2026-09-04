@@ -4,16 +4,9 @@ import path from "node:path";
 import {
   RecordValidationError,
   buildControlRecord,
-  buildExecutionRecord,
-  buildWaiverRecord,
-  buildWorkerResultRecord,
   parseControlRecord,
-  parseExecutionRecord,
-  parseWorkerResultRecord,
-  parseWaiverRecord,
   resolveControlAuthority,
   serializeRecord,
-  validateControlSnapshot,
 } from "../lib/records.mjs";
 
 const controlInput = {
@@ -51,68 +44,12 @@ function legacyControlBody(overrides = {}) {
 }
 
 describe("Maestro control records", () => {
-  test("validates the exact paginated control-loader boundary before resolution", () => {
-    const body = serializeRecord(buildControlRecord(controlInput));
-    const snapshot = {
-      schemaVersion: 1,
-      provider: "ready",
-      project: { id: "project-1", name: "Project One" },
-      comments: [
-        {
-          id: "comment-1",
-          body,
-          createdAt: "2026-08-27T10:00:00.000Z",
-          updatedAt: "2026-08-27T10:00:00.000Z",
-        },
-      ],
-      unknown: [],
-    };
-
-    expect(validateControlSnapshot(snapshot, { expectedProjectId: "project-1" })).toEqual(snapshot);
-    expect(() =>
-      validateControlSnapshot(snapshot, { expectedProjectId: "another-project" }),
-    ).toThrowError(expect.objectContaining({ code: "CONTROL_PROJECT_MISMATCH" }));
-    expect(() => validateControlSnapshot({ ...snapshot, schemaVersion: 2 })).toThrowError(
-      expect.objectContaining({ code: "CONTROL_SNAPSHOT_INVALID" }),
-    );
-  });
-
-  test("rejects unavailable or contradictory control-loader evidence", () => {
-    const unavailable = {
-      schemaVersion: 1,
-      provider: "unavailable",
-      project: { id: "project-1", name: "Project One" },
-      comments: [],
-      unknown: [{ code: "LINEAR_UNAVAILABLE", detail: "comment pagination failed" }],
-    };
-
-    expect(() => validateControlSnapshot(unavailable)).toThrowError(
-      expect.objectContaining({ code: "CONTROL_PROVIDER_UNAVAILABLE" }),
-    );
-    expect(() => validateControlSnapshot({ ...unavailable, provider: "ready" })).toThrowError(
-      expect.objectContaining({ code: "CONTROL_SNAPSHOT_CONTRADICTION" }),
-    );
-  });
-
-  test("the resolve-controls CLI requires the full loader envelope and exact project", () => {
+  test("the resolve-controls CLI selects comments for the exact project", () => {
     const script = path.resolve(import.meta.dir, "..", "scripts", "records.mjs");
-    const snapshot = {
-      schemaVersion: 1,
-      provider: "ready",
-      project: { id: "project-1", name: "Project One" },
-      comments: [
-        {
-          id: "comment-1",
-          body: serializeRecord(buildControlRecord(controlInput)),
-          createdAt: "2026-08-27T10:00:00.000Z",
-          updatedAt: "2026-08-27T10:00:00.000Z",
-        },
-      ],
-      unknown: [],
-    };
+    const comments = [{ id: "comment-1", body: serializeRecord(buildControlRecord(controlInput)) }];
     const result = Bun.spawnSync({
       cmd: [process.execPath, script, "resolve-controls"],
-      stdin: new Blob([JSON.stringify({ snapshot, expectedProjectId: "project-1" })]),
+      stdin: new Blob([JSON.stringify({ projectId: "project-1", comments })]),
       stdout: "pipe",
       stderr: "pipe",
     });
@@ -127,6 +64,9 @@ describe("Maestro control records", () => {
       },
     });
     expect(result.stderr.toString()).toBe("");
+    expect(
+      resolveControlAuthority(comments, { expectedProjectId: "another-project" }),
+    ).toMatchObject({ status: "invalid", reason: "CONTROL_PROJECT_MISMATCH" });
   });
 
   test("writes exactly the minimal v2 control fields", () => {
@@ -163,6 +103,16 @@ describe("Maestro control records", () => {
       RecordValidationError,
     );
   });
+
+  test.each([undefined, null, "", "   "])(
+    "requires a resolved non-empty default agent: %p",
+    (defaultAgent) => {
+      const input = { ...controlInput };
+      if (defaultAgent === undefined) delete input.defaultAgent;
+      else input.defaultAgent = defaultAgent;
+      expect(() => buildControlRecord(input)).toThrow("defaultAgent");
+    },
+  );
 
   test("round trips through a Linear markdown comment", () => {
     const record = buildControlRecord(controlInput);
@@ -267,126 +217,5 @@ describe("Maestro control records", () => {
       controlCommentIds: ["control-a", "control-b"],
       revision: 1,
     });
-  });
-});
-
-describe("execution and waiver records", () => {
-  test("requires a terminal for a verified execution", () => {
-    expect(() =>
-      buildExecutionRecord({
-        issueId: "issue-1",
-        runId: "run-1",
-        outcome: "verified",
-        workspaceId: "workspace-1",
-        taskId: "issue-1",
-        branch: "user/issue-1",
-        agent: "codex",
-        hostId: "host-1",
-        recordedAt: "2026-08-27T10:00:00.000Z",
-      }),
-    ).toThrow("terminalId");
-  });
-
-  test("accepts a partial execution without a terminal", () => {
-    const record = buildExecutionRecord({
-      issueId: "OPS-7",
-      runId: "run-1",
-      outcome: "partial",
-      workspaceId: "workspace-1",
-      taskId: "b62203f2-ed5c-4fea-870a-78ae217fc388",
-      branch: "user/issue-1",
-      agent: "codex",
-      hostId: "host-1",
-      recordedAt: "2026-08-27T10:00:00.000Z",
-      detail: "agent launch failed",
-    });
-    expect(parseExecutionRecord(serializeRecord(record))).toEqual(record);
-  });
-
-  test("requires a non-empty Superset task id without conflating it with the Linear identifier", () => {
-    expect(() =>
-      buildExecutionRecord({
-        issueId: "OPS-7",
-        runId: "run-1",
-        outcome: "partial",
-        workspaceId: "workspace-1",
-        taskId: "",
-        branch: "user/issue-1",
-        agent: "codex",
-        hostId: "host-1",
-        recordedAt: "2026-08-27T10:00:00.000Z",
-      }),
-    ).toThrow("taskId must be a non-empty string");
-  });
-
-  test("parses an exact non-revoked blocker waiver", () => {
-    const record = buildWaiverRecord({
-      dependentIssueId: "issue-2",
-      blockerIssueId: "issue-1",
-      reason: "work intentionally abandoned",
-      approver: "human@example.com",
-      approvedAt: "2026-08-27T10:00:00.000Z",
-    });
-    expect(parseWaiverRecord(serializeRecord(record))).toEqual(record);
-  });
-
-  test("rejects revoked or incomplete waivers", () => {
-    const record = {
-      marker: "nuthouse:maestro-waiver",
-      schemaVersion: 1,
-      dependentIssueId: "issue-2",
-      blockerIssueId: "issue-1",
-      reason: "work intentionally abandoned",
-      approver: "human@example.com",
-      approvedAt: "2026-08-27T10:00:00.000Z",
-      revokedAt: "2026-08-27T11:00:00.000Z",
-    };
-    expect(() => serializeRecord(record)).toThrow("revoked");
-  });
-
-  test("rejects a waiver for a self-edge", () => {
-    expect(() =>
-      buildWaiverRecord({
-        dependentIssueId: "issue-1",
-        blockerIssueId: "issue-1",
-        reason: "invalid",
-        approver: "human@example.com",
-        approvedAt: "2026-08-27T10:00:00.000Z",
-      }),
-    ).toThrow("self-edge");
-  });
-});
-
-describe("worker result records", () => {
-  test("round trips a completed Superset worker envelope", () => {
-    const record = buildWorkerResultRecord({
-      issueId: "OPS-7",
-      runId: "run-1",
-      workspaceId: "workspace-1",
-      terminalId: "terminal-1",
-      outcome: "completed",
-      summary: "Implemented the issue and opened its pull request",
-      files: ["src/example.ts", "src/example.test.ts"],
-      checks: "bun test: passed",
-      handoff: "PR #42",
-      recordedAt: "2026-08-27T12:00:00.000Z",
-    });
-
-    expect(parseWorkerResultRecord(serializeRecord(record))).toEqual(record);
-  });
-
-  test("requires actionable evidence for blocked results", () => {
-    expect(() =>
-      buildWorkerResultRecord({
-        issueId: "OPS-7",
-        runId: "run-1",
-        workspaceId: "workspace-1",
-        terminalId: "terminal-1",
-        outcome: "blocked",
-        reason: "",
-        needs: "API credentials",
-        recordedAt: "2026-08-27T12:00:00.000Z",
-      }),
-    ).toThrow("reason");
   });
 });

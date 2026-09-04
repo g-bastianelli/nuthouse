@@ -2,16 +2,12 @@
   "name": "monkey-maestro",
   "displayName": "Monkey Maestro",
   "description": "Plan from live Linear statuses and blockedBy links, then dispatch selected Superset workers in parallel with issue-scoped failures.",
-  "version": "1.0.22",
+  "version": "1.0.23",
   "author": {
     "name": "g-bastianelli"
   },
   "repository": "https://github.com/g-bastianelli/nuthouse",
   "homepage": "https://github.com/g-bastianelli/nuthouse",
   "skills": "./skills/",
-  "agents": [
-    "./agents/control-loader.md",
-    "./agents/project-snapshot-loader.md",
-    "./agents/runtime-inspector.md"
-  ]
+  "agents": ["./agents/linear-reader.md"]
 }

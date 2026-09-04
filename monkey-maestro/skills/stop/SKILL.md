@@ -1,14 +1,15 @@
 ---
 name: stop
-description: Use when the user wants to stop future Monkey Maestro dispatches for a Linear project. Performs one Linear-only minimal-control update to active:false; Superset availability can never prevent stop and existing workers remain untouched.
+description: Use when the user wants to stop future Monkey Maestro dispatches for a Linear project. Appends one approved active:false control while leaving existing Superset work untouched.
 argument-hint: "<linear-project-id>"
 effort: high
-allowed-tools: Bash(node:*), Bash(mktemp:*), Bash(rm:*), Read, Write, Agent, mcp__claude_ai_Linear__save_comment
+allowed-tools: Read, Bash(node:*), Agent, mcp__claude_ai_Linear__save_comment
 ---
 
 # stop
 
-> Agent resolution: before any subagent dispatch, read `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md` and use the active runtime's name.
+> Agent resolution: before dispatch, read `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md`
+> and select the active runtime name for `monkey-maestro:linear-reader`.
 
 ## Voice
 
@@ -17,29 +18,28 @@ Read `../../persona.md`; it is canonical for this skill's user-facing output, an
 ## Contract
 
 Read `${CLAUDE_PLUGIN_ROOT}/shared/project-execution-contract.md`. Stop is Linear-only.
-Never call Superset, GitHub, the runtime inspector, project snapshot loader, or project
-lock. Never terminate or delete a workspace, terminal, or agent.
+Never call Superset or GitHub, change issue status or relations, or terminate/delete an
+existing workspace, terminal, or agent.
 
 ## Workflow
 
-1. Require one exact Linear project id. Dispatch `monkey-maestro:control-loader` and pass
-   its complete envelope plus exact `expectedProjectId` to
-   `scripts/records.mjs resolve-controls`. Retry an unavailable/invalid envelope once.
+1. Require one exact Linear project id. Dispatch `monkey-maestro:linear-reader` in
+   `MODE: control` and resolve its complete marker-bearing set with
+   `scripts/records.mjs resolve-controls`.
 2. No usable control returns `not-configured`. An inactive usable control returns
-   `already-stopped`. Neither case writes anything.
-3. Build a schema-v2 successor containing only the projected operational fields, with
-   `active: false`, revision + 1, and current `updatedAt`.
-4. Show the exact old/new active state, run, transport config, and revision. Ask:
+   `already-stopped`. Neither writes anything.
+3. Build a minimal schema-v2 successor with `scripts/records.mjs build-control`, retaining
+   the run and transport configuration, setting `active: false`, incrementing revision,
+   and using the current `updatedAt`.
+4. Show the exact project, run, revision, and `active: true -> false`, then ask once:
 
 ```text
-Future dispatches stop. Existing workspaces and agents keep running.
-Stop Maestro for this project? (y / cancel)
+Stop future Maestro dispatches? Existing Superset work keeps running. (y / cancel)
 ```
 
-5. On `y`, save one Linear project comment. On denial, do nothing.
-6. Re-dispatch `control-loader`, re-run envelope validation/resolution, and require the
-   exact successor with `active: false`. A failed verification reports
-   `degraded-control`; never retry the write blindly.
+5. On approval, append one Linear project comment. On denial, do nothing. Dispatch the
+   reader once more in `MODE: control` and require the exact successor; report failed
+   verification without rewriting.
 
 ## Report
 
@@ -47,6 +47,6 @@ Stop Maestro for this project? (y / cancel)
 monkey-maestro:stop report
   Project/run: <project id> / <run id>
   Control:     schema v2 · revision <n> · inactive
-  Existing:    workers untouched
+  Existing:    Superset work untouched
   Next:        idle
 ```

@@ -5,11 +5,9 @@
 Resolve every logical agent id through this table before delegation. Select the exact name
 for the active runtime.
 
-| Logical id                               | Claude Code                              | Codex                                     |
-| ---------------------------------------- | ---------------------------------------- | ----------------------------------------- |
-| `monkey-maestro:control-loader`          | `monkey-maestro:control-loader`          | `monkey_maestro__control_loader`          |
-| `monkey-maestro:project-snapshot-loader` | `monkey-maestro:project-snapshot-loader` | `monkey_maestro__project_snapshot_loader` |
-| `monkey-maestro:runtime-inspector`       | `monkey-maestro:runtime-inspector`       | `monkey_maestro__runtime_inspector`       |
+| Logical id                     | Claude Code                    | Codex                           |
+| ------------------------------ | ------------------------------ | ------------------------------- |
+| `monkey-maestro:linear-reader` | `monkey-maestro:linear-reader` | `monkey_maestro__linear_reader` |
 
 On Codex, spawn a typed custom agent with isolated task-local context. Never use a
 full-history fork. Pass only the input contract required by the delegated task.

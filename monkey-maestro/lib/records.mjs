@@ -1,13 +1,4 @@
 const CONTROL_MARKER = "nuthouse:maestro-control";
-const MARKERS = new Set([
-  CONTROL_MARKER,
-  "nuthouse:maestro-execution",
-  "nuthouse:maestro-result",
-  "nuthouse:maestro-waiver",
-]);
-
-const EXECUTION_OUTCOMES = new Set(["verified", "partial", "degraded", "repaired"]);
-const WORKER_RESULT_OUTCOMES = new Set(["completed", "blocked", "failed"]);
 const CONTROL_V2_FIELDS = new Set([
   "schemaVersion",
   "projectId",
@@ -20,14 +11,6 @@ const CONTROL_V2_FIELDS = new Set([
   "revision",
   "updatedAt",
 ]);
-const CONTROL_SNAPSHOT_FIELDS = new Set([
-  "schemaVersion",
-  "provider",
-  "project",
-  "comments",
-  "unknown",
-]);
-
 export class RecordValidationError extends Error {
   constructor(code, message, detail = {}) {
     super(message);
@@ -68,24 +51,6 @@ function integer(value, label, minimum, maximum) {
   return value;
 }
 
-function sortedUniqueStrings(value, label) {
-  if (!Array.isArray(value)) fail("INVALID_RECORD", `${label} must be an array`);
-  const normalized = value.map((entry, index) => string(entry, `${label}[${index}]`));
-  if (new Set(normalized).size !== normalized.length) {
-    fail("INVALID_RECORD", `${label} contains duplicates`);
-  }
-  return normalized.sort();
-}
-
-function validateHeader(value, marker) {
-  const record = object(value, "record");
-  if (record.marker !== marker) fail("MARKER_MISMATCH", `expected marker ${marker}`);
-  if (record.schemaVersion !== 1) {
-    fail("UNSUPPORTED_SCHEMA", `unsupported schemaVersion: ${String(record.schemaVersion)}`);
-  }
-  return record;
-}
-
 function parseEnvelope(body, marker, requireKnownSchema = true) {
   if (typeof body !== "string") fail("INVALID_COMMENT", "comment body must be a string");
   const markerText = `<!-- ${marker} schema_version=`;
@@ -109,105 +74,11 @@ function parseEnvelope(body, marker, requireKnownSchema = true) {
   }
 }
 
-function parseBody(body, marker) {
-  return parseEnvelope(body, marker).record;
-}
-
 function validationCode(error) {
   return error instanceof RecordValidationError ? error.code : "INVALID_RECORD";
 }
 
-export function validateControlSnapshot(value, { expectedProjectId } = {}) {
-  const snapshot = object(value, "control snapshot");
-  const unsupported = Object.keys(snapshot)
-    .filter((field) => !CONTROL_SNAPSHOT_FIELDS.has(field))
-    .sort();
-  if (unsupported.length > 0) {
-    fail(
-      "CONTROL_SNAPSHOT_INVALID",
-      `control snapshot contains unsupported fields: ${unsupported.join(", ")}`,
-    );
-  }
-  if (snapshot.schemaVersion !== 1) {
-    fail("CONTROL_SNAPSHOT_INVALID", "control snapshot schemaVersion must be 1");
-  }
-  if (snapshot.provider !== "ready" && snapshot.provider !== "unavailable") {
-    fail("CONTROL_SNAPSHOT_INVALID", "control snapshot provider is invalid");
-  }
-
-  const project = object(snapshot.project, "control snapshot project");
-  const projectId = string(project.id, "control snapshot project.id");
-  const projectName = string(project.name, "control snapshot project.name");
-  if (expectedProjectId !== undefined && projectId !== expectedProjectId) {
-    fail(
-      "CONTROL_PROJECT_MISMATCH",
-      `expected project ${expectedProjectId}, received ${projectId}`,
-    );
-  }
-  if (!Array.isArray(snapshot.comments)) {
-    fail("CONTROL_SNAPSHOT_INVALID", "control snapshot comments must be an array");
-  }
-  const seenCommentIds = new Set();
-  const comments = snapshot.comments
-    .map((entry, index) => {
-      const comment = object(entry, `control snapshot comments[${index}]`);
-      const id = string(comment.id, `control snapshot comments[${index}].id`);
-      if (seenCommentIds.has(id)) {
-        fail("CONTROL_SNAPSHOT_INVALID", `duplicate control comment id ${id}`);
-      }
-      seenCommentIds.add(id);
-      if (typeof comment.body !== "string" || comment.body.trim().length === 0) {
-        fail(
-          "CONTROL_SNAPSHOT_INVALID",
-          `control snapshot comments[${index}].body must be a non-empty string`,
-        );
-      }
-      const body = comment.body;
-      if (!body.includes(`<!-- ${CONTROL_MARKER}`)) {
-        fail("CONTROL_SNAPSHOT_INVALID", `control comment ${id} is missing the marker prefix`);
-      }
-      return {
-        id,
-        body,
-        createdAt: timestamp(comment.createdAt, `control snapshot comments[${index}].createdAt`),
-        updatedAt: timestamp(comment.updatedAt, `control snapshot comments[${index}].updatedAt`),
-      };
-    })
-    .sort((left, right) => left.id.localeCompare(right.id));
-
-  if (!Array.isArray(snapshot.unknown)) {
-    fail("CONTROL_SNAPSHOT_INVALID", "control snapshot unknown must be an array");
-  }
-  const unknown = snapshot.unknown.map((entry, index) => {
-    const item = object(entry, `control snapshot unknown[${index}]`);
-    return {
-      code: string(item.code, `control snapshot unknown[${index}].code`),
-      detail: string(item.detail, `control snapshot unknown[${index}].detail`),
-    };
-  });
-  if (snapshot.provider === "ready" && unknown.length > 0) {
-    fail("CONTROL_SNAPSHOT_CONTRADICTION", "ready control snapshot cannot contain unknowns");
-  }
-  if (snapshot.provider === "unavailable") {
-    if (comments.length > 0 || unknown.length === 0) {
-      fail(
-        "CONTROL_SNAPSHOT_CONTRADICTION",
-        "unavailable control snapshot requires unknown evidence and no comments",
-      );
-    }
-    fail("CONTROL_PROVIDER_UNAVAILABLE", unknown.map((entry) => entry.detail).join("; "));
-  }
-
-  return {
-    schemaVersion: 1,
-    provider: "ready",
-    project: { id: projectId, name: projectName },
-    comments,
-    unknown: [],
-  };
-}
-
-export function resolveControlAuthority(comments) {
+export function resolveControlAuthority(comments, { expectedProjectId } = {}) {
   if (!Array.isArray(comments)) fail("INVALID_INPUT", "comments must be an array");
   const candidates = comments
     .map((comment, index) => {
@@ -273,9 +144,16 @@ export function resolveControlAuthority(comments) {
 
   const candidate = highest[0];
   try {
+    const control = parseControlRecord(candidate.body);
+    if (expectedProjectId !== undefined && control.projectId !== expectedProjectId) {
+      fail(
+        "CONTROL_PROJECT_MISMATCH",
+        `expected project ${expectedProjectId}, received ${control.projectId}`,
+      );
+    }
     return {
       status: "valid",
-      control: parseControlRecord(candidate.body),
+      control,
       controlCommentId: candidate.id,
       sourceSchemaVersion: candidate.sourceSchemaVersion,
       revision: highestRevision,
@@ -349,121 +227,9 @@ export function validateControlRecord(value) {
   };
 }
 
-export function validateExecutionRecord(value) {
-  const record = validateHeader(value, "nuthouse:maestro-execution");
-  if (!EXECUTION_OUTCOMES.has(record.outcome)) {
-    fail("INVALID_RECORD", `unknown execution outcome: ${String(record.outcome)}`);
-  }
-  const normalized = {
-    marker: record.marker,
-    schemaVersion: 1,
-    issueId: string(record.issueId, "issueId"),
-    runId: string(record.runId, "runId"),
-    outcome: record.outcome,
-    workspaceId: string(record.workspaceId, "workspaceId"),
-    taskId: string(record.taskId, "taskId"),
-    branch: string(record.branch, "branch"),
-    agent: string(record.agent, "agent"),
-    hostId: string(record.hostId, "hostId"),
-    recordedAt: timestamp(record.recordedAt, "recordedAt"),
-  };
-  if (record.terminalId !== undefined)
-    normalized.terminalId = string(record.terminalId, "terminalId");
-  if (record.detail !== undefined) normalized.detail = string(record.detail, "detail");
-  if ((record.outcome === "verified" || record.outcome === "repaired") && !normalized.terminalId) {
-    fail("INVALID_RECORD", `${record.outcome} execution requires terminalId`);
-  }
-  return normalized;
-}
-
-export function buildExecutionRecord(input) {
-  return validateExecutionRecord({
-    ...object(input, "execution input"),
-    marker: "nuthouse:maestro-execution",
-    schemaVersion: 1,
-  });
-}
-
-export function validateWorkerResultRecord(value) {
-  const record = validateHeader(value, "nuthouse:maestro-result");
-  if (!WORKER_RESULT_OUTCOMES.has(record.outcome)) {
-    fail("INVALID_RECORD", `unknown worker result outcome: ${String(record.outcome)}`);
-  }
-  const normalized = {
-    marker: record.marker,
-    schemaVersion: 1,
-    issueId: string(record.issueId, "issueId"),
-    runId: string(record.runId, "runId"),
-    workspaceId: string(record.workspaceId, "workspaceId"),
-    terminalId: string(record.terminalId, "terminalId"),
-    outcome: record.outcome,
-    recordedAt: timestamp(record.recordedAt, "recordedAt"),
-  };
-  if (record.outcome === "completed") {
-    normalized.summary = string(record.summary, "summary");
-    normalized.files = sortedUniqueStrings(record.files ?? [], "files");
-    normalized.checks = string(record.checks, "checks");
-    normalized.handoff = string(record.handoff, "handoff");
-  } else {
-    normalized.reason = string(record.reason, "reason");
-    normalized.needs = string(record.needs, "needs");
-  }
-  return normalized;
-}
-
-export function buildWorkerResultRecord(input) {
-  return validateWorkerResultRecord({
-    ...object(input, "worker result input"),
-    marker: "nuthouse:maestro-result",
-    schemaVersion: 1,
-  });
-}
-
-export function validateWaiverRecord(value) {
-  const record = validateHeader(value, "nuthouse:maestro-waiver");
-  if (record.revokedAt !== undefined && record.revokedAt !== null) {
-    timestamp(record.revokedAt, "revokedAt");
-    fail("WAIVER_REVOKED", "waiver is revoked");
-  }
-  const normalized = {
-    marker: record.marker,
-    schemaVersion: 1,
-    dependentIssueId: string(record.dependentIssueId, "dependentIssueId"),
-    blockerIssueId: string(record.blockerIssueId, "blockerIssueId"),
-    reason: string(record.reason, "reason"),
-    approver: string(record.approver, "approver"),
-    approvedAt: timestamp(record.approvedAt, "approvedAt"),
-  };
-  if (normalized.dependentIssueId === normalized.blockerIssueId) {
-    fail("INVALID_RECORD", "a waiver cannot name a self-edge");
-  }
-  return normalized;
-}
-
-export function buildWaiverRecord(input) {
-  return validateWaiverRecord({
-    ...object(input, "waiver input"),
-    marker: "nuthouse:maestro-waiver",
-    schemaVersion: 1,
-  });
-}
-
 export function serializeRecord(value) {
-  const record = object(value, "record");
-  const marker =
-    record.marker === undefined && Object.hasOwn(record, "active")
-      ? CONTROL_MARKER
-      : string(record.marker, "marker");
-  if (!MARKERS.has(marker)) fail("UNKNOWN_MARKER", `unknown record marker: ${marker}`);
-  const normalized =
-    marker === "nuthouse:maestro-control"
-      ? validateControlRecord(record)
-      : marker === "nuthouse:maestro-execution"
-        ? validateExecutionRecord(record)
-        : marker === "nuthouse:maestro-result"
-          ? validateWorkerResultRecord(record)
-          : validateWaiverRecord(record);
-  return `<!-- ${marker} schema_version=${String(normalized.schemaVersion)} -->\n\n\`\`\`json\n${JSON.stringify(normalized, null, 2)}\n\`\`\`\n`;
+  const normalized = validateControlRecord(value);
+  return `<!-- ${CONTROL_MARKER} schema_version=${String(normalized.schemaVersion)} -->\n\n\`\`\`json\n${JSON.stringify(normalized, null, 2)}\n\`\`\`\n`;
 }
 
 export function parseControlRecord(body) {
@@ -475,16 +241,4 @@ export function parseControlRecord(body) {
     fail("SCHEMA_MISMATCH", "control envelope and record schema versions differ");
   }
   return validateControlRecord(envelope.record);
-}
-
-export function parseExecutionRecord(body) {
-  return validateExecutionRecord(parseBody(body, "nuthouse:maestro-execution"));
-}
-
-export function parseWorkerResultRecord(body) {
-  return validateWorkerResultRecord(parseBody(body, "nuthouse:maestro-result"));
-}
-
-export function parseWaiverRecord(body) {
-  return validateWaiverRecord(parseBody(body, "nuthouse:maestro-waiver"));
 }

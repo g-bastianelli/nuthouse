@@ -4,80 +4,55 @@
 
 > screeching monkey maestro conducting the issue-symphony
 
-Monkey Maestro conducts a Linear project through parallel, task-linked Superset
-workspaces. Linear is the sole scheduling authority: each issue's live status and
-`blockedBy` relations decide whether it is terminal, active, ready, or blocked.
-Workspace, terminal, receipt, pull-request, and worker-report state never overrides that
-decision.
+Monkey Maestro starts one bounded batch of Linear work in task-linked Superset
+workspaces. Linear is the sole scheduling authority; Superset is only the transport.
 
-Within one orchestration invocation Maestro loads project control and the full Linear
-snapshot in parallel, plans one deterministic batch, dispatches it, and returns. A new
-invocation performs a new hydration, so current Linear dependency edits apply without a
-separate recovery ceremony.
+For an active project, Maestro reads the live Linear issues, counts every `started`
+(`In Progress`) issue against `maxConcurrency`, and fills the remaining slots with ready
+issues in stable identifier order. An issue is ready when it is non-terminal, not already
+started, and every current `blockedBy` issue is terminal.
+
+Each selected issue gets one workspace create-or-reuse attempt. Only an explicitly new
+workspace receives a worker; a reused workspace cannot trigger a duplicate launch. One
+failure is reported while siblings continue. A confirmed launch failure stays recoverable
+through one-issue `spawn`; ambiguous launch evidence is inspected through read-only
+`reconcile`. Runtime state never decides capacity, Maestro maintains no private queue,
+does not poll workers, and never mutates Linear lifecycle.
 
 ## Skills
 
-| Skill                        | Responsibility                                                                        |
-| ---------------------------- | ------------------------------------------------------------------------------------- |
-| `monkey-maestro:status`      | Report control and the live Linear frontier without inspecting runtimes               |
-| `monkey-maestro:start`       | Write minimal v2 control, then enter orchestration                                    |
-| `monkey-maestro:orchestrate` | Plan once, create or reuse task workspaces in parallel, launch missing agents, return |
-| `monkey-maestro:reconcile`   | Optionally audit or repair runtime telemetry; never rebuild scheduling truth          |
-| `monkey-maestro:spawn`       | Launch one selected issue through the same planner and idempotence rules              |
-| `monkey-maestro:stop`        | Set project control inactive without touching running work                            |
+| Skill                        | Responsibility                                                      |
+| ---------------------------- | ------------------------------------------------------------------- |
+| `monkey-maestro:status`      | Report control and the live Linear counts                           |
+| `monkey-maestro:start`       | Discover local transport, write one control, then orchestrate       |
+| `monkey-maestro:orchestrate` | Fill Linear slots and safely create/reuse then launch selected work |
+| `monkey-maestro:spawn`       | Launch or recover one explicitly selected Linear-authorized issue   |
+| `monkey-maestro:reconcile`   | Read-only report of runtime transport for requested issues          |
+| `monkey-maestro:stop`        | Disable future dispatch without touching existing work              |
 
-`status` is the implicit landing point for a Linear project URL. It is read-only and
-never scans GitHub or Superset.
+## Control and discovery
 
-`orchestrate` computes one deterministic frontier, reserves concurrency for started work,
-then fills remaining slots with ready issues in stable issue-id order. For each selected
-issue, it resolves the exact Superset task and directly calls branch-scoped workspace
-creation. Superset reports whether the workspace was created or already existed, so
-Maestro never pre-lists the project inventory. New workspaces receive one agent; reused
-workspaces receive one exact binding check and an agent only when one live-terminal check
-finds none. An unbound reused workspace is linked once to the exact task; a conflicting
-binding is never overwritten. The command then returns immediately.
+Control records are append-only v2 Linear project comments containing activation,
+Superset host/project/agent selectors, `maxConcurrency`, and a monotonic revision. They
+do not copy the issue graph or runtime state.
 
-Task lookup normally runs in one parallel wave. A failed ready issue is replaced by the
-next deferred ready issue, so bad transport metadata cannot starve valid siblings; extra
-waves happen only after failures.
+One read-only `linear-reader` keeps exhaustive Linear pagination and large issue responses
+out of the public skill context. It returns only control comments and minimal
+status/blocker facts, then selected issue details only when a prompt must be rendered.
 
-Independent issue sequences use all-settled semantics. One issue or provider failure is
-quarantined to that issue or provider while valid siblings continue. When no issue is
-ready or started, the command returns idle without touching Superset.
+On first start, selectors resolve in this order: explicit argument, usable prior control,
+then simple local Superset discovery. The host comes from a healthy `superset status
+--json`; the project comes from the current Superset worktree id, a matching local project
+path, or the sole local project; and the agent comes from the current runtime when that
+agent exists on the host, otherwise the sole configured agent. Missing or ambiguous
+choices are gathered into one clarification. The complete resolved control then receives
+exactly one Linear mutation approval.
 
-If Linear says an issue is terminal, it is complete for scheduling even when an old
-workspace or terminal remains. The stronger one-issue `spawn` flow retains explicit
-confirmation, issue-scoped force, exact runtime inspection, and its short dispatch lock.
-Those controls do not sit on the project orchestration hot path.
+## Safety boundary
 
-## Agents and deterministic kernels
-
-| Component                                  | Role                                                                        |
-| ------------------------------------------ | --------------------------------------------------------------------------- |
-| `monkey-maestro:control-loader`            | Retrieve raw project control-marker comments only                           |
-| `monkey-maestro:project-snapshot-loader`   | Retrieve full or targeted live Linear issue/status/`blockedBy` facts        |
-| `monkey-maestro:runtime-inspector`         | Inspect selected Superset candidates for `spawn` and `reconcile`            |
-| `lib/linear-snapshot.mjs`                  | Validate snapshots and maintain the invocation-local cache                  |
-| `lib/linear-frontier.mjs`                  | Classify the Linear frontier and enforce force exclusions                   |
-| `lib/runtime-actions.mjs`                  | Plan the stronger one-issue `spawn` runtime flow without changing readiness |
-| `scripts/orchestration-epoch.mjs`          | Drive `spawn` through replay-safe provider effects                          |
-| `lib/records.mjs` / `lib/project-lock.mjs` | Select monotonic control; protect confirmed manual spawn mutation           |
-
-Control records are append-only v2 Linear comments. They hold activation and stable
-configuration, not a copied dependency graph. Their monotonic revisions expose stale or
-conflicting writers. The one-issue spawn lock is a short ephemeral local project lease; it
-does not gate the fast orchestration path.
-
-GitHub is optional delivery telemetry. Superset is transport and idempotence evidence.
-Neither provider is required to classify the Linear frontier, and neither can turn a
-Linear-ready issue into a blocked one.
-
-## Workspace scope
-
-One workspace per issue stays a convention, not an interception. Nothing rewrites or
-denies your Git commands; invoke `monkey-maestro:spawn <LINEAR-ISSUE-ID>` when you want
-an issue placed in its own task-linked Superset workspace.
+Maestro never merges or pushes, changes dependencies, changes issue status or relations,
+or treats a workspace, terminal, worker envelope, commit, or pull request as scheduling
+truth. Human acceptance and manual merge remain outside Maestro.
 
 ## Development
 

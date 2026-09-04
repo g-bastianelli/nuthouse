@@ -1,14 +1,15 @@
 ---
 name: status
-description: Use automatically when the user supplies a Linear project URL or asks to inspect one project's Maestro state. Reads only the minimal control plus live Linear statuses and blockedBy links, reports the deterministic frontier, and never inspects Superset or requires reconciliation.
+description: Use automatically when the user supplies a Linear project URL or asks to inspect one project's Maestro state. Reports the current control, live Linear frontier, and available capacity without inspecting Superset.
 argument-hint: "<linear-project-url-or-id>"
 effort: medium
-allowed-tools: Read, Write, Agent, Bash(node:*), Bash(mktemp:*), Bash(rm:*), mcp__claude_ai_Linear__get_project
+allowed-tools: Read, Bash(node:*), Agent
 ---
 
 # status
 
-> Agent resolution: before any subagent dispatch, read `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md` and use the active runtime's name.
+> Agent resolution: before dispatch, read `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md`
+> and select the active runtime name for `monkey-maestro:linear-reader`.
 
 ## Voice
 
@@ -16,55 +17,37 @@ Read `../../persona.md`; it is canonical for this skill's user-facing output, an
 
 ## Contract
 
-Read `${CLAUDE_PLUGIN_ROOT}/shared/project-execution-contract.md`. This skill is strictly
-read-only and Linear-only. It never calls Superset, GitHub, a lock, `reconcile`, or another
-public skill.
+Read `${CLAUDE_PLUGIN_ROOT}/shared/project-execution-contract.md`. This skill is
+read-only and Linear-only. Never call Superset or GitHub and never mutate control, issue
+status, or relations.
 
 ## Workflow
 
-1. Require one exact Linear project reference. Accept a URL only when the host is exactly
-   `linear.app` and one non-empty path segment follows `/project/`. Reject issue URLs,
-   bare issue identifiers, malformed URLs, and multiple references before provider calls.
-2. Resolve the reference with Linear `get_project`; capture the exact returned project id.
-3. In parallel, dispatch:
-   - `monkey-maestro:control-loader` for that project;
-   - `monkey-maestro:project-snapshot-loader` with `MODE: full`.
-4. Pass the complete control-loader envelope plus exact `expectedProjectId` to
-   `scripts/records.mjs resolve-controls`; retry an unavailable/invalid retrieval once. A
-   malformed obsolete v1 field is only a warning when operational fields remain
-   projectable.
-5. Build the disposable cache only through `scripts/linear-snapshot.mjs`: `hydrate` the
-   exact expected project/full snapshot; use `recover-full` for one exact targeted retry
-   of identifiable malformed rows; use `recover-full-unknown` only when those exact
-   validator-attributed ids remain malformed before a cache exists; use `refresh` for
-   schema-valid scoped unknown retries; and `mark-unknown` for retry-exhausted ids after
-   hydration. Never splice issue or unknown arrays
-   manually. Retry a project-wide unknown once with the same full scope, then run
-   `planLinearFrontier` through `scripts/linear-frontier.mjs`. Never derive readiness
-   manually or from control history.
-6. Report one deterministic table:
-
-```text
-Issue | Linear status | Live blockers | Classification | Reason
-```
-
-7. Report control as `active`, `inactive`, `not-configured`, or `unusable`, followed by:
-   - active with ready/started work: `Next: monkey-maestro:orchestrate <project-id>`;
-   - active with no ready/started work: `Next: idle`;
-   - inactive or absent: `Next: monkey-maestro:start <project-id>`;
-   - unusable: `Next: repair the conflicting or malformed control comments`.
-
-Never recommend `reconcile` for a link change, stale history, runtime residue, or unrelated
-unknown issue. A scoped unknown stays on its row. Total Linear unavailability produces a
-read-only `degraded` report and no invented frontier.
+1. Require one exact Linear project reference and dispatch
+   `monkey-maestro:linear-reader` in `MODE: project`. Consume only its project identity,
+   marker comments, minimal status/blocker rows, and scoped unknowns. A failed page makes
+   the whole project snapshot unavailable rather than partial.
+2. Pass the complete marker-bearing control comments through
+   `scripts/records.mjs resolve-controls`. Treat an unavailable or conflicting latest
+   control as unusable; do not guess.
+3. Classify the live issues directly:
+   - terminal: `completed` or `canceled`;
+   - started: every known `started` row;
+   - ready: `backlog`, `triage`, or `unstarted`, with every current `blockedBy` row
+     present and terminal;
+   - blocked: a known candidate with a known non-terminal blocker;
+   - unknown: any row or dependency decision lacking complete Linear facts.
+4. Compute `remaining = max(0, maxConcurrency - startedCount)` when control is usable.
+   Report stable issue-id lists and counts. Never use runtime state to adjust them.
 
 ## Report
 
 ```text
 monkey-maestro:status report
-  Project:  <id / name>
-  Control:  <active | inactive | not-configured | unusable>
-  Frontier: <ready N · started N · blocked N · terminal N · unknown N>
-  Runtime:  not inspected
-  Next:     <action>
+  Project:   <id / name>
+  Control:   active | inactive | not-configured | unusable
+  Linear:    started <n> · ready <n> · blocked <n> · terminal <n> · unknown <n>
+  Capacity:  <remaining> of <maxConcurrency>
+  Superset:  not inspected
+  Next:      orchestrate | start | idle | repair control
 ```

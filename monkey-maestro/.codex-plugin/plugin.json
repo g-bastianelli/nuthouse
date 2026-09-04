@@ -1,7 +1,7 @@
 {
   "name": "monkey-maestro",
-  "version": "1.0.22",
-  "description": "Linear-first project orchestration with deterministic readiness, parallel Superset dispatch, and issue-scoped recovery.",
+  "version": "1.0.23",
+  "description": "Linear-first project orchestration with simple capacity accounting and parallel Superset dispatch.",
   "author": {
     "name": "g-bastianelli"
   },
@@ -10,7 +10,7 @@
   "interface": {
     "displayName": "Monkey Maestro",
     "shortDescription": "Orchestrate Linear dependency graphs through Superset agents",
-    "longDescription": "Monkey Maestro uses live Linear project membership, status types, and blockedBy links as its only scheduling authority. Each orchestration invocation loads Linear once, dispatches one bounded batch through branch-idempotent Superset workspace creation, launches only missing agents, and returns immediately. Runtime reconciliation remains optional and never owns the graph.",
+    "longDescription": "Monkey Maestro uses live Linear status and blockedBy links as its only scheduling authority. In Progress issues consume the configured capacity; remaining ready issues are sent directly to Superset in one bounded parallel batch.",
     "developerName": "g-bastianelli",
     "category": "Productivity",
     "capabilities": ["Read", "Write"],
@@ -19,8 +19,8 @@
       "Inspect this Linear project URL read-only and report its Maestro state.",
       "Use Monkey Maestro to start project execution for this verified Linear project.",
       "Use Monkey Maestro to orchestrate one fast dispatch pass for this active Linear project.",
-      "Use Monkey Maestro to audit or repair Superset runtime correlation without changing the Linear graph.",
-      "Use Monkey Maestro to spawn or force one task-linked Superset workspace from live Linear state.",
+      "Use Monkey Maestro to inspect Superset transport for current In Progress issues without changing Linear.",
+      "Use Monkey Maestro to spawn one task-linked Superset workspace from live Linear state.",
       "Use Monkey Maestro to stop future project dispatches without terminating active work."
     ],
     "logo": "./assets/banner.png"
