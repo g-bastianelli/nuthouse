@@ -17,20 +17,18 @@ it is. The repo's own `AGENTS.md` always wins over the plugin's discipline.
 
 The discipline lives in nine `SKILL.md` files, but it is **delivered by a hook**,
 not by hoping the model invokes a skill. Model-driven skill invocation is
-unreliable for passive knowledge, and subagents don't inherit the parent
-session's skills at all — so a hook is the only mechanism that loads the rules
-deterministically, during both implementation and review:
+unreliable for passive knowledge — so a hook is the only mechanism that loads
+the rules deterministically while you implement:
 
-| Hook event      | Matcher                  | What it does                                                                                                                        |
-| --------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `PostToolUse`   | `Edit\|Write\|MultiEdit` | Reads the edited file path, matches it against each skill's `paths`, injects the matching discipline bodies as `additionalContext`. |
-| `SubagentStart` | `review`                 | A code-review subagent starts blind to the parent's skills — this injects the disciplines so the reviewer can flag violations.      |
-| `SessionStart`  | `startup\|resume`        | In a TypeScript repo, injects a one-line-per-discipline digest so the spine is present before the first edit.                       |
+| Hook event     | Matcher                  | What it does                                                                                                                        |
+| -------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `PostToolUse`  | `Edit\|Write\|MultiEdit` | Reads the edited file path, matches it against each skill's `paths`, injects the matching discipline bodies as `additionalContext`. |
+| `SessionStart` | `startup\|resume`        | In a TypeScript repo, injects a one-line-per-discipline digest so the spine is present before the first edit.                       |
 
 Bodies use focused, reusable examples and are packed under the runtime's 10 000-
 char `additionalContext` budget. A normal backend `.ts` or component `.tsx`
-receives every relevant discipline in full. When a cross-stack hook or review
-matches too many, the lowest-priority overflow degrades to a one-line summary.
+receives every relevant discipline in full. When a cross-stack hook matches too
+many, the lowest-priority overflow degrades to a one-line summary.
 The `SKILL.md` files remain the single source of truth — edit them, and the hook
 delivers the change.
 
@@ -78,9 +76,9 @@ Restart the Codex session after install.
 
 > Note: Codex discovers `hooks/hooks.json` the same way Claude Code does, so the
 > discipline is delivered by the hook on both runtimes. `PostToolUse`-on-edit
-> injection works wherever Codex fires that event; `SubagentStart` /
-> `SessionStart` parity on Codex is unverified — validate before relying on the
-> review and session-digest injection there.
+> injection works wherever Codex fires that event; `SessionStart` parity on
+> Codex is unverified — validate before relying on the session-digest injection
+> there.
 
 ## Persona
 

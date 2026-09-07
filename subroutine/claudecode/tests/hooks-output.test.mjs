@@ -46,28 +46,6 @@ test("inject-on-edit stays silent on missing/garbage input", () => {
   expect(runHook("inject-on-edit.mjs", {})).toBeNull();
 });
 
-test("inject-on-review briefs a review subagent, under the cap", () => {
-  const res = runHook("inject-on-review.mjs", { agent_type: "git-gremlin:reviewer" });
-  expect(res.hookSpecificOutput.hookEventName).toBe("SubagentStart");
-  expect(res.hookSpecificOutput.additionalContext).toContain("type-safety");
-  expect(res.hookSpecificOutput.additionalContext.length).toBeLessThan(ADDITIONAL_CONTEXT_CAP);
-});
-
-test("inject-on-review also recognises the subagent_type field name", () => {
-  const res = runHook("inject-on-review.mjs", { subagent_type: "code-reviewer" });
-  expect(res.hookSpecificOutput.hookEventName).toBe("SubagentStart");
-});
-
-test("inject-on-review ignores 'preview' substring and document/plan auditors", () => {
-  expect(runHook("inject-on-review.mjs", { agent_type: "preview-generator" })).toBeNull();
-  expect(runHook("inject-on-review.mjs", { agent_type: "acid-prophet:spec-auditor" })).toBeNull();
-  expect(runHook("inject-on-review.mjs", { agent_type: "plan-auditor" })).toBeNull();
-});
-
-test("inject-on-review stays silent for a non-review subagent", () => {
-  expect(runHook("inject-on-review.mjs", { agent_type: "Explore" })).toBeNull();
-});
-
 test("inject-on-edit dedups within a session: full bodies first, reminder on repeat", () => {
   const memo = fs.mkdtempSync(path.join(os.tmpdir(), "subroutine-e2e-"));
   const env = { SUBROUTINE_MEMO_DIR: memo };

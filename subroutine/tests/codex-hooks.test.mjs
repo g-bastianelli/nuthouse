@@ -5,7 +5,7 @@ import path from "node:path";
 const ROOT = path.resolve(import.meta.dir, "..");
 const HOOKS_PATH = path.join(ROOT, "hooks", "hooks.json");
 
-test("hooks.json wires the three discipline-delivery events", () => {
+test("hooks.json wires the two discipline-delivery events", () => {
   const config = JSON.parse(fs.readFileSync(HOOKS_PATH, "utf8"));
 
   const session = config.hooks.SessionStart[0];
@@ -16,11 +16,7 @@ test("hooks.json wires the three discipline-delivery events", () => {
   expect(edit.matcher).toBe("Edit|Write|MultiEdit");
   expect(edit.hooks[0].command).toContain("claudecode/hooks/inject-on-edit.mjs");
 
-  const review = config.hooks.SubagentStart[0];
-  expect(review.matcher).toBe("review|auditor");
-  expect(review.hooks[0].command).toContain("claudecode/hooks/inject-on-review.mjs");
-
-  for (const evt of ["SessionStart", "PostToolUse", "SubagentStart"]) {
+  for (const evt of ["SessionStart", "PostToolUse"]) {
     const hook = config.hooks[evt][0].hooks[0];
     expect(hook.type).toBe("command");
     expect(hook.command).toContain("PLUGIN_ROOT");
