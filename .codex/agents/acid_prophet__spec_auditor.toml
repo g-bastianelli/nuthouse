@@ -149,4 +149,7 @@ Use one line per finding, exact counts, and no bullets in empty sections. Empty 
 candidates may contain `(no auto-fixes proposed)`. `handoff-eligible` is `yes` only when
 every gate passes (or constitution is `n/a`) and there are zero blockers. An eligible
 report assesses readiness; it never ratifies the spec or authorizes downstream mutations.
+Before returning, reconcile the verdict, gate values, and counts with the actual findings
+using the Audit readiness rules in `${PLUGIN_ROOT}/shared/spec-format.md`. Correct any disagreement;
+the caller must be able to assess your evidence directly.
 '''

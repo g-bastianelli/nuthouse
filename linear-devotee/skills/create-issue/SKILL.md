@@ -1,86 +1,79 @@
 ---
 name: create-issue
-description: Use to add a single Linear Issue with an SDD-formatted description to an existing project. Drafts and previews through issue-drafter, clarifies open questions one at a time, and creates the issue only after explicit approval. Use linear-devotee:create-project for a full project cascade or to resume a partially committed one.
+description: Use to add one coherent Linear issue to an existing project. Reuses supplied context, drafts exact Acceptance and observable verification, resolves consequential questions, and creates the complete authorized payload. Use create-project to resume a project cascade.
 effort: high
-allowed-tools: Read, Glob, Grep, Bash(git rev-parse:*), Write, Agent, mcp__claude_ai_Linear__list_projects, mcp__claude_ai_Linear__list_milestones, mcp__claude_ai_Linear__list_issue_labels, mcp__claude_ai_Linear__save_issue
+allowed-tools: Read, Glob, Grep, Bash, Write, Edit, Agent, ToolSearch
 ---
 
 # linear-devotee:create-issue
 
 > Agent resolution: before any subagent dispatch, read `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md` and use the active runtime's name.
 
-Rigid runbook. One issue, one approval.
+Resolve the plugin root from this skill's directory (`../..`) when runtime variables are absent.
+Read `../../shared/provider-selection.md` and `../../shared/planning-context.md`.
 
 ## Voice
 
 Read `../../persona.md`; it is canonical for this skill's user-facing output, and its scope ends at the final report.
 
-## Workflow
+## Establish context
 
-1. Preconditions:
-   - Verify Linear access with `ToolSearch` query `linear`.
-   - Verify git repo; capture `PROJECT_ROOT`.
-   - A partially committed cascade is not this skill's job.
-     **REQUIRED SUB-SKILL:** for resume, use `linear-devotee:create-project`.
-2. Gather context:
-   - Fetch active projects with `list_projects` and ask the user to pick one.
-   - Fetch that project's milestones with `list_milestones`, ask whether to attach one.
-   - Ask for the one-sentence issue hint.
-   - **Labels**: fetch the team's labels with `list_issue_labels` and hold an immutable
-     `LABEL_MAP` of exact name → id before drafting. Never create a label implicitly.
-   - **Source Acceptance namespace**: search `docs/acid-prophet/specs/` for a single spec whose
-     `linear-project:` equals the chosen project id and extract its active `AC-###` ids. Multiple
-     matches are a blocking clarification. Otherwise `SOURCE_ACCEPTANCE_IDS: _none_`. Never merge
-     ids from two specs.
-3. Draft — dispatch the logical `linear-devotee:issue-drafter` agent with:
-   ```text
-   PROJECT_ID: <id>
-   MILESTONE_ID: <id | _none_>
-   ISSUE_HINT: <hint>
-   SOURCE_ACCEPTANCE_IDS: <comma-separated AC-### ids | _none_>
-   PROJECT_ROOT: <git root>
-   ```
-   A cross-project milestone violation stops with `cross_project_violation`.
-4. Clarify — ask one blocking question at a time for every `_unclear_` field or suggested
-   question. Patch the draft until it is clean, or until the user ships it as is.
-5. Preview and approve:
-   - Mint one stable `client_ref` and append `<!-- nuthouse-client-ref: <client_ref> -->` to the
-     body. The marker is part of the approved description and can never be added or changed later.
-   - Print the exact full patched SDD draft and ask `Create this issue? (y / edit / cancel)`.
-   - Continue only on `y`.
-6. Create — call `save_issue` with the approved body, resolved `projectId`, nullable
-   `projectMilestoneId`, and label ids resolved through `LABEL_MAP`. Warn and drop an unknown
-   label name rather than inventing one. On timeout or API error, surface it verbatim and stop
-   with `linear_error`; a retry must first reload Linear by the exact marker.
-7. Hand off — recommend the created issue as the next thing to work on. Print
-   `Start with: linear-devotee:greet <identifier>`. Never write greet state or start it yourself.
+Resolve the repository, intended deliverable, project, and optional milestone from the request
+and current context. Fetch only missing metadata. A named project does not need another project
+picker; an absent optional milestone can remain unset unless attachment changes scope. Ask when
+project identity or the intended outcome is genuinely ambiguous.
 
-## Nothing reaches Linear unapproved
+A partial project cascade must resume through its approved preview and recovery path.
 
-**THE PREVIEW IS THE CONTRACT.** What the user approved in step 5 is what gets written, byte for
-byte. Never widen it afterwards.
+**REQUIRED SUB-SKILL:** Use `linear-devotee:create-project` for cascade recovery.
 
-| Excuse                                            | Reality                                                                 |
-| ------------------------------------------------- | ----------------------------------------------------------------------- |
-| "The draft obviously needed one more label"       | Then re-preview. An unapproved field is an unapproved write.            |
-| "The user said yes to the project earlier"        | Approval is per issue, at the preview.                                  |
-| "The API rejected a field, I'll adjust and retry" | Surface the error and stop. A silent adjustment is an unapproved write. |
+Read the authoritative source spec/register, prioritizing an explicit path and then project
+associations. A project's own approved Acceptance register can be the source when no local spec
+exists. Pass exact active ids and text, not ids alone. Resolve conflicting source candidates;
+never merge them or invent a source criterion. Capture selected team metadata, the milestone's
+project membership, and exact existing label names/ids before preparing the final payload.
 
-## Final Report
+## Draft and resolve
 
-```text
-linear-devotee:create-issue report
-  Project:    <project.title> (<PROJECT_ID>)
-  Milestone:  <milestone.name> | none
-  Issue:      <identifier> - <title> - <url> | (cancelled) | (linear_error) | (cross_project_violation)
-  Labels:     <comma-separated names | none>
-  Next:       Start with linear-devotee:greet <identifier>
-```
+Dispatch `linear-devotee:issue-drafter` with `PROJECT_ROOT`, `PROJECT_ID`, `MILESTONE_ID`,
+`ISSUE_HINT`, `SOURCE_ACCEPTANCE`, and current raw `LINEAR_CONTEXT`. Include an explicit parent
+packet when supplied. The scout returns the full SDD body, verification, overlap evidence, and
+consequential questions.
 
-## Never
+Check that the issue is a coherent deliverable and its criterion wording matches the source.
+Ask decision-changing questions, using supplied answers and recommendations. Do not ask for every
+optional blank. A consequential `_unclear_` remains a blocker; the user may resolve or explicitly
+defer a decision into a bounded discovery issue with its own completion conditions, but an
+unresolved implementation policy cannot be labeled ready just by saying “ship as is”.
 
-- Mutate Linear without explicit approval at the preview.
-- Attach an issue to a milestone from another project.
-- Retry a failed Linear write blindly.
-- Create a label implicitly.
-- Run `git push`, `git commit`, or `git rebase`.
+Inspect proposed duplicates and dependencies before preview. Resolve each actual blocking
+relation to a specific issue and explain why its output is necessary. Milestone membership must
+match the project. Resolve labels to exact ids now; omit an unsupported suggestion with an
+explanation before preview, or resolve an explicitly requested label with the user. Never drop
+an approved label during the write.
+
+## Preview and create
+
+Mint a stable `client_ref`; include `<!-- nuthouse-client-ref: <client_ref> -->` in the exact
+proposed description. Show the complete title/body, team, project, nullable milestone, labels,
+and any blocking relations together. A local preview file is useful for a long description;
+do not add session machinery merely to hold a single draft.
+
+Apply existing explicit authorization for this content and any delegated choices. Otherwise ask
+for approval of this complete preview. Resolve requested edits before the write; a prior approval
+of a different payload does not authorize a rewritten one.
+
+Create the issue with exactly those fields through the selected provider. If a requested relation
+is unsupported by that provider, resolve the available operation before creating; do not silently
+drop the relation. On timeout or error, report the actual error and stop. Before retrying, reload
+by the exact marker: one match is reused, multiple matches are ambiguous, and only confirmed
+absence permits creation. A title match is not an idempotency key.
+
+Read back the created issue and check title/body, project/milestone, labels, and requested
+relations against the preview. Report discrepancies without overwriting them automatically.
+
+Finish with the issue link, its scope, source Acceptance, verification status, and any unresolved
+write outcome. Recommend `linear-devotee:greet <identifier>` when creation is verified; continue
+there only if issue delivery was already requested. Creating this issue does not by itself
+start implementation. Never commit, push, rebase, create labels implicitly, or write unrelated
+Linear resources.

@@ -37,8 +37,9 @@ purpose and cost; component and consumer counts are not pass/fail thresholds.
 
 The complete audit reports `simplicity`, `anti-abstraction`, `behavior-consistent`,
 `acceptance-defined`, `acceptance-traceable`, `clarifications-resolved`, and `constitution`.
-The shared parser rejects incomplete reports, duplicate gates, and inconsistent counts.
-An asserted `handoff-eligible: yes` cannot override a failed gate or blocker.
+The calling skill reads the complete report, checks that its findings and counts agree,
+and requests correction when the assessment is incomplete or contradictory. An asserted
+`handoff-eligible: yes` cannot override a failed gate or a blocker in the actual findings.
 
 Readiness does not ratify a spec. The final product intent must be approved, and accepted
 ids must stay stable. A draft can contain `[NEEDS CLARIFICATION: ...]`; a ratified spec
@@ -53,6 +54,10 @@ results. Contracts exist only where an interface needs one. Quickstart scenarios
 the relevant failure paths as well as success; planned checks are never reported as test
 results. Complex plans receive an independent walkthrough, while small conventional plans
 can be reviewed locally.
+
+Reuse an applicable spec audit across the spec-to-plan handoff or a resumed session. New
+substantive changes or unresolved findings justify another review; moving to the next skill
+does not by itself require repeating it.
 
 ```text
 write-spec → independent audit → ratification
@@ -72,10 +77,10 @@ Acid Prophet itself makes no Linear mutation.
 
 ## Verification
 
-Run deterministic helper tests with `bun test acid-prophet/tests/`. These verify report
-parsing and metadata edits, not the quality of an agent's reasoning. The
-[behavioral evaluation procedure](evals/README.md) prepares isolated fixture repositories
-for fresh agents, with separate outcome rubrics and recorded observations.
+The [behavioral evaluation procedure](evals/README.md) describes isolated fixture
+repositories and requests for fresh agents, with separate outcome rubrics and recorded
+observations. Review actual decisions and generated artifacts, including how callers
+handle an incomplete or contradictory audit report.
 
 ## Install
 
@@ -94,5 +99,5 @@ codex plugin marketplace add g-bastianelli/nuthouse
 
 Then open `/plugins` and install `acid-prophet`.
 
-Runtime helpers and tests live at the plugin root and serve both runtimes. Each skill
-reads `persona.md` directly for its voice; the auditor's machine-readable report is neutral.
+Skills and the auditor use the same prose contracts in both runtimes. Each skill reads
+`persona.md` directly for its voice; the auditor's structured report is neutral.

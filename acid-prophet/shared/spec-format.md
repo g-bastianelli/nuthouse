@@ -80,3 +80,21 @@ choice without sufficient authority/evidence. Keep it next to the affected state
 Document a justified reversible implementation choice as a decision with its evidence;
 it is not automatically an unresolved product requirement. A draft may carry open
 markers. A ratified spec carries none.
+
+## Audit readiness
+
+The caller reads the complete report against the [auditor's gate and output contract](../agents/spec-auditor.md).
+Every gate and the verdict must appear once with a permitted
+value. Finding sections and the summary must be present, with counts matching the actual
+findings. Harmless formatting differences do not change the decision.
+
+Readiness requires an explicit `handoff-eligible: yes`, zero actual blockers, and every
+gate passing; only an absent constitution permits `constitution: n/a`. An explicit `no`
+remains blocked. Read the evidence too: a reported contradiction, unresolved consequential
+decision, or missing essential evidence cannot become ready through a passing label or
+a zero in the summary. Return such discrepancies to the auditor for correction.
+
+An incomplete, duplicate, unreadable, or internally inconsistent assessment cannot support
+ratification or planning. Preserve the actual report and explain what needs correction.
+An empty auto-fix section or a no-candidates marker proposes no change. Audit readiness
+assesses the proposal; it never supplies the user's approval or authority to mutate.

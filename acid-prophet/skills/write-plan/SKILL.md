@@ -32,12 +32,17 @@ clarification markers. If the source is still a draft, route it through
 `acid-prophet:write-spec` for reconciliation and ratification; do not offer an override
 that is immediately contradicted by an audit gate.
 
-Use a complete passing auditor report from this run only if it reviewed this exact spec
-content and project context. Otherwise dispatch `acid-prophet:spec-auditor` with
-`SPEC_PATH`, `PROJECT_ROOT`, `PLUGIN_ROOT`, and `MODE: report-only`. Import and execute
-`parseSpecAuditorReport` from `${PLUGIN_ROOT}/lib/parse-spec-auditor-report.mjs` on its
-actual output. Require `handoffEligible === true`. A missing or malformed report blocks
-planning from that source. Report the problem; never silently use another spec or invent ids.
+Reuse a complete passing auditor report when its spec content and relevant project evidence
+still apply, including a report from the preceding skill or a resumed session. Read the source
+and prior findings; a skill/session boundary or metadata-only ratification is not a reason to
+repeat the audit. Re-audit when the report is missing, substantive source changes or relevant
+code changes invalidate it, or a consequential finding remains unresolved. Then dispatch
+`acid-prophet:spec-auditor` with
+`SPEC_PATH`, `PROJECT_ROOT`, `PLUGIN_ROOT`, and `MODE: report-only`. Read its actual output
+using Audit readiness in `../../shared/spec-format.md`; require a complete, consistent
+assessment whose findings support handoff. Request one correction for a missing or
+contradictory assessment. If readiness remains unconfirmed, report the problem and keep
+planning blocked; never silently use another spec or invent ids.
 
 Extract active `SOURCE_AC_IDS` only from Acceptance, excluding history and examples.
 Read `docs/acid-prophet/constitution.md` when present; otherwise set `CONSTITUTION_FILE`

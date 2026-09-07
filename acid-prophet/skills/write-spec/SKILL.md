@@ -93,9 +93,10 @@ PLUGIN_ROOT: <absolute plugin root>
 MODE: report-only
 ```
 
-Import and execute `parseSpecAuditorReport(RAW_REPORT)` from
-`${PLUGIN_ROOT}/lib/parse-spec-auditor-report.mjs`. A null result or
-`handoffEligible !== true` cannot ratify a spec. Preserve the actual report.
+Read the complete returned report using Audit readiness in `../../shared/spec-format.md`.
+Check the findings against its gates and verdict before calling the draft ready for
+ratification. Preserve the actual report; missing or contradictory assessments need
+correction and cannot count as a clean audit.
 
 Fix defects whose resolution follows from approved intent or repository evidence. For a
 decision that belongs to the user, explain the conflicting outcomes and ask the focused

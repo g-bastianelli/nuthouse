@@ -98,7 +98,7 @@ const cases = {
   },
   "write-existing": {
     request:
-      "Prépare avec write-spec une spec pour valider la note optionnelle des invitations. Les admins peuvent envoyer une note de 0 à 240 caractères ; une note absente devient une chaîne vide, une note non textuelle ou trop longue renvoie 400 avec invalid_note. Les droits existants et les autres réponses restent identiques. Appuie-toi sur le code et ses conventions. Tu peux choisir les détails techniques réversibles. Écris le brouillon et fais-le auditer ; je relirai le document complet avant sa ratification. Aucun commit ni publication.",
+      "Use write-spec to prepare a spec for validating optional invitation notes. Admins may submit a note of 0 to 240 characters; an absent note becomes an empty string, and a non-text or overlong note returns 400 with invalid_note. Preserve existing permissions and other responses. Ground the proposal in the code and its conventions. You may choose reversible technical details. Write and audit the draft; I will review the complete document before ratification. No commits or publication.",
   },
   "plan-existing": {
     skill: "write-plan",
@@ -120,7 +120,7 @@ const cases = {
       .replace("status: draft", "status: ratified")
       .replace("verified-by: _none_", "verified-by: spec-auditor"),
     request:
-      "Cette spec est approuvée. Prépare et valide le plan complet avec write-plan. Je te délègue les détails techniques réversibles dans ce périmètre. Aucun code de production à modifier, aucun commit ni publication ; termine par les chemins des artefacts et le résultat de la revue.",
+      "This spec is approved. Prepare and validate the complete plan with write-plan. I delegate reversible technical details within this scope. Do not modify production code, commit, or publish. Finish with the artifact paths and review result.",
   },
 };
 

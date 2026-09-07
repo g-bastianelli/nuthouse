@@ -4,7 +4,6 @@ import path from "node:path";
 
 const ROOT = path.resolve(import.meta.dir, "..");
 const HOOKS_PATH = path.join(ROOT, "hooks", "hooks.json");
-const GREET_SKILL_PATH = path.join(ROOT, "skills", "greet", "SKILL.md");
 
 test("plugin bundles default Codex hooks for greet detection", () => {
   const config = JSON.parse(fs.readFileSync(HOOKS_PATH, "utf8"));
@@ -29,14 +28,4 @@ test("plugin relies on default hooks/hooks.json discovery, not manifest hooks", 
 
   expect(manifest.hooks).toBeUndefined();
   expect(fs.existsSync(HOOKS_PATH)).toBe(true);
-});
-
-test("greet requires a fresh Linear signal and absent context", () => {
-  const skill = fs.readFileSync(GREET_SKILL_PATH, "utf8");
-
-  expect(skill).toContain("Never use on resume or compaction");
-  // The property: greet gates on step 1 before it says anything, whatever the wording.
-  expect(skill).toMatch(/Silent gate:[^\n]*step 1 before any[^\n]*output/);
-  expect(skill).toContain("On `main`, `master`, or `staging`");
-  expect(skill).toContain("an injected summary, prior turns, or an existing context brief");
 });

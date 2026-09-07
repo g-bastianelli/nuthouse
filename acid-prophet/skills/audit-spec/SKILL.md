@@ -1,10 +1,10 @@
 ---
 name: audit-spec
-description: Review an existing spec for contradictory behavior, unverifiable acceptance, unsupported decisions, and repository conflicts. Returns concrete blockers and a parsed readiness verdict; use before ratification or when a spec's quality is in doubt.
+description: Review an existing spec for contradictory behavior, unverifiable acceptance, unsupported decisions, and repository conflicts. Returns concrete blockers and a readiness verdict; use before ratification or when a spec's quality is in doubt.
 argument-hint: [spec-path]
 effort: high
-allowed-tools: Read, Glob, Grep, Agent, Bash
-disallowed-tools: Write, Edit, NotebookEdit
+allowed-tools: Read, Edit, Glob, Grep, Agent, Bash
+disallowed-tools: Write, NotebookEdit
 ---
 
 # acid-prophet:audit-spec
@@ -21,14 +21,15 @@ Read `../../persona.md`; it is canonical for this skill's user-facing output, an
 1. Resolve the requested spec and project root. Use the explicit path when supplied;
    ask if selection is ambiguous. Verify the file is readable. Outside a git repository,
    use the available project directory and report missing repository context.
-2. Resolve `PLUGIN_ROOT` from this skill's `../..` directory and read
+2. Resolve `PLUGIN_ROOT` from this skill's `../..` directory. Read
+   `../../shared/spec-format.md` for source identities and Audit readiness, then read
    `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md` (substitute `PLUGIN_ROOT` outside
    Claude Code). Dispatch `acid-prophet:spec-auditor`
    with `SPEC_PATH`, `PROJECT_ROOT`, `PLUGIN_ROOT`, and `MODE: report-only`.
-3. Import and execute `parseSpecAuditorReport(RAW_REPORT)` from
-   `${PLUGIN_ROOT}/lib/parse-spec-auditor-report.mjs`. Preserve the actual report. If it
-   does not parse, request one corrected report; if still malformed, report that failure
-   and its raw evidence. A missing verdict never means ready.
+3. Read the full returned report using the Audit readiness rules. Check its completeness,
+   findings, and verdict together; preserve the actual report. Request one correction
+   if it is incomplete or contradictory. If that fails, report the unresolved discrepancy
+   with its evidence and keep readiness blocked.
 4. Lead with behavioral blockers, affected criteria, and decisions needed. Link the
    complete report or include it if short. Distinguish an implementation blocker from
    a transport/metadata repair and from an optional improvement. Report
@@ -36,10 +37,11 @@ Read `../../persona.md`; it is canonical for this skill's user-facing output, an
 
 ## Authorized follow-up
 
-If the user requested fixes, apply only deterministic metadata repairs supported by the
-document/history. Import `applyFrontmatterPatch` from
-`${PLUGIN_ROOT}/lib/apply-frontmatter-patch.mjs` and pass explicit `{ key, value }`
-pairs; its module is a function, not a patching CLI. Reject a proposed repair to
+If the user requested fixes, apply only metadata repairs whose values are established by
+the document or its history. Identify the frontmatter block, then use normal file-edit
+tools to change only those keys. Preserve the body and unrelated metadata, and re-read
+the diff to confirm the scope. If the frontmatter is ambiguous, report that problem
+instead of guessing its boundaries or values. Reject a proposed repair to
 `spec-version`, `status`, `verified-by`, `linear-project`, or an acceptance id. Those
 fields carry version, approval, or external-link state and require their owning workflow.
 An audit may flag missing sections; auto-fixing metadata cannot supply their meaning.
