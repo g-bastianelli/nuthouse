@@ -1,67 +1,65 @@
 ---
 name: audit-spec
-description: Use when auditing an existing acid-prophet spec for SDD compliance, codebase reality, narrative quality, and style. Takes a spec path, dispatches the `spec-auditor` subagent, renders a structured BLOCKER/WARNING/INFO report, and offers a hand-off menu (apply auto-fixes, open spec, hand to linear-devotee, stop).
+description: Review an existing spec for contradictory behavior, unverifiable acceptance, unsupported decisions, and repository conflicts. Returns concrete blockers and a parsed readiness verdict; use before ratification or when a spec's quality is in doubt.
 argument-hint: [spec-path]
 effort: high
-allowed-tools: Read, Glob, Agent, Bash(node:*)
-paths: ["docs/acid-prophet/**"]
+allowed-tools: Read, Glob, Grep, Agent, Bash
 disallowed-tools: Write, Edit, NotebookEdit
 ---
 
 # acid-prophet:audit-spec
 
-> Agent resolution: before any subagent dispatch, read `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md` and use the active runtime's name.
-
-Rigid audit gate. Match the user's language; keep technical identifiers unchanged.
+Identify what would force an implementing engineer to guess, and what evidence resolves it.
+The requested audit is read-only unless the user also authorized specific metadata repairs.
 
 ## Voice
 
 Read `../../persona.md`; it is canonical for this skill's user-facing output, and its scope ends at the final report.
 
-## Workflow
+## Review
 
-1. Preconditions:
-   - Verify git repo: `git rev-parse --show-toplevel`. Capture as `PROJECT_ROOT`. Abort if not in a repo.
-   - Resolve the spec path: if `$ARGUMENTS` contains a spec path, use it; otherwise ask. Resolve to absolute path; verify file exists (abort if not).
-   - Warn if spec lives outside `<PROJECT_ROOT>/docs/acid-prophet/specs/`, but continue.
-2. Dispatch the logical `acid-prophet:spec-auditor` agent:
-   ```
-   Agent({ subagent_type: 'acid-prophet:spec-auditor', prompt: `SPEC_PATH: <abs path>\nPROJECT_ROOT: <root>\nMODE: report-only` })
-   ```
-   Capture full output as `RAW_REPORT`.
-3. Render report:
-   - Parse with `${CLAUDE_PLUGIN_ROOT}/claudecode/lib/parse-spec-auditor-report.mjs`. If null: print `RAW_REPORT` verbatim, skip to `(s)` branch.
-   - Otherwise print `RAW_REPORT` exactly as emitted.
-4. Hand-off menu:
-   ```
-   (a) apply auto-fixes → patch spec, commit
-   (o) open spec        → print path
-   (l) hand to linear   → linear-devotee:create-project (only if linear-project: _none_ AND handoffEligible)
-   (s) stop
-   ```
-   Disable `(l)` if any of the following hold: `linear-project` frontmatter is not `_none_`, or the parsed report's `handoffEligible` is `false` (any gate failed or any BLOCKER remains). When `(l)` is disabled, print the disabling reason in plain text under the menu — quote the first failing gate or BLOCKER from the report.
-   - `(a)`: apply each `autoFixes` entry via `apply-frontmatter-patch.mjs`, except `spec-version`: reject and surface any `spec-version` entry instead of applying it. Commit: `git commit -m "docs(acid-prophet): spec-auditor auto-fixes"`. Never `--no-verify`. If no applicable fixes: inform and return to menu.
-   - `(o)`: print absolute spec path.
-   - `(l)`: invoke `linear-devotee:create-project` with spec path.
-   - `(s)`: exit.
+1. Resolve the requested spec and project root. Use the explicit path when supplied;
+   ask if selection is ambiguous. Verify the file is readable. Outside a git repository,
+   use the available project directory and report missing repository context.
+2. Resolve `PLUGIN_ROOT` from this skill's `../..` directory and read
+   `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md` (substitute `PLUGIN_ROOT` outside
+   Claude Code). Dispatch `acid-prophet:spec-auditor`
+   with `SPEC_PATH`, `PROJECT_ROOT`, `PLUGIN_ROOT`, and `MODE: report-only`.
+3. Import and execute `parseSpecAuditorReport(RAW_REPORT)` from
+   `${PLUGIN_ROOT}/lib/parse-spec-auditor-report.mjs`. Preserve the actual report. If it
+   does not parse, request one corrected report; if still malformed, report that failure
+   and its raw evidence. A missing verdict never means ready.
+4. Lead with behavioral blockers, affected criteria, and decisions needed. Link the
+   complete report or include it if short. Distinguish an implementation blocker from
+   a transport/metadata repair and from an optional improvement. Report
+   `ready for ratification | blocked`; audit readiness never changes spec status.
 
-## Final Report
+## Authorized follow-up
 
-```text
-acid-prophet:audit-spec report
-  Spec:        <path>
-  Gates:       <N pass · N fail · N n/a | _legacy_>
-  Handoff:     <eligible | blocked: <reason>>
-  Findings:    <N blocker · N warning · N info>
-  Auto-fixes:  <N proposed | N applied | none>
-  Branch:      <a | o | l | s | malformed>
-```
+If the user requested fixes, apply only deterministic metadata repairs supported by the
+document/history. Import `applyFrontmatterPatch` from
+`${PLUGIN_ROOT}/lib/apply-frontmatter-patch.mjs` and pass explicit `{ key, value }`
+pairs; its module is a function, not a patching CLI. Reject a proposed repair to
+`spec-version`, `status`, `verified-by`, `linear-project`, or an acceptance id. Those
+fields carry version, approval, or external-link state and require their owning workflow.
+An audit may flag missing sections; auto-fixing metadata cannot supply their meaning.
+Re-audit after repairs and use only the new verdict. Leave changes uncommitted unless a
+commit was requested. Never turn a fix suggestion into an unsolicited mutation.
 
-## Never
+For requested behavioral revisions, pass the source and findings to
+`acid-prophet:write-spec`, preserving accepted ids and the user's stated intent.
 
-- Mutate files outside `docs/acid-prophet/specs/`.
-- Apply auto-fixes without user choosing `(a)`.
-- Invoke `linear-devotee:create-project` without user choosing `(l)`.
-- Skip step 1 preconditions.
-- Run `git push`, `git rebase`, or `git commit --amend`.
-- Use `--no-verify`.
+When a Linear handoff is already requested, the current report is eligible, the spec is
+ratified, and `linear-project` is `_none_`:
+
+**REQUIRED SUB-SKILL:** Use `linear-devotee:create-project` with the absolute spec path.
+
+A draft that audits cleanly still goes through ratification before that handoff. For an
+already linked spec, report the existing project rather than creating another one.
+Otherwise finish the audit without a mandatory menu or commit prompt.
+
+## Completion
+
+Report the spec path, readiness verdict, blocker/warning/info counts, any repairs actually
+applied, and the next action taken. An unreadable file or malformed report is reported
+as blocked, never as an empty successful review.
