@@ -146,7 +146,8 @@ test("orchestrate uses one Linear capacity calculation and bounded Superset tran
   expect(orchestrate).toMatch(/linear-<lowercaseissueid>-<taskdigest>/);
   expect(tools).toMatch(/Bash\(superset workspaces create:\*\)/);
   expect(tools).toMatch(/Bash\(superset agents create:\*\)/);
-  expect(tools).not.toMatch(/workspaces (list|get|update)|terminals/i);
+  expect(tools).toMatch(/Bash\(superset workspaces list:\*\)/);
+  expect(tools).not.toMatch(/workspaces (get|update)|terminals/i);
 });
 
 test("status reports the same Linear-only capacity without Superset", () => {

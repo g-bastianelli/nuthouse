@@ -102,7 +102,10 @@ from narrow local discovery. Never consult a project control.
    an existing worker because the CLI exposes no stronger agent/shell discriminator.
 3. Show one final preview containing mode, issue status and blockers or quick-fix
    objective, task or branch, host, Superset project, agent, create/recover action,
-   workspace name, and the complete worker prompt. Ask exactly once:
+   workspace name, and the complete worker prompt. For `create`, first resolve `tagArgs`
+   using **Workspace groups** in the shared contract and include the inherited groups
+   (or root) in this preview; unresolved placement refuses creation. For `recover`, show
+   the matched workspace's existing groups and preserve them. Ask exactly once:
 
 ```text
 Create or recover this displayed worker? (y / cancel)
@@ -119,6 +122,7 @@ superset workspaces create \
   --host <targetHostId> \
   <bindingArgs> \
   --name <workspaceName> \
+  <tagArgs> \
   --json
 ```
 
@@ -168,5 +172,6 @@ monkey-maestro:spawn report
   Work:       <issue id / live status / blockers | quick-fix objective>
   Binding:    <task id | branch name>
   Workspace:  created | reused | none
+  Groups:     <inherited tags or root for create; existing groups for recover>
   Result:     dispatched | already-running | concurrent-reuse | launch-failed | launch-unknown | already-terminal | blocked | canceled | degraded
 ```
