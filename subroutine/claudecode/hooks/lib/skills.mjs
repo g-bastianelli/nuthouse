@@ -221,8 +221,8 @@ export function sweepStaleMarkers(memoDir, ttlMs = MEMO_TTL_MS, now = Date.now()
  * Split `skills` into the ones not yet injected this session (`fresh`) and the
  * ones already injected (`seen`). Marking happens only after budget packing,
  * because a summarized overflow discipline has not yet been delivered in full.
- * With no `sessionId` (e.g. review subagents, which start blind to the parent
- * transcript), everything is `fresh`. Any fs error treats the skill as fresh.
+ * With no `sessionId`, everything is `fresh`. Any fs error treats the skill as
+ * fresh.
  */
 export function partitionBySession(skills, sessionId, memoDir = MEMO_DIR) {
   if (!sessionId) return { fresh: skills, seen: [] };

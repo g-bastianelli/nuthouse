@@ -1,13 +1,12 @@
 {
   "name": "git-gremlin",
   "displayName": "Git Gremlin",
-  "description": "Git gremlin — auto-triggers contextual review, auto-prepared commits, and branch-publishing GitHub PR helpers while keeping mutations behind scoped intent gates",
+  "description": "Git gremlin — auto-prepared commits, review-comment discipline, and branch-publishing GitHub PR helpers while keeping mutations behind scoped intent gates",
   "version": "1.0.20",
   "author": {
     "name": "g-bastianelli"
   },
   "repository": "https://github.com/g-bastianelli/nuthouse",
   "homepage": "https://github.com/g-bastianelli/nuthouse",
-  "skills": "./skills/",
-  "agents": ["./agents/reviewer.md"]
+  "skills": "./skills/"
 }

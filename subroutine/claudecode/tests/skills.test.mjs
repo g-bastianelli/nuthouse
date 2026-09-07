@@ -124,7 +124,7 @@ test("a backend .ts packs every relevant discipline in full under the hook budge
   expect(payload).not.toContain("also binding");
 });
 
-test("buildDisciplinePayload over ALL skills (review) stays under the cap", () => {
+test("buildDisciplinePayload over ALL skills stays under the cap", () => {
   const skills = discoverSkills(SKILLS_DIR);
   const payload = buildDisciplinePayload(skills);
   expect(payload.length).toBeLessThan(ADDITIONAL_CONTEXT_CAP);
@@ -262,7 +262,7 @@ test("partitionBySession reports markers written after full delivery", () => {
   }
 });
 
-test("partitionBySession treats everything fresh with no sessionId (review path)", () => {
+test("partitionBySession treats everything fresh with no sessionId", () => {
   const skills = discoverSkills(SKILLS_DIR);
   const r = partitionBySession(skills, "");
   expect(r.fresh.length).toBe(skills.length);
