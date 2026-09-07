@@ -27,6 +27,12 @@ state and derives a stable `quick/<slug>-<digest>` branch so the same request ca
 recovered. Both modes discover ordinary local Superset transport when explicit selectors
 are absent and require one final approval before mutation.
 
+New workspaces from `orchestrate` and both `spawn` modes inherit all sidebar groups
+(Superset tags) from the workspace where the command runs. Run Maestro from `lot 2` and
+its new workspaces appear in `lot 2`. A workspace at root, or an invocation outside
+Superset, creates at root. Existing workspaces keep their groups when reused or recovered.
+An unavailable source group read is reported instead of silently creating at root.
+
 ## Skills
 
 | Skill                        | Responsibility                                                      |

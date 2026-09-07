@@ -3,7 +3,7 @@ name: orchestrate
 description: Use when the user wants Monkey Maestro to run an active Linear project. Counts live started issues, fills remaining slots, and safely creates or reuses one Superset workspace per selected issue.
 argument-hint: "<linear-project-id>"
 effort: medium
-allowed-tools: Read, Bash(node:*), Bash(superset tasks get:*), Bash(superset workspaces create:*), Bash(superset agents create:*), Agent
+allowed-tools: Read, Bash(node:*), Bash(superset tasks get:*), Bash(superset workspaces list:*), Bash(superset workspaces create:*), Bash(superset agents create:*), Agent
 ---
 
 # orchestrate
@@ -43,7 +43,9 @@ capacity and readiness. Superset receives selected work but never changes the pl
    from this bounded result and require it to remain ready. In parallel, fetch each exact
    Superset task. A changed, unknown, terminal, or non-ready issue, or a failed detail/task
    read, fails only that selected issue; do not backfill it during this invocation.
-6. Render the shared deterministic issue workspace name
+6. Resolve the invoking workspace's groups using **Workspace groups** in the shared
+   contract. If placement is unresolved, report `degraded` without creating workspaces.
+   Render the shared deterministic issue workspace name
    `linear-<lowercaseIssueId>-<taskDigest>`, where `taskDigest` is the first eight
    hexadecimal characters of SHA-256 over the exact task id. Render the complete worker
    prompt per valid issue. Attempt exactly one branch-scoped workspace create-or-reuse per
@@ -55,6 +57,7 @@ superset workspaces create \
   --host <targetHostId> \
   --task <taskId> \
   --name <workspaceName> \
+  <tagArgs> \
   --json
 ```
 
@@ -97,6 +100,7 @@ monkey-maestro:orchestrate report
   Project/run: <project id> / <run id>
   Linear:      started <n> · ready <n> · slots <n>
   Selected:    <stable issue ids or none>
+  Groups:      <inherited tags or root; reused workspaces keep their groups>
   Superset:    <per-issue dispatched / already-existing / create-failed / launch-failed / launch-unknown>
   Recovery:    <per-issue spawn / reconcile command or none>
   Exit:        idle | dispatched | degraded | stopped

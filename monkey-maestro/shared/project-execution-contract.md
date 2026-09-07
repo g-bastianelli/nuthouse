@@ -42,6 +42,35 @@ workspace `quick-<slug>-<digest>`. Bind it with `--branch <branchName>` and
 `--skip-branch-prefix`; the stored branch must remain exactly the derived identity used by
 recovery matching.
 
+## Workspace groups
+
+New workspaces inherit the invoking workspace's Superset sidebar groups. Groups are
+workspace tags, passed as one `--tag <tag>` argument per tag at creation time.
+
+Before creating workspaces, read `superset workspaces list --local --json` once. Resolve
+the source by exact `SUPERSET_WORKSPACE_ID` when set; otherwise use the unique workspace
+whose `worktreePath` most specifically contains the current directory (compare complete
+path segments). Read the source on the local host, even when dispatch targets another
+host or project. Never select the source by the destination project, issue, branch, or
+display name. `workspaces get` does not expose tags in the current CLI.
+
+The listing's `tags` field is a comma-separated string: split on commas, trim each entry,
+and discard empty entries. Preserve spelling, case, and spaces within each tag. Set
+`tagArgs` to one separately shell-quoted `--tag <tag>` pair per distinct tag, or no
+arguments when the source has an empty tag string. For example, `lot 2` becomes
+`--tag 'lot 2'`. Inherit all tags when the source belongs to several groups.
+
+A successful listing with no enclosing workspace and no Superset workspace environment
+or worktree path means this invocation is outside Superset: use no tags. An unreadable
+listing, missing declared source, ambiguous path match, or missing/malformed `tags` is
+unresolved placement; report it before creation instead of silently spawning at root.
+
+Resolve this once per invocation and use the same `tagArgs` for the whole batch. Groups
+are invocation context, not Linear control fields or part of the deterministic workspace
+identity. Reused or recovered workspaces keep their existing groups; do not retag them or
+filter duplicate/recovery matches by tags. Include inherited groups (or root) in creation
+previews and reports, and show existing placement when recovering a workspace.
+
 ## Linear retrieval boundary
 
 Linear-backed public skills never hydrate a whole Linear project into their main context.
@@ -107,7 +136,8 @@ and readiness only from that Linear set. If the control is inactive or unusable,
 Linear is unavailable or incomplete, perform no Superset mutation.
 
 For each selected ready issue, resolve its exact Superset task and selected Linear detail,
-then render its worker prompt. Attempt exactly one branch-scoped workspace creation or
+then render its worker prompt. Resolve `tagArgs` using **Workspace groups**. Attempt
+exactly one branch-scoped workspace creation or
 reuse without embedding an agent launch:
 
 ```text
@@ -116,6 +146,7 @@ superset workspaces create \
   --host <targetHostId> \
   --task <taskId> \
   --name <workspaceName> \
+  <tagArgs> \
   --json
 ```
 
