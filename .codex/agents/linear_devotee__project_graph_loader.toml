@@ -24,44 +24,56 @@ state, **ever**.
 PROJECT_ID: <Linear project id | _unknown_>
 PROJECT_CLIENT_REF: <approved project client_ref>
 TEAM_ID: <approved team id>
-CHAIN_STATE_FILE: <absolute path>
+ENVELOPE_FILE: <absolute approved mutation-envelope path>
 ```
 
-`CHAIN_STATE_FILE` contains the approved normalized graph, stable client refs, and any
-already confirmed Linear ids. `TEAM_ID` is the only workspace boundary allowed while resolving an
+`ENVELOPE_FILE` contains the complete approved mutation envelope, including its `graph` and
+stable client refs. `TEAM_ID` is the only workspace boundary allowed while resolving an
 unknown project id after an ambiguous create timeout.
 
 ## Mission
 
-1. Read the chain-state and require `mutation_envelope`, `normalized_graph`,
-   `approved_payload_hash`, `graph_hash`, and matching `PROJECT_CLIENT_REF` / `TEAM_ID`. Run
-   `project-graph.mjs validate-envelope` on the stored envelope and require its payload
-   and graph hashes to match those durable fields before trusting correlation keys. If
-   anything is absent or mismatched, return `complete: false` with an `unknown` entry;
-   do not infer an old schema.
+1. Read `shared/provider-selection.md` from the active plugin root. Read `ENVELOPE_FILE` and
+   run the existing `scripts/project-graph.mjs validate-envelope` on it. Require a valid envelope
+   whose `graph.project.clientRef` and `graph.project.teamId` match the supplied project ref and
+   team. Missing or conflicting input returns `complete: false` with an `unknown` entry. The
+   caller owns authorization; this read-only loader checks the actual supplied artifact.
 2. If `PROJECT_ID` is `_unknown_`, list projects only for `TEAM_ID` and inspect candidates for the
-   exact approved `<!-- nuthouse-client-ref: <PROJECT_CLIENT_REF> -->` description marker. Zero or
-   multiple exact matches is `project-correlation-unknown`; never retry project creation, search
-   other teams, or match by title. Persist nothing—the caller records the uniquely resolved id in
+   exact approved `<!-- nuthouse-client-ref: <PROJECT_CLIENT_REF> -->` description marker.
+   Multiple exact matches are `project-correlation-unknown`; never search other teams or match by
+   title. Zero matches after a complete authoritative enumeration confirms absence: return
+   `projectId: null`, `graph: null`, `complete: true`, empty id maps, `fieldsVerified: false`,
+   and a project-existence difference. An incomplete or uncertain read is unknown instead.
+   Persist nothing—the caller records the uniquely resolved id in
    its append-only ledger. If `PROJECT_ID` is present, require its current team and exact marker to
    match before continuing.
 3. Fetch the resolved project with milestones and list every issue in that project. Follow
    pagination until exhausted. For every issue, fetch relations with
    `includeRelations: true` when the list response does not include full blockers.
-4. Correlate entities using confirmed ids first, then the exact hidden marker
+4. Correlate entities using the exact hidden marker
    `<!-- nuthouse-client-ref: <uuid> -->` in the approved Linear description. A missing
    marker, duplicate marker, entity from another project, absent relation field, or
    pagination failure is `unknown`; never match by title alone.
 5. Build normalized entity fields from the fresh Linear response, never from their
    approved counterparts: use the current project team/title, milestone project/title,
    and issue project/milestone/title. For non-foundation issues parse current stable
-   `AC-###` / `AC-L###` coverage from each issue description. For foundation-only issues
+   `AC-###` / `AC-L###` coverage from active Acceptance criterion lines in each issue description;
+   ids in non-goals, history, or references to other tickets do not count as assigned coverage.
+   For foundation-only issues
    require and base64url-decode the exact
    `<!-- nuthouse-foundation-reason: ... -->` marker into `foundationReason`, with
    `acceptanceIds: []`. Missing, mixed, malformed, or ambiguous coverage is `unknown`.
 6. Emit the normalized graph with `dependentRef -> blockerRef` edges. Include every
    created project entity, including unexpected marked entities, so exact comparison can
    report extras. Sort arrays by `clientRef` and edges by dependent then blocker.
+7. Compare the freshly read project name/description/team/status, milestone name/description/date/
+   membership, and issue title/description/labels/membership with the approved envelope, resolving
+   actual Linear ids through the confirmed marker map. Compare id collections as sets. Read any
+   missing fields from their resource detail rather than filling them from the preview. In
+   particular, compare full Acceptance text, not only its ids. Return `fieldsVerified: true`
+   only when every expected field is known and agrees, with an empty `fieldDifferences` list.
+   Differences name the entity, field, expected value, and actual value; unavailable data is
+   also recorded in `unknown`. Graph equivalence alone cannot establish field verification.
 
 ## Output
 
@@ -74,32 +86,50 @@ Return strict JSON only:
   "complete": true,
   "graph": {
     "schemaVersion": 1,
-    "project": { "clientRef": "<ref>", "teamId": "<id>", "title": "<title>" },
-    "milestones": [],
-    "issues": [{ "clientRef": "<ref>", "acceptanceIds": [], "foundationReason": "<reason>" }],
+    "project": { "clientRef": "<project-ref>", "teamId": "<team-id>", "title": "<title>" },
+    "milestones": [
+      { "clientRef": "<milestone-ref>", "projectRef": "<project-ref>", "title": "<title>" }
+    ],
+    "issues": [
+      {
+        "clientRef": "<issue-ref>",
+        "projectRef": "<project-ref>",
+        "milestoneRef": "<milestone-ref>",
+        "title": "<title>",
+        "acceptanceIds": [],
+        "foundationReason": "<reason>"
+      }
+    ],
     "edges": []
   },
   "linearIds": {
-    "project": { "<client-ref>": "<Linear id>" },
-    "milestones": { "<client-ref>": "<Linear id>" },
-    "issues": { "<client-ref>": "<Linear id>" }
+    "project": { "<project-ref>": "<Linear project id>" },
+    "milestones": { "<milestone-ref>": "<Linear milestone id>" },
+    "issues": { "<issue-ref>": "<Linear issue id>" }
   },
-  "confirmedRelations": ["<dependent-ref><-<blocker-ref>"],
+  "fieldsVerified": true,
+  "fieldDifferences": [],
   "unknown": []
 }
 ```
 
 When any required value is unavailable, set `complete: false`, preserve all trustworthy
 fields, and list stable codes plus details in `unknown`.
+Confirmed absent entities/edges after complete reads are differences, not unknown data. Preserve
+the actual partial graph and known id maps so the caller can resume only that missing work.
+The issue example is foundation-only. A product issue instead carries its active `acceptanceIds`
+and omits `foundationReason`. Omit `milestoneRef` when the issue has no milestone; include full
+project membership and title for every entity.
 
 ## Hard rules
 
 - Read-only: no `save_*`, create, update, delete, local write, or git mutation.
-- Linear is authoritative; the chain-state supplies correlation keys, not runtime truth.
+- Linear is authoritative; the approved envelope supplies correlation keys, not runtime truth.
 - Never match entities by mutable title or array position.
 - Never retry an unknown project write; resolve only the exact approved marker inside `TEAM_ID`.
 - Never copy an approved title, milestone, Acceptance id, or edge into the actual graph.
 - Never hide missing, reversed, duplicate, or extra relations.
-- Output strict JSON only and keep it under 500 words.
+- Output strict JSON only. Keep every entity, edge, and unknown even when the graph exceeds
+  500 words; a truncated graph is not a complete reload.
 - Voice stays neutral; the calling skill owns persona output.
 '''

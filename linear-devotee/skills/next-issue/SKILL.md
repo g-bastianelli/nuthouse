@@ -1,86 +1,60 @@
 ---
 name: next-issue
-description: Use when the user says a Linear issue is finished/done/complete and wants the next issue to work on, or asks which Linear issue to take next in the same project. Resolves the current issue, reads project issues, respects completed/canceled states and blockers, and recommends the next startable issue without auto-starting greet or mutating Linear.
-argument-hint: [issue-id]
+description: Use when a Linear issue is finished and the user wants the next issue, or asks which issue to take next in the project. Reads current statuses and blockers, distinguishes active work from available work, and recommends a startable issue without changing Linear.
+argument-hint: "[issue-id]"
 model: haiku
 effort: medium
-allowed-tools: Read, Agent
+allowed-tools: Read, Glob, Bash, Agent, ToolSearch
 ---
 
 # linear-devotee:next-issue
 
 > Agent resolution: before any subagent dispatch, read `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md` and use the active runtime's name.
 
-Read-only next-work recommender. Match the user's language; keep technical identifiers unchanged.
+Read-only next-work selection. Resolve the plugin root from this skill's directory (`../..`)
+and read `../../shared/provider-selection.md`.
 
 ## Voice
 
 Read `../../persona.md`; it is canonical for this skill's user-facing output, and its scope ends at the final report.
 
-## Context
+## Establish current work
 
-> Auto-injected on Claude Code at skill load. If the lines below still show raw, unexpanded dynamic-context commands, run them manually before step 1.
+Use the explicit issue/project or current conversation first, then the current branch and a
+matching greet cache. Do not select the most recent cache from an unrelated project. Ask for the
+issue or project only when it remains ambiguous.
 
-- Session state: !`cat "${CLAUDE_PLUGIN_DATA}/state-${CLAUDE_SESSION_ID}.json" 2>/dev/null || echo "no state"`
+If the user says the current issue is done, treat it as completed for this recommendation and
+state that assumption when it affects the result. Do not update its Linear status. Fetch its
+project context, then all candidate issues with status types, milestone/order, assignee, and
+blocking relations. Paginate or scope further as needed; unknown blockers are not an empty list.
+Resolve blocker statuses even when they belong to another project.
 
-## Workflow
+Use a bounded read-only scout for a large project fetch when it keeps the main context useful;
+selection still belongs to this skill. No extra agent is needed for a small complete result.
 
-1. Preconditions:
-   - Verify Linear access with `ToolSearch` query `linear`.
-   - Verify git repo. Capture `PROJECT_ROOT = $(git rev-parse --show-toplevel)`.
-   - Do not mutate Linear. This skill recommends only.
-2. Resolve current issue:
-   - Priority:
-     1. explicit issue id in `$ARGUMENTS` or the user prompt
-     2. `issue` from the `Session state` JSON in `## Context` (skip when it shows `no state`)
-     3. most recent `${CLAUDE_PLUGIN_DATA}/greet-<ISSUE_ID>.json`
-     4. current branch name containing an issue identifier
-   - If absent, ask for the current Linear issue id.
-   - Treat the current issue as completed for recommendation purposes when the user says it is finished/done/complete, even if Linear has not been updated yet. Clearly report this as an assumption. Do not change the Linear status.
-3. Fetch Linear context:
-   - Provider selection: read `${CLAUDE_PLUGIN_ROOT}/shared/provider-selection.md`.
-   - Fetch the current issue, including project id/name, team, status, url, relations/blockers if exposed.
-   - Fetch all issues in the current issue's project, including identifier, title, url, status name/type, milestone/project milestone, sort/order fields if exposed, and blockers/blockedBy if exposed.
-   - If MCP tools are unavailable, use read-only Linear CLI commands via `Bash` (`which linear`, then `linear issue view`, `linear issue list`, or equivalent available subcommands). If neither provider works, stop with `blocked: Linear context unavailable`.
-4. Select next issue:
-   - Exclude the current issue.
-   - Exclude issues whose status type is `completed` or `canceled`.
-   - Treat the current issue as completed if step 2 says so.
-   - A candidate is startable when every blocking issue is completed/canceled, or the only incomplete blocker is the current issue and the user said it is finished.
-   - Prefer candidates in this order:
-     1. same milestone/project milestone as the current issue
-     2. earliest project milestone sort/order
-     3. explicit issue sort/order from Linear
-     4. lowest issue number in the same team key
-     5. oldest created issue
-   - If multiple candidates tie, show the top 3 and recommend the first.
-   - If no issue is startable, report the closest blocked issue and list its unresolved blockers.
-   - If no open issues remain, report that the project has no next issue.
-5. Output:
-   - Print a compact recommendation:
-     ```text
-     Recommended next issue: <identifier> - <title> - <url>
-     Reason: <same milestone | earliest unblocked | all blockers satisfied | current issue treated as done>
-     Start with: linear-devotee:greet <identifier>
-     ```
-   - Do **not** write greet state, invoke `linear-devotee:greet`, invoke `linear-devotee:plan`, or continue automatically.
-   - If no recommendation exists, print the blocker/all-done reason and omit the `Start with` line.
+## Choose from evidence
 
-## Final Report
+- Exclude the current issue and `completed`/`canceled` work. Show already `started` work separately
+  rather than recommending a duplicate start; resuming it needs the user's requested ownership.
+- A new candidate is startable when all its blockers are completed/canceled, including the
+  current issue only under the user's explicit done assumption. An unresolved relation or
+  unknown blocker state leaves readiness unknown until checked.
+- Prefer the current milestone, then explicit milestone order, issue order, issue number in the
+  same team, and creation time. Respect a user-supplied priority or ownership constraint first.
+  An issue assigned elsewhere should be identified as such, not silently treated as free work.
+- If several candidates remain equivalent, show up to three with a recommendation and reason.
+  If none is startable, name the closest blocked work and what must finish or be clarified.
+  If no open issues remain, say so without inventing a next step.
 
-```text
-linear-devotee:next-issue report
-  Current issue:    <identifier> - <title>
-  Project:          <project.name> (<project.id>)
-  Current treated:  done | not-done | unknown
-  Candidates:       <N startable> startable · <N blocked> blocked · <N done/canceled> done-or-canceled
-  Recommended next: <identifier> - <title> - <url | _none_>
-  Hand-off:         user-starts-greet <identifier> | none | blocked
-```
+## Report
 
-## Never
+Give the current issue/project, any done assumption, and the next issue's title/link plus the
+actual reason it is startable. Name unknowns that limit the recommendation. Include
+`Start with: linear-devotee:greet <identifier>` only for an eligible candidate. This recommendation
+is not authorization to change status, assignment, blockers, or start another workspace.
 
-- Mutate Linear status, assignee, priority, labels, blockers, or comments.
-- Invoke `linear-devotee:greet`, `linear-devotee:plan`, or implementation work automatically.
-- Recommend a blocked issue without explicitly naming the unresolved blocker assumption.
-- Run `git push`, `git commit`, or `git rebase`.
+If the user's request also explicitly includes starting the selected work, hand it to the
+appropriate delivery workflow with that existing authority; do not add another confirmation for
+an already authorized step. Otherwise finish with the recommendation. Never mutate Linear,
+commit, push, or rebase within this skill.

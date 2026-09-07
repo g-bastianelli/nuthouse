@@ -1,233 +1,139 @@
 ---
 name: write-plan
-description: Use after a spec has been ratified and before any code is written — turns an approved spec into a concrete implementation plan with file-level architecture decisions, typed API/data contracts, and a quickstart validation scenario. Produces docs/acid-prophet/plans/<slug>/{plan.md, contracts/*.md, quickstart.md, codebase-map.md} and is consumed downstream by the main implementation turn or linear-devotee:create-issue.
+description: Turn an approved spec into an implementation plan grounded in repository code, with dependency-ordered deliverables, necessary contracts, and observable acceptance checks. Use before implementing a ratified Acid Prophet spec.
 argument-hint: [spec-path]
 model: opus
 effort: xhigh
-allowed-tools: Read, Glob, Grep, Bash, Agent
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Agent
 ---
 
-# write-plan
+# acid-prophet:write-plan
 
-> Agent resolution: before any subagent dispatch, read `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md` and use the active runtime's name.
+Produce a plan an implementing engineer can execute and verify without rediscovering
+the project or making unstated product decisions.
 
-Rigid planning gate. Match the user's language; keep technical identifiers unchanged.
+Resolve `PLUGIN_ROOT` from this skill's `../..` directory. Before dispatching the spec
+auditor, read `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md` in Claude Code, or the
+same file under the resolved `PLUGIN_ROOT` in other runtimes.
 
 ## Voice
 
 Read `../../persona.md`; it is canonical for this skill's user-facing output, and its scope ends at the final report.
 
-## When you're invoked
+## Resolve the source
 
-The user has an approved spec under `docs/acid-prophet/specs/` and wants to lock the architecture, contracts, and validation scenario before implementation begins. Typically called between `write-spec` and the implementation turn / `linear-devotee:create-project`. If invoked on an unapproved spec (`status != ratified | approved | ready | implementing`), warn and require explicit user confirmation.
+Establish `PROJECT_ROOT` from the repository. Use a caller's `SPEC_FILE` exactly; otherwise
+use the argument path, then a unique matching spec under `docs/acid-prophet/specs/`.
+Ask when selection remains ambiguous. Do not reconstruct a supplied path from conversation.
 
-## Invoked from linear-devotee:create-project
+Read the source and `../../shared/spec-format.md`. Require an approved source status
+(`ratified | approved | ready | implementing`), a positive `spec-version`, and no open
+clarification markers. If the source is still a draft, route it through
+`acid-prophet:write-spec` for reconciliation and ratification; do not offer an override
+that is immediately contradicted by an audit gate.
 
-When `linear-devotee:create-project` calls this skill to obtain a plan, it passes named
-absolute paths:
+Reuse a complete passing auditor report when its spec content and relevant project evidence
+still apply, including a report from the preceding skill or a resumed session. Read the source
+and prior findings; a skill/session boundary or metadata-only ratification is not a reason to
+repeat the audit. Re-audit when the report is missing, substantive source changes or relevant
+code changes invalidate it, or a consequential finding remains unresolved. Then dispatch
+`acid-prophet:spec-auditor` with
+`SPEC_PATH`, `PROJECT_ROOT`, `PLUGIN_ROOT`, and `MODE: report-only`. Read its actual output
+using Audit readiness in `../../shared/spec-format.md`; require a complete, consistent
+assessment whose findings support handoff. Request one correction for a missing or
+contradictory assessment. If readiness remains unconfirmed, report the problem and keep
+planning blocked; never silently use another spec or invent ids.
 
-```text
-SPEC_FILE: <absolute path to the ratified source spec>
-RETURN_TARGET: linear-devotee:create-project
-```
+Extract active `SOURCE_AC_IDS` only from Acceptance, excluding history and examples.
+Read `docs/acid-prophet/constitution.md` when present; otherwise set `CONSTITUTION_FILE`
+to `_none_`. A planning request never creates a constitution implicitly.
 
-Require `SPEC_FILE` to exist and be readable; a missing artifact blocks. Artifacts travel by
-absolute path — never reconstruct one from conversation prose, and never select a different
-spec by branch or filename. Return to `RETURN_TARGET` in step 12 instead of showing the
-generic next-step menu, and perform no Linear mutation.
+## Map the implementation before dividing the work
 
-## Workflow
+Read applicable instructions and trace the source paths, symbols, and tests the feature
+depends on. Reuse recent evidence when still current. Delegate a bounded exploration
+when useful, asking for existing utilities, state owners, integration seams, test commands,
+and unresolved evidence. Distinguish verified paths from proposed new files.
 
-1. Preconditions:
-   - Verify git repo: `PROJECT_ROOT = $(git rev-parse --show-toplevel)`. Abort if not in a repo.
-   - Ensure `${PROJECT_ROOT}/docs/acid-prophet/plans/` exists; create if missing.
-   - When `SPEC_FILE` was supplied by a caller, require it to exist and be readable before reading any other artifact; a missing artifact blocks.
-2. Resolve the spec:
-   - When `SPEC_FILE` was supplied, resolve the spec only from that absolute path. Do not select by branch or filename.
-   - If `$ARGUMENTS` contains a spec path, use it. Resolve to absolute; verify file exists.
-   - Otherwise, scan `docs/acid-prophet/specs/`. Match by current branch's Linear identifier, then by closest filename slug, then ask if still ambiguous.
-   - Abort if zero candidates.
-3. Pre-flight gate:
-   - Read the spec frontmatter. If `status` is not one of `ratified | approved | ready | implementing`, ask: `spec status is <X>; plan may shift. continue (y) | stop (s)?`. Default to stop.
-   - Require `spec-version` to parse as a base-10 integer ≥ 1. Abort to `acid-prophet:audit-spec` when it is missing or invalid; never substitute a default version.
-   - Grep for unresolved `[NEEDS CLARIFICATION:` markers in the spec. If any exist, list them and ask `<N> unresolved markers — plan will inherit gaps. continue (y) | stop (s)?`. Default to stop.
-   - Dispatch the logical `acid-prophet:spec-auditor` agent in `MODE: report-only` and
-     capture its complete output as `RAW_REPORT`. Import and execute
-     `parseSpecAuditorReport(RAW_REPORT)` from
-     `${CLAUDE_PLUGIN_ROOT}/claudecode/lib/parse-spec-auditor-report.mjs`; do not interpret
-     the markdown by hand. Require the parsed `handoffEligible === true` plus
-     `gates["acceptance-traceable"] === "pass"`. Abort planning on null parser output,
-     missing/duplicate ids, or any failed gate; send the user to `acid-prophet:audit-spec`
-     instead of inheriting a broken source.
-   - Scope Acceptance extraction to the section headed exactly `Acceptance` (case-insensitive), stopping at the next heading of the same or higher level; exclude `Acceptance history`. Extract every id matching `AC-###` from that active section into `SOURCE_AC_IDS` only after the audit passes.
-   - The constitution applies exactly when the regular file `${PROJECT_ROOT}/docs/acid-prophet/constitution.md` exists. Read it when present; its articles become design constraints for every step below. When it is absent, record `CONSTITUTION_FILE: _none_` and continue — this workflow never creates a constitution implicitly.
-4. Explore the codebase (read-only):
-   - Dispatch an `Explore` subagent with the spec body as context. Ask it to: (a) locate every file/path the spec references and report whether it exists, (b) identify existing utilities, hooks, or modules that overlap with the spec's solution, (c) flag any architectural pattern (state management, routing, data fetching) already established in the codebase the plan must conform to. Capture as `CODEBASE_MAP`.
-   - Format `CODEBASE_MAP` as a markdown document destined for `${PROJECT_ROOT}/docs/acid-prophet/plans/<slug>/codebase-map.md` (written in step 11 with the other artifacts). Required sections: `# codebase map — <slug>`, `## Relevant files` (path + one-line role + exists/missing), `## Existing patterns` (established conventions the plan must conform to), `## Integration points` (where the new work plugs into existing code). This map is exploration context that travels with the plan — the implementing agent reads it instead of re-discovering the codebase from zero.
-5. Architecture decisions (one question at a time):
-   - For each open architectural question implied by the spec (storage shape, sync vs async, transport, state ownership, error propagation, retry policy) ask the user one focused question. Apply the uncertainty rule: when the user has not specified a value, emit `[NEEDS CLARIFICATION: ...]` inline and move on — never invent.
-   - Reuse before adding: when `CODEBASE_MAP` shows an existing utility that fits, propose reuse with a single sentence; require the user to opt out before introducing a parallel implementation.
-6. Data contracts:
-   - For each data model, request/response payload, message shape, or event the spec describes, draft one typed contract file. One contract per file at `${PROJECT_ROOT}/docs/acid-prophet/plans/<slug>/contracts/<contract-name>.md`. Slug rule: kebab-case, ASCII only.
-   - Required sections, in order: `# contract: <name>`, `## Shape`, `## Origin`, `## Invariants`, `## Errors`.
-     - `## Shape` — a fenced `ts` block, ≤ 30 lines, holding a typescript-like sketch (`type <Name> = { … };` or a zod schema). No prose inside the block.
-     - `## Origin` — bullets: `source: <spec section>:<line>`, `producer: <component / module>`, `consumer(s): <component / module>`.
-       Add `covers: <comma-separated AC-### ids | foundation>` so each contract is traceable to observable behavior or explicitly classified as enabling infrastructure.
-     - `## Invariants` — bullets, one invariant per line plus how it's enforced (runtime guard, type system, test).
-     - `## Errors` — bullets, one error case per line plus where it surfaces.
+Record the result in `codebase-map.md`. Follow established conventions unless a concrete
+requirement prevents it. Resolve reversible technical details within delegated authority
+and explain consequential choices. Ask only when the choice changes approved behavior,
+scope, external commitments, or an expensive boundary. Do not fill a contract with
+guessed product policy. Source defects go back to the spec owner for an explicit revision.
 
-7. Quickstart scenario:
-   - One concrete end-to-end scenario the user / a test can run to prove the feature works from outside. Format:
+## Build deliverables with evidence
 
-     ```markdown
-     # quickstart — <slug>
+Read `../../shared/plan-format.md` for the artifact shapes and handoff fields.
 
-     ## Setup
+- Each task delivers a behavior or a necessary enabling change with a concrete consumer.
+  Group setup with the deliverable it serves. Split tasks where one outcome can be
+  implemented and verified independently; avoid a separate task for every command.
+- Order dependencies explicitly. Put the riskiest unproven integration early enough
+  to change the plan before the bulk of implementation. For data migrations or partial
+  writes, specify ordering/recovery only where the feature needs them.
+- Give each task files/symbols, intended change, `covers: AC-###` (or `foundation` with a
+  reason), verification command or manual check, and the expected observable result.
+  An id alone does not prove a task implements that criterion.
+- Use existing testing tools. For a regression, identify the failing behavior to reproduce
+  first; for new behavior, name the success and relevant failure checks. Do not require
+  a new framework, full implementation pasted into the plan, or TDD for a prose-only edit.
+- Create a typed contract only for a changed data/interface boundary. Document producers,
+  consumers, invariants, and errors using actual repository conventions. A single consumer
+  is sufficient when the boundary has a concrete purpose. Keep `contracts/` empty when no
+  contract is needed, and say why in the plan.
+- Make `quickstart.md` an executable scenario or a set of focused scenarios that cover
+  every active AC, including applicable negative paths. State preconditions, actions,
+  expected outcomes, and cleanup. These are planned checks, not results already obtained.
 
-     - <step>: <command or precondition>
+Write the draft artifacts before asking anyone to review them. For multi-turn work, keep
+only the current step, artifact paths, and unresolved decisions in
+`.nuthouse/plan-<slug>/progress.md`; resume by reading that ledger and the artifacts.
 
-     ## Walkthrough
+## Review the whole plan
 
-     1. <user-visible action>
-        observe: <expected externally visible outcome>
-        covers: AC-001
-     2. …
+Compare the spec against tasks, contracts, and quickstart. Every active id needs a real
+implementation path and an observable check. Reject unknown/retired ids, uncovered
+requirements, incompatible types, impossible task ordering, or tests that only assert
+an internal detail instead of the required behavior. Check source and plan versions agree.
 
-     ## Cleanup
+For a plan with a new boundary, interacting tasks, or material failure/recovery behavior,
+dispatch a fresh read-only agent with the spec, draft artifacts, repository root, and
+constitution path. Ask it to walk the plan as the implementing engineer: identify concrete
+missing decisions, contradictions, unavailable integration points, unverified acceptance,
+or dependency problems. Request evidence and consequences, or an explicit no-blocker
+result. Do not send your own desired verdict. A small conventional plan can use the same
+walkthrough locally; report which review was performed.
 
-     - <step>
-     ```
+Fix evidenced defects, then recheck the affected relationships. After two unsuccessful
+correction attempts on the same blocker, leave the draft with the reason and decision
+needed. Report coverage, meaningful findings, and any check that could not be confirmed.
 
-   - The walkthrough is the executable form of the spec's Acceptance section. Every `SOURCE_AC_IDS` value must appear in at least one `covers:` line. Anything in Acceptance that has no walkthrough step is a missing scenario — emit `[NEEDS CLARIFICATION: missing walkthrough step for "<AC-ID> <AC quote>"]` rather than invent.
+Present one coherent review with links, important choices, and risks. If the user delegated
+the technical planning and the plan remains within approved behavior, complete validation
+after these checks. Otherwise obtain the outstanding approval on the concrete artifacts.
+On validation, set `status: validated`, `validated-at` to the current ISO timestamp, and
+the exact source version. Increment `plan-version` when revising a previously validated
+plan. An unresolved marker or blocker prevents validation.
 
-8. Draft plan.md:
-   - Layout:
+## Handoff
 
-     ```markdown
-     ---
-     id: <slug>
-     spec: <relative path>
-     status: draft
-     plan-version: 1
-     spec-version: <exact source spec-version>
-     acceptance-ids: [AC-001, AC-002]
-     validated-at: _none_
-     spec-synced-at: <spec last-reviewed copied here>
-     ---
+Return every named path in `../../shared/plan-format.md`, checking that each non-`_none_`
+path exists and is readable. A draft can be reported but cannot be handed off as validated.
 
-     # Plan — <title> (<slug>)
+When `RETURN_TARGET: linear-devotee:create-project` accompanies `SPEC_FILE`, return the
+validated artifact fields to that caller immediately; do not restart its interview or
+mutate Linear. When the user already requested implementation, hand the full artifact set
+to the implementing turn: read it before coding, follow repository instructions, use
+applicable `subroutine` discipline, and finish with `moon-moth:verify` in a moon workspace.
 
-     ## Context
+When a Linear breakdown is requested:
 
-     <1–3 sentences linking the spec + the goal; cite the spec by relative path>
+**REQUIRED SUB-SKILL:** Use `linear-devotee:create-project` with the named artifact fields.
 
-     ## Files
+Otherwise report the validated plan and next useful action. Leave artifacts uncommitted
+unless a commit was requested; use the available commit workflow for that authorized action.
 
-     - `<path>`: <one-line role; tag `[new]` or `[modified]` or `[delete]`>
+## Completion
 
-     ## Acceptance coverage
-
-     - `AC-001` → steps 2, 3 · quickstart steps 1, 2
-     - `AC-002` → step 4 · quickstart step 3
-
-     ## Steps
-
-     - [ ] <step 1: atomic edit, one file or one tight cluster>
-           verify: <inline command or manual check>
-           covers: foundation
-     - [ ] <step 2>
-           verify: …
-           covers: AC-001
-
-     ## Verify
-
-     <project-level commands after every Steps box is checked: test, lint, typecheck>
-
-     ## Risks
-
-     <enumerated; each risk gets a mitigation or an explicit "accepted">
-
-     ## Out of scope
-
-     <explicit negatives — what this plan will NOT touch; protects the implementing agent from drifting>
-     ```
-
-   - Steps must be atomic and dependency-ordered. Each step is one edit + one inline verify when possible (`bun test <path>`, `tsc --noEmit`, manual observation). Larger refactors get decomposed. Every step carries `covers: AC-001` (one or more comma-separated ids) or `covers: foundation` with a concrete enabling reason in the step text.
-
-9. Cross-artifact analysis:
-   - Before showing the artifacts, compare `SOURCE_AC_IDS` against `plan.md` and `quickstart.md`.
-   - Fail the pre-flight when an id is uncovered, duplicated in the spec, or referenced by the plan but absent from the spec. Return to the artifact that owns the defect and fix it there; never paper over a source-spec defect in the plan.
-   - Print a compact coverage summary: `<N>/<N> AC ids covered · <N> foundation steps · <N> unknown refs`.
-10. User validation gate:
-    - Print every produced artifact inline.
-    - Ask: `validate (y) | revise <artifact> | regenerate <artifact> | abandon (a)`. Wait.
-    - On revise/regenerate, return to the relevant step.
-    - On abandon, exit, no files written.
-
-11. Write + optional commit:
-    - Slug derivation: spec filename minus the `YYYY-MM-DD-` prefix.
-    - Write the full artifact tree:
-      ```
-      ${PROJECT_ROOT}/docs/acid-prophet/plans/<slug>/
-        plan.md
-        quickstart.md
-        codebase-map.md
-        contracts/
-          <contract-1>.md
-          <contract-2>.md
-      ```
-    - Ask exactly: `Commit the artifact? (y / no)`. On `y`, run `git add docs/acid-prophet/plans/<slug>/ && git commit -m "docs(acid-prophet): plan for <slug>"`. On `no`, leave the validated artifact set uncommitted and continue. Never use `--no-verify`.
-12. Handoff:
-    - If `RETURN_TARGET: linear-devotee:create-project` was supplied, skip the generic next-step menu and return immediately with the named-field block below and no Linear mutation.
-    - Ask: `next step? (i) implement now | (l) hand to linear-devotee:create-project for issue breakdown | (s) stop`.
-    - Build the **full artifact set** as named fields — the downstream agent gets every planning artifact explicitly, never a bare directory path or a one-liner:
-
-      ```
-      PLAN_FILE: ${PROJECT_ROOT}/docs/acid-prophet/plans/<slug>/plan.md
-      CONTRACTS_DIR: ${PROJECT_ROOT}/docs/acid-prophet/plans/<slug>/contracts/
-      QUICKSTART_FILE: ${PROJECT_ROOT}/docs/acid-prophet/plans/<slug>/quickstart.md
-      CODEBASE_MAP_FILE: ${PROJECT_ROOT}/docs/acid-prophet/plans/<slug>/codebase-map.md
-      SPEC_FILE: <absolute path to the source spec resolved in step 2>
-      CONSTITUTION_FILE: ${PROJECT_ROOT}/docs/acid-prophet/constitution.md | _none_
-      ```
-
-      `CONSTITUTION_FILE` is `_none_` when `docs/acid-prophet/constitution.md` does not exist. Omit no field — use `_none_` for anything missing. Require every non-`_none_` path to exist and be readable before handing off; a missing artifact blocks.
-
-    - `(i)`: hand the artifacts to the implementation turn with the named-field block above as its input. Emit this directive to the implementing agent: read every provided artifact before writing code, honor the repo's `AGENTS.md`/`CLAUDE.md`, let the `subroutine` discipline skills activate on matching files, and close with `moon-moth:verify` when a `.moon` workspace is present.
-    - `(l)`: **REQUIRED SUB-SKILL:** Use `linear-devotee:create-project`, passing the named-field block above verbatim.
-    - `(s)`: exit.
-
-## A plan is not validated because the files exist
-
-**AN ARTIFACT IS DONE ONLY AFTER THE CROSS-ARTIFACT AND USER VALIDATION GATES PASS.**
-
-| Excuse                                         | Reality                                                    |
-| ---------------------------------------------- | ---------------------------------------------------------- |
-| "The files are written, the plan is done"      | Written is a draft. Steps 9 and 10 are the gate.           |
-| "The spec audit passed earlier in the session" | Earlier is before the last spec edit. Re-run it.           |
-| "It's a one-step plan, coverage is obvious"    | Obvious coverage is uncounted coverage. Print the summary. |
-
-## Final Report
-
-```text
-acid-prophet:write-plan report
-  Spec:         <path>
-  Plan dir:     ${PROJECT_ROOT}/docs/acid-prophet/plans/<slug>/
-  Contracts:    <N written>
-  Codebase map: ${PROJECT_ROOT}/docs/acid-prophet/plans/<slug>/codebase-map.md
-  Steps:        <N atomic>
-  AC coverage:  <N>/<N>
-  Open markers: <N unresolved [NEEDS CLARIFICATION] | none>
-  Commits:      <N>
-  Handoff:      <implementation turn | linear-devotee:create-project | stopped>
-```
-
-## Never
-
-- Invent an architectural decision the user didn't approve — emit `[NEEDS CLARIFICATION: ...]` instead.
-- Introduce an abstraction without naming ≥ 2 consumers in the contracts.
-- Skip the cross-artifact or validation gates (steps 9–10), even on a one-step plan.
-- Mutate the source spec.
-- Run `git push`, `git rebase`, or `git commit --amend`.
-- Use `--no-verify`.
-- Move to the next step before the current one is done.
+Report source and plan paths, actual status, deliverables, AC coverage, review performed,
+unresolved decisions, and handoff taken. Never label planned verification as passing tests.

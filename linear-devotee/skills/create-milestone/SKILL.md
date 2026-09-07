@@ -1,75 +1,62 @@
 ---
 name: create-milestone
-description: Use to add a single Milestone to an existing Linear Project. Drafts through milestone-drafter, clarifies open questions one at a time, and creates the milestone only after explicit approval. Use linear-devotee:create-project for a full project cascade or to resume a partially committed one.
+description: Use to add one milestone to an existing Linear project. Defines a meaningful delivery boundary and exit evidence, reuses supplied context, and creates the complete authorized milestone. Use create-project for cascade creation or recovery.
 effort: high
-allowed-tools: Read, Glob, Grep, Bash(git rev-parse:*), Write, Agent, mcp__claude_ai_Linear__list_projects, mcp__claude_ai_Linear__save_milestone
+allowed-tools: Read, Glob, Grep, Bash, Write, Edit, Agent, ToolSearch
 ---
 
 # linear-devotee:create-milestone
 
 > Agent resolution: before any subagent dispatch, read `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md` and use the active runtime's name.
 
-Rigid runbook. One milestone, one approval.
+Find the plugin root from this skill's directory (`../..`) outside Claude Code. Read
+`../../shared/provider-selection.md` and `../../shared/planning-context.md`.
 
 ## Voice
 
 Read `../../persona.md`; it is canonical for this skill's user-facing output, and its scope ends at the final report.
 
-## Workflow
+## Draft the delivery boundary
 
-1. Preconditions:
-   - Verify Linear access with `ToolSearch` query `linear`.
-   - Verify git repo; capture `PROJECT_ROOT`.
-   - A partially committed cascade is not this skill's job.
-     **REQUIRED SUB-SKILL:** for resume, use `linear-devotee:create-project`.
-2. Gather context — fetch active projects with `list_projects`, ask the user to pick one, then
-   ask for the one-sentence milestone hint.
-3. Draft — dispatch the logical `linear-devotee:milestone-drafter` agent with:
-   ```text
-   PROJECT_ID: <id>
-   MILESTONE_HINT: <hint | _none_>
-   PROJECT_ROOT: <git root>
-   ```
-   Capture the milestone draft, its suggested issues, open decisions, and questions.
-4. Clarify — ask one blocking question at a time for every `_unclear_` field or suggested
-   question. Patch the draft until it is clean, or until the user ships it as is.
-5. Preview and approve:
-   - Mint one stable `client_ref` and append `<!-- nuthouse-client-ref: <client_ref> -->` to the
-     exact milestone description. The marker is part of the approved description and can never be
-     added or changed later.
-   - Print the full patched draft including the marker and ask
-     `Create this milestone? (y / edit / cancel)`.
-   - Continue only on `y`.
-6. Create — call `save_milestone` with the approved description, resolved `projectId`, and the
-   confirmed nullable target date. On timeout or API error, surface it verbatim and stop with
-   `linear_error`; a retry must first reload Linear by the exact marker.
-7. Hand off — report the suggested issues this milestone implies.
-   **REQUIRED SUB-SKILL:** to add one of them, use `linear-devotee:create-issue`.
+Resolve the project and milestone intent from the request or current project context. Reuse an
+explicit selection; list projects and ask only when the destination is ambiguous. Obtain the
+selected project's scope, existing milestones, and related issues. A partial cascade belongs to
+its own recovery workflow, not this standalone operation.
 
-## Nothing reaches Linear unapproved
+**REQUIRED SUB-SKILL:** Use `linear-devotee:create-project` for cascade recovery.
 
-**THE PREVIEW IS THE CONTRACT.** What the user approved in step 5 is what gets written, byte for
-byte. Never widen it afterwards.
+Dispatch `linear-devotee:milestone-drafter` with `PROJECT_ID`, `MILESTONE_HINT`, `PROJECT_ROOT`,
+current raw `LINEAR_CONTEXT`, and any explicit parent draft. Review the proposed boundary, exit
+evidence, existing issue contributions, suggested new issues, and true overlaps.
 
-| Excuse                                              | Reality                                                                 |
-| --------------------------------------------------- | ----------------------------------------------------------------------- |
-| "The target date was obviously meant to shift"      | Then re-preview. An unapproved field is an unapproved write.            |
-| "The user approved the project, this is part of it" | Approval is per milestone, at the preview.                              |
-| "The API rejected a field, I'll adjust and retry"   | Surface the error and stop. A silent adjustment is an unapproved write. |
+Clarify decisions that change delivery scope or its completion conditions. Recommend reuse if
+an existing milestone already expresses the same outcome. A target date is optional; do not
+invent one from the project deadline, or ask for one merely to fill a slot. Proposed issue titles
+are planning context and are not approved issue creations or membership changes.
 
-## Final Report
+## Approve the complete milestone
 
-```text
-linear-devotee:create-milestone report
-  Project:           <project.title> (<project.id>)
-  Milestone:         <name> - <url> | (cancelled) | (linear_error)
-  Suggested issues:  <N>
-  Next:              linear-devotee:create-issue | stop
-```
+Prepare the exact name, project id, description, and nullable target date. Mint one stable
+`client_ref` and include `<!-- nuthouse-client-ref: <client_ref> -->` in the description before
+showing the full preview, including scope and exit evidence.
 
-## Never
+Use explicit authorization already given for this milestone and its delegated choices. If that
+authority is missing, ask for approval of this complete result. Apply edits before creation;
+never shift a date, project, or scope after the approved preview without resolving the change.
 
-- Mutate Linear without explicit approval at the preview.
-- Attach a milestone to the wrong project.
-- Retry a failed Linear write blindly.
-- Run `git push`, `git commit`, or `git rebase`.
+## Create and verify
+
+Call the available milestone creation operation with exactly the previewed fields. On an error
+or ambiguous timeout, report the provider's actual response and stop. A retry first reloads the
+exact marker in the selected project; reuse one match, stop on multiple matches, and create only
+after confirmed absence. Do not fall back to a name match or silently adjust rejected fields.
+
+Read back the milestone and compare its name, description, project, and date with the preview.
+Report a discrepancy without automatically rewriting it. Finish with the milestone link,
+verification result, and the proposed existing/new issue work. Continue to issue creation only
+when the user has requested that next step; otherwise leave it as a recommendation.
+
+**REQUIRED SUB-SKILL:** Use `linear-devotee:create-issue` for an authorized standalone issue.
+
+Do not attach existing issues, create suggested issues, or alter project scope as an implicit
+side effect of creating the milestone. Never commit, push, rebase, or blindly retry a write.

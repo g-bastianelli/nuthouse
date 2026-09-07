@@ -4,40 +4,87 @@
 
 Linear workflow plugin for Claude Code and Codex.
 
-It turns Linear issues and specs into SDD-shaped context, acceptance-traceable
-implementation plans, dependency-aware next-work recommendations, and gated Linear
-project/milestone/issue creation. Full cascades hash-bind one complete mutation envelope
-(descriptions, labels, dates, membership, coverage, and relations) before the first
-mutation, then separately reload and compare the canonical dependency graph before
-publishing a verified receipt. Foundation-only packets remain explicit and verifiable.
+Turn an issue or product spec into work an engineer can understand, implement, and verify.
+The workflows read source decisions and relevant code, preserve exact Acceptance identities,
+and review the complete proposal before handing it to implementation or writing Linear resources.
 
 ## Skills
 
-| Skill                             | Purpose                                                                                                                                                 |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `linear-devotee:greet`            | Detect a fresh Linear issue when context is absent, optionally prepare branch/status, then hand off to planning                                         |
-| `linear-devotee:plan`             | Write and validate an implementation plan, detect spec drift, and sync accepted drift after approval                                                    |
-| `linear-devotee:next-issue`       | Recommend the next startable issue in the same Linear project after an issue is finished                                                                |
-| `linear-devotee:create-project`   | Draft complete `AC-###`/foundation packets and a canonical DAG, hash-bind the full mutation envelope, replay recoverably, then verify the graph exactly |
-| `linear-devotee:create-milestone` | Add or resume the next milestone in a project cascade                                                                                                   |
-| `linear-devotee:create-issue`     | Add or resume an SDD issue; source criteria use `AC-###`, autonomous criteria use `AC-L###`                                                             |
+| Skill                             | Purpose                                                                                                                                 |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `linear-devotee:greet`            | Brief a fresh issue with decision sources, resolve its spec and project plan, and prepare authorized delivery                           |
+| `linear-devotee:plan`             | Revise or write an issue-scoped implementation plan, review it at the appropriate depth, and hand off validated work                    |
+| `linear-devotee:next-issue`       | Recommend available work from current statuses and actual blockers, identifying active work separately                                  |
+| `linear-devotee:create-project`   | Draft complete issue packets and meaningful milestones, review coverage and dependencies, then create and verify the authorized cascade |
+| `linear-devotee:create-milestone` | Add one delivery boundary with observable exit evidence and an optional agreed date                                                     |
+| `linear-devotee:create-issue`     | Add one coherent SDD issue with exact criteria, implementation context, and verification                                                |
 
-## Agents
+A partial project cascade resumes through `create-project`. Standalone additions do not replay
+its unfinished mutations.
 
-| Agent                  | Purpose                                                                                                 |
-| ---------------------- | ------------------------------------------------------------------------------------------------------- |
-| `issue-context`        | Read issue, comments, status, and referenced files into an SDD brief                                    |
-| `plan-auditor`         | Compare plan, issue/spec, and exhaustive Acceptance coverage before implementation                      |
-| `project-drafter`      | Draft project SDD, milestones, and approval-ready issue packets with dependencies                       |
-| `milestone-drafter`    | Draft a milestone name, scope, target-date hint, and suggested issues                                   |
-| `issue-drafter`        | Draft strict SDD issue bodies                                                                           |
-| `project-graph-loader` | Reload a created project and normalize every marked entity and relation for exact post-write comparison |
+## Planning quality
 
-All Linear writes stay in skills and require explicit user confirmation. Agents are scouts/drafters, not Linear mutators.
+The issue's active Acceptance defines its delivery scope. A project spec constrains the issue,
+but criteria owned by other tickets do not become mandatory tasks in every plan. Source-backed
+criteria retain exact `AC-###` ids and text; standalone criteria use `AC-L###`. A foundation issue
+names the work it enables and verifies its own output. Shared criteria have explicit contribution
+and integrated-verification ownership.
 
-## Native Linear coding sessions
+Discovery reads affected entry points and tests. A proposed new file is different from a missing
+reference that was claimed to exist. Comments retain decision provenance, and a newer suggestion
+does not silently replace approved behavior. Existing plans preserve completed work and revise
+versions deliberately. Relative project-plan source paths resolve from the containing plan file.
 
-Linear Agent can run Claude Code or Codex from an assigned issue and return a diff for review. Issues created by this plugin are ready for that path because their approved body already carries goal, constraints, files, stable source `AC-###` or issue-local `AC-L###` criteria, non-goals, and blockers. `linear-devotee` does not auto-assign the issue or start a cloud session; the user keeps that external mutation gate. See [Linear coding sessions](https://linear.app/changelog/2026-06-11-coding-sessions).
+The interview asks whatever consequential questions the work needs. It reuses provided answers
+and delegates ordinary reversible implementation choices within the user's authority. Reviews
+challenge behavior and observable verification: an AC label or a passing helper test does not
+prove the requested integration works. Review loops stop on a specific unresolved decision.
+
+## Delegation
+
+| Agent                  | Responsibility                                                                             |
+| ---------------------- | ------------------------------------------------------------------------------------------ |
+| `issue-context`        | Bounded read of the issue, decision-bearing comments, status, blockers, and relevant code  |
+| `plan-auditor`         | Independent review of issue scope, integration, source consistency, and verification       |
+| `project-drafter`      | Complete deliverables and dependency reasoning; independent proposal review when requested |
+| `milestone-drafter`    | Delivery boundary, exit evidence, and existing/new issue scope                             |
+| `issue-drafter`        | Complete SDD description and consequential questions for one issue                         |
+| `project-graph-loader` | Fresh authoritative reload of marked entities and blocking relations                       |
+
+Agents remain read-only. Small conventional issue plans receive a local walkthrough; new
+boundaries, interacting tasks, consequential risks, and explicitly requested independent reviews
+use the plan auditor. Reuse applicable findings and check changed relationships instead of
+repeating the entire review at every handoff. Issue count does not dictate phases.
+
+## Creation and recovery
+
+Creation skills show complete content and apply existing explicit authorization; otherwise they
+ask for approval of the finished preview. The full project cascade has one mutation approval,
+with all bodies, dates, labels, memberships, and relations resolved before writing.
+
+The existing graph helper checks structure and exact mutation-envelope consistency. The agent
+reviews source coverage and deliverability. Stable markers identify potentially successful writes
+after timeouts; a readable ledger records confirmed progress. Recovery reads the same approved
+envelope, reloads Linear, and resumes confirmed missing work without recreating known resources.
+
+One authoritative reload supplies the graph and written fields for verification. Written
+bodies and other fields must match the preview before execution is ready. A discrepancy,
+including changed Acceptance wording under an unchanged id, blocks that handoff. Source linkage
+preserves spec ratification and review metadata.
+
+Greet owns the started-state transition for authorized delivery. A read-only brief does not
+change lifecycle state. Further delivery or Maestro execution follows the user's actual request.
+
+## Verification
+
+Behavioral fixtures and bounded observations are described in [evals](evals/README.md).
+Runtime checks cover the existing hook lifecycle, mutation envelope, and graph recovery logic:
+
+```sh
+bun test linear-devotee/
+bun run test:meta
+bun run check:codex-agents
+```
 
 ## Install
 
@@ -55,20 +102,3 @@ codex plugin marketplace add g-bastianelli/nuthouse
 ```
 
 Then open `/plugins` and install `linear-devotee`.
-
-## Layout
-
-```text
-linear-devotee/
-  assets/
-  persona.md
-  shared/
-  skills/
-  agents/
-  hooks/
-    hooks.json
-  claudecode/
-    hooks/
-    lib/
-    tests/
-```

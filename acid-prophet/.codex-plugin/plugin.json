@@ -1,7 +1,7 @@
 {
   "name": "acid-prophet",
-  "version": "1.0.6",
-  "description": "Spec-driven development for Codex with stable AC traceability: constitution → EARS spec with AC-### ids → audit gates → dependency-ordered plan and quickstart evidence → checklist → drift check. Optional Linear handoff.",
+  "version": "1.1.0",
+  "description": "Codebase-grounded discovery, behavioral spec review, and executable planning for Codex with stable acceptance traceability and optional Linear handoff.",
   "author": {
     "name": "g-bastianelli"
   },
@@ -10,7 +10,7 @@
   "interface": {
     "displayName": "Acid Prophet",
     "shortDescription": "Turn raw ideas into reviewed specs",
-    "longDescription": "Acid Prophet is a spec-driven development pipeline for Codex. Ratify project articles into a constitution. Turn ideas into specs through one-question-at-a-time clarification and stable EARS Acceptance ids, with explicit [NEEDS CLARIFICATION] markers when uncertain. Audit specs against SDD structure, codebase reality, and Phase -1 gates including acceptance traceability. Expand ratified specs into dependency-ordered plans with typed contracts, quickstart evidence, and exhaustive AC coverage. Derive acceptance checklists for QA, detect drift by AC id, and hand off approved artifacts to Linear Devotee.",
+    "longDescription": "Acid Prophet turns feature requests into reviewed specs and implementation plans. Trace the existing code before asking consequential questions, resolve reversible technical choices within delegated authority, and review one coherent proposal. The independent auditor checks behavioral consistency, observable acceptance, justified boundaries, and repository evidence. Stable AC ids connect specs, deliverables, necessary contracts, quickstart scenarios, Linear issues, checklists, and drift findings. Incomplete or contradictory audit reports cannot authorize handoff. Project constitutions add governing constraints.",
     "developerName": "g-bastianelli",
     "category": "Developer Tools",
     "capabilities": ["Read", "Write"],
