@@ -89,6 +89,13 @@ Use kebab-case filenames and sections `# contract: <name>`, `Shape`, `Origin`,
 project language. Origin names the source section, producer, consumers, and
 `covers: <active AC ids | foundation>`. Each invariant names its enforcement point;
 each error names the caller-visible outcome. Reuse existing types by reference.
+Record the agreed contract version/source and decision authority, each producer/consumer task,
+and conformance/integrated verification ownership. Required agreement cannot remain “coordinate
+with task X” in a validated plan. Fix the contract before parallel work, order consumers after a
+bounded contract/output producer with a reason, or regroup inseparable changes. Shared files
+alone do not impose ordering: explain independent symbols and unchanged shared invariants.
+Check the whole task graph for cycles; a fixed contract permits parallel work only when each
+task can deliver its Acceptance without the other's implementation output.
 
 ## quickstart.md
 

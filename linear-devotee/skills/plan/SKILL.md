@@ -36,6 +36,11 @@ Read `../../persona.md`; it is canonical for this skill's user-facing output, an
    new evidence invalidates it, explaining why. Never silently reset version 1 or erase progress.
    Reuse an already suitable plan with a current review instead of manufacturing a revision.
 
+Before validating a plan, apply `../../shared/coordination-review.md`. Collect affected peer
+bodies, decisions and dependency closure as `COORDINATION_CONTEXT`, or record none with a reason.
+A required contract or missing Linear relation must be repaired upstream and read back before
+implementation readiness; this skill can prepare the exact correction but cannot apply it.
+
 ## Write the complete plan
 
 Write `docs/linear-devotee/plan/<ISSUE_ID>.md` before requesting final review. Scale detail to the
@@ -72,6 +77,8 @@ Include these sections:
   Group by deliverable, not a compulsory database/backend/frontend sequence.
 - **Verification** — commands or scenarios, expected success and failure behavior, and criteria
   proved. Distinguish reproduced failures, planned tests, and actual results. Use existing tools.
+- **Coordination** — reviewed interactions, authoritative contracts, output dependencies or
+  independence reasons, verification owners, and cycle evidence under the shared review.
 - **Risks** — material failure modes and dependencies, with their handling or unresolved decision.
 - **Out of scope** — adjacent work excluded or owned by another issue.
 
@@ -85,13 +92,14 @@ findings as a local review; do not create a separate reviewer report or imply in
 Use `linear-devotee:plan-auditor` for new boundaries, interacting tasks, changes to access/data
 safety, material failure/recovery behavior, unresolved source conflicts, or a requested
 independent review. Pass `PROJECT_ROOT`, the resolved absolute `PLUGIN_ROOT`, `PLAN_FILE`,
-`SPEC_FILE`, `PROJECT_PLAN`, the full `ISSUE_CONTEXT_BRIEF`, and relevant existing paths.
+`SPEC_FILE`, `PROJECT_PLAN`, the full `ISSUE_CONTEXT_BRIEF`, `COORDINATION_CONTEXT`, and relevant existing paths.
 Supply raw sources, not a rationale for
 passing. Its review replaces a duplicate full walkthrough by the caller; inspect its findings
 and check that the report covers the issue's active criteria.
 
 For a delegated report, require `PLAN_REVIEW`, `SPEC_DRIFT_DETECTED`, `REVIEWED_ACCEPTANCE`,
-`DRIFT_ITEMS`, and `BLOCKERS`. A pass with missing criteria, drift, blockers, or an incomplete
+`DRIFT_ITEMS`, `BLOCKERS`, `COORDINATION_REVIEW`, and `COORDINATION_EVIDENCE`. Require a passing
+coordination result for local and delegated reviews. A pass with missing criteria, drift, blockers, or an incomplete
 assessment needs correction. Reuse a prior review whose plan and relevant evidence remain
 unchanged. Recheck only affected relationships after a correction, widening review when the
 change affects the rest of the plan.

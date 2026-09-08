@@ -101,3 +101,25 @@ provided context. One successful run does not establish a success rate or genera
 
 See [recorded observations](results/2026-09-07.md). Live provider mutations and timeout recovery
 need separate integration evidence; offline drafting does not verify them.
+
+## Shared coordination and existing-project review
+
+Give a fresh read-only evaluator [coordination-cases.md](coordination-cases.md) and the local
+plugin instructions it names. Keep this rubric and prior results out of its context. The cases
+use complete synthetic snapshots and forbid provider calls, writes, and dispatches. Assess the
+actual decisions, including current-state versus proposed-correction readiness:
+
+| Case | Required outcome                                                                                         |
+| ---- | -------------------------------------------------------------------------------------------------------- |
+| A    | Refuse unresolved mandatory ack agreement despite an empty graph; propose a concrete resolution.         |
+| B    | Accept the agreed contract and independently verifiable contributions without an edge.                   |
+| C    | Reject file-only serialization and justify independent edits in the same module.                         |
+| D    | Require E-2 → E-1 for the concrete codec output, or justify coherent regrouping.                         |
+| E    | Detect the cycle through the third existing issue; do not reverse/delete necessary edges arbitrarily.    |
+| F    | Preserve ids, Acceptance and completed discovery; preview a repair without claiming it approved/applied. |
+| G    | Retain the actual implementation prerequisite despite the fixed format.                                  |
+| H    | Report incomplete dependency closure as unknown; no ready creation or execution handoff.                 |
+
+Structural validation is separate: use the existing graph helper/tests for edge-free components,
+consumer → producer ordering, and cycles through existing edges. Do not claim the helper detects
+unresolved prose. See [the coordination review run](results/2026-09-08-coordination.md).

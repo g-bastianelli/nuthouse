@@ -31,7 +31,7 @@ QUICKSTART_FILE: <absolute path | _none_>
 CODEBASE_MAP_FILE: <absolute path | _none_>
 CONSTITUTION_FILE: <absolute path | _none_>
 VIBE_BULLETS: <absolute source brief path | _none_>
-LINEAR_CONTEXT: <current raw selected team/status/label/project metadata>
+LINEAR_CONTEXT: <current raw metadata plus affected issue bodies, decision comments and dependency closure for existing work>
 RELEVANT_FILES:
 - <optional existing file discovery hints>
 ```
@@ -65,7 +65,10 @@ creation while still allowing a clearly labeled local draft from known product e
    criteria, explain each contribution and identify final integrated verification ownership.
    Foundation-only packets use no AC ids; require a specific foundation reason, enabled work,
    and verification of their own deliverable.
-5. Add dependencies only when the dependent cannot deliver its acceptance without the blocker's
+5. Apply `shared/coordination-review.md` from the active plugin root to shared contracts and
+   coupled modifications, including changes in common files. Return its `COORDINATION_REVIEW`
+   with evidence in both modes; review the current state separately from any proposed repair.
+   Add dependencies only when the dependent cannot deliver its acceptance without the blocker's
    output. Explain that output. A milestone order, shared label, or adjacent file is not an edge.
    Emit one acyclic graph within this project; external prerequisites remain explicit unresolved
    dependencies for the caller to resolve, never invented cross-project edges.
@@ -120,6 +123,9 @@ and all **Issue packets** in dependency order:
 **Constraints**
 
 - <source requirements and relevant observed conventions>
+
+**Coordination**
+<interaction, resolution, decision source, required output or independence reason, verification owner>
 
 **Acceptance criteria**
 

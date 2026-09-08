@@ -1,6 +1,6 @@
 ---
 name: create-project
-description: Use to create a Linear project with complete issue bodies, meaningful milestones, and justified dependencies from a spec, Acid Prophet artifact set, or product interview. Reviews the full proposal before authorized writes, verifies the resulting graph, and resumes partial creation by exact markers.
+description: Use to create a Linear project with complete issue bodies, meaningful milestones, and justified dependencies from a spec, Acid Prophet artifact set, or product interview. Also reviews existing projects with a read-only correction preview. Reviews the full proposal before authorized writes, verifies the resulting graph, and resumes partial creation by exact markers.
 argument-hint: "[spec-file] [--fresh]"
 model: opus
 effort: max
@@ -21,6 +21,9 @@ a partial cascade resumes here.
 Read `../../persona.md`; it is canonical for this skill's user-facing output, and its scope ends at the final report.
 
 ## Sources and working artifacts
+
+For review or revision of an existing project, go to **Review an existing project** below;
+skip creation-only metadata, markers, and mutation preparation. Source authority still applies.
 
 Resolve the repository before accessing local state. Prefer the explicit named Acid Prophet
 handoff: `SPEC_FILE`, `PLAN_FILE`, `CONTRACTS_DIR`, `QUICKSTART_FILE`, `CODEBASE_MAP_FILE`, and
@@ -64,6 +67,20 @@ by status type when the user has not specified a state; never fabricate a named 
 the provider's actual create/relation operations before promising the cascade. Metadata limits
 may still permit a local draft, but block writes until resolved.
 
+## Review an existing project
+
+When asked to review or revise an existing project, use the existing-work procedure in
+`../../shared/coordination-review.md`. Collect current complete affected packets, decision
+sources, and the dependency closure as raw `LINEAR_CONTEXT`. Dispatch `project-drafter` in
+`MODE: review` with that snapshot as `DRAFT_FILE`; preserve existing ids as stable draft keys.
+Supply its full input contract: the current project brief/spec, exact active Acceptance register,
+repository root, and named source artifacts (absent optional artifacts are `_none_`). If there
+is no project register, extract the existing issues' active criteria verbatim for review and
+surface conflicting ids/text; do not invent or silently ratify a replacement source.
+Return current-state findings and an exact correction preview, then stop this review-only path.
+Do not enter creation, mint replacement refs, or mutate existing issues/relations. State whether
+corrections are merely proposed; an unapplied correction cannot justify a Maestro handoff.
+
 ## Draft and review the complete decomposition
 
 Dispatch `linear-devotee:project-drafter` with `MODE: draft`, `PROJECT_ROOT`,
@@ -79,6 +96,9 @@ Review the project brief, milestones, complete issue packets, and coverage table
   threshold, and do not replace complete packets with titles to expand after approval.
 - Every dependency names the output the dependent actually needs. The direction is always
   `dependentRef -> blockerRef`. Milestone ordering alone does not create a dependency.
+- Apply `../../shared/coordination-review.md` to all interacting packets. Require a complete
+  `COORDINATION_REVIEW: pass`, including justified independence and cycle evidence. Include the
+  resolved Coordination sections in the exact issue bodies; missing decisions block readiness.
 - Source wording, constraints, constitution, and validated architecture remain consistent.
   Optional blanks are not blockers; consequential `_unclear_` decisions are.
 
@@ -187,7 +207,7 @@ paths and the operation still unresolved; recovery uses this skill, never standa
 Recommend a next issue only after verified creation and from live status/blocker evidence.
 A blocker having a Linear id is not satisfied; startable work has no unfinished blockers. Use
 `linear-devotee:next-issue` when selection needs further context. Show
-`monkey-maestro:start <project-id>` only for a verified graph. Continue into delivery or Maestro
+`monkey-maestro:start <project-id>` only after a passing coordination review and verified Linear bodies and graph. Continue into delivery or Maestro
 only if the user already requested it; otherwise finish with the useful recommendation.
 
 Never commit, push, rebase, recreate confirmed resources, or mutate unrelated Linear work.
