@@ -93,7 +93,8 @@ only the current step, artifact paths, and unresolved decisions in
 
 Compare the spec against tasks, contracts, and quickstart. Every active id needs a real
 implementation path and an observable check. Reject unknown/retired ids, uncovered
-requirements, incompatible types, impossible task ordering, or tests that only assert
+requirements, unresolved cross-task contract agreement, unsupported independence claims,
+cycles or unjustified serialization from file overlap, incompatible types, impossible task ordering, or tests that only assert
 an internal detail instead of the required behavior. Check source and plan versions agree.
 
 For a plan with a new boundary, interacting tasks, or material failure/recovery behavior,

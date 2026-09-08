@@ -1,5 +1,8 @@
 # Planning from issue and repository evidence
 
+For creation, revision, and plan review, read `coordination-review.md` in this directory and
+apply its shared-contract and interdependent-change checks before reporting readiness.
+
 ## Source authority
 
 The issue defines the deliverable being planned. Its active Acceptance section defines the

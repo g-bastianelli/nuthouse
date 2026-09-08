@@ -28,6 +28,7 @@ SPEC_FILE: <absolute source path | _none_>
 PROJECT_PLAN: <absolute approved project-plan path | _none_>
 ISSUE_CONTEXT_BRIEF:
 <complete issue brief, exact active Acceptance, relevant decisions and source references>
+COORDINATION_CONTEXT: <affected peer bodies, contract decisions, live relations and dependency closure | none with reason>
 RELEVANT_FILES:
 - <absolute existing file path; optional discovery hints>
 ```
@@ -60,12 +61,18 @@ Missing required input is a blocker; never reconstruct an approved source from a
    Missing policy that changes behavior is a blocker. Harmless wording and optional metadata
    are not blockers.
 
+7. Apply `${PLUGIN_ROOT}/shared/coordination-review.md` to the plan and supplied peer evidence.
+   Missing required peer/closure evidence or an unapplied Linear repair prevents implementation
+   readiness. Report the required upstream correction; do not add runtime scheduling rules.
+
 ## Output
 
 Return only this shape, expanding findings as needed for actionable evidence:
 
 ```text
 PLAN_REVIEW: pass | needs_changes
+COORDINATION_REVIEW: pass | needs_changes
+COORDINATION_EVIDENCE: <interactions, decisions, edges or independence reasons, cycle evidence>
 SPEC_DRIFT_DETECTED: yes | no
 REVIEWED_ACCEPTANCE: AC-001, AC-L001 | foundation
 DRIFT_ITEMS:

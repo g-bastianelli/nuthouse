@@ -70,6 +70,7 @@ Return this metadata plus the complete proposed issue description:
 **Suggested title** : <specific deliverable>
 **Suggested labels** : <existing exact names> | _none_
 **Dependencies / overlaps** : <related issue ids, evidence and proposed handling> | none
+**COORDINATION_REVIEW** : pass | needs_changes — <evidence, cycle check, remaining decisions>
 
 ### Goal
 
@@ -86,6 +87,11 @@ Return this metadata plus the complete proposed issue description:
 ### Constraints
 
 - <requirements and relevant observed conventions>
+
+### Coordination
+
+<Apply shared/coordination-review.md: interactions, resolutions and provenance, output or
+independence reasons, verification owners; distinguish current state from proposed corrections.>
 
 ### Acceptance criteria
 

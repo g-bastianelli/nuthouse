@@ -1,6 +1,6 @@
 ---
 name: create-issue
-description: Use to add one coherent Linear issue to an existing project. Reuses supplied context, drafts exact Acceptance and observable verification, resolves consequential questions, and creates the complete authorized payload. Use create-project to resume a project cascade.
+description: Use to add one coherent Linear issue to an existing project. Reuses supplied context, drafts exact Acceptance and observable verification, resolves consequential questions, and creates the complete authorized payload. Also prepares read-only corrections for existing issues. Use create-project to resume a project cascade.
 effort: high
 allowed-tools: Read, Glob, Grep, Bash, Write, Edit, Agent, ToolSearch
 ---
@@ -33,6 +33,15 @@ exists. Pass exact active ids and text, not ids alone. Resolve conflicting sourc
 never merge them or invent a source criterion. Capture selected team metadata, the milestone's
 project membership, and exact existing label names/ids before preparing the final payload.
 
+## Review an existing issue
+
+For a requested revision of an existing ticket, reload that ticket and affected peer bodies,
+relevant decisions, and the dependency closure. Use `../../shared/coordination-review.md` to
+prepare current-state findings and exact proposed body/relation corrections. The drafter receives
+these raw sources and the existing id. Preserve Acceptance and completed work; return the
+correction preview without entering the creation path or applying updates. Proposed repairs do
+not establish readiness until authorized application and fresh readback through the owning workflow.
+
 ## Draft and resolve
 
 Dispatch `linear-devotee:issue-drafter` with `PROJECT_ROOT`, `PROJECT_ID`, `MILESTONE_ID`,
@@ -45,6 +54,11 @@ Ask decision-changing questions, using supplied answers and recommendations. Do 
 optional blank. A consequential `_unclear_` remains a blocker; the user may resolve or explicitly
 defer a decision into a bounded discovery issue with its own completion conditions, but an
 unresolved implementation policy cannot be labeled ready just by saying “ship as is”.
+
+Apply `../../shared/coordination-review.md` to the draft and affected existing peers. Require
+`COORDINATION_REVIEW: pass` before a ready preview. If resolution requires changing an existing
+peer, include that exact correction and keep readiness blocked until it is applied and verified;
+creating this issue alone cannot complete that repair.
 
 Inspect proposed duplicates and dependencies before preview. Resolve each actual blocking
 relation to a specific issue and explain why its output is necessary. Milestone membership must

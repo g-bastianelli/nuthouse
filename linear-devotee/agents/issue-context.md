@@ -42,7 +42,11 @@ LINEAR_CONTEXT: <optional current raw issue/comments/status snapshot, with sourc
 4. Copy the complete active Acceptance with exact ids and text. Preserve `AC-###` and `AC-L###`
    as distinct namespaces; do not mint ids while reading. Exclude criteria mentioned only as
    other-ticket scope. For a foundation issue, include its reason, enabled work, and verification.
-5. Surface consequential contradictions and gaps: what behavior cannot be chosen or verified?
+5. Preserve mandatory coordination even when no blocking relation exists. Read the named peer's
+   body and decision comments when needed to establish the contract; report missing peer evidence
+   explicitly. Include contract decisions, required outputs, and their sources in the brief,
+   separately from actual Linear blockers. Never manufacture a relation from common files.
+6. Surface consequential contradictions and gaps: what behavior cannot be chosen or verified?
    Missing optional labels/dates or an empty Non-goals section do not automatically need user
    questions. Distinguish absent evidence from a requirement that does not apply.
 
