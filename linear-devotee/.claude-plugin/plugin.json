@@ -2,7 +2,7 @@
   "name": "linear-devotee",
   "displayName": "Linear Devotee",
   "description": "Linear planning grounded in issue scope, source Acceptance, repository behavior, and independently reviewed deliverables, with recoverable verified project creation.",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "author": {
     "name": "g-bastianelli"
   },

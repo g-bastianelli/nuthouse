@@ -1,6 +1,6 @@
 {
   "name": "acid-prophet",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Codebase-grounded discovery, behavioral spec review, and executable planning for Codex with stable acceptance traceability and optional Linear handoff.",
   "author": {
     "name": "g-bastianelli"

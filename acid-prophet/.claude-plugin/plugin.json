@@ -2,7 +2,7 @@
   "name": "acid-prophet",
   "displayName": "Acid Prophet",
   "description": "Codebase-grounded discovery, behavioral spec review, and executable planning with stable AC traceability. Resolve consequential decisions, independently audit observable acceptance, and hand reviewed artifacts to implementation or Linear.",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "author": {
     "name": "g-bastianelli"
   },
