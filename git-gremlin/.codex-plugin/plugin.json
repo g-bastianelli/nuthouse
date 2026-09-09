@@ -1,6 +1,6 @@
 {
   "name": "git-gremlin",
-  "version": "1.0.22",
+  "version": "1.0.23",
   "description": "Git commit, review-comment discipline, and GitHub PR helper for Codex with stronger automatic skill triggers and scoped mutation gates.",
   "author": {
     "name": "g-bastianelli"

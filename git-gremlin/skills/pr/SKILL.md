@@ -29,11 +29,14 @@ Read `../../persona.md`; it is canonical for this skill's user-facing output, an
    - Stop on a detached `HEAD`, when the current branch is the base branch, or when no
      commits exist ahead of the base.
    - Capture the current branch and `HEAD_OID = git rev-parse HEAD`.
-2. Read `git log <base>...HEAD --oneline` and `git diff <base>...HEAD`. Draft an
-   imperative title no longer than 72 characters, preserving a useful conventional type or
+2. Read `git log <base>...HEAD --oneline` and `git diff <base>...HEAD`. Detect Linear
+   issue ids with `/\b[A-Z][A-Z0-9]+-[0-9]+\b/`, preferring the branch, then the log, then
+   the diff. When exactly one id is unambiguous, suffix the title with ` [<id>]`; when
+   several ids remain ambiguous, add no suffix. Draft an imperative title no longer than
+   72 characters including any Linear suffix, preserving a useful conventional type or
    scope from the commits. Draft a body with `## Summary` and one to three bullets, then
-   `## Test plan` with a checklist. Do not invent changes or verification absent from the
-   inputs.
+   `## Test plan` with a checklist, then `Closes <id>` on its own line when one unambiguous
+   Linear id was detected. Do not invent changes or verification absent from the inputs.
 3. If the user asked only for PR text, display it and stop. Otherwise display the title,
    body, and `<branch> → <base>`, then wait for confirmation or edits. This is the only
    extra approval gate.
