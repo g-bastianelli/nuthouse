@@ -42,10 +42,15 @@ Read `../../persona.md`; it is canonical for this skill's user-facing output, an
 5. Resolve the push remote in this order: `branch.<BRANCH>.pushRemote`,
    `remote.pushDefault`, `branch.<BRANCH>.remote`, `origin`, then the sole configured remote.
    Stop if the result is local (`.`), missing, or ambiguous.
-6. Run `git push "<REMOTE>" "<HEAD_OID>:refs/heads/<BRANCH>"`. Never substitute a mutable
-   branch ref or force-push. If it fails, surface stderr verbatim and do not retry or create
-   the PR.
-7. Run
+6. Run `git push --set-upstream "<REMOTE>" "HEAD:refs/heads/<BRANCH>"`. Never force-push.
+   `--set-upstream` is what leaves the branch with an upstream: it is silently ignored on an
+   OID refspec, and `push.autoSetupRemote` only covers a push with no refspec, so a branch
+   pushed either of those ways has none and tooling that maps a branch to its PR finds
+   nothing. If the push fails, surface stderr verbatim and do not retry or create the PR.
+7. Verify what actually landed: `git rev-parse "<REMOTE>/<BRANCH>"` must equal `<HEAD_OID>`.
+   On mismatch, stop without creating the PR and report both OIDs — the remote holds
+   something the user never approved.
+8. Run
    `gh pr create --head "<BRANCH>" --title "<TITLE>" --body "<BODY>" --base "<BASE>"`,
    passing every value as a separately quoted argument without `eval`. If it fails,
    surface stderr verbatim and do not retry. On success, capture the PR URL from stdout.
