@@ -3,7 +3,7 @@ name: greet
 description: Use only at fresh session start when an issue identifier comes from the current branch or first user prompt and no issue context is already available. Never retrigger from resume, compaction, or a conversation summary. Fetches a sourced brief, resolves spec/project-plan authority, and hands authorized delivery to plan. Never implements.
 argument-hint: "[issue-id] [--fresh]"
 model: haiku
-allowed-tools: Read, Glob, Bash, Write, Agent, ToolSearch
+allowed-tools: Read, Glob, Bash, Write, Agent, ToolSearch, mcp__claude_ai_Linear__list_issue_statuses, mcp__claude_ai_Linear__save_issue
 ---
 
 # linear-devotee:greet
@@ -55,10 +55,27 @@ includes that work, preserving current changes. Never discard, reset, or stash u
 make checkout succeed. Ask only when ownership or a conflicting branch needs a decision;
 network updates are not a prerequisite for a brief.
 
-Greet owns the documented In Progress transition for a delivery invocation. When status is not
-already `started`, use a confirmed started state id from this issue's team. Do not guess among
-multiple states, reopen a closed issue, or mutate status during read-only work. If the update is
-ambiguous or fails, report it and resolve current status before proceeding.
+## Move the issue to In Progress
+
+GREET MOVES THE ISSUE TO A `started` STATE BEFORE HANDING OFF. It is the sole owner of this
+transition; the user's delivery request is the authorization, and no extra confirmation is asked.
+
+1. If the brief's status type is already `started`, record `Status: <name> (unchanged)`.
+2. Otherwise take the brief's `Started state id`. If it is `_none_` or `_unclear_`, list the
+   issue team's statuses yourself and pick the `started`-type state, preferring the one named
+   `In Progress` when several exist. Ask only when no `started` state exists or the remaining
+   candidates cannot be told apart.
+3. Update the issue with that state through the active Linear connector (on Claude Code:
+   `mcp__claude_ai_Linear__save_issue` with the issue `id` and the `state` id). Re-read the
+   status and record `Status: <new> (was <prior>)`.
+4. A failed or refused update stops delivery with the provider's reason. Never reopen a
+   `completed`/`canceled` issue, and never touch status for a read-only brief.
+
+| Excuse                                                 | Reality                                                                                     |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| "The scout returned `_unclear_`, so I must not guess." | Listing the team's statuses is a read, not a guess. Do it.                                  |
+| "The user will move it in Linear later."               | A started issue is how Maestro counts concurrency. Skipping the flip lies to the scheduler. |
+| "Planning first, status after."                        | Plan never mutates Linear. Once greet hands off, nobody else will do it.                    |
 
 ## Retain useful context
 
