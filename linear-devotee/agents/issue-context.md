@@ -11,6 +11,7 @@ tools:
   - Bash
   - mcp__claude_ai_Linear__get_issue
   - mcp__claude_ai_Linear__list_comments
+  - mcp__claude_ai_Linear__list_issue_statuses
 ---
 
 Extract a useful implementation brief from an issue in any format. Stay read-only and neutral.
@@ -30,8 +31,9 @@ LINEAR_CONTEXT: <optional current raw issue/comments/status snapshot, with sourc
 1. Get this issue's details and relevant comments. Reuse a supplied current raw snapshot; fetch
    missing context through the selected provider. Preserve project id, team, status name/type,
    URL, and blocking relations. Missing relation data means unknown, not no blockers.
-   If status metadata is requested, identify applicable `started` states from that issue's team;
-   multiple plausible states require resolution, not an arbitrary choice.
+   If status metadata is requested, list this issue's team statuses and return the id of the
+   `started`-type state. When several `started` states exist, return the one named
+   `In Progress` if present; otherwise list them all under `_unclear_` for the caller to resolve.
 2. Read the description and decision-bearing comments. Keep approved criteria separate from
    proposals, historical text, and implementation notes. Cite comment author/date or URL for a
    decision that changes the brief. A newer suggestion cannot silently override source Acceptance.
