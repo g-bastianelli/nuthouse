@@ -1,6 +1,6 @@
 {
   "name": "linear-devotee",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Linear planning grounded in issue scope, source Acceptance, repository behavior, and independently reviewed deliverables, with recoverable verified project creation.",
   "author": {
     "name": "g-bastianelli"
