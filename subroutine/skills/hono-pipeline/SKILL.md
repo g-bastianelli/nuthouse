@@ -13,7 +13,8 @@ Apply this only to Hono backend/contracts/domain code. First read the scoped
 
 ## Implement the whole vertical slice
 
-1. **Contract** — input/output schemas plus every transport error code.
+1. **Contract** — input/output schemas plus every transport error code, each
+   with an explicit `status` and a `data` schema; refusal reasons are enums.
 2. **Resource error** — discriminated variants for expected failures.
 3. **Service** — framework-pure `Promise<Result<T, ResourceError>>`; pass
    tenant/auth values explicitly.
@@ -28,7 +29,7 @@ export const ordersContract = oc.router({
     .route({ method: "GET", path: "/orders/{id}" })
     .input(z.object({ id: z.uuid() }))
     .output(OrderSchema)
-    .errors({ NOT_FOUND: { data: z.object({ orderId: z.uuid() }) } }),
+    .errors({ NOT_FOUND: { status: 404, data: z.object({ orderId: z.uuid() }) } }),
 });
 
 // errors.ts + service.ts
@@ -44,14 +45,15 @@ export function createOrdersService(tenantId: string) {
 
 // _unwrap.ts + router.ts
 export const ordersRouter = {
-  get: os.orders.get.handler(async ({ input, context }) =>
-    unwrap(await createOrdersService(context.tenantId).get(input.id)),
+  get: os.orders.get.handler(async ({ input, context, errors }) =>
+    unwrap(await createOrdersService(context.tenantId).get(input.id), errors),
   ),
 };
 ```
 
-The omitted `unwrap` follows `result-pattern`; its payload must match the
-contract's `.errors()` schema exactly.
+The omitted `unwrap` follows `result-pattern`: it receives the handler's
+contract-typed `errors` constructors and throws `errors.CODE({ data })`, so the
+payload is checked against `.errors()` and the status is never repeated.
 
 ## Preserve layer boundaries
 
@@ -68,4 +70,4 @@ contract's `.errors()` schema exactly.
 - Test service behavior and every expected error. Test serialization/auth at the
   router edge only when repo policy permits it.
 - Typecheck contract, domain, and API together. Exhaustiveness catches
-  union/unwrap drift; explicitly compare unwrap codes with contract errors.
+  union/unwrap drift, and the typed constructors catch unwrap/contract drift.

@@ -42,6 +42,14 @@ export async function createOrder(input: CreateOrder): Promise<Result<Order, Ord
 
 - Define one discriminated error union per resource/slice, with `code` and only
   the fields required to explain or translate that variant.
+- A refusal carries a `reason` typed as a union of literals declared in the
+  transport contract and imported by the domain, never `string`: a UI mapper
+  cannot sort prose, and a new reason must break the build until its copy is
+  decided. One `CONFLICT` per resource is the default; add a code per refused
+  action only when reason sets or client reactions differ.
+- Each `data` field keeps one meaning. If `field` names a form field to
+  highlight, an entity the refusal names gets its own carrier
+  (`dataSource: { id, name }`), never `field`.
 - Propagate a failed dependency result immediately; do not unwrap and rewrap it.
 - Keep domain code free of Hono/RPC/HTTP imports.
 
@@ -70,6 +78,11 @@ export function unwrap<T>(result: Result<T, OrdersError>): T {
     .exhaustive();
 }
 ```
+
+When the transport hands the handler contract-typed error constructors, the
+unwrap receives them and throws `errors.CODE({ data })` instead of building the
+framework error itself. The constructors check code and `data` against the
+contract, and the status stays the contract's — never set it in the unwrap.
 
 A new error variant moves three artifacts together: the error union, this
 unwrap mapping, and the transport contract's declared error codes.
