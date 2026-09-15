@@ -45,11 +45,12 @@ capacity and readiness. Superset receives selected work but never changes the pl
    read, fails only that selected issue; do not backfill it during this invocation.
 6. Resolve the invoking workspace's groups using **Workspace groups** in the shared
    contract. If placement is unresolved, report `degraded` without creating workspaces.
-   Render the shared deterministic issue workspace name
-   `linear-<lowercaseIssueId>-<taskDigest>`, where `taskDigest` is the first eight
-   hexadecimal characters of SHA-256 over the exact task id. Render the complete worker
-   prompt per valid issue. Attempt exactly one branch-scoped workspace create-or-reuse per
-   issue, without an embedded agent launch, with sibling attempts settled independently:
+   Render the issue workspace name from the uppercase issue identifier and the title
+   already returned by the reader in step 5, per **Workspace identities** in the shared
+   contract; the name is a display label and `--task` carries the identity. Render the
+   complete worker prompt per valid issue. Attempt exactly one branch-scoped workspace
+   create-or-reuse per issue, without an embedded agent launch, with sibling attempts
+   settled independently:
 
 ```text
 superset workspaces create \

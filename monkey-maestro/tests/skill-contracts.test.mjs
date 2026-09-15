@@ -143,7 +143,9 @@ test("orchestrate uses one Linear capacity calculation and bounded Superset tran
   expect(orchestrate).toMatch(/reclassify every selected issue.*require it to remain ready/);
   expect(orchestrate).toMatch(/linear-reader.*mode: project.*mode: selected/);
   expect(orchestrate).toMatch(/sibling attempts settled independently/);
-  expect(orchestrate).toMatch(/linear-<lowercaseissueid>-<taskdigest>/);
+  expect(orchestrate).toMatch(/workspace name from the uppercase issue identifier and the title/);
+  expect(orchestrate).toMatch(/the name is a display label and --task carries the identity/);
+  expect(orchestrate).not.toMatch(/taskdigest/);
   expect(tools).toMatch(/Bash\(superset workspaces create:\*\)/);
   expect(tools).toMatch(/Bash\(superset agents create:\*\)/);
   expect(tools).toMatch(/Bash\(superset workspaces list:\*\)/);
@@ -173,7 +175,9 @@ test("spawn keeps issue dispatch manual and independent from project controls", 
   expect(spawn).toMatch(/blocked issue or any unknown.*refuses dispatch/);
   expect(spawn).toMatch(/does not calculate project capacity/);
   expect(spawn).toMatch(/exact linear issue and project binding/);
-  expect(spawn).toMatch(/linear-<lowercaseissueid>-<taskdigest>/);
+  expect(spawn).toMatch(/workspace name from the uppercase issue identifier and the title/);
+  expect(spawn).toMatch(/never narrow that listing by name/);
+  expect(spawn).not.toMatch(/taskdigest/);
   expect(spawn).toMatch(/not specified in linear.*never infer/);
   expect(tools).toMatch(/Bash\(superset tasks get:\*\)/);
 });

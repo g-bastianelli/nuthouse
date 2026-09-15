@@ -43,10 +43,11 @@ project-wide reconciliation.
    explicitly named `started` issue may proceed. Manual issue spawn does not calculate
    project capacity and does not read the rest of the project.
 3. Resolve the exact Superset task with `superset tasks get <issueId> --json`. Require its
-   exact Linear issue and project binding. Calculate `taskDigest` as the first eight
-   hexadecimal characters of SHA-256 over the exact task id. Set the workspace name to
-   `linear-<lowercaseIssueId>-<taskDigest>` and use `bindingArgs = --task <taskId>`. This is
-   the same issue identity required of project orchestration.
+   exact Linear issue and project binding. Use `bindingArgs = --task <taskId>`; that
+   binding is the issue identity, the same one project orchestration matches on. Render the
+   workspace name from the uppercase issue identifier and the title read in step 1, per
+   **Workspace identities** in the shared contract. The name is a display label and is
+   never matched against.
 
 ## Quick-fix mode
 
@@ -91,10 +92,12 @@ from narrow local discovery. Never consult a project control.
 
 ## Workspace inspection and approval
 
-1. List workspaces once with the resolved Superset project and exact workspace-name
-   search. In issue mode keep only exact task-bound matches. In quick-fix mode keep only
-   exact name-and-branch matches. Multiple exact matches are ambiguous and refuse
-   mutation; an unavailable or malformed listing also refuses.
+1. List workspaces once for the resolved Superset project. In issue mode keep only exact
+   task-bound matches and never narrow that listing by name; a retitled issue would no
+   longer match its own workspace and a duplicate would be created. In quick-fix mode
+   narrow by exact workspace-name search and keep only exact name-and-branch matches.
+   Multiple exact matches are ambiguous and refuse mutation; an unavailable or malformed
+   listing also refuses.
 2. With one matching workspace, list live terminals for that exact workspace. A live
    terminal returns `already-running` without approval or launch. Zero matches previews
    `create`; one match with no live terminal previews `recover`. An unavailable or

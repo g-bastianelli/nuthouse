@@ -28,9 +28,15 @@ Superset workspace or terminal counts never change this calculation.
 
 ## Workspace identities
 
-Issue-backed orchestration and manual issue spawn use the same identity. Calculate the
-first eight hexadecimal characters of SHA-256 over the exact Superset task id and name the
-workspace `linear-<lowercaseIssueId>-<taskDigest>`. Bind it with `--task <taskId>`.
+Issue-backed orchestration and manual issue spawn use the same identity: the Superset
+`--task <taskId>` binding. The workspace name is a display label only — Superset stores it
+verbatim, enforces no character rules, and derives no worktree path from it — so it is
+never a matching key. Build it by joining the uppercase Linear issue identifier, a spaced
+em dash, and the issue title exactly as Linear returned it, then truncate to 100
+characters and trim trailing whitespace:
+`NOT-613 — Corriger le retry et le redéploiement à froid des ZIP`. Fall back to the bare
+uppercase identifier when the title is empty or unknown. A later retitle changes the label
+and nothing else.
 
 For a quick fix, normalize the exact objective by trimming it and replacing every
 whitespace run with one ASCII space. Build its readable slug by lowercasing, applying
@@ -40,7 +46,8 @@ again. Use `quick-fix` if empty. Calculate the first eight hexadecimal character
 SHA-256 over the normalized objective. Name the branch `quick/<slug>-<digest>` and the
 workspace `quick-<slug>-<digest>`. Bind it with `--branch <branchName>` and
 `--skip-branch-prefix`; the stored branch must remain exactly the derived identity used by
-recovery matching.
+recovery matching. A quick fix has no task to bind, so unlike issue mode its name is part
+of that identity and is not free to read well.
 
 ## Workspace groups
 
