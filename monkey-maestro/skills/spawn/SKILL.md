@@ -124,7 +124,7 @@ superset workspaces create \
   --project <supersetProjectId> \
   --host <targetHostId> \
   <bindingArgs> \
-  --name <workspaceName> \
+  --name '<workspaceName>' \
   <tagArgs> \
   --json
 ```

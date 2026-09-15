@@ -38,6 +38,10 @@ characters and trim trailing whitespace:
 uppercase identifier when the title is empty or unknown. A later retitle changes the label
 and nothing else.
 
+A title is free-form text, so pass the name as one single-quoted `--name` argument with
+every embedded `'` replaced by `'\''`. Unquoted, a name silently truncates at its first
+space and the shell expands any `$`, backtick, or quote the title carries.
+
 For a quick fix, normalize the exact objective by trimming it and replacing every
 whitespace run with one ASCII space. Build its readable slug by lowercasing, applying
 Unicode NFKD, removing combining marks, replacing every run outside `a-z0-9` with one
@@ -152,7 +156,7 @@ superset workspaces create \
   --project <supersetProjectId> \
   --host <targetHostId> \
   --task <taskId> \
-  --name <workspaceName> \
+  --name '<workspaceName>' \
   <tagArgs> \
   --json
 ```
@@ -184,8 +188,9 @@ project capacity.
   the objective and bind the workspace with `--branch`.
 
 Both modes resolve transport from explicit values followed by narrow local discovery.
-Before approval, narrow one workspace listing by the deterministic identity and require
-at most one exact task-bound or branch-bound match. A matching live terminal returns
+Before approval, list workspaces once for the resolved project and require at most one
+match: the exact task binding in issue mode, the exact name and branch in quick-fix mode.
+Never narrow an issue-mode listing by name. A matching live terminal returns
 `already-running`. Otherwise preview `create` or `recover` and ask once. After approval,
 create at most one workspace, but launch from a create action only when the response
 explicitly says `created`; a reuse caused by a concurrent winner launches nothing.

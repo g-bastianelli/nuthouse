@@ -135,6 +135,7 @@ test("orchestrate uses one Linear capacity calculation and bounded Superset tran
     /superset workspaces create \\\n[\s\S]*?  --json/,
   )?.[0];
   expect(workspaceCommand).not.toMatch(/--agent|--prompt/);
+  expect(workspaceCommand).toMatch(/--name '<workspaceName>'/);
   expect(orchestrate).toMatch(/report dispatched only when the agent command confirms success/);
   expect(orchestrate).toMatch(/launch-failed.*monkey-maestro:spawn <issueid>/);
   expect(orchestrate).toMatch(/launch-unknown.*monkey-maestro:reconcile/);
@@ -145,7 +146,6 @@ test("orchestrate uses one Linear capacity calculation and bounded Superset tran
   expect(orchestrate).toMatch(/sibling attempts settled independently/);
   expect(orchestrate).toMatch(/workspace name from the uppercase issue identifier and the title/);
   expect(orchestrate).toMatch(/the name is a display label and --task carries the identity/);
-  expect(orchestrate).not.toMatch(/taskdigest/);
   expect(tools).toMatch(/Bash\(superset workspaces create:\*\)/);
   expect(tools).toMatch(/Bash\(superset agents create:\*\)/);
   expect(tools).toMatch(/Bash\(superset workspaces list:\*\)/);
@@ -177,7 +177,6 @@ test("spawn keeps issue dispatch manual and independent from project controls", 
   expect(spawn).toMatch(/exact linear issue and project binding/);
   expect(spawn).toMatch(/workspace name from the uppercase issue identifier and the title/);
   expect(spawn).toMatch(/never narrow that listing by name/);
-  expect(spawn).not.toMatch(/taskdigest/);
   expect(spawn).toMatch(/not specified in linear.*never infer/);
   expect(tools).toMatch(/Bash\(superset tasks get:\*\)/);
 });

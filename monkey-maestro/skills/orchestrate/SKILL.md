@@ -57,7 +57,7 @@ superset workspaces create \
   --project <supersetProjectId> \
   --host <targetHostId> \
   --task <taskId> \
-  --name <workspaceName> \
+  --name '<workspaceName>' \
   <tagArgs> \
   --json
 ```
