@@ -23,16 +23,26 @@ Apply this only to Hono backend/contracts/domain code. First read the scoped
 6. **Wiring** — mount a new resource/domain only; an existing router is wired.
 
 ```ts
-// contract.ts
-export const ordersContract = oc.router({
-  get: oc
-    .route({ method: "GET", path: "/orders/{id}" })
-    .input(z.object({ id: z.uuid() }))
-    .output(OrderSchema)
-    .errors({ NOT_FOUND: { status: 404, data: z.object({ orderId: z.uuid() }) } }),
+// contracts/orders/reasons.ts — leaf module, no routes, no framework imports
+export const conflictReasons = ["duplicate-reference"] as const;
+export type ConflictReason = (typeof conflictReasons)[number];
+
+// contract.ts — the resource declares its full error set once, so every
+// procedure's `errors` map carries every code the shared unwrap can throw.
+const base = oc.errors({
+  NOT_FOUND: { status: 404, data: z.object({ orderId: z.uuid() }) },
+  CONFLICT: { status: 409, data: z.object({ reason: z.enum(conflictReasons) }) },
 });
 
-// errors.ts + service.ts
+export const ordersContract = oc.router({
+  get: base
+    .route({ method: "GET", path: "/orders/{id}" })
+    .input(z.object({ id: z.uuid() }))
+    .output(OrderSchema),
+});
+
+// errors.ts + service.ts — CONFLICT belongs to the resource (create refuses a
+// duplicate reference); this get slice only ever returns NOT_FOUND.
 export type OrdersError = { code: "NOT_FOUND"; orderId: string };
 export function createOrdersService(tenantId: string) {
   return {
@@ -57,7 +67,8 @@ payload is checked against `.errors()` and the status is never repeated.
 
 ## Preserve layer boundaries
 
-- Keep Hono/RPC/HTTP imports out of domain/service code.
+- Keep Hono/RPC/HTTP imports out of domain/service code; the contract's refusal
+  literals are the one `import type` exception.
 - Read auth/session at the edge; pass only required values into services.
 - Prefer resource subpath imports; broad barrels can load a whole context.
 - Follow the repo's persistence slices. Do not add a generic repository layer;

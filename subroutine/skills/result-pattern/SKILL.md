@@ -22,9 +22,11 @@ Use the repository's existing `Result` helpers and error taxonomy; the nearest
   to a declared domain variant; rethrow everything else.
 
 ```ts
+import type { ConflictReason } from "@app/contracts/orders/reasons";
+
 export type OrdersError =
   | { code: "NOT_FOUND"; orderId: string }
-  | { code: "CONFLICT"; reason: "duplicate-reference" };
+  | { code: "CONFLICT"; reason: ConflictReason };
 
 export async function createOrder(input: CreateOrder): Promise<Result<Order, OrdersError>> {
   try {
@@ -42,16 +44,21 @@ export async function createOrder(input: CreateOrder): Promise<Result<Order, Ord
 
 - Define one discriminated error union per resource/slice, with `code` and only
   the fields required to explain or translate that variant.
-- A refusal carries a `reason` typed as a union of literals declared in the
-  transport contract and imported by the domain, never `string`: a UI mapper
-  cannot sort prose, and a new reason must break the build until its copy is
-  decided. One `CONFLICT` per resource is the default; add a code per refused
-  action only when reason sets or client reactions differ.
-- Each `data` field keeps one meaning. If `field` names a form field to
-  highlight, an entity the refusal names gets its own carrier
-  (`dataSource: { id, name }`), never `field`.
+- A refusal carries a `reason` typed as a union of literals, never `string`: a
+  UI mapper cannot sort prose, and a new reason must break the build until its
+  copy is decided. The literals live in a leaf module of the contract package —
+  no routes, no framework imports, so nothing cycles back through the domain
+  schemas the contract itself pulls in — and reach the domain through an
+  `import type`, which erases at build. One `CONFLICT` per resource is the
+  default; add a code per refused action only when reason sets or client
+  reactions differ.
+- Each error field keeps one meaning. A validation variant may carry `field` to
+  name the form input to highlight; an entity the refusal names then gets its
+  own carrier (`dataSource: { id, name }`), never a second meaning stuffed into
+  `field`.
 - Propagate a failed dependency result immediately; do not unwrap and rewrap it.
-- Keep domain code free of Hono/RPC/HTTP imports.
+- Keep domain code free of Hono/RPC/HTTP imports; an `import type` of that leaf
+  reason module is the one exception.
 
 ```ts
 const tenant = resolveTenant(tenantId);
@@ -66,23 +73,32 @@ function. Exhaustive matching makes a newly added variant fail compilation
 until transport behavior is declared.
 
 ```ts
-export function unwrap<T>(result: Result<T, OrdersError>): T {
+// _unwrap.ts — the transport edge, so typing against the contract belongs here.
+export function unwrap<T>(result: Result<T, OrdersError>, errors: OrdersErrorConstructors): T {
   if (result.ok) return result.value;
   return match(result.error)
     .with({ code: "NOT_FOUND" }, (e) => {
-      throw new TransportError("NOT_FOUND", { orderId: e.orderId });
+      throw errors.NOT_FOUND({ data: { orderId: e.orderId } });
     })
     .with({ code: "CONFLICT" }, (e) => {
-      throw new TransportError("CONFLICT", { reason: e.reason });
+      throw errors.CONFLICT({ data: { reason: e.reason } });
     })
     .exhaustive();
 }
 ```
 
-When the transport hands the handler contract-typed error constructors, the
-unwrap receives them and throws `errors.CODE({ data })` instead of building the
-framework error itself. The constructors check code and `data` against the
-contract, and the status stays the contract's — never set it in the unwrap.
+`errors` is the handler's constructor map. Type it with the stack's own
+constructor-map type applied to the contract; never hand-write a structural map,
+which keeps compiling after a code is renamed in `.errors()` and only fails at
+runtime on the first refusal of that kind. The constructors check each code and
+its `data` against the contract and carry the status declared there — never
+build the framework error by hand, and never set a status in the unwrap.
+
+One unwrap serving a whole resource needs one invariant: the resource declares
+its full error set once on a shared contract builder, not per route, so every
+handler's map carries every code this `match` can throw. Per-route `.errors()`
+gives `get` a map without `CONFLICT`, and the `throw` becomes a 500 instead of
+the declared status.
 
 A new error variant moves three artifacts together: the error union, this
 unwrap mapping, and the transport contract's declared error codes.
