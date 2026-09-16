@@ -8,52 +8,36 @@ paths: ["**/*.ts"]
 
 # subroutine — Hono pipeline discipline
 
-Apply this only to Hono backend/contracts/domain code. First read the scoped
-`AGENTS.md` and one complete neighboring resource; reuse its stack and commands.
+Hono backend/contracts/domain code only. Read the scoped `AGENTS.md` and one
+complete neighboring resource first; reuse its stack and commands.
 
 ## Implement the whole vertical slice
 
-1. **Contract** — input/output schemas plus every transport error code, each
-   with an explicit `status` and a `data` schema; refusal reasons are enums.
+1. **Contract** — input/output schemas plus every error code with an explicit
+   `status` and `data` schema; refusal reasons are enums.
 2. **Resource error** — discriminated variants for expected failures.
-3. **Service** — framework-pure `Promise<Result<T, ResourceError>>`; pass
-   tenant/auth values explicitly.
-4. **Unwrap** — exhaustive translation to framework errors.
+3. **Service** — framework-pure `Promise<Result<T, ResourceError>>`;
+   auth/session read at the edge, only required values passed in.
+4. **Unwrap** — exhaustive translation to framework errors (`result-pattern`).
 5. **Router** — contract validation → service → unwrap → return.
-6. **Wiring** — mount a new resource/domain only; an existing router is wired.
+6. **Wiring** — mount new resources only; an existing router is already wired.
 
 ```ts
 // contracts/orders/reasons.ts — leaf module, no routes, no framework imports
 export const conflictReasons = ["duplicate-reference"] as const;
 export type ConflictReason = (typeof conflictReasons)[number];
 
-// contract.ts — the resource declares its full error set once, so every
-// procedure's `errors` map carries every code the shared unwrap can throw.
+// contract.ts — declare the full error set once on a shared builder so every
+// procedure (`base.route().input().output()`) carries every code the shared
+// unwrap can throw; a per-route map missing CONFLICT turns that throw into a
+// 500.
 const base = oc.errors({
   NOT_FOUND: { status: 404, data: z.object({ orderId: z.uuid() }) },
   CONFLICT: { status: 409, data: z.object({ reason: z.enum(conflictReasons) }) },
 });
 
-export const ordersContract = oc.router({
-  get: base
-    .route({ method: "GET", path: "/orders/{id}" })
-    .input(z.object({ id: z.uuid() }))
-    .output(OrderSchema),
-});
-
-// errors.ts + service.ts — CONFLICT belongs to the resource (create refuses a
-// duplicate reference); this get slice only ever returns NOT_FOUND.
-export type OrdersError = { code: "NOT_FOUND"; orderId: string };
-export function createOrdersService(tenantId: string) {
-  return {
-    async get(id: string): Promise<Result<Order, OrdersError>> {
-      const order = await findOrder(tenantId, id);
-      return order ? ok(order) : err({ code: "NOT_FOUND", orderId: id });
-    },
-  };
-}
-
-// _unwrap.ts + router.ts
+// router.ts — the handler's contract-typed `errors` constructors feed the
+// unwrap
 export const ordersRouter = {
   get: os.orders.get.handler(async ({ input, context, errors }) =>
     unwrap(await createOrdersService(context.tenantId).get(input.id), errors),
@@ -61,24 +45,15 @@ export const ordersRouter = {
 };
 ```
 
-The omitted `unwrap` follows `result-pattern`: it receives the handler's
-contract-typed `errors` constructors and throws `errors.CODE({ data })`, so the
-payload is checked against `.errors()` and the status is never repeated.
-
 ## Preserve layer boundaries
 
-- Keep Hono/RPC/HTTP imports out of domain/service code; the contract's refusal
-  literals are the one `import type` exception.
-- Read auth/session at the edge; pass only required values into services.
-- Prefer resource subpath imports; broad barrels can load a whole context.
-- Follow the repo's persistence slices. Do not add a generic repository layer;
-  isolate a store only for a complex transactional aggregate.
-- Keep token/session acquisition, webhooks, and health probes as plain Hono
-  routes when they sit outside the authenticated RPC pipeline.
+- Follow the repo's persistence slices: no generic repository layer, a dedicated
+  store only for a complex transactional aggregate.
+- Token/session acquisition, webhooks, and health probes stay plain Hono routes
+  outside the authenticated RPC pipeline.
 
 ## Verify the chain
 
-- Test service behavior and every expected error. Test serialization/auth at the
-  router edge only when repo policy permits it.
-- Typecheck contract, domain, and API together. Exhaustiveness catches
-  union/unwrap drift, and the typed constructors catch unwrap/contract drift.
+Test service behavior and every expected error; test serialization/auth at the
+router edge only when repo policy permits. Typecheck contract, domain, and API
+together.
