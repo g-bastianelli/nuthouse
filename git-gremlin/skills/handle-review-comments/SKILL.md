@@ -25,9 +25,11 @@ It adds two laws and nothing else: a reply announcing a fix waits for the push, 
 
 **EVERY COMMENT THE AGENT DECLINES TO ACT ON GETS AN EXPLANATORY REPLY, THEN A RESOLUTION, IN THAT ORDER.**
 
-Excluded, invalid, out of scope, already handled, obsolete, and won't-fix are one case, not
-six: the agent decided against the requested change, so the thread is owed a reason and a
-close. This is the default outcome of a dismissal, not an extra step the user has to ask for.
+Excluded, invalid, out of scope, and won't-fix are one case, not four: the agent decided
+against the requested change, so the thread is owed a reason and a close. This is the
+default outcome of a refusal, not an extra step the user has to ask for. A thread whose
+change the agent did make is not a refusal — it is announced under the push law below and
+never through this one.
 
 | Excuse                                 | Reality                                                    |
 | -------------------------------------- | ---------------------------------------------------------- |
@@ -39,8 +41,9 @@ close. This is the default outcome of a dismissal, not an extra step the user ha
 
 Reply first; resolve only once that reply is visible. If replying fails, leave the thread
 unresolved. If resolving fails after a successful reply, do not post the reply again —
-report the still-open thread in the agent's normal completion report. A dismissing reply
-depends on no push and is never withheld by the law below.
+report the still-open thread in the agent's normal completion report. A reply that announces
+no change depends on no push and is never withheld by **Push before you answer**; a reply
+that announces one is governed by that law, whatever the thread is labelled.
 
 ## Push before you answer
 
