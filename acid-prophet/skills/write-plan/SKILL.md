@@ -126,6 +126,9 @@ validated artifact fields to that caller immediately; do not restart its intervi
 mutate Linear. When the user already requested implementation, hand the full artifact set
 to the implementing turn: read it before coding, follow repository instructions, use
 applicable `subroutine` discipline, and finish with `moon-moth:verify` in a moon workspace.
+Include `../../shared/development-drift.md` in that handoff: the implementing agent
+reads it before coding and follows its autonomous checkpoints after each completed
+functional block and before a PR.
 
 When a Linear breakdown is requested:
 

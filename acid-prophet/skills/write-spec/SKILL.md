@@ -70,6 +70,14 @@ Write the draft under `docs/acid-prophet/specs/YYYY-MM-DD-<topic>.md` before req
 final review. Keep each section proportional to what it needs to communicate; a
 straightforward feature may need only a sentence per section.
 
+When revising an existing spec, keep its supplied path and identity. Apply only the
+approved delta, record decision provenance, advance `spec-version` once for the revision,
+and clear stale audit metadata while returning it to draft. Preserve acceptance identity
+and history under the shared format contract. Approval of the exact change already given
+in the conversation remains valid; only newly introduced consequential choices need a
+decision. After audit and ratification, return to `acid-prophet:reconcile-drift` when it
+is the caller so it can update dependent artifacts and recheck the implementation.
+
 Work through one representative user journey and the failures that can change its outcome.
 Choose relevant cases: invalid input, unauthorized actor, repeated action, conflicting
 state, dependency failure, or partial completion. Cover the applicable cases in observable

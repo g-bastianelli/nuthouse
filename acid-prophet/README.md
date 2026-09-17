@@ -19,7 +19,23 @@ through plans, contracts, quickstarts, Linear issues, checklists, and drift repo
 | `acid-prophet:write-plan`         | Turn an approved spec into dependency-ordered deliverables, necessary contracts, a codebase map, and acceptance scenarios |
 | `acid-prophet:write-constitution` | Ratify project-specific governing articles that later audits enforce                                                      |
 | `acid-prophet:write-checklist`    | Derive an open QA checklist preserving the source acceptance ids                                                          |
-| `acid-prophet:check-drift`        | Compare planned work or branch changes with the authoritative spec                                                        |
+| `acid-prophet:check-drift`        | Compare planned work, local changes, or PR commits with the authoritative spec                                            |
+| `acid-prophet:reconcile-drift`    | Resolve drift using approved intent and synchronize affected specifications and artifacts                                 |
+
+## Autonomous development checks
+
+Implementation handoffs from `write-plan` and `linear-devotee:plan` carry the
+[development checkpoints](shared/development-drift.md). After each completed functional
+block and before a PR, the active agent checks committed, staged, unstaged, and relevant
+untracked changes without a permission prompt. PR preparation also assesses HEAD alone;
+a local fix cannot hide drift in the commits being published. This is agent workflow
+behavior, not a background watcher, and an inspection-only request stays read-only.
+
+`acid-prophet:reconcile-drift` corrects accidental implementation changes and revises
+specs for decisions already approved by the user. It reuses the spec audit, preserves
+acceptance identities, updates affected artifacts, and rechecks the result. Unresolved
+product decisions require an answer; already approved decisions do not need another vote.
+Linked Linear descriptions are updated only with authorization and verified by readback.
 
 ## Discovery and review
 
@@ -73,7 +89,8 @@ Specs live under `docs/acid-prophet/specs/`. Plans live under
 `docs/acid-prophet/plans/<slug>/{plan.md, codebase-map.md, quickstart.md, contracts/}`.
 The exact [spec contract](shared/spec-format.md) and [plan contract](shared/plan-format.md)
 are shared by their producers and reviewers. Linear receives the full artifact paths;
-Acid Prophet itself makes no Linear mutation.
+Spec and plan creation make no Linear mutation; reconciliation may update existing
+descriptions when explicitly authorized.
 
 ## Verification
 
