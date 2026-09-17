@@ -26,6 +26,30 @@ A suggestion in a newer comment does not automatically replace approved Acceptan
 conflicting decisions with their sources and consequence; ask the person who can resolve them.
 Distinguish stated requirements, observed code behavior, and proposed implementation choices.
 
+## Database constraints during feature delivery
+
+When drafting projects, issues, and implementation plans, default to enforcing new business
+rules programmatically in application/service code, with observable verification. During initial
+delivery, add only simple structural database constraints: primary keys, foreign keys, and
+straightforward NOT NULL or UNIQUE constraints where required. Keep business-rule checks in
+code; defer complex CHECK constraints, triggers, and other elaborate database enforcement until
+the feature is complete and validated. Apply this boundary to foundation issues and feature
+Acceptance as well as implementation recommendations.
+
+Reassess additional database constraints after the feature is complete and validated. Add only
+those justified by the validated invariants and actual integrity needs. Do not automatically
+create a hardening issue or make speculative constraints a prerequisite for feature delivery.
+When a follow-up is justified, state the invariant, why application checks are insufficient,
+and how existing data will be checked or repaired before the constraint is added.
+
+Preserve existing constraints and explicit source requirements. If an approved source already
+requires early database enforcement, surface the conflict and propose a source amendment
+rather than silently changing Acceptance. If application checks cannot guarantee a required
+invariant under concurrent writes or across writers, explain the concrete failure and use a
+simple constraint where sufficient. If it would require more elaborate database enforcement,
+surface that decision rather than adding it automatically during initial delivery. Do not claim
+a check-then-write validation provides an atomic guarantee.
+
 ## Repository discovery
 
 Read applicable repository instructions, the affected entry point, its immediate callers and
