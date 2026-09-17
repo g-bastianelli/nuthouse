@@ -29,6 +29,19 @@ Read `../../persona.md`; it is canonical for this skill's user-facing output, an
    - Stop on a detached `HEAD`, when the current branch is the base branch, or when no
      commits exist ahead of the base.
    - Capture the current branch and `HEAD_OID = git rev-parse HEAD`.
+   - If an authoritative spec or issue Acceptance is available in the delivery context
+     or `docs/acid-prophet/specs/`, resolve the applicable source and run the checkpoint
+     below before drafting. An ambiguous source needs clarification. No source means
+     drift assessment is unavailable, not a reason to invent requirements.
+
+   **REQUIRED SUB-SKILL:** Use `acid-prophet:check-drift` when available, with the source,
+   inferred base, and intended PR scope. Check `worktree` and `committed` separately.
+   Follow its plugin's `shared/development-drift.md` for findings and existing repair
+   authority. Do not publish with unresolved drift or ambiguous findings. Local fixes
+   must enter HEAD through an authorized commit workflow before clearing committed drift.
+   If the skill is unavailable, disclose that limitation without claiming a clean result.
+   After any authorized repairs, refresh branch and `HEAD_OID` before drafting.
+
 2. Read `git log <base>...HEAD --oneline` and `git diff <base>...HEAD`. Detect Linear
    issue ids with `/\b[A-Z][A-Z0-9]+-[0-9]+\b/`, preferring the branch, then the log, then
    the diff. When exactly one id is unambiguous, suffix the title with ` [<id>]`; when
@@ -42,6 +55,10 @@ Read `../../persona.md`; it is canonical for this skill's user-facing output, an
    extra approval gate.
 4. After confirmation, verify that the branch and `HEAD_OID` still match the proposal. If they
    changed, regenerate it and ask again.
+   Revalidate drift report inputs too: base, source (including remote Acceptance when used),
+   recorded decisions, relevant worktree changes, and intended scope. Refresh affected
+   comparisons if any changed during the approval wait; unresolved findings stop publication.
+   If that changes the PR proposal, present the updated proposal for approval.
 5. Resolve the push remote in this order: `branch.<BRANCH>.pushRemote`,
    `remote.pushDefault`, `branch.<BRANCH>.remote`, `origin`, then the sole configured remote.
    Stop if the result is local (`.`), missing, or ambiguous.
@@ -58,7 +75,8 @@ Read `../../persona.md`; it is canonical for this skill's user-facing output, an
    passing every value as a separately quoted argument without `eval`. If it fails,
    surface stderr verbatim and do not retry. On success, capture the PR URL from stdout.
 
-Hooks and CI own verification. This skill does not run checks, merge the PR, update issue or
+Hooks and CI own test execution; the source comparison above is the pre-PR drift checkpoint.
+This skill does not run test suites, merge the PR, update issue or
 project state, orchestrate follow-up work, or infer human acceptance unless the user asks for
 that work separately.
 
@@ -79,5 +97,5 @@ git-gremlin:pr report
 - Push the base branch, force-push, or choose between ambiguous remotes.
 - Create a PR without explicit user confirmation.
 - Retry silently after `git push` or `gh pr create` failure.
-- Run verification, merge, update external issue state, or invoke another workflow unless
-  the user asks separately.
+- Run test suites, merge, update external issue state, or invoke unrelated workflows unless
+  the user asks separately. The conditional drift checkpoint above is part of PR preparation.

@@ -7,7 +7,9 @@ Review-comment discipline, commit, and PR helper for Claude Code and Codex.
 It recognizes commit or PR intent, drafts the boring text from the current git state, stages
 dirty changes when an actual commit needs them, and publishes local branches after the PR
 confirmation gate. Code review itself belongs to the runtime's native reviewer; verification
-belongs to hooks and CI; workspace orchestration stays outside Git Gremlin.
+belongs to hooks and CI. When a source spec or issue Acceptance is available, PR
+preparation invokes Acid Prophet to check local changes and the committed PR payload
+for drift. Workspace orchestration stays outside Git Gremlin.
 
 ## Skills
 

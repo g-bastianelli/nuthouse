@@ -137,6 +137,10 @@ Continue into implementation when the user's request already includes it. If the
 a plan, finish with the artifact and readiness result. Do not insert a commit menu or another
 permission for the same authorized step. This skill prepares the plan; the implementing agent
 follows it and runs repository verification, including `moon-moth:verify` in moon workspaces.
+Include the autonomous drift checkpoints in the implementation handoff: read the installed
+Acid Prophet plugin's `shared/development-drift.md`, retain the source path/issue id, and
+check after completed functional blocks and before a PR. If Acid Prophet is unavailable,
+report that limitation instead of claiming the checks ran; continue authorized implementation.
 
 Report the issue, plan version/path, source and project plan, audit result, and
 `implementation_ready | blocked | stopped`. Do not implement, mutate Linear, commit, push,
