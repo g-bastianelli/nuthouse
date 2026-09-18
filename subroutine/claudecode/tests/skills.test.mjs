@@ -54,23 +54,29 @@ test("parseSkill returns null without frontmatter", () => {
   expect(parseSkill("no frontmatter here")).toBeNull();
 });
 
-test("discoverSkills finds all nine real subroutine skills, priority-ordered", () => {
-  const skills = discoverSkills(SKILLS_DIR);
-  const names = skills.map((s) => s.name);
-  expect(names).toEqual([
-    "type-safety",
-    "validation",
-    "code-organisation",
-    "form-rules",
-    "react-rules",
-    "testing-discipline",
-    "state-machine",
-    "result-pattern",
-    "hono-pipeline",
-  ]);
-  for (const s of skills) {
-    expect(s.body.length).toBeGreaterThan(0);
-    expect(s.paths.length).toBeGreaterThan(0);
+test("discovery orders disciplines and keeps workflows out of edit matching", () => {
+  const dir = tmpMemo();
+  try {
+    for (const name of ["check-example", "code-organisation", "type-safety"]) {
+      fs.mkdirSync(path.join(dir, name));
+      fs.writeFileSync(
+        path.join(dir, name, "SKILL.md"),
+        `---\nname: ${name}\ndescription: Test ${name}\n${name === "check-example" ? "" : 'paths: ["**/*.ts"]\n'}---\nRules`,
+      );
+    }
+    const skills = discoverSkills(dir);
+    expect(skills.map((s) => s.name)).toEqual([
+      "type-safety",
+      "code-organisation",
+      "check-example",
+    ]);
+    expect(matchSkills(skills, "/repo/a.ts").map((s) => s.name)).toEqual([
+      "type-safety",
+      "code-organisation",
+    ]);
+    expect(buildDigest(skills)).toContain("check-example");
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
   }
 });
 
@@ -271,7 +277,7 @@ test("partitionBySession treats everything fresh with no sessionId", () => {
 
 test("buildInjection: full bodies first time, reminder on repeat, both under the cap", () => {
   const dir = tmpMemo();
-  const skills = discoverSkills(SKILLS_DIR);
+  const skills = matchSkills(discoverSkills(SKILLS_DIR), "/repo/src/service.ts");
   const wrap = (b) => `<system-reminder>x:\n${b}</system-reminder>`;
   try {
     const first = buildInjection(skills, "s1", wrap, { memoDir: dir });
