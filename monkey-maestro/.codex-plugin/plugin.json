@@ -1,6 +1,6 @@
 {
   "name": "monkey-maestro",
-  "version": "1.0.26",
+  "version": "1.0.27",
   "description": "Linear-first project orchestration plus manual control-free Superset quick-fix dispatch.",
   "author": {
     "name": "g-bastianelli"
