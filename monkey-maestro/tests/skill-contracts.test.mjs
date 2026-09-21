@@ -152,6 +152,19 @@ test("orchestrate uses one Linear capacity calculation and bounded Superset tran
   expect(tools).not.toMatch(/workspaces (get|update)|terminals/i);
 });
 
+test("the orchestrate worker prompt hands over its concurrent siblings without inference", () => {
+  const orchestrate = normalize(skills.orchestrate);
+
+  expect(orchestrate).toMatch(
+    /name the other issues dispatched in the same pass, by identifier and title only/,
+  );
+  expect(orchestrate).toMatch(/implemented concurrently in separate workspaces/);
+  expect(orchestrate).toMatch(/treat a file a sibling also owns as shared/);
+  expect(orchestrate).toMatch(/never infer which files a sibling touches/);
+  expect(orchestrate).toMatch(/never rank or sequence the siblings/);
+  expect(orchestrate).toMatch(/selects one issue renders no sibling section/);
+});
+
 test("status reports the same Linear-only capacity without Superset", () => {
   const status = normalize(skills.status);
   expect(status).toMatch(/read-only and linear-only/);

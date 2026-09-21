@@ -94,6 +94,15 @@ when the description states them; otherwise label each missing section
 the shared contract. The worker must not merge, push, change dependencies, or infer
 Linear completion.
 
+Name the other issues dispatched in the same pass, by identifier and title only, and state
+that they are being implemented concurrently in separate workspaces off the same base. A
+worker still owns its issue alone; the siblings change what it must assume about every file
+it opens. Instruct it to treat a file a sibling also owns as shared: the smallest change the
+issue needs, no restructuring, no drive-by cleanup, and no edit justified only by a
+sibling's concern. Never infer which files a sibling touches, and never rank or sequence the
+siblings — the identifiers and titles are the whole handoff, and the worker reads Linear
+itself when it needs more. A pass that selects one issue renders no sibling section.
+
 ## Report
 
 ```text
