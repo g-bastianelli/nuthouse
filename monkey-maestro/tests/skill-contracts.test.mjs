@@ -152,17 +152,42 @@ test("orchestrate uses one Linear capacity calculation and bounded Superset tran
   expect(tools).not.toMatch(/workspaces (get|update)|terminals/i);
 });
 
-test("the orchestrate worker prompt hands over its concurrent siblings without inference", () => {
-  const orchestrate = normalize(skills.orchestrate);
+test("the shared contract owns the concurrent-sibling handoff and forbids inference", () => {
+  const contract = normalize(read("monkey-maestro/shared/project-execution-contract.md"));
 
+  expect(contract).toMatch(/implemented concurrently.*separate workspaces off the same base/);
+  expect(contract).toMatch(/treat a file a sibling also owns as shared/);
+  expect(contract).toMatch(/never infers which files a sibling touches/);
+  expect(contract).toMatch(/never ranks or sequences the siblings/);
+  expect(contract).toMatch(/each skill defines its own sibling set/);
+  expect(contract).toMatch(/set is empty renders no sibling section/);
+});
+
+test("every worker that can have a live sibling is told about it", () => {
+  const orchestrate = normalize(skills.orchestrate);
+  const spawn = normalize(skills.spawn);
+
+  for (const document of [orchestrate, spawn]) {
+    expect(document).toMatch(/concurrent siblings.*shared contract/);
+  }
+
+  // An orchestrate pass dispatches into the workers already started by earlier passes,
+  // so the sibling set cannot stop at the issues selected by the current one.
+  expect(orchestrate).toMatch(/every issue counted started in step 3, by identifier only/);
+  expect(orchestrate).toMatch(/every other issue of this pass whose workspace returned/);
+  expect(orchestrate).toMatch(/reused or whose creation failed receives no worker/);
+
+  // The prompt is rendered late enough for that set to be knowable.
   expect(orchestrate).toMatch(
-    /name the other issues dispatched in the same pass, by identifier and title only/,
+    /once every workspace attempt of the pass has settled, render the complete worker prompt/,
   );
-  expect(orchestrate).toMatch(/implemented concurrently in separate workspaces/);
-  expect(orchestrate).toMatch(/treat a file a sibling also owns as shared/);
-  expect(orchestrate).toMatch(/never infer which files a sibling touches/);
-  expect(orchestrate).toMatch(/never rank or sequence the siblings/);
-  expect(orchestrate).toMatch(/selects one issue renders no sibling section/);
+
+  // spawn is the recovery path orchestrate hands out mid-pass: it reads the started set
+  // instead of launching a sibling-blind worker.
+  expect(spawn).toMatch(/mode: project.*solely to build the sibling set/);
+  expect(spawn).toMatch(/every issue counted started except the spawned issue itself/);
+  expect(spawn).toMatch(/never calculates project capacity/);
+  expect(spawn).toMatch(/reads no linear project, so it names no sibling/);
 });
 
 test("status reports the same Linear-only capacity without Superset", () => {
@@ -182,11 +207,15 @@ test("spawn keeps issue dispatch manual and independent from project controls", 
   expect(spawn).not.toMatch(/\bforce\b/);
   expect(spawn).toMatch(/issue mode.*linear issue identifier/);
   expect(spawn).toMatch(/linear-reader.*mode: selected/);
-  expect(spawn).not.toMatch(/resolve-controls|maxconcurrency|mode: project/);
+  expect(spawn).not.toMatch(/resolve-controls|maxconcurrency/);
   expect(spawn).toMatch(/never read or obey a linear project control/);
+  // The one project read spawn may make carries no authority: it feeds the sibling list
+  // and nothing else, and the marker comments it returns are discarded.
+  expect(spawn).toMatch(/discard everything else that read returns, including its marker/);
+  expect(spawn).toMatch(/capacity, readiness, and the control stay outside manual spawn/);
   expect(spawn).toMatch(/completed or canceled issue returns already-terminal/);
   expect(spawn).toMatch(/blocked issue or any unknown.*refuses dispatch/);
-  expect(spawn).toMatch(/does not calculate project capacity/);
+  expect(spawn).toMatch(/never calculates project capacity/);
   expect(spawn).toMatch(/exact linear issue and project binding/);
   expect(spawn).toMatch(/workspace name from the uppercase issue identifier and the title/);
   expect(spawn).toMatch(/never narrow that listing by name/);
