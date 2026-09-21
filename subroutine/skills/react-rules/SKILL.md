@@ -29,6 +29,8 @@ MembersTable/
     └── useMember.ts
 ```
 
+After structural edits, follow `code-organisation`’s checkpoint.
+
 ## Pass identity; let children own their data
 
 Prefer IDs and primitives over domain objects. A child selects what it needs
