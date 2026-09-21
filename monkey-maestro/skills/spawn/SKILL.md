@@ -40,9 +40,16 @@ project-wide reconciliation.
    branch, description, status, blocker ids, and current direct blocker rows.
 2. A `completed` or `canceled` issue returns `already-terminal`. A blocked issue or any
    unknown project, status, membership, or blocker fact refuses dispatch. A ready or
-   explicitly named `started` issue may proceed. Manual issue spawn does not calculate
-   project capacity and does not read the rest of the project.
-3. Resolve the exact Superset task with `superset tasks get <issueId> --json`. Require its
+   explicitly named `started` issue may proceed. Manual issue spawn never calculates
+   project capacity.
+3. Dispatch the reader once more in `MODE: project` for that exact project id, solely to
+   build the sibling set: keep the identifiers of every issue counted `started` except the
+   spawned issue itself, and discard everything else that read returns, including its marker
+   comments. This read decides nothing — capacity, readiness, and the control stay outside
+   manual spawn — but without it the worker `orchestrate` recommends recovering here is
+   blind to the siblings that are provably live. An unavailable or incomplete project read
+   yields an unknown sibling set: say so in the preview and never refuse dispatch for it.
+4. Resolve the exact Superset task with `superset tasks get <issueId> --json`. Require its
    exact Linear issue and project binding. Use `bindingArgs = --task <taskId>`; that
    binding is the issue identity, the same one project orchestration matches on. Render the
    workspace name from the uppercase issue identifier and the title read in step 1, per
@@ -160,12 +167,14 @@ An issue worker prompt starts with `linear-devotee:greet <issueId>` and preserve
 selected issue's title, branch, and description verbatim. Extract scope, acceptance
 criteria, and required checks only when the description states them; otherwise label each
 missing section `not specified in Linear` and never infer it. Include the shared ownership
-rules.
+rules, then apply **Concurrent siblings** from the shared contract with the identifiers
+collected in issue mode step 3 as the sibling set.
 
 A quick-fix worker prompt starts directly with the exact objective, requires repository
 instructions to be read before editing, scopes ownership to this fix and workspace,
 requires appropriate checks, and forbids reverting others' edits, merging, pushing,
-changing dependencies, or changing Linear. It ends with a concise DONE/BLOCKED handoff.
+changing dependencies, or changing Linear. It reads no Linear project, so it names no
+sibling. It ends with a concise DONE/BLOCKED handoff.
 
 ## Report
 

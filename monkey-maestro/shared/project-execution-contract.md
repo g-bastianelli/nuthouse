@@ -179,7 +179,8 @@ later invocation begins from a new Linear read.
 `spawn` has two explicit manual modes and never reads a project control or calculates
 project capacity.
 
-- **Issue mode:** read only the selected Linear issue and its current direct blockers. A
+- **Issue mode:** read the selected Linear issue and its current direct blockers, plus one
+  project read used only to name concurrently `started` issues in the worker prompt. A
   terminal, blocked, or unknown issue never launches. A ready or explicitly selected
   `started` issue may proceed. Require the exact Superset task binding and use it as the
   workspace identity.
@@ -225,6 +226,21 @@ issue exists. Both state:
 - for issue work, do not change Linear status or relations outside the greet/user
   workflow; for quick fixes, do not change Linear at all;
 - human feature acceptance and manual merge remain mandatory.
+
+### Concurrent siblings
+
+When other issues of the same Linear project are being implemented concurrently, the worker
+prompt names them by identifier, adds the title only when the calling skill already holds
+it, and states that they run in separate workspaces off the same base. A worker still owns
+its issue alone; the siblings change only what it must assume about every file it opens.
+Instruct it to treat a file a sibling also owns as shared: the smallest change the issue
+needs, no restructuring, no drive-by cleanup, and no edit justified only by a sibling's
+concern.
+
+Monkey Maestro never infers which files a sibling touches and never ranks or sequences the
+siblings: the identifiers are the whole handoff, and the worker reads Linear itself when it
+needs more. Each skill defines its own sibling set, and a prompt whose set is empty renders
+no sibling section at all.
 
 A DONE/BLOCKED worker envelope is a handoff only. It never changes scheduling state.
 

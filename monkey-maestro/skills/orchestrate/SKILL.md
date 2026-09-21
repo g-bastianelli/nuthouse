@@ -47,10 +47,9 @@ capacity and readiness. Superset receives selected work but never changes the pl
    contract. If placement is unresolved, report `degraded` without creating workspaces.
    Render the issue workspace name from the uppercase issue identifier and the title
    already returned by the reader in step 5, per **Workspace identities** in the shared
-   contract; the name is a display label and `--task` carries the identity. Render the
-   complete worker prompt per valid issue. Attempt exactly one branch-scoped workspace
-   create-or-reuse per issue, without an embedded agent launch, with sibling attempts
-   settled independently:
+   contract; the name is a display label and `--task` carries the identity. Attempt exactly
+   one branch-scoped workspace create-or-reuse per issue, without an embedded agent launch,
+   with sibling attempts settled independently:
 
 ```text
 superset workspaces create \
@@ -66,8 +65,10 @@ superset workspaces create \
    task-bound workspace id. Launch only after an explicit `created` result. A `reused` or
    ambiguous result never launches an agent; report `already-existing` and the confirmed
    recovery command `monkey-maestro:spawn <issueId>`. This makes workspace creation the
-   atomic duplicate guard across concurrent orchestration invocations. For a newly created
-   workspace, attempt one launch:
+   atomic duplicate guard across concurrent orchestration invocations. Once every workspace
+   attempt of the pass has settled, render the complete worker prompt for each explicitly
+   created workspace; its sibling set is knowable only here. For each of them, attempt one
+   launch:
 
 ```text
 superset agents create \
@@ -93,6 +94,19 @@ when the description states them; otherwise label each missing section
 `not specified in Linear` and never infer it. Include the ownership and handoff rules from
 the shared contract. The worker must not merge, push, change dependencies, or infer
 Linear completion.
+
+Apply **Concurrent siblings** from the shared contract. A worker's sibling set is exactly
+the union of two sets, and nothing else:
+
+- every issue counted `started` in step 3, by identifier only — a `project` read returns no
+  titles, and a live `started` issue is concurrent work whether or not this pass launched
+  it;
+- every other issue of this pass whose workspace returned an explicit `created` in step 7,
+  by identifier and title.
+
+An issue whose workspace was reused or whose creation failed receives no worker, so it never
+appears in a sibling list. A pass that fills the last free slot still renders the started
+issues it dispatched into.
 
 ## Report
 
