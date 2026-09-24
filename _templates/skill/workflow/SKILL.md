@@ -1,7 +1,8 @@
 <!-- template-meta
 required_frontmatter: [name, description]
 optional_frontmatter: [model, effort, allowed-tools, argument-hint, disable-model-invocation, user-invocable, paths, disallowed-tools, context, agent]
-required_sections: ["## Workflow", "## Never"]
+genre: workflow
+required_sections: ["## Voice"]
 variables: [plugin, skill, description]
 -->
 
@@ -96,3 +97,17 @@ Name the next skill explicitly, on its own line, so the chain cannot be guessed:
 - Mutate external services without explicit user confirmation.
 - Skip the preconditions step.
 - [Skill-specific don'ts]
+
+<!--
+Genre notes — read before choosing this template over `_templates/skill/contract/`.
+
+A **workflow** performs ordered actions, gates a mutation, dispatches subagents, or
+reports a result. `/audit` requires only `name`, `description`, and a `## Voice` section
+that points to the plugin's `persona.md`. The `## Workflow`, `## Final Report`, and
+`## Never` sections above are a starting skeleton, not a contract: rename or regroup
+them around what the skill does, and orchestrate in prose
+(`_adr/0007-prose-orchestration-over-a-workflow-kernel.md`).
+
+A rule the skill must not break becomes a named law: the rule in capitals, then a short
+`| Excuse | Reality |` table. `git-gremlin/skills/commit/SKILL.md` is the reference.
+-->

@@ -158,7 +158,8 @@ Write one canonical root SKILL.md. Runtime selection controls which manifest exp
 
 **Template source:** Before generating any SKILL.md, read the root skill template:
 
-- Root skill runtime → `_templates/skill/codex/SKILL.md`
+- Workflow skill → `_templates/skill/workflow/SKILL.md`
+- Knowledge skill (Q13 = knowledge, read not run) → `_templates/skill/contract/SKILL.md`
 
 This is the source of truth for file structure. Substitute these variables from interview answers:
 
@@ -187,8 +188,13 @@ argument-hint: "<ARGUMENT_HINT>" # [IF Q14 gave a hint — REQUIRED when the ski
 context: fork # [IF Q13 = fork, else omit]
 agent: <FORK_AGENT> # [IF Q13 = fork AND FORK_AGENT provided, else omit]
 user-invocable: false # [IF Q13 = knowledge, else omit]
+genre: contract # [IF Q13 = knowledge, else omit]
 ---
 ```
+
+[IF Q13 = knowledge] Skip the body skeleton below: fill the contract template's
+body instead — no `## Voice`, `## Workflow`, `## Final Report`, or `## Never`.
+[/ENDIF]
 
 **Body skeleton** — generate:
 

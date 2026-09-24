@@ -1,6 +1,6 @@
 ---
 name: audit
-description: Scan all skills, agents, personas, and banner prompts in this nuthouse repo against the _templates/ source of truth. Reports missing ## Workflow / ## Never, old-format ## Voice / ## Language artifacts, missing agent tools allowlist, persona-coded non-voice agent names, invalid frontmatter, and BANNER_PROMPT.md convention drift. Run after any convention change to catch drift.
+description: Scan all skills, agents, personas, and banner prompts in this nuthouse repo against the _templates/ source of truth. Reports invalid frontmatter, workflow skills without a persona-pointing ## Voice, contract skills carrying workflow sections, missing agent tools allowlist, persona-coded agent names, and BANNER_PROMPT.md convention drift. Run after any convention change to catch drift.
 effort: high
 ---
 
@@ -36,7 +36,8 @@ other plugin; its image is the style target, not a rules exception.
 Verify `_templates/` exists and contains the required templates:
 
 ```bash
-test -f _templates/skill/claudecode/SKILL.md && \
+test -f _templates/skill/workflow/SKILL.md && \
+test -f _templates/skill/contract/SKILL.md && \
 test -f _templates/agent/AGENT.md && \
 test -f _templates/persona/persona.md && \
 test -f _templates/plugin/BANNER_PROMPT.md && \
@@ -49,14 +50,16 @@ If templates are missing, abort with: _"les formules manquent. `_templates/` est
 
 Read the `<!-- template-meta -->` block from each template:
 
-- `_templates/skill/claudecode/SKILL.md` → for all SKILL.md files
+- `_templates/skill/workflow/SKILL.md` → for every SKILL.md without `genre: contract`
+- `_templates/skill/contract/SKILL.md` → for every SKILL.md whose frontmatter declares `genre: contract`
 - `_templates/agent/AGENT.md` → for all AGENT.md files
 - `_templates/persona/persona.md` → for all persona.md files
 - `_templates/plugin/BANNER_PROMPT.md` → for all plugin banner prompts
 
 Requirements extracted:
 
-- **SKILL.md:** required_frontmatter `[name, description]`, required_sections `["## Workflow", "## Never"]`
+- **Workflow SKILL.md:** required_frontmatter `[name, description]`, required_sections `["## Voice"]`
+- **Contract SKILL.md:** required_frontmatter `[name, description]`, forbidden_sections `["## Workflow", "## Final Report"]`
 - **AGENT.md:** required_frontmatter `[name, description]`, required_sections `[]`
 - **persona.md:** required_frontmatter `[name, tagline]`, required_sections `["## Language", "## Hard rule"]`
 - **BANNER_PROMPT.md:** required guidance: README banner, visible mascot/persona, existing nuthouse style, setting from persona world, functional props secondary, user-centered personas keep the user offscreen/implied/abstract, 3:1 target, no readable text unless exact English text is requested, final asset path `assets/banner.png`
@@ -93,10 +96,14 @@ For each file, check against the matching template's requirements.
 
 1. Frontmatter contains `name` field — ❌ CRITIQUE if missing
 2. Frontmatter contains `description` field — ❌ CRITIQUE if missing
-3. `## Workflow` section present — ❌ CRITIQUE if missing (new format)
-4. `## Never` section present — ❌ CRITIQUE if missing (new format)
-5. `## Voice` section present WITHOUT `## Workflow` — ⚠️ WARNING: old format, migrate to compact `## Workflow` + `## Never`
-6. `## Language` section present WITHOUT `## Workflow` — ⚠️ WARNING: old format artifact, migrate to intro-line pattern
+3. Genre is `contract` when the frontmatter declares `genre: contract`, else `workflow`.
+4. Workflow: `## Voice` section present — ❌ CRITIQUE if missing
+5. Workflow: the `## Voice` section points to the plugin's `persona.md` — ❌ CRITIQUE if not
+6. Contract: no `## Workflow` or `## Final Report` section — ❌ CRITIQUE if present
+
+Headings beyond these are the skill's own. Do not require `## Workflow`, `## Never`,
+or a step numbering: skills orchestrate in prose and state hard rules as named laws
+(`_adr/0007-prose-orchestration-over-a-workflow-kernel.md`).
 
 **AGENT.md checks:**
 

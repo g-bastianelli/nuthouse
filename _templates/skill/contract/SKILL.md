@@ -10,7 +10,8 @@ variables: [plugin, skill, description]
 ---
 
 name: {{skill}}
-description: {{description}} Background knowledge contract, preloaded into {{plugin}} agents; not a user-facing workflow.
+genre: contract
+description: {{description}}
 
 # user-invocable: false # set when only Claude and this plugin's agents should read it
 
@@ -38,16 +39,16 @@ State the rule, then the reason it exists. Show the shape a reader must produce 
 [...]
 
 <!--
-Genre notes — read before choosing this template over `_templates/skill/claudecode/`.
+Genre notes — read before choosing this template over `_templates/skill/workflow/`.
 
 A **contract** is background knowledge: a discipline a reader implements against, a schema
 two components exchange, or a canonical set of invocations. It is read, not run. It has no
-preconditions, no ordered steps, no approval gate, and no final report — so `## Workflow`,
-`## Final Report`, and `## Never` do not apply, and `/audit` skips those checks for this
-genre.
+preconditions, no ordered steps, no approval gate, no final report, and no voice — so
+`## Voice`, `## Workflow`, `## Final Report`, and `## Never` do not apply, and `/audit`
+rejects `## Workflow` and `## Final Report` for this genre.
 
-Declare the genre in the description with the exact phrase
-`not a user-facing workflow`. That phrase is what routes `/audit` to this template.
+Declare the genre with the frontmatter key `genre: contract`. That key is what routes
+`/audit` to this template; it stays out of the description, which a hook may inject.
 
 Choose the workflow template instead whenever the skill performs ordered actions, gates a
 mutation, dispatches subagents, or reports a result. A skill that does anything is a
