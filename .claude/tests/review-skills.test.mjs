@@ -1,4 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { execFileSync } from "node:child_process";
+import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import {
   checkBudget,
@@ -211,5 +214,68 @@ describe("reviewRepo", () => {
     const report = reviewRepo(REPO_ROOT);
     expect(report.skills.length).toBeGreaterThan(30);
     for (const entry of report.skills) expect(entry.plugin).not.toBe(".claude");
+  });
+});
+
+describe("review follow-ups", () => {
+  test("parses block-scalar descriptions, inline comments and CRLF", () => {
+    const folded = parseSkill(
+      "---\nname: x\ndescription: >-\n  Writes things.\n  Use when asked.\neffort: high # tier\n---\nbody\n",
+    );
+    expect(folded.fields.description.value).toBe("Writes things. Use when asked.");
+    expect(folded.fields.effort.value).toBe("high");
+    const crlf = parseSkill("---\r\nname: x\r\ndescription: d\r\n---\r\nbody\r\n");
+    expect(crlf.hasFrontmatter).toBe(true);
+    expect(crlf.fields.name.value).toBe("x");
+  });
+
+  test("requires the plugin's own persona and ignores headings inside code fences", () => {
+    const wrongPersona = skill(
+      "name: write-thing\ndescription: d",
+      "## Voice\n\nRead `../../../other/persona.md`; scope ends at the final report.\n",
+    );
+    expect(ids(run(wrongPersona))).toContain("N01");
+    const fencedOnly = skill(
+      "name: write-thing\ndescription: d",
+      "```markdown\n## Voice\n\nRead `../../persona.md`; scope ends at the final report.\n```\n",
+    );
+    expect(ids(run(fencedOnly))).toContain("N01");
+    const fencedContract = skill(
+      "name: write-thing\ngenre: contract\ndescription: d",
+      "```md\n## Workflow\n```\n",
+    );
+    expect(ids(run(fencedContract))).not.toContain("N13");
+  });
+
+  test("counts ./references links as linked", () => {
+    const text = skill(
+      "name: write-thing\ndescription: d",
+      `${VOICE}\nSee [rules](./references/x.md).\n`,
+    );
+    expect(ids(run(text, { files: ["SKILL.md", "references/x.md"] }))).not.toContain("A09");
+  });
+
+  test("does not count a trailing newline as a body line", () => {
+    const text = skill("name: write-thing\ndescription: d", VOICE + "line\n".repeat(493));
+    const bodyLines = parseSkill(text).body.split("\n").length - 1;
+    expect(bodyLines).toBe(499);
+    expect(ids(run(text))).not.toContain("A06");
+  });
+
+  test("skips dotfiles and runs from a path with spaces", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "review skills "));
+    const dir = path.join(root, "cobaye", "skills", "write-thing");
+    fs.mkdirSync(path.join(root, "cobaye", ".claude-plugin"), { recursive: true });
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, "SKILL.md"), skill("name: write-thing\ndescription: d"));
+    fs.writeFileSync(path.join(dir, ".DS_Store"), "");
+    const script = path.join(root, "check skills.mjs");
+    fs.copyFileSync(
+      path.join(REPO_ROOT, ".claude/skills/review-skills/scripts/check-skills.mjs"),
+      script,
+    );
+    const out = execFileSync("node", [script, "--json", root], { encoding: "utf8" });
+    const report = JSON.parse(out);
+    expect(report.skills[0].findings.map((f) => f.id)).not.toContain("C10");
   });
 });

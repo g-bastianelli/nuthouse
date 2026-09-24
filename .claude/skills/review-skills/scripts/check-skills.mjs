@@ -6,6 +6,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 const CLAUDE_ONLY_KEYS = [
   "paths",
@@ -38,23 +39,40 @@ function unquote(raw) {
   if (t.length >= 2 && (t[0] === '"' || t[0] === "'") && t.at(-1) === t[0]) {
     return { value: t.slice(1, -1), quoted: true };
   }
-  return { value: t, quoted: false };
+  // In YAML an unquoted ` #` starts a comment.
+  return { value: t.replace(/\s+#.*$/, ""), quoted: false };
+}
+
+// A `>` or `|` scalar continues on the indented lines that follow it.
+function blockScalar(indicator, lines) {
+  const text = lines.map((l) => l.trim());
+  return indicator.startsWith(">") ? text.filter(Boolean).join(" ") : text.join("\n");
 }
 
 /** Split a SKILL.md into top-level frontmatter fields and body. */
-export function parseSkill(text) {
+export function parseSkill(raw) {
+  const text = raw.replace(/\r\n/g, "\n");
   if (!text.startsWith("---\n"))
     return { hasFrontmatter: false, fields: {}, keys: [], body: text, bodyLine: 1 };
   const end = text.indexOf("\n---", 4);
   if (end === -1) return { hasFrontmatter: false, fields: {}, keys: [], body: text, bodyLine: 1 };
   const fields = {};
   const keys = [];
-  for (const line of text.slice(4, end).split("\n")) {
+  const lines = text.slice(4, end).split("\n");
+  lines.forEach((line, i) => {
     const m = line.match(/^([A-Za-z_][\w-]*):(.*)$/);
-    if (!m) continue;
+    if (!m) return;
     keys.push(m[1]);
-    fields[m[1]] = unquote(m[2]);
-  }
+    const indicator = m[2].trim();
+    if (/^[>|][+-]?$/.test(indicator)) {
+      const rest = lines.slice(i + 1);
+      const stop = rest.findIndex((l) => l.trim() && !/^\s/.test(l));
+      const block = stop === -1 ? rest : rest.slice(0, stop);
+      fields[m[1]] = { value: blockScalar(indicator, block), quoted: true };
+    } else {
+      fields[m[1]] = unquote(m[2]);
+    }
+  });
   const bodyStart = text.indexOf("\n", end + 1) + 1;
   return {
     hasFrontmatter: true,
@@ -81,11 +99,15 @@ function proseLines(body, bodyLine) {
 
 function section(body, heading) {
   const lines = body.split("\n");
-  const start = lines.findIndex((l) => l.trim() === heading);
+  let fenced = false;
+  const isHeading = lines.map((l) => {
+    if (/^\s*```/.test(l)) fenced = !fenced;
+    return !fenced && l.startsWith("## ");
+  });
+  const start = lines.findIndex((l, i) => isHeading[i] && l.trim() === heading);
   if (start === -1) return null;
-  const rest = lines.slice(start + 1);
-  const next = rest.findIndex((l) => l.startsWith("## "));
-  return (next === -1 ? rest : rest.slice(0, next)).join("\n");
+  const next = isHeading.findIndex((h, i) => h && i > start);
+  return lines.slice(start + 1, next === -1 ? undefined : next).join("\n");
 }
 
 function finding(id, severity, message, line) {
@@ -174,7 +196,7 @@ function checkBody(parsed, { codex, contract, knownSkills }) {
   const out = [];
   const { body, bodyLine } = parsed;
   const lines = proseLines(body, bodyLine);
-  const bodyLines = body.split("\n").length;
+  const bodyLines = body.split("\n").length - (body.endsWith("\n") ? 1 : 0);
   if (bodyLines >= 500)
     out.push(finding("A06", "WARNING", `body is ${bodyLines} lines; keep it under 500`));
 
@@ -223,7 +245,7 @@ function checkBody(parsed, { codex, contract, knownSkills }) {
     }
   } else {
     const voice = section(body, "## Voice");
-    if (voice === null || !/persona\.md/.test(voice)) {
+    if (voice === null || !voice.includes("../../persona.md")) {
       out.push(finding("N01", "CRITIQUE", "no ## Voice section pointing to ../../persona.md"));
     } else if (!/final report|hand-?off|scope/i.test(voice)) {
       out.push(
@@ -262,9 +284,11 @@ function checkFiles(parsed, { files, readFile, pluginFileExists, plugin, skillNa
     out.push(finding("C10", "WARNING", `stray file ${f} in the skill folder`));
 
   const linked = new Set(
-    [...parsed.body.matchAll(/(?:^|[\s`(])((?:references|scripts|assets)\/[\w./-]+[\w])/gm)].map(
-      (m) => m[1],
-    ),
+    [
+      ...parsed.body.matchAll(
+        /(?:^|[\s`(])(?:\.\/)?((?:references|scripts|assets)\/[\w./-]+[\w])/gm,
+      ),
+    ].map((m) => m[1]),
   );
   for (const link of linked) {
     if (!files.includes(link) && !pluginFileExists(link)) {
@@ -373,10 +397,13 @@ export function checkBudget(skills) {
 }
 
 function listFiles(dir, prefix = "") {
-  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
-    const rel = prefix ? `${prefix}/${e.name}` : e.name;
-    return e.isDirectory() ? listFiles(path.join(dir, e.name), rel) : [rel];
-  });
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  return entries
+    .filter((e) => !e.name.startsWith("."))
+    .flatMap((e) => {
+      const rel = prefix ? `${prefix}/${e.name}` : e.name;
+      return e.isDirectory() ? listFiles(path.join(dir, e.name), rel) : [rel];
+    });
 }
 
 function codexPlugins(root) {
@@ -454,7 +481,8 @@ function printReport({ skills, global }) {
   return count.CRITIQUE;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+const invoked = process.argv[1] && pathToFileURL(fs.realpathSync(process.argv[1])).href;
+if (import.meta.url === invoked) {
   const args = process.argv.slice(2);
   const root = path.resolve(args.find((a) => !a.startsWith("--")) ?? process.cwd());
   const report = reviewRepo(root);
