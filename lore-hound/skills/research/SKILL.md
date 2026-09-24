@@ -1,6 +1,6 @@
 ---
 name: research
-description: Use automatically when the user wants a researched, fact-checked, or cited answer from the web — "fais une recherche", "creuse le sujet", "vérifie cette info", "trouve-moi des sources sur", "research X", "fact-check X", "find sources on X", "dig into X", or any question whose answer needs several cross-checked web sources. Prefer this over a bare WebSearch whenever the answer should be sourced rather than answered from memory. Fan-out web search → fetch + summarize → adversarial verification → cited synthesis. Zero parametric knowledge — answers only from verified sources.
+description: Research and fact-check web questions through parallel search, source extraction, adversarial verification, and cited synthesis without relying on model memory.
 argument-hint: [research-question]
 model: sonnet
 effort: high
@@ -20,15 +20,6 @@ Read `../../persona.md`; it is canonical for this skill's user-facing output, an
 > Auto-injected on Claude Code at skill load. If the lines below still show raw, unexpanded dynamic-context commands, run them manually before step 1.
 
 - Today: !`date +%Y-%m-%d`
-
-## When you're invoked
-
-Fires automatically whenever the user asks for a researched, fact-checked, or cited answer
-from the web ("fais une recherche", "creuse", "vérifie cette info", "research X", "find
-sources on X"). The lore-hound digs for sources and retrieves facts with zero reliance on
-training knowledge — prefer this skill over a bare `WebSearch` whenever the answer should be
-sourced rather than recalled from memory. Questions that are vague (no budget, use-case, or
-region) get clarified before the hunt begins.
 
 ## Step 0 — Preconditions
 
@@ -68,6 +59,10 @@ via `WebSearch` (do NOT loop sequentially). Angles should be:
 Collect all results and URLs.
 
 ## Step 3 — Fetch + summarize (parallel source-fetcher dispatch)
+
+Before dispatching, read
+[`references/agent-contracts.md`](references/agent-contracts.md) for the exact
+payload and output contract of both research agents.
 
 For each promising source URL from Step 2 (cap at ~8 sources per run), dispatch the
 logical `lore-hound:source-fetcher` agent **in parallel** — issue all agent calls in one
@@ -115,42 +110,6 @@ Compose the final report from verified claims only:
   outro from the lore-hound.
 
 Print the report. Exit.
-
-## Subagent dispatch
-
-This skill dispatches two dedicated logical agents. The structured payload goes in the
-prompt, and each agent returns JSON in its final message. Dispatch each step as one
-concurrent batch; use the runtime's native delegation mechanism.
-
-### `lore-hound:source-fetcher` (Step 3)
-
-Haiku model, fetch-optimized. Retrieves exact text from a URL, extracts claims with
-provenance (URL + verbatim excerpt + confidence). Returns
-`{ claims: [{ text, citation_url, citation_excerpt, confidence }], _unclear_ }` as text.
-
-```
-Agent({
-  subagent_type: 'lore-hound:source-fetcher',
-  description: 'Fetch a URL, extract cited claims',
-  prompt: 'url: https://...\nquestion: <research question>',
-})
-```
-
-### `lore-hound:claim-verifier` (Step 4)
-
-Sonnet model for adversarial reasoning. Tests claims against sources, prefers recent
-reliable sources over memory, defaults to `refuted` if uncertain. Returns
-`{ verdict, reasoning }` as text.
-
-```
-Agent({
-  subagent_type: 'lore-hound:claim-verifier',
-  description: 'Adversarially verify a claim',
-  prompt: 'claim: <the claim>\nsources: [{ url, excerpt }, ...]',
-})
-```
-
-Both agents live under `lore-hound/agents/`.
 
 ## Final report
 

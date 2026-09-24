@@ -32,9 +32,9 @@ This skill is **rigid** — execute the steps in order.
 - Working tree: !`git status --porcelain | head -20`
 - Version bump plan: !`node scripts/bump-plugin-versions.mjs --dry-run 2>&1 | head -15`
 
-## Why this skill exists
-
-Nuthouse ships to two runtimes with different refresh mechanisms. Claude Code keys the plugin cache by **version** (`~/.claude/plugins/cache/<marketplace>/<plugin>/<version>/`) and `claude plugin update` compares **versions**, not sha pins. Codex reads `.agents/plugins/marketplace.json` from a cached Git marketplace snapshot and exposes the refreshed plugin only to a new session. A cross-runtime release is incomplete unless both manifests carry the release version, both registries cover the plugin, and the final report names both refresh paths. See `_adr/0004-plugin-version-bump-on-release.md`. The cure is an iron ordering rule: **versions first, shas last, both runtimes reported.**
+Nuthouse has two release phases because Claude Code discovers releases by plugin version,
+while the marketplace pins merged content by SHA. Therefore versions always land before
+SHA pins, and every cross-runtime release verifies and reports both runtimes.
 
 ## Workflow
 
@@ -48,26 +48,11 @@ Nuthouse ships to two runtimes with different refresh mechanisms. Claude Code ke
      - The `Version bump plan` line in `## Context` lists pending bumps → phase **versions**.
      - No pending bumps, on `main`, up to date with `origin/main` → phase **shas**.
      - Neither → report that there is nothing to release and stop.
-2. Phase **versions** (feature branch or main, before sha bump):
-   - Show the dry-run plan from `## Context` to the user and ask for approval (this is the only gate — one question).
-   - On approval, run `bun run bump:versions` (no `--dry-run`).
-   - Run the verification battery and show evidence, not assertion:
-     - `bunx bun test <plugin>/` for every bumped plugin that has tests
-     - `bun run test:meta`
-     - `bun test scripts/tests/`
-     - `bun run check:workflow` to verify Claude Code/Codex manifest version parity
-     - `bun run check:codex-agents` to verify generated Codex agents and runtime maps
-     - `bun run lint` and `bun run fmt:check`
-     - parse both registries: `.claude-plugin/marketplace.json` and `.agents/plugins/marketplace.json`
-     - for every Codex plugin in the runtime matrix, assert that its Codex registry entry exists and its `.codex-plugin/plugin.json` version equals the planned release version
-   - Any failure → report verbatim output, fix nothing silently, stop and ask.
-   - Hand off the version-bump commit to the `git-gremlin:commit` skill (it owns the mutation gate). Suggested message shape: `chore(release): bump <plugin>[, <plugin>…] to propagate <change>`.
-   - Tell the user the next move: merge to `main` (squash PR per repo workflow), then re-invoke `/release shas`.
-3. Phase **shas** (on up-to-date `main`, after the version-bump commit landed):
-   - Run `bun run bump:shas`. This updates Claude Code SHA pins only; the Codex registry deliberately has no `sha` field.
-   - Re-parse `.agents/plugins/marketplace.json` and assert that every released Codex plugin from the runtime matrix is still registered with the expected `./<plugin>` path.
-   - No diff → everything already pinned; skip to the final report.
-   - Diff → hand the commit to `git-gremlin:commit` (message shape: `chore(marketplace): bump shas after <change>`).
+2. For phase **versions**, read
+   [`references/versions-phase.md`](references/versions-phase.md) and complete it before
+   reporting or moving to SHA pins.
+3. For phase **shas**, read [`references/shas-phase.md`](references/shas-phase.md). This
+   phase runs only on up-to-date `main` after the version-bump commit landed.
 4. Final report (see format below). Never push — pushing stays a user action.
 
 ## Hard rules
@@ -79,6 +64,11 @@ Nuthouse ships to two runtimes with different refresh mechanisms. Claude Code ke
 - Never bypass lefthook with `--no-verify`.
 - Report failing checks with their verbatim output; no silent retries, no silent fixes.
 - Re-running the skill must be safe: both scripts are idempotent.
+
+## Phase references
+
+Read exactly one phase reference per invocation after preflight. Never preload the other
+phase merely to summarize it.
 
 ## Final report
 

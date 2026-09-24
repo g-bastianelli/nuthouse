@@ -1,41 +1,47 @@
 ---
 name: react-rules
 genre: contract
-description: React implementation discipline — one component per file, folders mirror JSX ownership, children receive stable IDs/primitives, state lives at the highest durable layer, and styling ownership stays explicit.
+description: React implementation discipline for component ownership, stable props, durable state, styling boundaries, accessibility, and measured optimization.
 user-invocable: false
 paths: ["**/*.tsx", "**/use*.ts", "**/hooks/**/*.ts"]
 ---
 
 # subroutine — React discipline
 
-Apply this to React components and hooks. Read the scoped `AGENTS.md` first for
-the router, data layer, form library, design system, i18n, and testing policy.
+Apply these rules to React components and hooks. Read the scoped `AGENTS.md`
+first: repository choices for routing, data, forms, design systems, i18n, and
+tests take precedence.
 
-## Make the file tree express the render tree
+## Rules that apply every time
 
-- Define exactly one React component per file using a named `function`.
-- A leaf is one file. When it gains children/support code, turn it into a folder
-  whose `index.tsx` exports the parent and only composes layout.
-- Put shared-by-siblings code at their lowest common ancestor. Keep nesting
-  shallow and colocate private hooks/types with their owner.
+1. Define one named React component per file; let folders mirror JSX ownership.
+2. Pass stable IDs and primitives across component boundaries, not whole domain
+   objects. The child selects the data it renders from the shared cache.
+3. Put state at its highest durable owner: server cache, typed URL, focused
+   Context, then local state.
+4. Never mirror fetched data in `useState` or fetch it from `useEffect`.
+5. Let the parent own placement and the child own its visual root; merge a
+   caller-provided `className` onto that root.
+6. Prefer repository design-system components and tokens to raw controls and
+   magic values.
+7. Preserve semantic markup, labels, keyboard behavior, and visible focus.
+8. Add memoization only for a measured need, and never when React Compiler owns
+   it.
+9. Follow the repository's test policy; do not invent component tests where it
+   deliberately tests extracted pure logic only.
+10. After creating, moving, or deleting TypeScript files, run the structural
+    checkpoint required by `subroutine:code-organisation`.
 
-```text
-MembersTable/
-├── index.tsx
-└── MemberRow/
-    ├── index.tsx
-    ├── RoleBadge.tsx
-    ├── RowActions.tsx
-    └── useMember.ts
-```
+## Read the relevant reference before changing code
 
-After structural edits, follow `code-organisation`’s checkpoint.
+- Creating, splitting, moving, or composing components: read
+  [`references/components.md`](references/components.md).
+- Adding selectors, fetching, URL state, Context, or local state: read
+  [`references/state-and-data.md`](references/state-and-data.md).
+- Changing layout, variants, controls, or interaction behavior: read
+  [`references/styling-and-accessibility.md`](references/styling-and-accessibility.md).
 
-## Pass identity; let children own their data
-
-Prefer IDs and primitives over domain objects. A child selects what it needs
-from the repository's cached data layer, owns its loading/empty behavior, and
-returns `null` when it has nothing to render.
+## Compliant example
 
 ```tsx
 type Props = { memberId: string; className?: string };
@@ -43,38 +49,10 @@ type Props = { memberId: string; className?: string };
 export function MemberRow({ memberId, className }: Props) {
   const member = useMember(memberId);
   if (!member) return null;
+
   return <li className={cn("flex items-center", className)}>{member.email}</li>;
 }
 ```
 
-When siblings need the same entity, share a colocated selector hook over the
-same query/cache rather than threading the object through the tree. Route-aware
-code owns URL reads/writes and passes values plus callbacks into route-agnostic
-libraries. Keep selectors subscribed to cache updates; do not replace a query
-hook with a one-time cache snapshot.
-
-## Put state at the highest durable layer
-
-1. Server state → query/data library; never mirror fetched data in `useState`.
-2. Shareable/refresh-persistent view state → typed URL search params.
-3. Low-frequency session/DI → one-purpose Context plus a dedicated hook.
-4. Ephemeral unsaved UI → local `useState`.
-
-Avoid `useEffect` for data fetching. If an effect is truly synchronizing with
-an external system, keep dependencies complete and comment the reason.
-
-## Keep styling and accessibility owned
-
-- Parent owns placement (grid/flex, gap, width, margin); child owns its root,
-  typography, color, border, and internal padding.
-- Accept `className` and merge it onto the root. Prefer design-system components
-  and tokens over raw controls and magic values.
-- Switch variants at the call site with `clsx`/`cn` conditionals; do not create
-  top-level class lookup registries.
-- Associate labels and controls with stable unique IDs and preserve keyboard,
-  focus, and semantic behavior supplied by the design system.
-
-If React Compiler is enabled, do not add `useMemo`, `useCallback`, or
-`React.memo`; otherwise add memoization only after measuring a real need. Follow
-the repository's test policy—do not invent component tests in a codebase that
-deliberately tests only extracted pure logic.
+The prop carries identity, the child owns its selection and empty state, and
+the caller can place the component without taking over its internals.

@@ -36,6 +36,20 @@ function skill(name) {
   return read(`monkey-maestro/skills/${name}/SKILL.md`);
 }
 
+function skillBundle(name) {
+  const entrypoint = skill(name);
+  const references = path.join(PLUGIN_ROOT, "skills", name, "references");
+  if (!fs.existsSync(references)) return entrypoint;
+  return [
+    entrypoint,
+    ...fs
+      .readdirSync(references)
+      .filter((filename) => filename.endsWith(".md"))
+      .sort()
+      .map((filename) => fs.readFileSync(path.join(references, filename), "utf8")),
+  ].join("\n");
+}
+
 function allowedTools(document) {
   return frontmatterField(document, "allowed-tools");
 }
@@ -47,6 +61,7 @@ function agentTools(document) {
 }
 
 const skills = Object.fromEntries(SKILL_NAMES.map((name) => [name, skill(name)]));
+const bundles = Object.fromEntries(SKILL_NAMES.map((name) => [name, skillBundle(name)]));
 
 test("discovered skills and agents preserve their context and capability boundaries", () => {
   const skillFiles = fs
@@ -119,7 +134,7 @@ test("start discovers ordinary local transport and has one mutation approval", (
 });
 
 test("orchestrate uses one Linear capacity calculation and bounded Superset transport", () => {
-  const orchestrate = normalize(skills.orchestrate);
+  const orchestrate = normalize(bundles.orchestrate);
   const tools = allowedTools(skills.orchestrate);
 
   expect(orchestrate).toMatch(/count every known started issue/);
@@ -129,9 +144,9 @@ test("orchestrate uses one Linear capacity calculation and bounded Superset tran
   expect(orchestrate).toMatch(/every blocker is present and terminal/);
   expect(orchestrate).toMatch(/started issues consume capacity but are never redispatched/);
   expect(orchestrate).toMatch(/do not backfill/);
-  expect((skills.orchestrate.match(/^superset workspaces create/gm) ?? []).length).toBe(1);
-  expect((skills.orchestrate.match(/^superset agents create/gm) ?? []).length).toBe(1);
-  const workspaceCommand = skills.orchestrate.match(
+  expect((bundles.orchestrate.match(/^superset workspaces create/gm) ?? []).length).toBe(1);
+  expect((bundles.orchestrate.match(/^superset agents create/gm) ?? []).length).toBe(1);
+  const workspaceCommand = bundles.orchestrate.match(
     /superset workspaces create \\\n[\s\S]*?  --json/,
   )?.[0];
   expect(workspaceCommand).not.toMatch(/--agent|--prompt/);
@@ -164,8 +179,8 @@ test("the shared contract owns the concurrent-sibling handoff and forbids infere
 });
 
 test("every worker that can have a live sibling is told about it", () => {
-  const orchestrate = normalize(skills.orchestrate);
-  const spawn = normalize(skills.spawn);
+  const orchestrate = normalize(bundles.orchestrate);
+  const spawn = normalize(bundles.spawn);
 
   for (const document of [orchestrate, spawn]) {
     expect(document).toMatch(/concurrent siblings.*shared contract/);
@@ -200,7 +215,7 @@ test("status reports the same Linear-only capacity without Superset", () => {
 });
 
 test("spawn keeps issue dispatch manual and independent from project controls", () => {
-  const spawn = normalize(skills.spawn);
+  const spawn = normalize(bundles.spawn);
   const tools = allowedTools(skills.spawn);
 
   expect(frontmatterField(skills.spawn, "argument-hint")).not.toContain("--force");
@@ -224,7 +239,7 @@ test("spawn keeps issue dispatch manual and independent from project controls", 
 });
 
 test("spawn launches deterministic quick fixes without Linear or controls", () => {
-  const spawn = normalize(skills.spawn);
+  const spawn = normalize(bundles.spawn);
   const tools = allowedTools(skills.spawn);
 
   expect(frontmatterField(skills.spawn, "argument-hint")).toMatch(/quick-fix objective/i);
@@ -242,12 +257,12 @@ test("spawn launches deterministic quick fixes without Linear or controls", () =
 });
 
 test("spawn performs at most one approved create and one launch in either mode", () => {
-  const spawn = normalize(skills.spawn);
+  const spawn = normalize(bundles.spawn);
   const tools = allowedTools(skills.spawn);
 
-  expect((skills.spawn.match(/^superset workspaces create/gm) ?? []).length).toBe(1);
-  expect((skills.spawn.match(/^superset agents create/gm) ?? []).length).toBe(1);
-  expect((skills.spawn.match(/\(y \/ cancel\)/g) ?? []).length).toBe(1);
+  expect((bundles.spawn.match(/^\s*superset workspaces create/gm) ?? []).length).toBe(1);
+  expect((bundles.spawn.match(/^\s*superset agents create/gm) ?? []).length).toBe(1);
+  expect((bundles.spawn.match(/\(y \/ cancel\)/g) ?? []).length).toBe(1);
   expect(spawn).toMatch(/live terminal returns already-running.*without approval or launch/);
   expect(spawn).toMatch(/immediately list the chosen workspace's live terminals once more/);
   expect(spawn).toMatch(/require explicit success before reporting dispatched/);

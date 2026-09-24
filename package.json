@@ -19,6 +19,7 @@
     "check:codex-agents": "node scripts/sync-codex-agents.mjs --check",
     "check:installed-codex-agents": "node scripts/sync-codex-agents.mjs --install --check",
     "check:workflow": "node scripts/check-plugin-invariants.mjs",
+    "check:skills": "node scripts/check-skill-structure.mjs",
     "test:scripts": "bun test scripts/tests",
     "check:duplication": "node scripts/check-prose-duplication.mjs"
   },

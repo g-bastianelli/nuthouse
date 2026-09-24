@@ -1,6 +1,6 @@
 ---
 name: reconcile-drift
-description: Use after development drift is detected to correct accidental implementation changes or synchronize specs and affected artifacts with decisions already approved by the user. Ask only for unresolved consequential decisions; inspection-only requests remain read-only.
+description: Reconcile detected development drift by fixing accidental implementation changes or synchronizing sources with already approved decisions. Inspection-only requests stay read-only.
 argument-hint: "[spec-path] [drift-report-path]"
 effort: high
 ---
@@ -46,32 +46,10 @@ is never a reason to weaken requirements.
 
 ## Revise accepted intent and its references
 
-For an approved change to a local spec, pass its existing absolute path, exact approved
-delta, decision provenance, and report to the owning workflow:
-
-**REQUIRED SUB-SKILL:** Use `acid-prophet:write-spec` to revise that file in place.
-
-Use `../../shared/spec-format.md`: advance the version once for this revision, return
-to draft during review, preserve stable identities and record retired criteria. Clear
-stale audit metadata. Reuse the user's explicit approval of the exact change; new
-consequential choices still need their decision. The existing independent audit and
-ratification process applies. Do not create a replacement spec or rebuild the project.
-
-After ratification, locate artifacts referencing the changed source/ids, including
-project and issue plans, contracts, quickstarts, checklists, and linked Linear issues.
-Update only affected references and verification expectations. Retain unrelated content
-and progress. Reopen affected checklist checks until new evidence supports them;
-document synchronization is not test completion. Re-review affected plan relationships
-under their existing format/owning workflow before restoring validated status.
-
-For Linear (including a Linear-only authoritative source), prepare exact changes to
-existing issue/project descriptions. Apply only when the user has authorized those
-external updates; prior explicit authorization counts. Otherwise finish all local work
-and present the concrete pending edits for approval. Read the latest remote body before
-writing, preserve unrelated sections and stable ids, and read back to verify. Never
-create duplicate issues, change status/assignees/dependencies, or expand the project as
-a side effect. On a conflict or failed write, stop that mutation and report remaining
-items; do not overwrite concurrent edits or claim full synchronization.
+When a finding changes already accepted intent or a linked source, read
+[`references/source-synchronization.md`](references/source-synchronization.md) before
+editing the spec, dependent artifacts, or Linear. Do not treat document synchronization
+as test completion.
 
 ## Verify and return
 

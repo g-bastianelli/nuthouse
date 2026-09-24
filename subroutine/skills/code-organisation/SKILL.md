@@ -1,7 +1,7 @@
 ---
 name: code-organisation
 genre: contract
-description: Code-organisation discipline for TypeScript — named exports, declarative entry points, one responsibility per file, explicit package boundaries, and reuse before writing. Applies while editing TypeScript and requires check-folder-shape after structural changes, before verification.
+description: TypeScript code organization with named exports, declarative entry points, explicit ownership and package boundaries, reuse first, and a folder-shape check after structural edits.
 user-invocable: false
 paths: ["**/*.ts", "**/*.tsx"]
 ---

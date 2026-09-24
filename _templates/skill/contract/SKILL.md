@@ -1,6 +1,6 @@
 <!-- template-meta
 genre: contract
-required_frontmatter: [name, description]
+required_frontmatter: [name, genre, description]
 optional_frontmatter: [model, effort, allowed-tools, user-invocable, paths, disable-model-invocation]
 required_sections: []
 forbidden_sections: ["## Workflow", "## Final Report"]
@@ -10,6 +10,7 @@ variables: [plugin, skill, description]
 ---
 
 name: {{skill}}
+genre: contract
 description: {{description}} Background knowledge contract, preloaded into {{plugin}} agents; not a user-facing workflow.
 
 # user-invocable: false # set when only Claude and this plugin's agents should read it
@@ -37,6 +38,15 @@ State the rule, then the reason it exists. Show the shape a reader must produce 
 
 [...]
 
+## Example
+
+[Optional short compliant example. Prefer one representative shape over repeated generic rules.]
+
+## References
+
+[Optional conditional routes such as: “Before editing a form, read
+`references/forms.md`.” Delete when the contract has no conditional material.]
+
 <!--
 Genre notes — read before choosing this template over `_templates/skill/claudecode/`.
 
@@ -56,4 +66,7 @@ workflow, however short.
 Existing contracts in this marketplace:
 
 - `subroutine/skills/*` — ambient implementation disciplines injected by a hook
+
+Keep only rules that change implementation decisions. Naming, imports, formatting, and other
+mechanical properties belong in the repository's lint/check configuration when enforceable.
 -->

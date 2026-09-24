@@ -1,6 +1,6 @@
 ---
 name: create-milestone
-description: Use to add one milestone to an existing Linear project. Defines a meaningful delivery boundary and exit evidence, reuses supplied context, and creates the complete authorized milestone. Use create-project for cascade creation or recovery.
+description: Add one reviewed milestone with a meaningful delivery boundary and exit evidence to an existing Linear project. Use create-project for cascades or recovery.
 effort: high
 allowed-tools: Read, Glob, Grep, Bash, Write, Edit, Agent, ToolSearch
 ---

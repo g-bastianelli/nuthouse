@@ -76,6 +76,30 @@ Canonical layout for cross-runtime plugins:
 
 Root skills read the plugin persona with `../../persona.md`. Skill frontmatter names are local (`name: write-spec`), not plugin-qualified; the runtime exposes them as `<plugin>:<skill>`. New scaffolding must not create duplicate runtime skill trees under `<plugin>/codex/` or `<plugin>/claudecode/skills/`.
 
+### Skill authoring and progressive disclosure
+
+`_adr/0009-progressive-disclosure-for-skills.md` is the governing decision. It
+supersedes ADR 0007 wherever that older record treats entrypoint line count as irrelevant
+or prescribes capitalized laws and rationalisation tables as the default writing style.
+
+`SKILL.md` is the entrypoint, not the complete manual. Keep what every invocation needs there:
+the outcome, shared workflow or implementation invariants, permission/stop boundaries,
+verification, and a router to conditional material. Put provider-specific commands, alternate
+modes, large schemas, and extended examples in `references/`, linked directly from `SKILL.md` with
+an explicit condition for reading them. Do not create a reference for material every invocation
+must immediately reload, and do not split a short focused skill merely to reduce its line count.
+
+Use examples when output shape or implementation style is easier to demonstrate than describe;
+keep explicit rules for safety, authority, and correctness. Move deterministic repeated work to a
+script and enforce mechanical structure with `bun run check:skills`. A 500-line entrypoint is a
+hard review threshold, not a target. Long references still need navigation and still consume
+context when read.
+
+For implementation-contract skills, keep the small set of invariants that recur on every
+matching edit and one short compliant example when it materially clarifies the shape. Route
+framework-, provider-, or operation-specific cases to references. A focused skill that already
+meets this rule stays self-contained; progressive disclosure is not a quota of files.
+
 Claude agent definitions under `<plugin>/agents/*.md` are canonical. Their generated
 Codex equivalents live in the repository-level `.codex/agents/*.toml` and use namespaced
 names such as `linear_devotee__issue_context`. Shared skills refer only to the logical id
@@ -104,10 +128,11 @@ and each completed step gets one line. On resume, re-read it and continue at the
 without a line. It is git-ignored and disposable. No hashes, no manifests, no signed evidence:
 the threat model is a lost conversation, not a hostile writer.
 
-**Guardrails are named laws, not code.** State the rule in capitals, then a short
-`| Excuse | Reality |` table naming the rationalisations that break it. `git-gremlin/skills/commit/SKILL.md`
-is the reference implementation. A gate that cannot be enforced by a hook is prose — write it as
-prose that is hard to argue with, rather than as a protocol nobody executes.
+Explain a guardrail's concrete failure mode in one line. Use absolute language only for real
+permission, safety, or correctness invariants. If a property can be checked deterministically,
+put it in a script or hook and let the skill name the command instead of duplicating the checker
+in prose. Small `| Excuse | Reality |` tables remain useful for repeatedly observed
+rationalisations, but they are evidence-driven exceptions rather than the default style.
 
 ---
 
@@ -129,6 +154,7 @@ bunx bun test <plugin>/                    # all plugin tests pass
 (cd .claude/hooks/tests && bunx bun test)  # persona-roulette tests pass
 bun run test:meta                          # frontmatter model/effort values valid
 bun run check:codex-agents                 # generated Codex agents match canonical Claude agents
+bun run check:skills                       # skill entrypoints and routed references are structurally valid
 bun run lint                                # lint clean
 bun run fmt:check                           # format clean
 node -e "JSON.parse(require('node:fs').readFileSync('.claude-plugin/marketplace.json', 'utf8'))"  # Claude Code marketplace JSON valid
@@ -192,8 +218,11 @@ Architecture Decision Records live in `_adr/`, numbered sequentially (`NNNN-keba
 - `_adr/0005-spec-issue-traceability.md` — stable Acceptance identities join Acid Prophet specs to plans, Linear issue packets, QA checklists, and drift reports. Source ids use `AC-###`; standalone Linear ids use `AC-L###`.
 - `_adr/0007-prose-orchestration-over-a-workflow-kernel.md` — the workflow kernel, the
   hash-bound evidence protocol, and the `warden` voice indirection are replaced by prose
-  chaining, a markdown ledger, and named laws. Read before adding any orchestration
-  machinery; it records why there is none.
+  chaining and a markdown ledger. Read before adding orchestration machinery; ADR 0009
+  supersedes its older skill-size and guardrail-style guidance.
+- `_adr/0009-progressive-disclosure-for-skills.md` — `SKILL.md` is a focused entrypoint;
+  conditional detail belongs in directly routed references and deterministic repeated work
+  in scripts. It governs skill creation and refactoring.
 
 ---
 

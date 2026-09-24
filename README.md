@@ -71,6 +71,7 @@ bun install
 bun test
 bun run test:meta
 bun run check:workflow
+bun run check:skills
 bun run lint
 bun run fmt:check
 ```

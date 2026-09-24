@@ -20,15 +20,8 @@ binds is out of scope.
 
 ## Convert in the schema, nowhere else
 
-- An `<input>` holds a string: convert in a codec, never in the form library
-  (`valueAsNumber`, `setValueAs`) or by hand. Two converters disagree on what
-  empty means — `valueAsNumber` yields `NaN`, which `z.number()` rejects with an
-  untranslated developer string.
-- Split the codec: the input schema owns the shape, so `decode` stays a bare
-  `Number`; the exported value schema owns the range, so `-1` is told to be
-  positive instead of unreadable.
-- Blank, malformed and out-of-range are three failures with three messages, and
-  `abort` after blank. Use the library's format constants, never a copied regex.
+- An `<input>` holds a string: convert through the schema, never in the form
+  library (`valueAsNumber`, `setValueAs`) or by hand.
 - Mirror the contract's bounds: a form looser than its API turns an inline
   message into a failed request.
 - Route messages through the repo i18n as thunks (`{ error: () => m.key() }`) —
@@ -36,19 +29,8 @@ binds is out of scope.
 - A closed option set (Select, Switch, radio) parses nothing: convert in the
   control's `onChange`.
 
-```ts
-// `abort` matters: without it a blank field fails both checks and reports
-// "invalid" for a value the user never entered.
-const slaveId = z.codec(
-  z
-    .string()
-    .trim()
-    .min(1, { error: errors.blank, abort: true })
-    .regex(z.regexes.integer, { error: errors.invalid }),
-  SlaveIdSchema, // exported: z.int().min(1).max(247), reused on stored data
-  { decode: Number, encode: String },
-);
-```
+Before binding a numeric text input, read
+[`references/numeric-inputs.md`](references/numeric-inputs.md).
 
 ## Input and output are different types
 

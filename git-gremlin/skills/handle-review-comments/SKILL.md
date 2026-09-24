@@ -1,6 +1,6 @@
 ---
 name: handle-review-comments
-description: Use whenever an agent is handling GitHub pull-request review comments, whether it fixes them or declines them. Let the agent assess and address them autonomously; this skill adds only two laws—a reply announcing a fix must not precede the push of that fix, and every comment the agent excludes, judges invalid, rules out of scope, or otherwise refuses to act on receives an explanatory reply and is then resolved.
+description: Handle GitHub PR review comments, requiring fixes to be pushed before announcing them and every declined comment to be explained before resolution.
 ---
 
 # git-gremlin — handle review comments
