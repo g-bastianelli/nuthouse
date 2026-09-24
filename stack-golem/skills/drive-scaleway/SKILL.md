@@ -1,6 +1,6 @@
 ---
 name: drive-scaleway
-description: Use when working with any Scaleway resource — IAM, instances, databases, registry, observability, networking. Drives the `scw` CLI directly to inspect and modify resources instead of suggesting manual console actions.
+description: Use when working with any Scaleway resource — IAM, instances, databases, registry, observability, networking. Inspects resources through the `scw` CLI and follows the repository's infrastructure owner for mutations.
 effort: high
 allowed-tools: Read
 ---
@@ -17,6 +17,12 @@ Use this skill when working with any Scaleway resource: IAM, instance, rdb, redi
 registry, observability, network. Inspecting current state, updating resources,
 or debugging infra failures (Pulumi errors, permission issues).
 
+Read the applicable repository instructions before choosing a write path. In
+notom-platform, Scaleway resources are owned by Pulumi: use `scw` for read-only
+diagnosis, make resource changes in Pulumi source, and follow the repository's
+approval rule before running `pulumi preview`, `up`, or `destroy`. Never create,
+update, or delete a Pulumi-owned resource directly with `scw`.
+
 **Core principle: read before you write.** Always inspect current state with
 `scw ... get` or `scw ... list` before proposing changes. **Never** suggest "go to
 the Scaleway console" for something `scw` can do.
@@ -24,7 +30,9 @@ the Scaleway console" for something `scw` can do.
 ## Step 0 — Preconditions
 
 1. Verify `scw` CLI is available and authenticated (`scw account project list -o json`).
-2. For any mutation: confirm the target resource and project with the user first.
+2. For any mutation, identify its infrastructure owner and confirm the target
+   resource and project. Request authorization only if the user has not already
+   authorized that change; follow any additional repository approval rule.
 
 ## Step 1 — Discover the resource & action
 
@@ -81,7 +89,11 @@ scw registry image list namespace-id=<id> -o json
 scw cockpit get -o json    # Grafana URL, endpoints
 ```
 
-## Step 3 — Mutate (only after reading + user confirmation)
+## Step 3 — Mutate through the owning system
+
+When repository instructions assign resources to IaC, edit that source and use
+its deployment workflow. The direct `scw` example below applies only where no
+IaC owner or repository rule prohibits CLI writes.
 
 ### IAM rule update (overwrites ALL rules)
 
@@ -102,14 +114,14 @@ scw iam rule update <policy-id> \
 
 ## Common mistakes
 
-| Mistake                                                   | Fix                                                                              |
-| --------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| Suggesting console for IAM policy edits                   | Use `scw iam rule update`                                                        |
-| Forgetting existing rules in `rule update`                | Fetch with `scw iam policy get` first, reconstruct all rules                     |
-| Using `scw iam policy update` for rule changes            | That only updates metadata — use `scw iam rule update`                           |
-| Not using `-o json` when parsing output                   | Always add `-o json` when piping to `jq`                                         |
-| `IAMApplicationManager` alone for creating policies       | Also add `IAMPolicyManager` — separate permission sets                           |
-| `getGrafana`/cockpit data source panic (provider v1.45.0) | Pass `projectId` explicitly — provider panics on `projects[0]` when inferring it |
+| Mistake                                                   | Fix                                                                                             |
+| --------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Suggesting console for IAM policy edits                   | Follow the owning IaC workflow, or use `scw iam rule update` when direct CLI writes are allowed |
+| Forgetting existing rules in `rule update`                | Fetch with `scw iam policy get` first, reconstruct all rules                                    |
+| Using `scw iam policy update` for rule changes            | That only updates metadata — use `scw iam rule update`                                          |
+| Not using `-o json` when parsing output                   | Always add `-o json` when piping to `jq`                                                        |
+| `IAMApplicationManager` alone for creating policies       | Also add `IAMPolicyManager` — separate permission sets                                          |
+| `getGrafana`/cockpit data source panic (provider v1.45.0) | Pass `projectId` explicitly — provider panics on `projects[0]` when inferring it                |
 
 ## Final report
 
@@ -124,7 +136,8 @@ stack-golem:drive-scaleway report
 ## Hard rules
 
 - **Read before write** — always inspect current state before mutating.
-- **Confirm mutations with the user** before applying — IAM rule updates overwrite all rules.
+- **Respect repository resource ownership** — use `scw` read-only for Pulumi-owned resources.
+- **Confirm the mutation target and authorization** before applying — IAM rule updates overwrite all rules.
 - Never `git commit`, `git push`, or `git rebase`.
 - Never suggest the Scaleway console for an operation `scw` can perform.
 - Always add `-o json` when parsing output.

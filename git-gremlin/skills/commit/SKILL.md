@@ -48,9 +48,11 @@ Read `../../persona.md`; it is canonical for this skill's user-facing output, an
    - Re-read `git diff --staged --name-only`. If it is still empty, report that there is
      nothing to commit and stop.
 3. Read the resolved diff (`git diff --staged` for an actual commit) and draft
-   `<type>(<scope>): <imperative description>` from that exact selection. Choose from
-   `feat`, `fix`, `chore`, `refactor`, `docs`, `test`, `style`, or `perf`;
-   keep the first line at 72 characters or fewer and omit the scope when none is useful.
+   `<type>(<scope>): <imperative description>` from that exact selection. Read the
+   repository's commit rules and use its allowed types and language. When it has
+   no such rule, choose from `feat`, `fix`, `chore`, `refactor`, `docs`, `test`,
+   `style`, or `perf`. Keep the first line at 72 characters or fewer and omit
+   the scope when none is useful.
    Never describe a change absent from the diff. For draft-only intent, display the message
    and stop.
 4. For an actual commit request, run `git commit -m "<MESSAGE>"`, passing the message as

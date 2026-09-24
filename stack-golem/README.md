@@ -25,12 +25,12 @@ codex plugin install stack-golem@nuthouse
 
 ## Skills
 
-| Skill              | What it does                                                                                |
-| ------------------ | ------------------------------------------------------------------------------------------- |
-| `debug-local`      | Investigate local dev failures (env vars, Docker, Authentik/OIDC) — fixes before asking     |
-| `observe-platform` | Query Loki logs & Prometheus metrics on Scaleway staging/prod; SSH into Authentik VMs       |
-| `drive-scaleway`   | Drive the `scw` CLI for IAM, instances, databases, registry, networking — read before write |
-| `sync-insomnia`    | Add/modify/remove API endpoints in Insomnia collections; commit via Git Sync                |
+| Skill              | What it does                                                                             |
+| ------------------ | ---------------------------------------------------------------------------------------- |
+| `debug-local`      | Investigate local dev failures (env vars, Docker, Authentik/OIDC) — fixes before asking  |
+| `observe-platform` | Query Loki logs & Prometheus metrics on Scaleway staging/prod; SSH into Authentik VMs    |
+| `drive-scaleway`   | Inspect Scaleway with `scw`; change resources through their owning infrastructure system |
+| `sync-insomnia`    | Add/modify/remove API endpoints in Insomnia collections; commit via Git Sync             |
 
 ## Agents
 
