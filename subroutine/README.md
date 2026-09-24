@@ -36,17 +36,17 @@ delivers the change.
 
 Each discipline matches files by its `paths` globs:
 
-| Skill                | Paths                                               | Discipline                                                                                     |
-| -------------------- | --------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `type-safety`        | `**/*.ts`, `**/*.tsx`                               | No `any`/`as`/`!`, string-literal unions over `enum`, `ts-pattern` `.exhaustive()`             |
-| `validation`         | `**/*.ts`, `**/*.tsx`                               | Zod as the sole validation library, `z.infer`, parse at trust boundaries                       |
-| `code-organisation`  | `**/*.ts`, `**/*.tsx`                               | Named exports, declarative `index.ts`, one-file-one-responsibility, reuse before writing       |
-| `form-rules`         | `**/*Form*.ts(x)`, `**/*Form*/**`, `**/*Fields.tsx` | Schema-owned codecs, distinct input/output types, blank-seeded required fields, ungated submit |
-| `react-rules`        | `**/*.tsx`, `**/use*.ts`, `**/hooks/**/*.ts`        | One component per file, folder mirrors JSX ownership, identity props, state hierarchy          |
-| `testing-discipline` | `**/*.test.ts(x)`, `**/*.spec.ts(x)`                | Behavior-first tests, boundary doubles, typed failures, preserved infrastructure throws        |
-| `state-machine`      | state-machine/lifecycle/workflow/reducer TS         | Illegal states unrepresentable, pure exhaustive transitions, replay and concurrency            |
-| `result-pattern`     | `**/*.ts` (backend/domain code)                     | `Result<T,E>` / `ok` / `err`, return-don't-throw, one unwrap at the transport boundary         |
-| `hono-pipeline`      | `**/*.ts` (Hono backend code)                       | Contract → error union → pure service (`Result`) → unwrap → thin router                        |
+| Skill                | Paths                                               | Discipline                                                                                                  |
+| -------------------- | --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `type-safety`        | `**/*.ts`, `**/*.tsx`                               | No `any`/`as`/`!`, string-literal unions over `enum`, `ts-pattern` `.exhaustive()`                          |
+| `validation`         | `**/*.ts`, `**/*.tsx`                               | Zod as the sole validation library, `z.infer`, parse at trust boundaries                                    |
+| `code-organisation`  | `**/*.ts`, `**/*.tsx`                               | Named exports, declarative `index.ts`, one-file-one-responsibility, reuse before writing, why-only comments |
+| `form-rules`         | `**/*Form*.ts(x)`, `**/*Form*/**`, `**/*Fields.tsx` | Schema-owned codecs, distinct input/output types, blank-seeded required fields, ungated submit              |
+| `react-rules`        | `**/*.tsx`, `**/use*.ts`, `**/hooks/**/*.ts`        | One component per file, folder mirrors JSX ownership, no nested `.map`, identity props, state hierarchy     |
+| `testing-discipline` | `**/*.test.ts(x)`, `**/*.spec.ts(x)`                | Behavior-first tests, boundary doubles, typed failures, preserved infrastructure throws                     |
+| `state-machine`      | state-machine/lifecycle/workflow/reducer TS         | Illegal states unrepresentable, pure exhaustive transitions, replay and concurrency                         |
+| `result-pattern`     | `**/*.ts` (backend/domain code)                     | `Result<T,E>` / `ok` / `err`, return-don't-throw, one unwrap at the transport boundary                      |
+| `hono-pipeline`      | `**/*.ts` (Hono backend code)                       | Contract → error union → pure service (`Result`) → unwrap → thin router                                     |
 
 `form-rules`, `testing-discipline` and `state-machine` use narrow filename globs
 — `form-rules` also matches inside a `*Form*/` folder, because the react-rules
