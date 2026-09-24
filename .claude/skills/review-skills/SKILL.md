@@ -1,6 +1,7 @@
 ---
 name: review-skills
-description: Use when the user wants to review the quality of existing nuthouse skills — runs a structural audit then queues selected skills for testing and description optimization via skill-creator. Use when the user says "are my skills good?", "review all skills", "check my skills", "audit quality".
+description: Reviews nuthouse plugin skills against Anthropic's Agent Skills best practices, Codex's skill rules and cross-runtime pitfalls, and the repo's house rules (persona voice, English files, chaining, named laws). Runs a deterministic check, then parallel read-only reviewers, and reports verified findings with rule ids and sources. Use when the user asks whether skills are good, to review, audit, or check skills, or before releasing skill changes.
+argument-hint: "[all | <plugin> | <plugin>:<skill>]"
 effort: high
 ---
 
@@ -8,123 +9,106 @@ effort: high
 
 ## Voice
 
-Read `../persona.md` at the start of this skill. The mad-scientist voice is canonical for all output.
-
-**Scope:** local to this skill's execution only. Revert to session default voice once the final report is printed.
+Read `../persona.md` at the start of this skill. The mad-scientist voice is canonical for
+every user-facing string; its scope ends with the final report or the hand-off menu.
 
 ## Language
 
-Adapt all output to the user's language. Technical identifiers (file paths, skill names, CLI flags) stay in their original form.
+Adapt all output to the user's language. Technical identifiers (file paths, skill names,
+rule ids, CLI flags) stay in their original form.
 
-## What this skill does
+## What this skill decides
 
-Two-phase quality pass over all nuthouse plugin skills:
+`references/rules.md` is the rule catalogue: `A` rules from Anthropic and Claude Code, `C`
+rules from Codex and cross-runtime behavior, `N` rules from this repo's `CLAUDE.md`, ADR
+0007, and each plugin's `persona.md`. Every rule has an id, a type (`mech` or `judgment`),
+a severity, and a source. Read it before step 3.
 
-1. **Structure** — runs `/audit` to check conventions (frontmatter, sections, persona pointer, plugin.json). Reports critiques and warnings.
-2. **Quality** — lets the user pick which skills to test with `skill-creator:skill-creator` (evals, benchmarks, description optimization). Processes them one by one.
+`scripts/check-skills.mjs` decides every `mech` rule. Reviewers decide `judgment` rules.
+Banners, agents, and personas belong to `/audit`, not here.
 
-The two phases are independent. If the user only wants structure: point them to `/audit`. If they only want quality: start at Step 3.
+## Workflow
 
-## Step 1 — Preconditions
+1. **Preconditions.** Confirm `.claude-plugin/marketplace.json` exists; otherwise stop with
+   _"ce labo n'est pas le bon."_ Read the `Verified` date in `references/rules.md`. When it is
+   more than 90 days old, say so and offer to re-verify the sources (dispatch
+   `claude-code-guide` for Anthropic, a web-research agent for Codex) before trusting any
+   finding that depends on runtime behavior.
 
-Verify we're in the nuthouse repo:
+2. **Scope.** Use the user's request (`$ARGUMENTS` on Claude Code): `all`, a plugin, or
+   `<plugin>:<skill>`. With no scope given, list the plugins with their skill counts and ask.
+   Never assume `all` without showing that list.
 
-```bash
-test -f .claude-plugin/marketplace.json && echo "ok" || echo "not nuthouse"
-```
+3. **Mechanical pass.** Run both, and keep their output out of the reviewers' job:
 
-If not nuthouse: abort with _"ce labo n'est pas le bon."_
-
-## Step 2 — Structural audit
-
-Tell the user: _"phase 1 — j'inspecte la structure. on vérifie les formules."_
-
-Dispatch `/audit` by invoking the `audit` skill directly. Let it run and print its report. Do not suppress its output.
-
-After the report, ask:
-
-```
-des critiques ou warnings ? veux-tu corriger ça avant de tester la qualité ?
-  (y) oui — stop ici, corrige d'abord les critiques
-  (n) non — continue vers la phase qualité
-```
-
-If `(y)`: exit. Print _"reviens quand le labo est propre. 🧪"_
-
-## Step 3 — Discover plugin skills
-
-Discover all plugin skills (exclude local `.claude/skills/`):
-
-```bash
-find . -path "*/skills/*/SKILL.md" \
-  ! -path "./.claude/*" \
-  ! -path "./_templates/*" \
-  | sort
-```
-
-Group by plugin. Present the list:
-
-```
-skills disponibles pour review qualité :
-
-  acid-prophet
-    [1] audit-spec    acid-prophet/skills/audit-spec/SKILL.md
-    [2] check-drift   acid-prophet/skills/check-drift/SKILL.md
-    [3] write-spec    acid-prophet/skills/write-spec/SKILL.md
-
-  git-gremlin
-    [4] commit        git-gremlin/skills/commit/SKILL.md
-    [5] pr            git-gremlin/skills/pr/SKILL.md
-
-  ... (full list)
-
-lesquels veux-tu tester ? (numéros séparés par virgule, ou "all")
-```
-
-Wait for the user's selection. Parse the response into a queue of `(plugin, skill, path)` tuples.
-
-## Step 4 — Quality review loop
-
-For each skill in the queue, in order:
-
-1. Print: _"skill-creator sur `<plugin>:<skill>` — lancement."_
-2. Chain to `skill-creator:skill-creator` with this context:
-
-   > "Audit this existing skill at `<absolute path to SKILL.md>`. The skill is named `<plugin>:<skill>`. Skip the intent-capture interview — the skill draft already exists. Go straight to writing 2-3 test cases, running evals (with-skill vs baseline), and launching the eval viewer. After the user reviews outputs and you've iterated to a good state, run the description optimization loop."
-
-3. Wait for `skill-creator` to finish its loop with this skill.
-4. After it returns, print:
-
-   ```
-   `<plugin>:<skill>` — done.
-   queue restante : <N-1> skill(s)
-
-     (c) continuer — prochain skill : `<plugin>:<next-skill>`
-     (s) stop      — assez pour aujourd'hui
+   ```bash
+   node .claude/skills/review-skills/scripts/check-skills.mjs --json
+   bun run check:duplication
    ```
 
-5. If `(c)`: continue with next skill in queue.
-6. If `(s)`: exit with final report.
+   Keep the findings for the skills in scope, plus the repo-wide `global` findings (C12).
+   A duplication failure is an `N11` finding on each file it names.
 
-## Step 5 — Final report
+4. **Judgment pass.** Dispatch one read-only reviewer per plugin in scope, in parallel, in a
+   single message: at most 8 agents. Use `general-purpose`. Brief each one in SDD form:
+   - **Goal:** review these skills against the `judgment` rules of `references/rules.md`
+     (absolute path). Do not edit, create, or delete any file.
+   - **Inputs:** the absolute SKILL.md paths, the plugin's `persona.md`, and the
+     mechanical findings already recorded for those skills. Do not repeat a mech finding.
+   - **Skip:** a `genre: contract` skill is exempt from voice, workflow, and user-facing
+     rules (the catalogue says which).
+   - **Output:** one line per finding: `rule id | severity | skill | file:line | quoted
+evidence | one-sentence fix`. Severity comes from the catalogue, never invented. No
+     quoted line, no finding. Cap at 12 findings per skill, most severe first.
 
+5. **Verify.** For every judgment finding rated CRITIQUE or WARNING, open the cited line
+   yourself and confirm the quote and the rule. Drop what does not survive, and count the
+   drops. A finding the reviewer could not quote is dropped, not softened.
+
+6. **Report**, then the hand-off menu.
+
+## Final Report
+
+Plain structure, one or two voice lines around it:
+
+```text
+review-skills — <scope>
+
+<plugin>:<skill>
+  ❌ <id> <message> (<file>:<line>) — <fix>
+  ⚠️  <id> <message> (<file>:<line>) — <fix>
+  · <id> <message>
+
+repo-wide
+  ⚠️  C12 <message>
+
+<N> critiques · <N> warnings · <N> info · <N> skills · <N> reviewer findings dropped
+sources verified <date> — references/rules.md
 ```
-review-skills — terminé
 
-  Structural audit:  /audit (voir rapport ci-dessus)
-  Skills reviewed:   <N> / <total selected>
-    <plugin>:<skill> — done
-    <plugin>:<skill> — done
-    ...
-  Skills pending:    <list if stopped early, else "none">
+Order skills by their worst finding. Collapse every `C05` into one line per skill.
+
+```text
+la dissection est finie. que fait-on des organes ?
+  (f) fix    → apply the fixes the user picks, in this session
+  (e) evals  → run skill-creator on chosen skills, one at a time
+  (s) stop   → leave the report as it is
 ```
 
-Exit with voice line: _"les créatures ont été testées. bonne nuit au labo."_
+- **(f)** Apply only the fixes the user named. Re-run step 3 afterwards and show the
+  delta. A fix that changes a plugin's content needs its version bumped before release:
+  **REQUIRED SUB-SKILL:** Use `release` when the user is ready to release.
+- **(e)** For each chosen skill, in order, chain to `skill-creator:skill-creator` with:
+  _"Audit the existing skill at `<absolute path>`, named `<plugin>:<skill>`. Skip the
+  intent interview. Write 2–3 test cases that cover the findings above, run with-skill vs
+  baseline evals, open the viewer, and after the user's review run the description
+  optimization loop."_ Ask `(c) continuer / (s) stop` between skills.
+- **(s)** Exit with _"les créatures ont été disséquées. bonne nuit au labo."_
 
 ## Never
 
-- Run `git commit`, `git push`, or `git rebase`.
-- Suppress the `/audit` output — let it print in full.
-- Run `skill-creator` on multiple skills in parallel — they each need human review.
-- Skip the structural audit phase if there are unresolved critiques — quality testing on structurally broken skills is a waste.
-- Auto-select "all" without showing the user the list first.
+- Edit a skill before the user picks `(f)`, or run `git commit`, `git push`, `git rebase`.
+- Report a judgment finding without a quoted line, or overrule a `mech` result.
+- Run `skill-creator` on several skills in parallel: each needs the user's review.
+- Invent a rule, threshold, or source that `references/rules.md` does not carry. A gap in
+  the catalogue is reported as a gap, then fixed in the catalogue with its source.
