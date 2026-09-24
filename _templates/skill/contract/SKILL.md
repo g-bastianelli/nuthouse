@@ -1,9 +1,9 @@
 <!-- template-meta
 genre: contract
 required_frontmatter: [name, description]
-optional_frontmatter: [model, effort, allowed-tools, user-invocable, paths, disable-model-invocation]
+optional_frontmatter: [model, effort, allowed-tools, user-invocable, paths]
 required_sections: []
-forbidden_sections: ["## Workflow", "## Final Report"]
+forbidden_sections: ["## Voice", "## Workflow", "## Final Report"]
 variables: [plugin, skill, description]
 -->
 
@@ -45,7 +45,7 @@ A **contract** is background knowledge: a discipline a reader implements against
 two components exchange, or a canonical set of invocations. It is read, not run. It has no
 preconditions, no ordered steps, no approval gate, no final report, and no voice — so
 `## Voice`, `## Workflow`, `## Final Report`, and `## Never` do not apply, and `/audit`
-rejects `## Workflow` and `## Final Report` for this genre.
+rejects `## Voice`, `## Workflow` and `## Final Report` for this genre.
 
 Declare the genre with the frontmatter key `genre: contract`. That key is what routes
 `/audit` to this template; it stays out of the description, which a hook may inject.

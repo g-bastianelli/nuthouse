@@ -59,7 +59,7 @@ Read the `<!-- template-meta -->` block from each template:
 Requirements extracted:
 
 - **Workflow SKILL.md:** required_frontmatter `[name, description]`, required_sections `["## Voice"]`
-- **Contract SKILL.md:** required_frontmatter `[name, description]`, forbidden_sections `["## Workflow", "## Final Report"]`
+- **Contract SKILL.md:** required_frontmatter `[name, description]`, forbidden_sections `["## Voice", "## Workflow", "## Final Report"]`
 - **AGENT.md:** required_frontmatter `[name, description]`, required_sections `[]`
 - **persona.md:** required_frontmatter `[name, tagline]`, required_sections `["## Language", "## Hard rule"]`
 - **BANNER_PROMPT.md:** required guidance: README banner, visible mascot/persona, existing nuthouse style, setting from persona world, functional props secondary, user-centered personas keep the user offscreen/implied/abstract, 3:1 target, no readable text unless exact English text is requested, final asset path `assets/banner.png`
@@ -99,7 +99,7 @@ For each file, check against the matching template's requirements.
 3. Genre is `contract` when the frontmatter declares `genre: contract`, else `workflow`.
 4. Workflow: `## Voice` section present — ❌ CRITIQUE if missing
 5. Workflow: the `## Voice` section points to the plugin's `persona.md` — ❌ CRITIQUE if not
-6. Contract: no `## Workflow` or `## Final Report` section — ❌ CRITIQUE if present
+6. Contract: no `## Voice`, `## Workflow` or `## Final Report` section — ❌ CRITIQUE if present
 
 Headings beyond these are the skill's own. Do not require `## Workflow`, `## Never`,
 or a step numbering: skills orchestrate in prose and state hard rules as named laws

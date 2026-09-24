@@ -191,8 +191,10 @@ describe("checkSkill", () => {
   test("exempts contracts from voice rules and rejects workflow sections in them", () => {
     const clean = skill("name: write-thing\ngenre: contract\ndescription: d", "## Rule group\n");
     expect(ids(run(clean))).not.toContain("N01");
-    const dirty = skill("name: write-thing\ngenre: contract\ndescription: d", "## Workflow\n");
-    expect(ids(run(dirty))).toContain("N13");
+    const dirty = skill("name: write-thing\ngenre: contract\ndescription: d", "## Voice\n");
+    expect(run(dirty)).toContainEqual(expect.objectContaining({ id: "N13", severity: "CRITIQUE" }));
+    const wordy = skill(`name: write-thing\ngenre: contract\ndescription: ${"x".repeat(351)}`, "");
+    expect(ids(run(wordy))).toContain("N14");
   });
 });
 

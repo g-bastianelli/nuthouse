@@ -166,8 +166,6 @@ This is the source of truth for file structure. Substitute these variables from 
 - `{{plugin}}` → parent plugin name
 - `{{skill}}` → skill name (action verb)
 - `{{description}}` → one-line description from interview
-- `{{persona_path}}` → relative path from skill dir to plugin's persona.md
-  (`../../persona.md` for `<plugin>/skills/<skill>/SKILL.md`)
 
 Use the template as the structural baseline: substitute `{{variables}}` and fill
 `[bracketed]` creative sections with AI-generated content appropriate to the
@@ -202,6 +200,11 @@ body instead — no `## Voice`, `## Workflow`, `## Final Report`, or `## Never`.
 # <SKILL>
 
 Rigid [gate type]. Match the user's language; keep technical identifiers unchanged.
+
+## Voice
+
+Read `../../persona.md` at the start of this skill. It is canonical for every
+user-facing string this skill emits, and its scope ends with the final report.
 
 ## Workflow
 

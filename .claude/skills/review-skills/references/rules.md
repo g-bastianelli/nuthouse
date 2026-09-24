@@ -83,7 +83,8 @@ and the plugin's `persona.md`.
 | N10 | No backwards compatibility: no alias for a retired name, deprecation path, migration note, or gate defending a past decision.                                                  | judgment | WARNING  |
 | N11 | No prose block over 450 chars duplicated across two SKILL.md files (`bun run check:duplication`).                                                                              | mech     | WARNING  |
 | N12 | State that must survive a compaction goes only in `.nuthouse/<subject>/progress.md`; no other durable local state.                                                             | judgment | WARNING  |
-| N13 | A `genre: contract` skill has no `## Voice`, `## Workflow`, or `## Final Report`, and keeps its description short — a hook may inject it.                                      | mech     | WARNING  |
+| N13 | A `genre: contract` skill has no `## Voice`, `## Workflow`, or `## Final Report` (same rule as `/audit`).                                                                      | mech     | CRITIQUE |
+| N14 | A `genre: contract` skill keeps its description at most 350 chars: a hook may inject it in a session digest.                                                                   | mech     | WARNING  |
 
 ## Sources
 

@@ -219,7 +219,7 @@ function checkBody(parsed, { codex, contract, knownSkills }) {
   if (contract) {
     for (const heading of ["## Voice", "## Workflow", "## Final Report"]) {
       if (section(body, heading) !== null)
-        out.push(finding("N13", "WARNING", `contract carries ${heading}`));
+        out.push(finding("N13", "CRITIQUE", `contract carries ${heading}`));
     }
   } else {
     const voice = section(body, "## Voice");
@@ -349,7 +349,7 @@ export function checkSkill({
   if (contract && description.length > CONTRACT_DESCRIPTION_MAX) {
     out.push(
       finding(
-        "N13",
+        "N14",
         "WARNING",
         `contract description is ${description.length} chars; a hook may inject it`,
       ),

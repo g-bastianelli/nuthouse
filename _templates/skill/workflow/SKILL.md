@@ -1,6 +1,6 @@
 <!-- template-meta
 required_frontmatter: [name, description]
-optional_frontmatter: [model, effort, allowed-tools, argument-hint, disable-model-invocation, user-invocable, paths, disallowed-tools, context, agent]
+optional_frontmatter: [model, effort, allowed-tools, argument-hint, user-invocable, paths, disallowed-tools, context, agent]
 genre: workflow
 required_sections: ["## Voice"]
 variables: [plugin, skill, description]
@@ -19,7 +19,7 @@ description: {{description}}
 
 # argument-hint: "[issue-id]" # REQUIRED when the skill takes arguments — autocomplete hint
 
-# disable-model-invocation: true # user-triggered only (deploy, commit, …) — Claude never auto-invokes
+# user-triggered only: Codex rejects `disable-model-invocation: true`; set `policy.allow_implicit_invocation: false` in agents/openai.yaml instead
 
 # user-invocable: false # background knowledge skill — Claude reads it, users can't invoke it
 
