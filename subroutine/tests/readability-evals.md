@@ -13,7 +13,7 @@ of the previous one, with data from an already-loaded tree query.
 
 Expected: no component holds a `.map` inside another `.map`; each level is its own
 component, rendered once per element by the level that owns the array. Levels with a
-single child are flat sibling files, not one folder per level. A child receives an ID
+single child are flat sibling files in the owner's folder, not one folder per level. A child receives an ID
 when a selector hook finds its node in the loaded query, otherwise the node, never
 the list.
 
@@ -22,9 +22,10 @@ the list.
 Ask for a batch menu with five submenus, two of which need radio groups whose value
 can be "none" or "mixed" across the selection.
 
-Expected: either every submenu has its own file or none does. The parent passes
-typed domain values (`null`/`undefined` for none/mixed); any sentinel such as `""`
-or `"none"` a radio group needs is declared in that radio's leaf component.
+Expected: every submenu is its own component file; none is inline JSX in the parent.
+The parent passes a typed literal union (`"none" | "mixed" | value`), not
+`null`/`undefined`; any sentinel a radio group needs (such as `""`) is declared in
+that radio's leaf component.
 
 ## Infinite-query rows
 

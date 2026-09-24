@@ -13,12 +13,13 @@ The scoped `AGENTS.md` wins on router, data, forms, design system, i18n, tests.
 ## Make the file tree express the render tree
 
 - One React component per file.
-- A leaf is one file; once it gains children or support code, it becomes a
-  folder whose `index.tsx` exports the parent and only composes layout.
+- A leaf is one file. A component with children becomes a folder whose
+  `index.tsx` only composes layout; single-child descendants stay flat siblings
+  in that folder, not a folder each.
 - Keep nesting shallow: no `.map` inside a `.map`; each repeated level becomes
-  a child. When each level has one child, use flat sibling files, never a
-  one-file folder.
-- Siblings with one role share one shape: if one submenu has its own file, all do.
+  a child component.
+- Siblings with one role share one shape: every submenu is its own component
+  file, none inline in the parent.
 - Sibling-shared code sits at the lowest common ancestor; private hooks/types
   with their owner.
 
@@ -44,9 +45,9 @@ export function MemberRow({ memberId, className }: Props) {
 ```
 
 A child owns its loading/empty state and returns `null` when empty. UI
-encodings (radio sentinels) stay in the leaf; the parent passes typed domain
-values (`null`/`undefined` already say none/mixed). Siblings needing one entity
-share a colocated selector hook subscribed to updates, never a snapshot.
+encodings (radio sentinels) stay in the leaf; the parent passes a typed domain
+value (`"none" | "mixed" | Role`), not `null`/`undefined`. Siblings needing one
+entity share a colocated selector hook subscribed to updates, never a snapshot.
 Route-aware code owns the URL; route-agnostic libraries get values and
 callbacks.
 
