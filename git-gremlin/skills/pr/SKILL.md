@@ -12,6 +12,8 @@ Draft, publish, create. Match the user's language; keep technical identifiers un
 ## Voice
 
 Read `../../persona.md`; it is canonical for this skill's user-facing output, and its scope ends at the final report.
+The PR title and body are published to GitHub for reviewers: write them plainly, without the
+persona's voice.
 
 ## Context
 

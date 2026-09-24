@@ -176,7 +176,8 @@ an instance rebuild.
 ## Grafana (visual exploration only)
 
 Dashboards: `GRAFANA_DASHBOARDS` (see `../../shared/infra-map.md`)
-If datasources appear empty: `scw cockpit grafana sync-data-sources`
+If datasources appear empty, propose `scw cockpit grafana sync-data-sources` and run it only
+after the user confirms: it changes cockpit configuration.
 
 ## Final report
 
@@ -193,6 +194,8 @@ stack-golem:observe-platform report
 
 - **Always delete the temporary cockpit token** after querying — even on error paths.
 - **Use only the scopes you need** when creating tokens.
+- **Stay read-only.** Apart from the temporary token, run a command that changes a resource
+  only after the user confirms it.
 - Never `git commit`, `git push`, or `git rebase`.
 - Never punt to Grafana for something queryable via CLI/API.
 - Never store or echo the token secret beyond the ephemeral shell variable.

@@ -57,10 +57,12 @@ state and never changes Linear issue lifecycle or dependencies.
 Apply this Maestro activation/update to Linear and run its first bounded orchestration pass? (y / cancel)
 ```
 
-10. On `y`, append one Linear project control comment. On denial, do nothing. Dispatch the
-    reader once more in `MODE: control` and require the exact successor; report a failed
-    verification without blindly writing again.
-11. Enter `monkey-maestro:orchestrate <project-id>`.
+10. On `cancel` or any answer other than `y`, write nothing, report `canceled`, and stop:
+    a declined gate authorizes neither the control write nor the orchestration pass.
+11. On `y`, append one Linear project control comment. Dispatch the reader once more in
+    `MODE: control` and require the exact successor; report a failed verification without
+    blindly writing again, and stop there.
+12. Only after the successor is verified, enter `monkey-maestro:orchestrate <project-id>`.
 
 The clarification in step 7 is configuration input, not mutation approval. There is
 exactly one final gate after the fully resolved preview; it authorizes the Linear control
@@ -74,5 +76,6 @@ monkey-maestro:start report
   Control:     schema v2 · revision <n> · active
   Transport:   <host> / <Superset project> / <agent>
   Concurrency: <n>
-  Next:        monkey-maestro:orchestrate <project id>
+  Result:      activated | updated | already-active | canceled | verification-failed
+  Next:        monkey-maestro:orchestrate <project id> | none
 ```

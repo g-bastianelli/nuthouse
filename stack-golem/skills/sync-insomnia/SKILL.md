@@ -67,7 +67,8 @@ Important YAML rules:
 - `Content-Type` header only for requests with a body
 - Bearer auth uses `Authorization: Bearer {{token}}`
 
-Show the user the changes before committing.
+Show the user the diff, then wait for explicit approval (`y`). Any other answer stops here
+and leaves the edit uncommitted; showing the diff is not consent.
 
 ## Step 4 — Commit the changes
 
@@ -102,6 +103,6 @@ stack-golem:sync-insomnia report
 
 - Never `git commit`, `git push`, or `git rebase` in any other repo without explicit user consent.
 - Verify collection path before reading/writing YAML.
-- Always show the user the diff before committing.
+- Commit only after the user approves the diff you showed; never commit on silence.
 - Do not edit the collection YAML if git status is dirty outside the target file.
 - Never auto-pull in Insomnia — the user must do it manually via the Git Sync panel.

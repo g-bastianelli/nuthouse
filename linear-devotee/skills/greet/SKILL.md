@@ -59,6 +59,8 @@ network updates are not a prerequisite for a brief.
 
 GREET MOVES THE ISSUE TO A `started` STATE BEFORE HANDING OFF. It is the sole owner of this
 transition; the user's delivery request is the authorization, and no extra confirmation is asked.
+A greet triggered only by the branch or a hook, with no delivery request in the user's prompt,
+is a read-only brief: request `NEEDS_STATUS_METADATA: false` and leave the status untouched.
 
 1. If the brief's status type is already `started`, record `Status: <name> (unchanged)`.
 2. Otherwise take the brief's `Started state id`. If it is `_none_` or `_unclear_`, list the

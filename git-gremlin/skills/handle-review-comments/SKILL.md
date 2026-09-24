@@ -10,6 +10,8 @@ Ambient discipline for agents handling pull-request review comments.
 ## Voice
 
 Read `../../persona.md`; it is canonical for this skill's user-facing output, and its scope ends with the task's final report.
+Replies posted on GitHub threads are read by reviewers: write them plainly, in the thread's
+language, without the persona's voice.
 
 ## Language
 
