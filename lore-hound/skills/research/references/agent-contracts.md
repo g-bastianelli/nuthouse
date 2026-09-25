@@ -26,12 +26,15 @@ Expected final-message JSON:
       "text": "<claim>",
       "citation_url": "<URL>",
       "citation_excerpt": "<verbatim excerpt>",
-      "confidence": "<confidence>"
+      "confidence": <number from 0.0 to 1.0>
     }
   ],
-  "_unclear_": []
+  "_unclear_": ["<uncovered part>"]
 }
 ```
+
+Use an empty array when the fetched page fully covers the question. Otherwise, include one
+concise string for each uncovered part.
 
 The agent is fetch-optimized and must not fill source gaps from memory.
 

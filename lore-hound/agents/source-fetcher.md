@@ -61,9 +61,12 @@ Output exactly this JSON structure:
       "confidence": 0.95
     }
   ],
-  "_unclear_": "what the page did NOT cover, or null if full coverage"
+  "_unclear_": ["what the page did NOT cover"]
 }
 ```
+
+Use an empty array when the page fully covers the question. Include one concise string per
+uncovered part; never use a string or `null` for this field.
 
 ## Output format
 
