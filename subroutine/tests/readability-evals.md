@@ -13,9 +13,9 @@ by an existing query hook.
 
 Expected: one component per repeated level, each rendering one child per item; no
 component holds a `.map` inside another `.map`. Children receive IDs they resolve
-through selector hooks over the loaded queries. Because each level has a single
-child component, the levels are flat sibling files in one owner folder, not a
-folder per level.
+through selector hooks over the loaded queries. Each level that owns a child is a
+folder whose `index.tsx` renders it, even with a single child; the last level is
+a file.
 
 ## Uneven sibling submenus
 

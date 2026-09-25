@@ -7,16 +7,12 @@ rendering a collection.
 
 - Keep a leaf component in one file.
 - When it gains private children or support code, turn it into a folder whose
-  `index.tsx` exports the parent and composes layout. Exception below: a chain
-  of single children.
+  `index.tsx` exports the parent and composes layout, even for a single child.
 - Put code shared by siblings at their lowest common ancestor.
 - Colocate private hooks and types with their owner.
 - Treat siblings that play the same role the same way: if one submenu of a menu
   has its own file, every submenu does.
-- Keep nesting shallow; deep nesting makes code painful to read. A chain where
-  each component owns a single child component stays flat: sibling files in the
-  chain owner's folder, not a folder per level. Never create a folder that holds
-  a single file.
+- Never create a folder that holds a single file.
 
 ```text
 MembersTable/
@@ -28,14 +24,17 @@ MembersTable/
     └── useMember.ts
 ```
 
-A hierarchy rendered level by level stays flat:
+A hierarchy rendered level by level nests one owner folder per level; the last
+level stays a file:
 
 ```text
 LocationSubmenu/
-├── index.tsx          # maps areas → <AreaItem areaId />
-├── AreaItem.tsx       # maps its work centers → <WorkCenterItem workCenterId />
-├── WorkCenterItem.tsx # maps its units → <UnitItem unitId />
-└── UnitItem.tsx
+├── index.tsx              # maps areas → <AreaItem areaId />
+└── AreaItem/
+    ├── index.tsx          # maps its work centers → <WorkCenterItem workCenterId />
+    └── WorkCenterItem/
+        ├── index.tsx      # maps its units → <UnitItem unitId />
+        └── UnitItem.tsx
 ```
 
 After structural edits, follow `subroutine:code-organisation` and its folder
