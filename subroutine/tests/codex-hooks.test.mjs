@@ -9,11 +9,11 @@ test("hooks.json wires the two discipline-delivery events", () => {
   const config = JSON.parse(fs.readFileSync(HOOKS_PATH, "utf8"));
 
   const session = config.hooks.SessionStart[0];
-  expect(session.matcher).toBe("startup|resume");
+  expect(session.matcher).toBe("startup|resume|compact");
   expect(session.hooks[0].command).toContain("claudecode/hooks/inject-digest.mjs");
 
   const edit = config.hooks.PostToolUse[0];
-  expect(edit.matcher).toBe("Edit|Write|MultiEdit");
+  expect(edit.matcher).toBe("Edit|Write|MultiEdit|apply_patch");
   expect(edit.hooks[0].command).toContain("claudecode/hooks/inject-on-edit.mjs");
 
   for (const evt of ["SessionStart", "PostToolUse"]) {

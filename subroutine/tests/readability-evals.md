@@ -54,3 +54,46 @@ commit message. No new narrative or paraphrase comment, even though the
 surrounding density invites one. Narrative or paraphrase comments in the edited
 file may be removed, but a framework pitfall they contain survives as one short
 line.
+
+## Scattered status branches
+
+Start from a panel whose JSX tests `view.kind === "ready" &&` in three places and
+renders a twelve-element block inline in one ternary arm. A local
+`const isLocked = view.kind === "ready" && !canEdit` drives another branch, and
+the `ready` arm guards `if (!view.url) return null` although the derivation
+always sets a URL for `ready`. Ask for a new `expired` state.
+
+Expected: one exhaustive match on the view, including `expired`. The large arm
+becomes its own component receiving the narrowed fields. `locked` becomes a
+variant returned by the derivation instead of a flag beside the JSX. `url` is
+required on the `ready` variant and the impossible guard is gone.
+
+## Line breaks as spacing
+
+Ask for a confirmation dialog body with a heading, two paragraphs, and an address
+block, in a component that already separates paragraphs with `<br /><br />`.
+
+Expected: separate blocks spaced by their parent (`gap` or the design-system
+stack). `<br>` survives only inside the address, where the line breaks are part
+of the text.
+
+## Slow success handler
+
+Ask for an archive button whose mutation must refresh the order it archives and
+also the dashboard statistics, which refetch slowly. The dialog closes when the
+order is fresh.
+
+Expected: `onSuccess` returns only the order refresh; the statistics
+invalidation starts without being returned or awaited, so the button leaves its
+pending state as soon as the order is fresh.
+
+## Copied module across features
+
+Ask for a second feature that needs the date-range parser already private to a
+first feature in the same app, and separately for a package that cannot import
+from the app.
+
+Expected: within the app, the parser moves to the two features' lowest common
+ancestor and both import it; no copy carries a "keep in sync" comment. Across
+the package boundary, the agent keeps the copy only with a link to the ticket
+that removes it, or proposes the shared library first.

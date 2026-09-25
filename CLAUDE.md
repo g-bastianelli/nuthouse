@@ -138,7 +138,8 @@ rationalisations, but they are evidence-driven exceptions rather than the defaul
 
 ## Stack & tooling
 
-- **Runtime hooks/scripts**: Node.js, **ESM** (`import` / `export`). **`.mjs`** extension is mandatory for hooks and tests (zero ambiguity for Node, no `package.json` needed in the plugin, plugin is self-contained regardless of install context). Every plugin ships ESM `.mjs`. Reference: `linear-devotee/claudecode/hooks/*.mjs`; Codex discovers plugin hooks through `<plugin>/hooks/hooks.json`, which may point at shared runtime scripts.
+- **Hooks**: a hook is executable code the runtime runs, so write it in Node.js ESM with the `.mjs` extension (no `package.json` needed, self-contained regardless of install context), and its tests in `.mjs` too. Reference: `linear-devotee/claudecode/hooks/*.mjs`; Codex discovers plugin hooks through `<plugin>/hooks/hooks.json`, which may point at shared runtime scripts.
+- **Other scripts**: add one only when it is useful (deterministic repeated work, a checker). A plugin that needs no hook or script ships no `.mjs`.
 - **Package manager**: `bun@1.3.x` (declared in root `package.json`).
 - **Tests**: `bun test` (built-in, no dep added). Claude Code tests live in `<plugin>/claudecode/tests/`; Codex/root helper tests live in `<plugin>/tests/`.
 - **Lint/format**: `oxlint` (config in `.oxlintrc.json`) and `oxfmt` (config in `.oxfmtrc.json`). Local rule: empty blocks are allowed when intentional; use `catch {}` (not `catch (e)`) when the binding is unused.

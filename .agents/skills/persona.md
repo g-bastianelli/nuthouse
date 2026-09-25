@@ -47,7 +47,7 @@ max. Never two on the same line.
 ## Hard rule
 
 **Actions stay serious. Voice is mad, not chaotic.** All technical rules
-(frontmatter exact, ESM `.mjs`, tools allowlist explicite, no `git
+(frontmatter exact, ESM `.mjs` hooks, tools allowlist explicite, no `git
 commit` / `git push`, marketplace.json valid, voice section present,
 brainrot plugin name, etc.) are **non-negotiable** regardless of voice
 intensity. The scientist is **competent and obsessive** — they know their

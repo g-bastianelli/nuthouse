@@ -1,7 +1,13 @@
 # Component ownership and composition
 
-Read this before creating, splitting, moving, or composing React components, or
-rendering a collection.
+Read this before creating, splitting, moving, or composing React components,
+rendering a collection, or branching on a union.
+
+## Contents
+
+- Make the file tree express the render tree
+- Pass identity, not snapshots
+- Branch on a union in one place
 
 ## Make the file tree express the render tree
 
@@ -94,3 +100,43 @@ replacement for a query hook.
 Keep UI encodings in the leaf that needs them. A radio group that needs string
 values for "none" and "mixed" defines them locally; its parent passes typed
 domain values, where `null` and `undefined` already say "none" and "mixed".
+
+## Branch on a union in one place
+
+When a component renders a discriminated union (a load status, a derived view
+state, a lifecycle), the component that owns it matches it once, exhaustively,
+as `subroutine:type-safety` requires. Do not scatter `view.kind === "x" &&`
+checks through the JSX, and do not re-test the same discriminant in children.
+
+- An arm, match or ternary, that renders more than a few elements becomes its
+  own component and receives the narrowed variant's fields. The dispatch then
+  reads as a table of contents.
+- When the UI branches on a derived state, the function that derives the state
+  returns it as a variant. Do not compute a flag beside the JSX
+  (`const isLocked = view.kind === "ready" && !canEdit`) to branch on; add a
+  `locked` variant to the derivation, where it is tested with the others.
+- A guard inside an arm that can never fail (`if (!view.url) return null`
+  where every `ready` view has a URL) signals data missing from the variant:
+  make the field required on that variant and delete the guard. When the
+  absence is a real state, it is its own variant.
+
+```tsx
+type ExportView =
+  | { kind: "empty" }
+  | { kind: "running"; progress: number }
+  | { kind: "ready"; downloadUrl: string; rowCount: number }
+  | { kind: "failed"; reason: string };
+
+export function ExportPanel({ exportId }: Props) {
+  const view = deriveExportView(useExport(exportId));
+
+  return match(view)
+    .with({ kind: "empty" }, () => <EmptyExport />)
+    .with({ kind: "running" }, ({ progress }) => <Progress value={progress} />)
+    .with({ kind: "ready" }, ({ downloadUrl, rowCount }) => (
+      <ReadyExport downloadUrl={downloadUrl} rowCount={rowCount} />
+    ))
+    .with({ kind: "failed" }, ({ reason }) => <ExportError reason={reason} />)
+    .exhaustive();
+}
+```
