@@ -9,151 +9,78 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Agent
 
 # acid-prophet:write-spec
 
-Make the consequential decisions clear enough that another engineer can implement the
-feature without guessing its behavior. Scale discovery to uncertainty and impact.
+Make consequential decisions clear enough that another engineer can implement the feature
+without guessing its behavior. Scale discovery to uncertainty and impact.
 
-Resolve `PLUGIN_ROOT` to this skill's plugin directory (`../..`). Before delegation,
-read `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md` for the active runtime's agent
-name; outside Claude Code, substitute the resolved `PLUGIN_ROOT` for that variable.
+Resolve `PLUGIN_ROOT` to this skill's plugin directory (`../..`). Before delegation, read
+`${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md` for the active runtime's agent name;
+outside Claude Code, substitute the resolved `PLUGIN_ROOT`.
 
-## Voice
+Read `../../persona.md`; it is canonical for user-facing output until the final report.
 
-Read `../../persona.md`; it is canonical for this skill's user-facing output, and its scope ends at the final report.
+## Ground the request
 
-## Start from the request and the code
+1. Use the conversation and arguments as the brief. Establish the project root and read
+   applicable instructions, the package manifest, and any supplied spec.
+2. Trace the affected flow through source and tests: entry point, state/data owner, external
+   boundary, validation, and errors. Delegate only bounded exploration and ask for paths,
+   symbols, and conclusions rather than file dumps.
+3. State a short working understanding before questions: user, current behavior, desired
+   outcome, known constraints, and the most consequential uncertainty. Cite repository
+   evidence and reuse it throughout the run.
+4. For settled focused work, draft directly. For unclear behavior or a new boundary,
+   investigate risky decisions first. Propose a useful first slice only when the request
+   contains independently deliverable outcomes; never silently discard scope.
 
-Use the conversation and arguments as the brief. Establish the project root; outside
-a repository, continue with the available context and report what could not be checked.
-Read applicable `AGENTS.md` / `CLAUDE.md`, the package manifest, and an existing spec
-when supplied. Then trace the affected flow through actual source and relevant tests:
-entry point, state/data owner, external boundary, existing validation and errors.
-Delegate a bounded exploration when needed; request paths, symbols, and conclusions,
-not file dumps. An absent implementation is a fact to record, not permission to invent one.
+## Resolve decisions
 
-Before asking questions, state a short working understanding: user, current behavior,
-desired outcome, constraints already known, and the most consequential uncertainty.
-Cite the files behind technical claims. Reuse discoveries throughout the run.
+- Separate what the user gave, what the repository proves, what you recommend, and what
+  remains unresolved.
+- Ask only about choices that change user-visible behavior, permissions, retention, scope,
+  external commitments, or expensive boundaries. Resolve reversible implementation detail
+  from repository conventions and record the reason.
+- For an open consequential choice, explain its impact, recommend an option, and ask one
+  focused question. Mark unresolved product policy exactly
+  `[NEEDS CLARIFICATION: <decision needed>]`; a marked draft cannot be ratified.
+- Compare alternatives only when a real trade-off exists. Include the simplest viable reuse,
+  its decisive constraint, its cost, and the evidence that would change the recommendation.
 
-- For a focused change with settled behavior, write a compact spec directly.
-- For a new boundary or unclear behavior, investigate the risky decisions first.
-- When the request contains independently deliverable goals, propose a useful first
-  slice and the relationship to later slices. Component count alone is not a reason
-  to split one coherent user journey. Do not silently discard requested scope.
+## Draft the proposal
 
-## Resolve decisions, not a questionnaire
+Read `../../shared/spec-format.md`, then write
+`docs/acid-prophet/specs/YYYY-MM-DD-<topic>.md` before final review.
 
-Separate what is **given by the user**, **observed in the repository**, **recommended**,
-and **unresolved**. Never present a recommendation as an existing requirement.
+- Cover one representative user journey and applicable failures in observable Acceptance:
+  invalid input, authorization, repetition, conflict, dependency failure, or partial work.
+- Explain what the caller observes and what state changes or remains intact.
+- Record consequential choices and rejected alternatives with reasons.
+- Cite existing integration points, mark proposed files `[new]`, and keep code examples
+  contract-sized.
+- Do not invent policy, performance targets, retries, or test infrastructure to fill a
+  section.
 
-Ask about choices that change user-visible behavior, permissions, data retention,
-scope, external commitments, or costly architectural boundaries. Resolve reversible
-implementation details using repository conventions and the user's delegated authority;
-record the choice and its reason. Do not ask the user to rediscover facts the code answers.
+When revising an existing spec or receiving named inputs from another workflow, read
+[`references/revision-and-handoffs.md`](references/revision-and-handoffs.md) before editing.
 
-For a consequential open question, explain why the answer matters, give a recommendation,
-and ask one focused question. Continue independent exploration while awaiting it.
-For a material technical uncertainty, use a bounded read-only investigation or a disposable
-experiment when authorized; record the observation and its limit. Do not turn speculation
-into an architectural commitment. Unknown product policy gets a literal
-`[NEEDS CLARIFICATION: <decision needed>]` at the affected requirement. A marked draft
-can be reviewed but cannot be ratified.
+## Audit and ratify
 
-Compare alternatives only where there is a real trade-off. Include the simplest viable
-approach or reuse of the current design. Explain the decisive constraint, the cost of the
-recommendation, and what evidence would change it. One obvious conventional solution
-does not need two invented competitors.
+Before dispatching the auditor, read
+[`references/audit-and-ratification.md`](references/audit-and-ratification.md) and follow
+its complete gate. A clean audit proves readiness for review, not user approval.
 
-## Draft a coherent proposal
+## Continue authorized work
 
-Read `../../shared/spec-format.md` for the artifact and acceptance identity contract.
-Write the draft under `docs/acid-prophet/specs/YYYY-MM-DD-<topic>.md` before requesting
-final review. Keep each section proportional to what it needs to communicate; a
-straightforward feature may need only a sentence per section.
+If the user already requested a plan or Linear breakdown, continue with the ratified artifact:
 
-When revising an existing spec, keep its supplied path and identity. Apply only the
-approved delta, record decision provenance, advance `spec-version` once for the revision,
-and clear stale audit metadata while returning it to draft. Preserve acceptance identity
-and history under the shared format contract. Approval of the exact change already given
-in the conversation remains valid; only newly introduced consequential choices need a
-decision. After audit and ratification, return to `acid-prophet:reconcile-drift` when it
-is the caller so it can update dependent artifacts and recheck the implementation.
+- plan → **REQUIRED SUB-SKILL:** `acid-prophet:write-plan` with the absolute spec path;
+- Linear project → **REQUIRED SUB-SKILL:** `linear-devotee:create-project` with the absolute
+  spec path.
 
-Work through one representative user journey and the failures that can change its outcome.
-Choose relevant cases: invalid input, unauthorized actor, repeated action, conflicting
-state, dependency failure, or partial completion. Cover the applicable cases in observable
-Acceptance criteria. Explain in Error handling what the caller sees and what changes or
-stays intact. Do not add policies, performance targets, retries, or test infrastructure
-merely to fill a section.
-
-Record consequential choices and rejected alternatives with their reasons. Cite existing
-integration points and mark proposed files `[new]`. Keep implementation examples short
-enough to explain a contract; a complete implementation belongs in the later work.
-
-## Review the behavior before ratification
-
-Dispatch the logical `acid-prophet:spec-auditor` with only the artifact paths and raw project
-context; do not coach it with the desired verdict:
-
-```text
-SPEC_PATH: <absolute spec path>
-PROJECT_ROOT: <absolute project root>
-PLUGIN_ROOT: <absolute plugin root>
-MODE: report-only
-```
-
-Read the complete returned report using Audit readiness in `../../shared/spec-format.md`.
-Check the findings against its gates and verdict before calling the draft ready for
-ratification. Preserve the actual report; missing or contradictory assessments need
-correction and cannot count as a clean audit.
-
-Fix defects whose resolution follows from approved intent or repository evidence. For a
-decision that belongs to the user, explain the conflicting outcomes and ask the focused
-question. Re-audit after substantive edits. If a malformed report or the same unresolved
-finding persists after two correction attempts, leave a draft and explain the exact
-remaining issue; do not loop indefinitely or relabel it as a pass.
-
-Present the complete, audited proposal once: artifact link, meaningful decisions, acceptance
-summary, and any remaining warnings with their consequences. Avoid asking for approval
-of each heading. Honor authorization already given for concrete content. General authority
-to investigate or draft does not approve an unseen product policy. When ratification is
-still needed, ask for review of this document and wait.
-
-After approval and a clean audit, set `status: ratified`, `verified-by: spec-auditor`, and
-`last-reviewed` to today's ISO date. Keep source version and accepted ids accurate under
-the format contract. Metadata-only ratification does not require repeating the same audit.
-Leave the artifact uncommitted unless a commit was requested; use `git-gremlin:commit`
-when that action is authorized and available.
-
-## Continue the authorized work
-
-If the user already requested a plan or Linear breakdown, continue that work with the
-ratified artifact. Otherwise report the spec and the useful next step without a mandatory
-commit question or handoff menu.
-
-When a plan is requested:
-
-**REQUIRED SUB-SKILL:** Use `acid-prophet:write-plan` with the absolute spec path.
-
-When a Linear project is requested:
-
-**REQUIRED SUB-SKILL:** Use `linear-devotee:create-project` with the absolute spec path.
-
-When invoked from `linear-devotee:create-project`, accept these named inputs:
-
-```text
-SPEC_FILE: <absolute candidate path | _none_>
-ACCEPTANCE_REGISTER: <absolute upstream register path | _none_>
-RETURN_TARGET: linear-devotee:create-project
-```
-
-Read every supplied non-`_none_` path. Reconcile the existing candidate and register,
-preserving accepted ids; do not restart the upstream interview or select another spec.
-Audit and ratify through the same process. Return the absolute ratified spec path and its
-active ids to `RETURN_TARGET` immediately. A blocked draft returns its blockers, never a
-success handoff. This skill performs no Linear mutation and writes no session store.
+Otherwise report the useful next step without a mandatory commit question or handoff menu.
+Leave the artifact uncommitted unless a commit was requested; use the authorized commit
+workflow when available.
 
 ## Completion
 
-Report the actual spec path, `draft | ratified` status, number of active criteria,
-audit outcome, open decisions, and next action taken. A written draft is a valid partial
-artifact; an eligible audit proves readiness for review, not the user's approval.
+Report the actual spec path, `draft | ratified` status, active criterion count, audit
+outcome, open decisions, and next action. A written draft is a valid partial artifact.

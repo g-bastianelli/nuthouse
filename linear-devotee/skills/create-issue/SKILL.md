@@ -1,6 +1,6 @@
 ---
 name: create-issue
-description: Use to add one coherent Linear issue to an existing project. Reuses supplied context, drafts exact Acceptance and observable verification, resolves consequential questions, and creates the complete authorized payload. Also prepares read-only corrections for existing issues. Use create-project to resume a project cascade.
+description: Add one coherent Linear issue to an existing project or prepare a read-only correction. Use for a complete issue with exact Acceptance and observable verification; use create-project instead to resume a project cascade.
 effort: high
 allowed-tools: Read, Glob, Grep, Bash, Write, Edit, Agent, ToolSearch
 ---
@@ -35,12 +35,9 @@ project membership, and exact existing label names/ids before preparing the fina
 
 ## Review an existing issue
 
-For a requested revision of an existing ticket, reload that ticket and affected peer bodies,
-relevant decisions, and the dependency closure. Use `../../shared/coordination-review.md` to
-prepare current-state findings and exact proposed body/relation corrections. The drafter receives
-these raw sources and the existing id. Preserve Acceptance and completed work; return the
-correction preview without entering the creation path or applying updates. Proposed repairs do
-not establish readiness until authorized application and fresh readback through the owning workflow.
+For a requested revision of an existing ticket, read
+[`references/review-existing.md`](references/review-existing.md). Return its correction
+preview without entering the creation path.
 
 ## Draft and resolve
 

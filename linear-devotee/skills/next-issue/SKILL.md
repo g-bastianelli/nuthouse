@@ -1,6 +1,6 @@
 ---
 name: next-issue
-description: Use when a Linear issue is finished and the user wants the next issue, or asks which issue to take next in the project. Reads current statuses and blockers, distinguishes active work from available work, and recommends a startable issue without changing Linear.
+description: Recommend the next startable Linear issue from live statuses and blockers, separating active from available work without changing Linear.
 argument-hint: "[issue-id]"
 model: haiku
 effort: medium

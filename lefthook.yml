@@ -10,3 +10,6 @@ pre-commit:
     frontmatter:
       glob: "{**/SKILL.md,**/agents/*.md}"
       run: bun run test:meta
+    skill-structure:
+      glob: "{**/SKILL.md,**/references/*.md}"
+      run: bun run check:skills

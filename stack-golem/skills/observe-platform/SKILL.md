@@ -1,6 +1,6 @@
 ---
 name: observe-platform
-description: Use when investigating a service issue, checking logs, querying metrics, or verifying the health of any notom-platform resource on Scaleway staging or prod. Queries Loki logs and Prometheus metrics directly via the cockpit API — never punts to Grafana.
+description: Investigate notom platform health on Scaleway through direct Loki logs, Prometheus metrics, and resource state instead of delegating evidence collection to Grafana.
 argument-hint: [service-or-issue]
 effort: high
 context: fork
@@ -10,189 +10,42 @@ allowed-tools: Read, Bash(scw config get:*), Bash(scw account project list:*), B
 
 # observe-platform
 
-> Agent resolution: before any subagent dispatch, read `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md` and use the active runtime's name.
+Before subagent dispatch, read `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md` and use the
+active runtime name. Read `../../persona.md`; it is canonical for user-facing output until the
+report.
 
-## Voice
+Investigate with direct evidence before asking the user to inspect a dashboard or run commands.
 
-Read `../../persona.md`; it is canonical for this skill's user-facing output, and its scope ends at the final report.
+## Workflow
 
-## When you're invoked
+1. Verify `scw` authentication and the local query tools. Read `../../shared/infra-map.md` for
+   endpoints, Loki resource names, SSH aliases, and maintenance notes; never substitute remembered
+   infrastructure values.
+2. Classify `$ARGUMENTS` or the user report:
+   - crash/down → Loki plus Scaleway management state;
+   - performance/usage → Prometheus, adding logs when causality is unclear;
+   - resource-state uncertainty → Scaleway management state;
+   - Authentik host evidence unavailable from telemetry → SSH as a final read-only fallback.
+3. For logs, metrics, metric discovery, or SSH, read
+   [references/query-cookbook.md](references/query-cookbook.md) and use only the matching section.
+4. Loki or Prometheus access uses a newly created temporary cockpit token with only required
+   read scopes. Keep its secret in one ephemeral shell variable, never echo it, and arrange token
+   deletion before the first query so error paths clean up too.
+5. Query the narrowest relevant time range and resource. Correlate telemetry with current
+   Scaleway state; distinguish observations, inference, and unknowns.
+6. Verify the cockpit token was deleted. If deletion is unconfirmed, report that as the primary
+   unresolved operational risk rather than claiming completion.
 
-Use this skill to investigate a service issue, check logs, query metrics, or verify
-the health of any notom-platform resource on Scaleway staging or prod.
+## Report
 
-**Core principle: investigate first, ask later.** All tools are available via CLI —
-never ask the user to open Grafana for something you can query yourself.
-
-## Step 0 — Preconditions
-
-1. Verify `scw` CLI is available and authenticated (`scw config get` or `scw account project list`).
-2. Verify `curl` and `python3` are available (used to query Loki/Prometheus).
-3. Read `../../shared/infra-map.md` — the single source of truth for endpoints, SSH aliases, and Loki `resource_name` values. Substitute its values wherever a step references an infra-map key (`LOKI_ENDPOINT`, `PROM_ENDPOINT`, `LOKI_RESOURCE_*`, `SSH_AUTHENTIK_*`, ...).
-
-## Step 1 — Classify the issue
-
-Start from `$ARGUMENTS` (a service name or issue description) when non-empty;
-otherwise classify from the user's report.
-
-- **Service down / crash?** → query Loki logs (Step 3) + Scaleway CLI state (Step 5)
-- **Performance / usage?** → query Prometheus metrics (Step 4)
-- **Resource state unclear?** → Scaleway CLI state (Step 5)
-
-## Step 2 — Create a temporary cockpit token (REQUIRED for Loki & Prometheus)
-
-The cockpit token secret is only returned at creation — never stored. Always create
-a temporary token, query, then delete.
-
-```bash
-# 1. Create
-TOKEN_JSON=$(scw cockpit token create name=tmp-query \
-  token-scopes.0=read_only_logs \
-  token-scopes.1=read_only_metrics \
-  -o json)
-TOKEN=$(echo $TOKEN_JSON | python3 -c "import json,sys; print(json.loads(sys.stdin.read())['secret_key'])")
-TOKEN_ID=$(echo $TOKEN_JSON | python3 -c "import json,sys; print(json.loads(sys.stdin.read())['id'])")
-
-# 2. Query (Steps 3 / 4)
-
-# 3. Delete (ALWAYS — even on error)
-scw cockpit token delete $TOKEN_ID
+```text
+stack-golem:observe-platform
+  Issue:       <investigated symptom>
+  Sources:     <Loki | Prometheus | Scaleway CLI | SSH>
+  Findings:    <evidence summary>
+  Diagnosis:   <supported cause | unknown>
+  Token:       deleted | deletion-unconfirmed | not-created
 ```
 
-Use only the scopes you need: `read_only_logs`, `read_only_metrics`, `write_only_logs`, `write_only_metrics`.
-
-## Step 3 — Loki (logs)
-
-**Endpoint:** `LOKI_ENDPOINT` (see infra-map)
-**Auth header:** `X-Token: $TOKEN` · **API path:** `/loki/api/v1/`
-
-### Service → resource_name mapping
-
-See the `LOKI_RESOURCE_*` keys in `../../shared/infra-map.md` (Atlas API →
-`LOKI_RESOURCE_ATLAS_API`, PostgreSQL → `LOKI_RESOURCE_POSTGRES`, Redis →
-`LOKI_RESOURCE_REDIS`, App → `LOKI_RESOURCE_APP`).
-
-### Query last N minutes
-
-```bash
-LOKI="<LOKI_ENDPOINT — see infra-map>"
-START=$(date -v-30M +%s)000000000
-END=$(date +%s)000000000
-
-curl -sG -H "X-Token: $TOKEN" \
-  --data-urlencode 'query={resource_name="<LOKI_RESOURCE_* — see infra-map>"}' \
-  --data "limit=50&start=$START&end=$END&direction=backward" \
-  "$LOKI/loki/api/v1/query_range" | python3 -c "
-import json, sys, datetime
-for stream in json.loads(sys.stdin.read()).get('data',{}).get('result',[]):
-    for ts, line in stream.get('values',[]):
-        t = datetime.datetime.fromtimestamp(int(ts)//1_000_000_000)
-        try: msg = json.loads(line).get('message', line)
-        except: msg = line
-        print(f'[{t}] {msg[:200]}')
-"
-```
-
-### Discover labels
-
-```bash
-curl -s -H "X-Token: $TOKEN" "$LOKI/loki/api/v1/labels"
-curl -s -H "X-Token: $TOKEN" "$LOKI/loki/api/v1/label/resource_name/values"
-```
-
-## Step 4 — Prometheus (metrics)
-
-**Endpoint:** `PROM_ENDPOINT` (see infra-map)
-**Auth header:** `X-Token: $TOKEN` · **API path:** `/prometheus/api/v1/`
-
-### Metric families by service
-
-| Service             | Metric prefix                     |
-| ------------------- | --------------------------------- |
-| VM Authentik        | `instance_server_*`               |
-| PostgreSQL          | `rdb_instance_postgresql_*`       |
-| Redis               | `rkv_cluster_*`                   |
-| Atlas API container | `serverless_container_*`          |
-| App S3 bucket       | `object_storage_bucket_*`         |
-| CDN (Edge Services) | `edge_content_delivery_service_*` |
-| Private network     | `vpc_pn_*`                        |
-
-### Query a metric
-
-```bash
-PROM="<PROM_ENDPOINT — see infra-map>"
-
-# Instant query
-curl -sG -H "X-Token: $TOKEN" \
-  --data-urlencode 'query=serverless_container_requests_per_second' \
-  "$PROM/prometheus/api/v1/query" | python3 -c "
-import json,sys
-for r in json.loads(sys.stdin.read()).get('data',{}).get('result',[]):
-    print(r.get('metric'), '->', r.get('value'))
-"
-
-# Discover all metric names
-curl -s -H "X-Token: $TOKEN" "$PROM/prometheus/api/v1/label/__name__/values"
-```
-
-### Key health metrics
-
-```bash
-serverless_container_cpu_usage_ratio                                          # Container CPU (0–1)
-serverless_container_memory_usage_bytes / serverless_container_memory_limit_bytes  # Container memory
-serverless_container_instances_total                                          # Container scaling
-rdb_instance_postgresql_pg_stat_activity_count                                # PostgreSQL connections
-rkv_cluster_redis_memory_used_bytes / rkv_cluster_redis_memory_max_bytes      # Redis memory
-instance_server_agent_up                                                      # VM health
-instance_server_memory_used / instance_server_memory_total                    # VM memory
-```
-
-## Step 5 — Scaleway CLI (management plane — no token needed)
-
-```bash
-scw containers container list -o json | jq '[.[] | {name, status, min_scale, max_scale}]'  # Container status & scaling
-scw rdb instance list -o json | jq '[.[] | {name, status, node_type}]'                     # PostgreSQL health
-scw redis cluster list -o json | jq '[.[] | {name, status, node_type}]'                    # Redis health
-scw instance server list -o json | jq '[.[] | {name, state, public_ip}]'                   # VM (Authentik) health
-scw cockpit data-source list -o json | jq '[.[] | {name, type, synchronized_with_grafana}]'  # Cockpit datasources
-```
-
-## Step 6 — SSH into Authentik VMs (when logs/metrics aren't enough)
-
-The Authentik instances are plain Scaleway VMs (Ubuntu 24.04). SSH in as `root` to
-inspect docker, journald, or disk directly. Host aliases and IPs: see
-`SSH_AUTHENTIK_STAGING` / `SSH_AUTHENTIK_PROD` in `../../shared/infra-map.md`.
-
-```bash
-ssh <SSH_AUTHENTIK_STAGING — see infra-map> 'docker ps'
-ssh <SSH_AUTHENTIK_PROD — see infra-map> 'journalctl -u docker --since "1 hour ago"'
-```
-
-Both aliases live in `~/.ssh/config` (`User root`, auth via the Bitwarden SSH agent
-at `SSH_AGENT_SOCK` — see infra-map). The infra-map's Maintenance section covers
-agent troubleshooting (`ssh-add -l`, locked agent) and how to refresh an IP after
-an instance rebuild.
-
-## Grafana (visual exploration only)
-
-Dashboards: `GRAFANA_DASHBOARDS` (see `../../shared/infra-map.md`)
-If datasources appear empty: `scw cockpit grafana sync-data-sources`
-
-## Final report
-
-```
-stack-golem:observe-platform report
-  Issue:        <what was investigated>
-  Source:       <Loki / Prometheus / Scaleway CLI / SSH>
-  Findings:     <logs / metrics summary>
-  Diagnosis:    <root cause or status>
-  Token:        deleted ✓
-```
-
-## Hard rules
-
-- **Always delete the temporary cockpit token** after querying — even on error paths.
-- **Use only the scopes you need** when creating tokens.
-- Never `git commit`, `git push`, or `git rebase`.
-- Never punt to Grafana for something queryable via CLI/API.
-- Never store or echo the token secret beyond the ephemeral shell variable.
+Never commit, push, rebase, store a token, request write scopes, or punt a CLI-queryable question
+to Grafana. Grafana is optional visual exploration, not evidence collection by proxy.

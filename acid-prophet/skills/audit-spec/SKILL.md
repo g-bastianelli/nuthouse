@@ -1,6 +1,6 @@
 ---
 name: audit-spec
-description: Review an existing spec for contradictory behavior, unverifiable acceptance, unsupported decisions, and repository conflicts. Returns concrete blockers and a readiness verdict; use before ratification or when a spec's quality is in doubt.
+description: Audit a spec for contradictory behavior, unverifiable Acceptance, unsupported decisions, and repository conflicts, returning blockers and ratification readiness.
 argument-hint: [spec-path]
 effort: high
 allowed-tools: Read, Edit, Glob, Grep, Agent, Bash

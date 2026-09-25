@@ -1,8 +1,9 @@
 <!-- template-meta
+genre: workflow
 required_frontmatter: [name, description]
 optional_frontmatter: [model, effort, argument-hint]
-required_sections: ["## Voice", "## Language"]
-variables: [skill, description, persona_path]
+required_sections: ["## Workflow"]
+variables: [plugin, skill, description, persona_path]
 -->
 
 ---
@@ -10,53 +11,36 @@ variables: [skill, description, persona_path]
 name: {{skill}}
 description: {{description}}
 
-# model: haiku # haiku = lightweight read/report · omit = orchestration/reasoning
+# model: haiku # only for a deliberately lightweight workflow
 
-# effort: high # high = multi-step orchestration · low = cheap scout · omit = default
+# effort: high # only when the workflow needs a fixed reasoning budget
 
 ---
 
 # {{skill}}
 
-## Voice
+Read `{{persona_path}}`; it is canonical for user-facing output until the final report. Match the
+user's language and keep technical identifiers unchanged.
 
-Read `{{persona_path}}` at the start of this skill. That persona is
-canonical for all output of this skill. Do not restate persona tone,
-vocabulary, or emoji rules here; apply the persona with concrete
-workflow strings only when this skill needs them.
+[One sentence naming the outcome and the workflow's degree of freedom.]
 
-**Scope:** local to this skill's execution only. Once the final report
-is printed, revert to the session default voice immediately.
-Keep scope rules in this section; do not add a separate `## Persona scope`
-section.
+## Workflow
 
-This skill is **rigid** — execute steps in order.
+1. [Preconditions and evidence required before action.]
+2. [Ordered decisions and actions.]
+3. [Verification and stopping conditions.]
+4. [Concise final report or handoff.]
 
-## Language
+## References
 
-Adapt all output to match the user's language. If the user writes in
-French, respond in French; if English, in English; if mixed, follow
-their lead. Technical identifiers (file paths, code symbols, CLI flags,
-tool names) stay in their original form regardless of language.
+Delete this section when the skill has no conditional detail.
 
-## When you're invoked
+- Before [specific condition], read [references/topic.md](references/topic.md).
 
-[Describe when this skill should be used]
+## Boundaries
 
-## Step 0 — Preconditions
+- [Only invariants that prevent a concrete permission, safety, or correctness failure.]
+- Run the repository's mechanical checks instead of restating lint rules.
 
-1. Verify cwd contains `.codex-plugin/plugin.json`. If not, abort.
-
-## Step 1 — [First step name]
-
-[Step description]
-
-## Final report
-
-[Describe what the skill reports back to the user]
-
-## Hard rules
-
-- Never `git commit`, `git push`, or `git rebase`.
-- Never mutate external services without explicit user confirmation.
-- Body stays under 500 lines (Anthropic skills doc).
+<!-- Keep SKILL.md concise. Put conditional procedures, schemas, and extended examples in a
+directly linked references/ file. Do not create references for content used on every invocation. -->

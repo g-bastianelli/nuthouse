@@ -6,6 +6,10 @@ Accepted (2026-09-02). Supersedes the architecture described by the adaptive
 cross-runtime workflow specs under `docs/acid-prophet/specs/`, which are removed with
 this change and remain readable in git history.
 
+Superseded in part by [ADR 0009](./0009-progressive-disclosure-for-skills.md) for
+skill-entrypoint size, progressive disclosure, and guardrail writing style. The decision
+to orchestrate in prose without a workflow kernel remains accepted.
+
 ## Context
 
 The repo had grown to 90 864 lines of `md`/`mjs`/`json`/`toml` around roughly
@@ -59,9 +63,9 @@ Orchestrate in prose. Delete the kernel and everything that existed to serve it.
   step, git-ignored and disposable. No hashes, no manifests, no signed evidence.
 - **Artifacts pass by absolute path.** A precondition requires a file to exist and be
   readable, never that its bytes match a recorded digest.
-- **Guardrails are named laws**: a rule in capitals followed by a short
-  `| Excuse | Reality |` table naming the rationalisations that break it.
-  `git-gremlin/skills/commit/SKILL.md` is the reference implementation.
+- **Guardrails are named laws**: this original writing-style decision is superseded by
+  ADR 0009. Absolute wording and `| Excuse | Reality |` tables are now reserved for
+  evidenced safety, authority, or correctness failures.
 - **The voice is read, not dispatched.** A skill reads its plugin's `persona.md` inline.
   The `warden` plugin, its `voice` agent, the per-plugin `persona-line-contract.md`, and
   the `voice.state` flag are all removed.
@@ -77,10 +81,9 @@ bundles, vendoring, isolation fixtures and their checkers. ADR 0003 stands uncha
   tests had been failing.
 - `bun run check:duplication` replaces the workflow-bundle checkers. It asserts a
   property — no run of identical prose over 450 characters appears in two SKILL.md files —
-  so it never needs editing when a skill is added, renamed, or retired. Weight, not line
-  count, is the measure, and the budget is calibrated on the mandatory cross-runtime header
-  from ADR 0003 (~410 characters), which every skill legitimately carries. A 300-line skill
-  whose every line is its own is healthy; a 120-line skill with 60 copied ones is not.
+  so it never needs editing when a skill is added, renamed, or retired. Its duplication
+  budget remains useful, but ADR 0009 supersedes the conclusion that line count is
+  irrelevant: unique prose can still impose unnecessary entrypoint context.
 - A cross-runtime hook defect surfaced and was fixed: `moon-moth` declared its
   `SessionStart` hook inline in `.claude-plugin/plugin.json`, invisible to Codex, while
   every gate passed green. `.claude/tests/hooks-dedup.test.mjs` now asserts that a

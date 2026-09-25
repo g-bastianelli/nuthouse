@@ -1,6 +1,6 @@
 ---
 name: greet
-description: Use only at fresh session start when an issue identifier comes from the current branch or first user prompt and no issue context is already available. Never retrigger from resume, compaction, or a conversation summary. Fetches a sourced brief, resolves spec/project-plan authority, and hands authorized delivery to plan. Never implements.
+description: Load a sourced Linear issue brief at fresh session start, move authorized delivery to started, and hand it to planning. Never retriggers after resume/compaction or implements.
 argument-hint: "[issue-id] [--fresh]"
 model: haiku
 allowed-tools: Read, Glob, Bash, Write, Agent, ToolSearch, mcp__claude_ai_Linear__list_issue_statuses, mcp__claude_ai_Linear__save_issue
@@ -57,52 +57,16 @@ network updates are not a prerequisite for a brief.
 
 ## Move the issue to In Progress
 
-GREET MOVES THE ISSUE TO A `started` STATE BEFORE HANDING OFF. It is the sole owner of this
-transition; the user's delivery request is the authorization, and no extra confirmation is asked.
-
-1. If the brief's status type is already `started`, record `Status: <name> (unchanged)`.
-2. Otherwise take the brief's `Started state id`. If it is `_none_` or `_unclear_`, list the
-   issue team's statuses yourself and pick the `started`-type state, preferring the one named
-   `In Progress` when several exist. Ask only when no `started` state exists or the remaining
-   candidates cannot be told apart.
-3. Update the issue with that state through the active Linear connector (on Claude Code:
-   `mcp__claude_ai_Linear__save_issue` with the issue `id` and the `state` id). Re-read the
-   status and record `Status: <new> (was <prior>)`.
-4. A failed or refused update stops delivery with the provider's reason. Never reopen a
-   `completed`/`canceled` issue, and never touch status for a read-only brief.
-
-| Excuse                                                 | Reality                                                                                     |
-| ------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
-| "The scout returned `_unclear_`, so I must not guess." | Listing the team's statuses is a read, not a guess. Do it.                                  |
-| "The user will move it in Linear later."               | A started issue is how Maestro counts concurrency. Skipping the flip lies to the scheduler. |
-| "Planning first, status after."                        | Plan never mutates Linear. Once greet hands off, nobody else will do it.                    |
+For authorized delivery, read
+[`references/started-transition.md`](references/started-transition.md) and complete its
+verified transition before handoff. `greet` is the sole owner of this state change; a
+read-only brief never changes status.
 
 ## Retain useful context
 
-Verify that selected source artifacts and `RELEVANT_FILES` exist and are readable. Proposed new
-code paths remain in the brief, not the existing-file list. Retain the brief in the conversation
-and, when plugin data storage is available, write `greet-<ISSUE_ID>.json` there:
-
-```json
-{
-  "issue_id": "<ID>",
-  "issue_title": "<title>",
-  "linear_project_id": "<project id | _none_>",
-  "issue_context_brief": "<markdown>",
-  "spec_file": "<absolute path | _none_>",
-  "project_plan": "<absolute path | _none_>",
-  "relevant_files": ["<absolute existing path>"],
-  "project_root": "<absolute repository root>",
-  "branch": "<current branch>",
-  "status": "<name> (<type>)",
-  "created_at": "<actual ISO timestamp>"
-}
-```
-
-Update existing runtime session state with `greeted: true` and the resolved context, preserving
-unrelated fields. Keep this one cache; do not mirror it into another session store. A missing
-cache is recoverable from the current brief and authoritative sources, not an excuse to restart
-an interview after compaction.
+Before caching the resolved brief, read
+[`references/context-cache.md`](references/context-cache.md). Verify selected source paths
+and `RELEVANT_FILES`; proposed paths stay in the brief rather than the existing-file list.
 
 ## Handoff
 

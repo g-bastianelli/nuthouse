@@ -1,6 +1,6 @@
 ---
 name: commit
-description: Use automatically when the user asks to commit changes, create a commit, write a commit message, commit staged changes, commit everything, run git commit, "fais le commit", "commit mes changements", or "crée un commit". Commits an existing staged selection, or stages dirty changes automatically for an actual commit while preserving explicit file scope. Do not use for plain git status, diff, log, push, rebase, or PR creation.
+description: Create a Git commit from staged or explicitly scoped dirty changes when the user asks to commit. Not for status, diff, log, push, rebase, or PR creation.
 effort: high
 allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git add:*), Bash(git commit:*), Bash(git rev-parse:*), Read
 ---

@@ -60,6 +60,5 @@ const label = match(status)
   .exhaustive();
 ```
 
-When using Drizzle/Postgres, prefer a typed text column plus boundary validation
-to `pgEnum`; database enum migrations make removal and renaming unnecessarily
-rigid. Skip this rule when the repository deliberately standardizes otherwise.
+When changing a Drizzle/Postgres enum representation, read
+[`references/drizzle-postgres.md`](references/drizzle-postgres.md).

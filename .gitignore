@@ -6,6 +6,8 @@ node_modules/
 !.agents/plugins/
 .agents/plugins/**
 !.agents/plugins/marketplace.json
+!.agents/skills/
+!.agents/skills/**
 
 # Workflow ledgers — disposable, survive compaction only
 .nuthouse/

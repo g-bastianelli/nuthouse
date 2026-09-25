@@ -1,8 +1,8 @@
 ---
 name: sync-insomnia
-description: Use when adding, modifying, or removing API endpoints and the corresponding Insomnia collection needs to be updated. Edits the Git-Synced YAML collection directly, commits, and tells the user to Pull in Insomnia.
+description: Synchronize endpoint changes into a Git-Synced Insomnia YAML collection, commit the approved collection diff, and provide the manual Insomnia pull step.
 model: haiku
-allowed-tools: Read
+allowed-tools: Read, Edit, Glob, Grep, Bash
 ---
 
 # sync-insomnia
@@ -11,15 +11,8 @@ allowed-tools: Read
 
 Read `../../persona.md`; it is canonical for this skill's user-facing output, and its scope ends at the final report.
 
-## When you're invoked
-
-Use this skill when:
-
-- Adding, modifying, or removing HTTP endpoints in an Insomnia collection
-- The collection uses Git Sync
-- Changes need to be synced between local edits and Insomnia
-
-The skill locates the Insomnia Git repository on disk (`INSOMNIA_GIT_DIR` — see `../../shared/infra-map.md`), edits the YAML collection directly, commits the changes, and tells you to Pull in Insomnia's Git Sync panel.
+Locate the Git-Synced collection through `INSOMNIA_GIT_DIR`, edit only its YAML,
+commit the approved diff, then tell the user to pull it from Insomnia.
 
 ## Step 0 — Preconditions
 
@@ -44,28 +37,19 @@ ls <repo-path>/git/*.yaml
 
 Show the user which collection was found. If multiple collections exist, ask which one to edit.
 
-## Step 2 — Read and understand the structure
+## Step 2 — Read the collection
 
 Read the target YAML file and show the user a summary:
 
 - Collection name
 - Existing folders and requests
-- ID generation pattern (prefixes: `req_`, `fld_`, `jar_`, `env_`)
+- Existing ID and timestamp conventions
 
-## Step 3 — Add, modify, or remove entries
+## Step 3 — Apply the requested mutation
 
-Based on the user's request:
-
-- **Add a new request**: generate a new `req_<hex32>` ID, add the request entry with all required fields (url, method, name, meta, headers, body if needed).
-- **Modify an existing request**: locate the entry, update url/method/headers/body as needed.
-- **Remove a request**: delete the entry from the collection array.
-
-Important YAML rules:
-
-- `sortKey` is always required — use negative timestamp (e.g., `node -e "console.log(-Date.now())"`)
-- `created` and `modified` are Unix timestamps in milliseconds
-- `Content-Type` header only for requests with a body
-- Bearer auth uses `Authorization: Bearer {{token}}`
+Read [`references/collection-mutations.md`](references/collection-mutations.md), then
+apply only the requested additions, modifications, or removals. Follow the collection's
+observed conventions where they are stricter than the examples.
 
 Show the user the changes before committing.
 

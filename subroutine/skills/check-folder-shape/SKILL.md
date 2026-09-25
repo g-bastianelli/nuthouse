@@ -1,6 +1,6 @@
 ---
 name: check-folder-shape
-description: Use after a task creates, moves, or deletes TypeScript files or changes their ownership, after the last file move and before verification, completion, or PR preparation. Review the resulting owner folders, including unchanged siblings, for cohesive subtrees, orphan folders, and shared code at the lowest common ancestor.
+description: Review TypeScript folder ownership, cohesive subtrees, orphans, and shared-code placement. Use after the last file creation/move/deletion or ownership change and before verification, completion, or PR preparation.
 effort: high
 argument-hint: "[task-start-commit-or-merge-base]"
 ---

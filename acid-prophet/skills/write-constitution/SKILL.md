@@ -1,10 +1,10 @@
 ---
 name: write-constitution
-description: Use when a project needs immutable governing principles that every spec / audit / drift check is held against — runs a one-question-at-a-time interview to extract project-specific articles (test-first, anti-abstraction, library boundaries, etc.), writes them to docs/acid-prophet/constitution.md, and commits. The spec-auditor reads this file on every audit and treats each article as an extra gate.
+description: Define and ratify project-specific principles that constrain specs, audits, and drift checks, such as testing policy, abstraction limits, or architectural boundaries.
 model: opus
 effort: max
-allowed-tools: Read, Glob, Grep, Bash
-disallowed-tools: Edit, NotebookEdit
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash
+disallowed-tools: NotebookEdit
 ---
 
 # write-constitution
@@ -17,18 +17,14 @@ Rigid governance gate. Match the user's language; keep technical identifiers unc
 
 Read `../../persona.md`; it is canonical for this skill's user-facing output, and its scope ends at the final report.
 
-## When you're invoked
-
-The user wants to write a constitution for a project — typically before the first spec, or when an audit keeps surfacing the same project-specific concern (test-first, no-new-deps, library-first, etc.).
-
 ## Workflow
 
 1. Preconditions:
    - Verify git repo: `PROJECT_ROOT = $(git rev-parse --show-toplevel)`. Abort if not in a repo.
    - Ensure `${PROJECT_ROOT}/docs/acid-prophet/` exists; create if missing.
-   - Check whether `${PROJECT_ROOT}/docs/acid-prophet/constitution.md` already exists.
-     - **Yes** → read it, print its current articles, and ask: `revise (r) | append articles (a) | replace from scratch (x) | stop (s)`. Branch on response. `(x)` requires a second confirmation.
-     - **No** → proceed to step 2.
+   - If `${PROJECT_ROOT}/docs/acid-prophet/constitution.md` already exists, read
+     [`references/revision-mode.md`](references/revision-mode.md) and resolve that branch
+     before continuing. Otherwise proceed to step 2.
 2. Explore context (read-only):
    - `git log --oneline -20`.
    - Read `${PROJECT_ROOT}/CLAUDE.md` if present — its policies are constitutional candidates already.
@@ -45,39 +41,9 @@ The user wants to write a constitution for a project — typically before the fi
 4. Clarifying questions (one per message):
    - For each `edit` candidate, drill in: what does the article actually require, what does it forbid, when does it apply, when does it NOT apply (anti-scope). One question at a time. Apply the uncertainty rule: when the user has not specified a value, emit `[NEEDS CLARIFICATION: ...]` inline and move on — never invent.
    - Optional fifth pass: ask the user to add 1–2 articles not surfaced by the candidates. Same drill.
-5. Draft the constitution:
-   - Layout:
-
-     ```markdown
-     ---
-     id: constitution
-     status: ratified
-     last-reviewed: <today ISO>
-     version: 1
-     ---
-
-     # Constitution — <project name>
-
-     > Articles below are enforced by `acid-prophet:spec-auditor` on every spec audit. Each article becomes a gate: violating articles ⇒ `gate:constitution:<slug>` BLOCKER and `handoff-eligible: no`.
-
-     ## Articles
-
-     ### <Article slug — kebab-case>
-
-     **Rule.** <One sentence stating what the spec must do or must not do.>
-
-     **Why.** <One to three sentences citing the evidence: CLAUDE.md quote, prior incident, stack constraint.>
-
-     **Scope.** <When this article applies and when it doesn't. Anti-scope is mandatory — articles without an exit clause turn into religious dogma.>
-
-     **Auditor check.** <One sentence telling the auditor what to grep for or what spec section to read to decide pass/fail.>
-
-     ### <next article>
-
-     …
-     ```
-
-   - Slug rule: each `### <slug>` heading uses kebab-case, ASCII only, ≤ 30 chars. The auditor uses this slug for `[gate:constitution:<slug>]` findings.
+5. Before drafting, read
+   [`references/constitution-format.md`](references/constitution-format.md). Follow its
+   exact metadata, article fields, slug rules, and auditor-gate contract.
 
 6. User ratification gate:
    - Print the full draft inline.
