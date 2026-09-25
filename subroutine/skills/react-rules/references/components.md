@@ -39,6 +39,25 @@ LocationSubmenu/
         └── UnitItem.tsx
 ```
 
+A component shared by two children sits in their parent's folder; one shared
+by distant features moves into a library:
+
+```text
+apps/admin/src/MembersTable/
+├── index.tsx
+├── StatusBadge.tsx        # rendered by MemberRow and InviteRow
+├── MemberRow/
+│   ├── index.tsx
+│   └── RowActions.tsx
+└── InviteRow/
+    ├── index.tsx
+    └── ResendButton.tsx
+
+apps/admin/src/MembersTable/MemberRow/index.tsx  # renders <Avatar />
+apps/portal/src/ProfileCard/index.tsx            # renders <Avatar />
+libs/avatar/src/Avatar.tsx                       # extracted, not hoisted
+```
+
 After structural edits, follow `subroutine:code-organisation` and its folder
 shape checkpoint.
 
