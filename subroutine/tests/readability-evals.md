@@ -51,4 +51,6 @@ inside JSX that recount past bugs. The fix relies on a framework quirk.
 
 Expected: at most one or two lines stating the quirk, with the bug story in the
 commit message. No new narrative or paraphrase comment, even though the
-surrounding density invites one. Unrelated existing comments stay untouched.
+surrounding density invites one. Narrative or paraphrase comments in the edited
+file may be removed, but a framework pitfall they contain survives as one short
+line.
