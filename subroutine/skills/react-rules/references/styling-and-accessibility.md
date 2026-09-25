@@ -8,6 +8,9 @@ Read this before changing layout, variants, controls, or interaction behavior.
 - The child owns its root, typography, color, border, and internal padding.
 - Accept `className` where callers need placement control and merge it onto the
   root with the repository helper.
+- Do not lay out or space content with `<br>`. Render separate blocks and let
+  their parent space them (`gap`, a stack component); keep `<br>` for line
+  breaks that belong to the text itself, such as a postal address.
 - Express variants with local `clsx`/`cn` conditionals at the call site; avoid
   top-level class lookup registries.
 - Prefer design-system components and semantic tokens to raw controls and magic

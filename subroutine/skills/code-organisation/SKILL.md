@@ -41,6 +41,9 @@ barrel that exposes every internal module.
 - Prefer small autonomous libraries with explicit runtime/layer direction.
   Avoid catch-all `shared`/`utils` packages that hide ownership.
 - Search the repo and shared packages first; reuse established abstractions/imports.
+- Do not copy a module under a "keep in sync" comment: extract it to the
+  consumers' lowest common ancestor, or link the ticket when a package boundary
+  forbids that.
 - Comment only when it tells the reader what the code cannot: a non-obvious
   why or an API/framework pitfall, in one or two lines. No bug narratives (the
   commit holds them), no paraphrase, no multi-paragraph blocks in JSX. Matching
