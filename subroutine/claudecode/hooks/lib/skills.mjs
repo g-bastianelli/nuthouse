@@ -29,6 +29,9 @@ const PRIORITY = [
 // Hard ceiling the runtime enforces on a single additionalContext string.
 export const RUNTIME_CAP = 10000;
 
+// Headroom buildInjection keeps below `cap` by default.
+export const INJECTION_MARGIN = 120;
+
 // Default body budget when a caller doesn't pass one (used by unit tests and
 // direct callers). Real hooks pass a precise budget via buildInjection so the
 // full wrapped string is guaranteed under RUNTIME_CAP.
@@ -257,6 +260,15 @@ export function markSkillsSeen(skills, sessionId, memoDir = MEMO_DIR) {
 }
 
 /**
+ * Wrap for PostToolUse injections. Bodies are pasted without their file path,
+ * so the envelope names the skills directory for routed `references/` links.
+ */
+export function disciplineEnvelope(skillsDir) {
+  return (body) =>
+    `<system-reminder>subroutine — discipline bound to this file (the repo's own AGENTS.md overrides where it is stricter). Relative links resolve under ${skillsDir}/<skill>/:\n${body}</system-reminder>`;
+}
+
+/**
  * Build the full wrapped additionalContext for a hook. Injects full bodies for
  * skills not yet seen this session and a one-line reminder for those already
  * loaded, then wraps with `wrap(body)`. The body budget is derived from the
@@ -264,7 +276,7 @@ export function markSkillsSeen(skills, sessionId, memoDir = MEMO_DIR) {
  * under RUNTIME_CAP. Returns "" when there is nothing to say.
  */
 export function buildInjection(skills, sessionId, wrap, opts = {}) {
-  const { memoDir = MEMO_DIR, cap = RUNTIME_CAP, margin = 120 } = opts;
+  const { memoDir = MEMO_DIR, cap = RUNTIME_CAP, margin = INJECTION_MARGIN } = opts;
   if (!skills.length) return "";
   const { fresh, seen } = partitionBySession(skills, sessionId, memoDir);
   if (!fresh.length && !seen.length) return "";

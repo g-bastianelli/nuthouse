@@ -72,7 +72,10 @@ preparation too; an earlier review is stale after another structural edit.
      files too: Git may not recognize an edited or unstaged move. Search symbol
      references and follow re-exports, aliases and test imports, not just literal
      relative paths. Code consumed by different subtrees belongs at their lowest
-     common ancestor. A predicate used by both modes must not stay private to one.
+     common ancestor; code shared by distant branches (different features or
+     apps) moves into the existing library that fits its domain. If none fits,
+     propose a new library and create it only after the user agrees. A
+     predicate used by both modes must not stay private to one.
 
    Reuse a dependency analyzer only if the repo already configures it, with its
    TypeScript resolution settings. Otherwise use code search plus source reads.
