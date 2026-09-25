@@ -6,16 +6,21 @@ import {
   buildDigest,
   buildDisciplinePayload,
   buildInjection,
+  disciplineEnvelope,
   discoverSkills,
   markSkillsSeen,
   matchSkills,
   parseSkill,
   partitionBySession,
+  RUNTIME_CAP,
   sweepStaleMarkers,
 } from "../hooks/lib/skills.mjs";
 
 const SKILLS_DIR = path.resolve(import.meta.dir, "..", "..", "skills");
 const ADDITIONAL_CONTEXT_CAP = 10000;
+// Body budget of a real PostToolUse injection from a typical plugin-cache install.
+const INSTALL_SKILLS_DIR = "/Users/someone/.claude/plugins/cache/nuthouse/subroutine/9.9.9/skills";
+const HOOK_BUDGET = RUNTIME_CAP - 120 - disciplineEnvelope(INSTALL_SKILLS_DIR)("").length;
 
 function tmpMemo() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "subroutine-memo-"));
@@ -124,7 +129,7 @@ test("matchSkills: tests and state machines pull their focused disciplines", () 
 test("a backend .ts packs every relevant discipline in full under the hook budget", () => {
   const skills = discoverSkills(SKILLS_DIR);
   const matched = matchSkills(skills, "/repo/src/service.ts");
-  const payload = buildDisciplinePayload(matched, { capChars: 9748 });
+  const payload = buildDisciplinePayload(matched, { capChars: HOOK_BUDGET });
   expect(payload.length).toBeLessThan(ADDITIONAL_CONTEXT_CAP);
   for (const skill of matched) expect(payload).toContain(`### ${skill.name}\n`);
   expect(payload).not.toContain("also binding");
@@ -198,7 +203,7 @@ test("buildDisciplinePayload output never exceeds capChars (overflow summary cou
 
 test("a .tsx packs react-rules as a full body under a realistic hook budget", () => {
   const matched = matchSkills(discoverSkills(SKILLS_DIR), "/repo/src/Button.tsx");
-  const payload = buildDisciplinePayload(matched, { capChars: 9748 });
+  const payload = buildDisciplinePayload(matched, { capChars: HOOK_BUDGET });
   expect(payload).toContain("### react-rules");
   expect(payload).not.toContain("also binding");
 });
@@ -211,9 +216,9 @@ test("a form file keeps form-rules in full under a realistic hook budget", () =>
     "/repo/src/members/MemberForm/schema.ts",
     "/repo/src/members/MemberFields.tsx",
   ]) {
-    const payload = buildDisciplinePayload(matchSkills(skills, file), { capChars: 9748 });
+    const payload = buildDisciplinePayload(matchSkills(skills, file), { capChars: HOOK_BUDGET });
     expect(payload).toContain("### form-rules\n");
-    expect(payload.length).toBeLessThanOrEqual(9748);
+    expect(payload.length).toBeLessThanOrEqual(HOOK_BUDGET);
   }
 });
 
@@ -231,7 +236,7 @@ test("form-rules stays off files that only look like forms", () => {
 
 test("a React hook .ts keeps react-rules in full when backend fallbacks overflow", () => {
   const matched = matchSkills(discoverSkills(SKILLS_DIR), "/repo/src/hooks/useMember.ts");
-  const payload = buildDisciplinePayload(matched, { capChars: 9748 });
+  const payload = buildDisciplinePayload(matched, { capChars: HOOK_BUDGET });
   expect(payload).toContain("### react-rules\n");
   expect(payload).toContain("also binding");
 });
@@ -244,7 +249,7 @@ test("focused test and state-machine disciplines stay full under the hook budget
     ["/repo/src/jobs/state-machine.test.ts", ["testing-discipline", "state-machine"]],
     ["/repo/src/Members.test.tsx", ["react-rules", "testing-discipline"]],
   ]) {
-    const payload = buildDisciplinePayload(matchSkills(skills, file), { capChars: 9748 });
+    const payload = buildDisciplinePayload(matchSkills(skills, file), { capChars: HOOK_BUDGET });
     for (const name of expected) expect(payload).toContain(`### ${name}\n`);
     expect(payload.length).toBeLessThanOrEqual(9400);
   }

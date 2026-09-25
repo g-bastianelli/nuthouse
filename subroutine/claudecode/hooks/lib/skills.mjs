@@ -263,6 +263,15 @@ export function markSkillsSeen(skills, sessionId, memoDir = MEMO_DIR) {
  * wrapper overhead and the reminder length so the returned string is guaranteed
  * under RUNTIME_CAP. Returns "" when there is nothing to say.
  */
+/**
+ * Wrap for PostToolUse injections. Bodies are pasted without their file path,
+ * so the envelope names the skills directory for routed `references/` links.
+ */
+export function disciplineEnvelope(skillsDir) {
+  return (body) =>
+    `<system-reminder>subroutine — discipline bound to this file (the repo's own AGENTS.md overrides where it is stricter). Relative links resolve under ${skillsDir}/<skill>/:\n${body}</system-reminder>`;
+}
+
 export function buildInjection(skills, sessionId, wrap, opts = {}) {
   const { memoDir = MEMO_DIR, cap = RUNTIME_CAP, margin = 120 } = opts;
   if (!skills.length) return "";

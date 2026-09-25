@@ -9,7 +9,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { buildInjection, discoverSkills, matchSkills } from "./lib/skills.mjs";
+import { buildInjection, disciplineEnvelope, discoverSkills, matchSkills } from "./lib/skills.mjs";
 
 const exit0 = () => process.exit(0);
 
@@ -30,12 +30,7 @@ if (!matched.length) exit0();
 // Dedup per session: a discipline body is injected in full at most once per
 // session; later edits get a one-line reminder instead of a fresh ~9 KB copy.
 const sessionId = String(input?.session_id ?? input?.sessionId ?? "");
-const additionalContext = buildInjection(
-  matched,
-  sessionId,
-  (body) =>
-    `<system-reminder>subroutine — discipline bound to this file (the repo's own AGENTS.md overrides where it is stricter):\n${body}</system-reminder>`,
-);
+const additionalContext = buildInjection(matched, sessionId, disciplineEnvelope(skillsDir));
 if (!additionalContext) exit0();
 
 process.stdout.write(

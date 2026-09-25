@@ -36,6 +36,13 @@ test("inject-on-edit emits react discipline for a .tsx edit", () => {
   expect(res.hookSpecificOutput.additionalContext).toContain("react-rules");
 });
 
+test("inject-on-edit names a skills dir where routed references resolve", () => {
+  const res = runHook("inject-on-edit.mjs", { tool_input: { file_path: "/repo/src/Button.tsx" } });
+  const dir = res.hookSpecificOutput.additionalContext.match(/resolve under (.+)\/<skill>\//)?.[1];
+  expect(dir).toBeDefined();
+  expect(fs.existsSync(path.join(dir, "react-rules", "references", "components.md"))).toBe(true);
+});
+
 test("inject-on-edit stays silent for a non-matching file", () => {
   expect(
     runHook("inject-on-edit.mjs", { tool_input: { file_path: "/repo/README.md" } }),
