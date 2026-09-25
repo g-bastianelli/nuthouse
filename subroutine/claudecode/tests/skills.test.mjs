@@ -6,6 +6,7 @@ import {
   buildDigest,
   buildDisciplinePayload,
   buildInjection,
+  clearSessionMemo,
   disciplineEnvelope,
   discoverSkills,
   INJECTION_MARGIN,
@@ -77,7 +78,7 @@ test("discovery orders disciplines and keeps workflows out of edit matching", ()
       "code-organisation",
       "check-example",
     ]);
-    expect(matchSkills(skills, "/repo/a.ts").map((s) => s.name)).toEqual([
+    expect(matchSkills(skills, ["/repo/a.ts"]).map((s) => s.name)).toEqual([
       "type-safety",
       "code-organisation",
     ]);
@@ -93,7 +94,7 @@ test("discoverSkills returns [] for a missing dir", () => {
 
 test("matchSkills: a backend .ts pulls type/validation/org/result/hono (not react)", () => {
   const skills = discoverSkills(SKILLS_DIR);
-  const names = matchSkills(skills, "/repo/src/service.ts").map((s) => s.name);
+  const names = matchSkills(skills, ["/repo/src/service.ts"]).map((s) => s.name);
   expect(names).toContain("type-safety");
   expect(names).toContain("validation");
   expect(names).toContain("code-organisation");
@@ -104,7 +105,7 @@ test("matchSkills: a backend .ts pulls type/validation/org/result/hono (not reac
 
 test("matchSkills: a .tsx pulls react-rules but not the .ts-only domain skills", () => {
   const skills = discoverSkills(SKILLS_DIR);
-  const names = matchSkills(skills, "/repo/src/Button.tsx").map((s) => s.name);
+  const names = matchSkills(skills, ["/repo/src/Button.tsx"]).map((s) => s.name);
   expect(names).toContain("type-safety");
   expect(names).toContain("react-rules");
   expect(names).not.toContain("result-pattern");
@@ -113,15 +114,15 @@ test("matchSkills: a .tsx pulls react-rules but not the .ts-only domain skills",
 
 test("matchSkills: tests and state machines pull their focused disciplines", () => {
   const skills = discoverSkills(SKILLS_DIR);
-  const testNames = matchSkills(skills, "/repo/src/orders/service.test.ts").map((s) => s.name);
+  const testNames = matchSkills(skills, ["/repo/src/orders/service.test.ts"]).map((s) => s.name);
   expect(testNames).toContain("testing-discipline");
   expect(testNames).not.toContain("state-machine");
 
-  const machineNames = matchSkills(skills, "/repo/src/jobs/state-machine.ts").map((s) => s.name);
+  const machineNames = matchSkills(skills, ["/repo/src/jobs/state-machine.ts"]).map((s) => s.name);
   expect(machineNames).toContain("state-machine");
   expect(machineNames).not.toContain("testing-discipline");
 
-  const machineTestNames = matchSkills(skills, "/repo/src/jobs/state-machine.test.ts").map(
+  const machineTestNames = matchSkills(skills, ["/repo/src/jobs/state-machine.test.ts"]).map(
     (s) => s.name,
   );
   expect(machineTestNames).toContain("testing-discipline");
@@ -130,7 +131,7 @@ test("matchSkills: tests and state machines pull their focused disciplines", () 
 
 test("a backend .ts packs every relevant discipline in full under the hook budget", () => {
   const skills = discoverSkills(SKILLS_DIR);
-  const matched = matchSkills(skills, "/repo/src/service.ts");
+  const matched = matchSkills(skills, ["/repo/src/service.ts"]);
   const payload = buildDisciplinePayload(matched, { capChars: HOOK_BUDGET });
   expect(payload.length).toBeLessThan(ADDITIONAL_CONTEXT_CAP);
   for (const skill of matched) expect(payload).toContain(`### ${skill.name}\n`);
@@ -204,7 +205,7 @@ test("buildDisciplinePayload output never exceeds capChars (overflow summary cou
 });
 
 test("a .tsx packs react-rules as a full body under a realistic hook budget", () => {
-  const matched = matchSkills(discoverSkills(SKILLS_DIR), "/repo/src/Button.tsx");
+  const matched = matchSkills(discoverSkills(SKILLS_DIR), ["/repo/src/Button.tsx"]);
   const payload = buildDisciplinePayload(matched, { capChars: HOOK_BUDGET });
   expect(payload).toContain("### react-rules");
   expect(payload).not.toContain("also binding");
@@ -218,7 +219,7 @@ test("a form file keeps form-rules in full under a realistic hook budget", () =>
     "/repo/src/members/MemberForm/schema.ts",
     "/repo/src/members/MemberFields.tsx",
   ]) {
-    const payload = buildDisciplinePayload(matchSkills(skills, file), { capChars: HOOK_BUDGET });
+    const payload = buildDisciplinePayload(matchSkills(skills, [file]), { capChars: HOOK_BUDGET });
     expect(payload).toContain("### form-rules\n");
     expect(payload.length).toBeLessThanOrEqual(HOOK_BUDGET);
   }
@@ -232,12 +233,12 @@ test("form-rules stays off files that only look like forms", () => {
     "/repo/src/components/ui/Dialog.tsx",
     "/repo/src/orders/OrderDrawer.tsx",
   ]) {
-    expect(matchSkills(skills, file).map((s) => s.name)).not.toContain("form-rules");
+    expect(matchSkills(skills, [file]).map((s) => s.name)).not.toContain("form-rules");
   }
 });
 
 test("a React hook .ts keeps react-rules in full when backend fallbacks overflow", () => {
-  const matched = matchSkills(discoverSkills(SKILLS_DIR), "/repo/src/hooks/useMember.ts");
+  const matched = matchSkills(discoverSkills(SKILLS_DIR), ["/repo/src/hooks/useMember.ts"]);
   const payload = buildDisciplinePayload(matched, { capChars: HOOK_BUDGET });
   expect(payload).toContain("### react-rules\n");
   expect(payload).toContain("also binding");
@@ -251,7 +252,7 @@ test("focused test and state-machine disciplines stay full under the hook budget
     ["/repo/src/jobs/state-machine.test.ts", ["testing-discipline", "state-machine"]],
     ["/repo/src/Members.test.tsx", ["react-rules", "testing-discipline"]],
   ]) {
-    const payload = buildDisciplinePayload(matchSkills(skills, file), { capChars: HOOK_BUDGET });
+    const payload = buildDisciplinePayload(matchSkills(skills, [file]), { capChars: HOOK_BUDGET });
     for (const name of expected) expect(payload).toContain(`### ${name}\n`);
     expect(payload.length).toBeLessThanOrEqual(9400);
   }
@@ -284,7 +285,7 @@ test("partitionBySession treats everything fresh with no sessionId", () => {
 
 test("buildInjection: full bodies first time, reminder on repeat, both under the cap", () => {
   const dir = tmpMemo();
-  const skills = matchSkills(discoverSkills(SKILLS_DIR), "/repo/src/service.ts");
+  const skills = matchSkills(discoverSkills(SKILLS_DIR), ["/repo/src/service.ts"]);
   const wrap = (b) => `<system-reminder>x:\n${b}</system-reminder>`;
   try {
     const first = buildInjection(skills, "s1", wrap, { memoDir: dir });
@@ -305,7 +306,7 @@ test("buildInjection leaves summarized overflow fresh for a later full injection
   const wrap = (b) => `<system-reminder>x:\n${b}</system-reminder>`;
   try {
     const testEdit = buildInjection(
-      matchSkills(skills, "/repo/src/orders/service.test.ts"),
+      matchSkills(skills, ["/repo/src/orders/service.test.ts"]),
       "overflow-session",
       wrap,
       { memoDir: dir },
@@ -314,7 +315,7 @@ test("buildInjection leaves summarized overflow fresh for a later full injection
     expect(testEdit).not.toContain("### hono-pipeline\n");
 
     const serviceEdit = buildInjection(
-      matchSkills(skills, "/repo/src/orders/service.ts"),
+      matchSkills(skills, ["/repo/src/orders/service.ts"]),
       "overflow-session",
       wrap,
       { memoDir: dir },
@@ -322,7 +323,7 @@ test("buildInjection leaves summarized overflow fresh for a later full injection
     expect(serviceEdit).toContain("### hono-pipeline\n");
 
     const repeatedServiceEdit = buildInjection(
-      matchSkills(skills, "/repo/src/orders/service.ts"),
+      matchSkills(skills, ["/repo/src/orders/service.ts"]),
       "overflow-session",
       wrap,
       { memoDir: dir },
@@ -392,6 +393,52 @@ test("partitionBySession does NOT scan/write on a pure repeat (dedup path stays 
     const repeat = partitionBySession(skills, "repeat-sess", dir); // all seen → no write/sweep
     expect(repeat.fresh.length).toBe(0);
     expect(fs.existsSync(ancient)).toBe(true); // sweep did not run
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("sweepStaleMarkers reaps stale markers inside session dirs and drops emptied dirs", () => {
+  const dir = tmpMemo();
+  try {
+    const skills = discoverSkills(SKILLS_DIR).slice(0, 1);
+    markSkillsSeen(skills, "old-sess", dir);
+    const [sessionDir] = fs.readdirSync(dir).map((n) => path.join(dir, n));
+    const old = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000);
+    for (const marker of fs.readdirSync(sessionDir)) {
+      fs.utimesSync(path.join(sessionDir, marker), old, old);
+    }
+    fs.utimesSync(sessionDir, old, old);
+    sweepStaleMarkers(dir);
+    expect(fs.existsSync(sessionDir)).toBe(false);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("clearSessionMemo forgets one session, its subagents included, and no other", () => {
+  const dir = tmpMemo();
+  const skills = discoverSkills(SKILLS_DIR);
+  try {
+    markSkillsSeen(skills, "a", dir);
+    markSkillsSeen(skills, "a", dir, "sub-1");
+    markSkillsSeen(skills, "b", dir);
+    clearSessionMemo("a", dir);
+    expect(partitionBySession(skills, "a", dir).seen.length).toBe(0);
+    expect(partitionBySession(skills, "a", dir, "sub-1").seen.length).toBe(0);
+    expect(partitionBySession(skills, "b", dir).fresh.length).toBe(0);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("sweepStaleMarkers keeps an empty session dir another hook has just created", () => {
+  const dir = tmpMemo();
+  try {
+    const fresh = path.join(dir, "fresh-session");
+    fs.mkdirSync(fresh);
+    sweepStaleMarkers(dir);
+    expect(fs.existsSync(fresh)).toBe(true);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }

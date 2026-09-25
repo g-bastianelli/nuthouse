@@ -37,8 +37,12 @@ export const INJECTION_MARGIN = 120;
 // full wrapped string is guaranteed under RUNTIME_CAP.
 const DEFAULT_CAP = 9500;
 
-// Per-session injection memo: empty marker files keyed by (session, skill) so a
-// discipline body is injected in full at most once per session. Override the
+// Per-session injection memo: one directory per session holding empty marker
+// files keyed by (agent, skill), so a discipline body is injected in full at
+// most once per context. A subagent reports its parent's session id with its own
+// agent id, so it gets its own markers. A compaction reports the parent's
+// session id even when a subagent compacts, so clearing the session directory
+// resets the parent and its subagents together. Override the
 // directory with SUBROUTINE_MEMO_DIR (used by tests). Best-effort — any fs
 // error degrades to "always fresh" (full injection), never throws.
 const MEMO_DIR = process.env.SUBROUTINE_MEMO_DIR || path.join(os.tmpdir(), "subroutine-inject");
@@ -144,11 +148,10 @@ export function discoverSkills(skillsDir) {
   return skills.sort(byPriority);
 }
 
-/** Skills whose `paths` globs match the given file path. */
-export function matchSkills(skills, filePath) {
-  const p = String(filePath || "");
-  if (!p) return [];
-  return skills.filter((s) => s.paths.some((g) => matchGlob(g, p)));
+/** Skills whose `paths` globs match at least one of the file paths, in priority order. */
+export function matchSkills(skills, filePaths) {
+  const paths = filePaths.map((p) => String(p || "")).filter(Boolean);
+  return skills.filter((s) => s.paths.some((g) => paths.some((p) => matchGlob(g, p))));
 }
 
 function assemblePayload(full, overflow) {
@@ -191,32 +194,73 @@ export function buildDigest(skills) {
   return skills.map((s) => `- \`${s.name}\` — ${s.description}`).join("\n");
 }
 
-function markerPath(memoDir, sessionId, skillName) {
-  const key = crypto
-    .createHash("sha1")
-    .update(`${sessionId}\0${skillName}`)
-    .digest("hex")
-    .slice(0, 20);
-  return path.join(memoDir, key);
+function shortHash(value) {
+  return crypto.createHash("sha1").update(value).digest("hex").slice(0, 20);
+}
+
+function sessionMemoDir(memoDir, sessionId) {
+  return path.join(memoDir, shortHash(sessionId));
+}
+
+function markerPath(memoDir, sessionId, agentId, skillName) {
+  return path.join(sessionMemoDir(memoDir, sessionId), shortHash(`${agentId}\0${skillName}`));
+}
+
+/** The session id both runtimes put in every hook input. */
+export function sessionIdOf(input) {
+  return String(input?.session_id ?? "");
+}
+
+/** Forget every discipline delivered in this session, subagents included. */
+export function clearSessionMemo(sessionId, memoDir = MEMO_DIR) {
+  if (!sessionId) return;
+  try {
+    fs.rmSync(sessionMemoDir(memoDir, sessionId), { recursive: true, force: true });
+  } catch {}
 }
 
 /**
- * Delete marker files in `memoDir` whose mtime is older than `ttlMs`, bounding
- * the memo dir's growth to roughly one TTL window of active sessions. Touches
- * only subroutine's own marker dir and never throws.
+ * Delete marker files older than `ttlMs`, in `memoDir` and in its session
+ * directories, then drop stale session directories left empty. A fresh empty
+ * directory may belong to a hook that has not written its markers yet. Bounds
+ * the memo dir to roughly one TTL window of active sessions. Touches only
+ * subroutine's own marker dir and never throws.
  */
 export function sweepStaleMarkers(memoDir, ttlMs = MEMO_TTL_MS, now = Date.now()) {
-  let names;
-  try {
-    names = fs.readdirSync(memoDir);
-  } catch {
-    return;
-  }
-  for (const name of names) {
-    const p = path.join(memoDir, name);
+  for (const p of listEntries(memoDir)) {
     try {
-      if (now - fs.statSync(p).mtimeMs > ttlMs) fs.rmSync(p, { force: true });
+      if (!fs.statSync(p).isDirectory()) {
+        removeIfStale(p, ttlMs, now);
+        continue;
+      }
+      // Removing markers bumps the directory's mtime, so read its age first.
+      const dirStale = isStale(p, ttlMs, now);
+      const markers = listEntries(p);
+      const removed = markers.filter((marker) => removeIfStale(marker, ttlMs, now)).length;
+      if (dirStale && removed === markers.length) fs.rmdirSync(p);
     } catch {}
+  }
+}
+
+function listEntries(dir) {
+  try {
+    return fs.readdirSync(dir).map((name) => path.join(dir, name));
+  } catch {
+    return [];
+  }
+}
+
+function isStale(file, ttlMs, now) {
+  return now - fs.statSync(file).mtimeMs > ttlMs;
+}
+
+function removeIfStale(file, ttlMs, now) {
+  try {
+    if (!isStale(file, ttlMs, now)) return false;
+    fs.rmSync(file, { force: true });
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -227,14 +271,14 @@ export function sweepStaleMarkers(memoDir, ttlMs = MEMO_TTL_MS, now = Date.now()
  * With no `sessionId`, everything is `fresh`. Any fs error treats the skill as
  * fresh.
  */
-export function partitionBySession(skills, sessionId, memoDir = MEMO_DIR) {
+export function partitionBySession(skills, sessionId, memoDir = MEMO_DIR, agentId = "") {
   if (!sessionId) return { fresh: skills, seen: [] };
   const fresh = [];
   const seen = [];
   for (const s of skills) {
     let exists = false;
     try {
-      exists = fs.existsSync(markerPath(memoDir, sessionId, s.name));
+      exists = fs.existsSync(markerPath(memoDir, sessionId, agentId, s.name));
     } catch {
       exists = false;
     }
@@ -244,14 +288,14 @@ export function partitionBySession(skills, sessionId, memoDir = MEMO_DIR) {
 }
 
 /** Mark only skill bodies that were actually emitted in full. Best-effort. */
-export function markSkillsSeen(skills, sessionId, memoDir = MEMO_DIR) {
+export function markSkillsSeen(skills, sessionId, memoDir = MEMO_DIR, agentId = "") {
   if (!sessionId || !skills.length) return;
   try {
-    fs.mkdirSync(memoDir, { recursive: true });
     sweepStaleMarkers(memoDir);
+    fs.mkdirSync(sessionMemoDir(memoDir, sessionId), { recursive: true });
     for (const s of skills) {
       try {
-        fs.writeFileSync(markerPath(memoDir, sessionId, s.name), "");
+        fs.writeFileSync(markerPath(memoDir, sessionId, agentId, s.name), "");
       } catch {}
     }
   } catch {
@@ -276,9 +320,9 @@ export function disciplineEnvelope(skillsDir) {
  * under RUNTIME_CAP. Returns "" when there is nothing to say.
  */
 export function buildInjection(skills, sessionId, wrap, opts = {}) {
-  const { memoDir = MEMO_DIR, cap = RUNTIME_CAP, margin = INJECTION_MARGIN } = opts;
+  const { memoDir = MEMO_DIR, agentId = "", cap = RUNTIME_CAP, margin = INJECTION_MARGIN } = opts;
   if (!skills.length) return "";
-  const { fresh, seen } = partitionBySession(skills, sessionId, memoDir);
+  const { fresh, seen } = partitionBySession(skills, sessionId, memoDir, agentId);
   if (!fresh.length && !seen.length) return "";
   const seenLine = seen.length
     ? `Still binding (loaded earlier this session): ${seen.map((s) => `\`${s.name}\``).join(", ")}.`
@@ -289,6 +333,6 @@ export function buildInjection(skills, sessionId, wrap, opts = {}) {
   const core = [packed.payload, seenLine].filter(Boolean).join("\n\n");
   if (!core) return "";
   const injection = wrap(core);
-  markSkillsSeen(packed.full, sessionId, memoDir);
+  markSkillsSeen(packed.full, sessionId, memoDir, agentId);
   return injection;
 }

@@ -20,10 +20,14 @@ not by hoping the model invokes a skill. Model-driven skill invocation is
 unreliable for passive knowledge — so a hook is the only mechanism that loads
 the rules deterministically while you implement:
 
-| Hook event     | Matcher                  | What it does                                                                                                                        |
-| -------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `PostToolUse`  | `Edit\|Write\|MultiEdit` | Reads the edited file path, matches it against each skill's `paths`, injects the matching discipline bodies as `additionalContext`. |
-| `SessionStart` | `startup\|resume`        | In a TypeScript repo, injects a one-line-per-discipline digest so the spine is present before the first edit.                       |
+| Hook event     | Matcher                               | What it does                                                                                                                                                                                             |
+| -------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PostToolUse`  | `Edit\|Write\|MultiEdit\|apply_patch` | Reads the edited file paths (`file_path`, or the files a Codex `apply_patch` adds, updates, or moves to), matches them against each skill's `paths`, injects the matching bodies as `additionalContext`. |
+| `SessionStart` | `startup\|resume\|compact`            | In a TypeScript repo, injects a one-line-per-discipline digest so the spine is present before the first edit. After `compact`, it forgets what the session was given.                                    |
+
+Each body is injected in full once per session and once per subagent (keyed by
+`agent_id`); later edits get a one-line reminder. After a compaction, the next
+matching edit injects the bodies again; `/clear` starts a new session.
 
 Bodies use focused, reusable examples and are packed under the runtime's 10 000-
 char `additionalContext` budget. A normal backend `.ts` or component `.tsx`
@@ -96,10 +100,9 @@ codex plugin add subroutine@nuthouse
 Restart the Codex session after install.
 
 > Note: Codex discovers `hooks/hooks.json` the same way Claude Code does, so the
-> discipline is delivered by the hook on both runtimes. `PostToolUse`-on-edit
-> injection works wherever Codex fires that event; `SessionStart` parity on
-> Codex is unverified — validate before relying on the session-digest injection
-> there.
+> discipline is delivered by the hook on both runtimes. Codex reports file edits
+> as `apply_patch` with the patch text in `tool_input.command`; the hook reads the
+> written files from its headers.
 
 ## Persona
 

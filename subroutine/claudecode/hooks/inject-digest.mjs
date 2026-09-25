@@ -6,11 +6,16 @@
 // line per discipline, from each skill's description) at session start so the
 // spine of the discipline is present from turn one. Stays dark outside
 // TypeScript projects so it never adds noise where it doesn't belong.
+//
+// A compaction drops the injected bodies from context, so it also forgets what
+// this session was given; the next matching edit re-injects them through
+// PostToolUse instead of relying on this event's additionalContext. `/clear`
+// starts a new session id, which has no markers to forget.
 
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { buildDigest, discoverSkills } from "./lib/skills.mjs";
+import { buildDigest, clearSessionMemo, discoverSkills, sessionIdOf } from "./lib/skills.mjs";
 
 const exit0 = () => process.exit(0);
 
@@ -20,6 +25,8 @@ try {
 } catch {
   input = null;
 }
+
+if (input?.source === "compact") clearSessionMemo(sessionIdOf(input));
 
 const cwd = typeof input?.cwd === "string" && input.cwd ? input.cwd : process.cwd();
 

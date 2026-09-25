@@ -132,3 +132,69 @@ test("inject-digest stays silent outside a TS repo", () => {
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+function withMemo(run) {
+  const memo = fs.mkdtempSync(path.join(os.tmpdir(), "subroutine-e2e-"));
+  try {
+    return run({ SUBROUTINE_MEMO_DIR: memo });
+  } finally {
+    fs.rmSync(memo, { recursive: true, force: true });
+  }
+}
+
+const patch = (...lines) => ["*** Begin Patch", ...lines, "*** End Patch"].join("\n");
+
+test("inject-on-edit reads the files a Codex apply_patch touches", () => {
+  const res = runHook("inject-on-edit.mjs", {
+    tool_name: "apply_patch",
+    cwd: "/repo",
+    tool_input: {
+      command: patch("*** Update File: web/orders/OrderPanel.tsx", "@@", "-a", "+b"),
+    },
+  });
+  expect(res.hookSpecificOutput.additionalContext).toContain("### react-rules\n");
+});
+
+test("inject-on-edit binds the files a patch leaves behind, not moved or deleted ones", () => {
+  const res = runHook("inject-on-edit.mjs", {
+    tool_name: "apply_patch",
+    cwd: "/repo",
+    tool_input: {
+      command: patch(
+        "*** Add File: /repo/web/orders/OrderPanel.tsx",
+        "+export {};",
+        "*** Update File: api/orders/old.test.ts",
+        "*** Move to: api/orders/service.ts",
+        "*** Delete File: web/orders/OrderPanel.test.tsx",
+      ),
+    },
+  });
+  const ctx = res.hookSpecificOutput.additionalContext;
+  expect(ctx).toContain("react-rules");
+  expect(ctx).toContain("result-pattern");
+  expect(ctx).not.toContain("testing-discipline");
+});
+
+test("inject-on-edit gives a subagent full bodies its parent already received", () => {
+  withMemo((env) => {
+    const edit = { tool_input: { file_path: "/repo/src/service.ts" }, session_id: "parent" };
+    runHook("inject-on-edit.mjs", edit, env);
+    const sub = runHook("inject-on-edit.mjs", { ...edit, agent_id: "sub-1" }, env);
+    expect(sub.hookSpecificOutput.additionalContext).toContain("### type-safety\n");
+    const again = runHook("inject-on-edit.mjs", { ...edit, agent_id: "sub-1" }, env);
+    expect(again.hookSpecificOutput.additionalContext).not.toContain("### type-safety\n");
+  });
+});
+
+test("a compaction makes the next edit re-inject full bodies, subagents included", () => {
+  withMemo((env) => {
+    const edit = { tool_input: { file_path: "/repo/src/service.ts" }, session_id: "s" };
+    runHook("inject-on-edit.mjs", edit, env);
+    runHook("inject-on-edit.mjs", { ...edit, agent_id: "sub-1" }, env);
+    runHook("inject-digest.mjs", { session_id: "s", source: "compact", cwd: os.tmpdir() }, env);
+    for (const payload of [edit, { ...edit, agent_id: "sub-1" }]) {
+      const res = runHook("inject-on-edit.mjs", payload, env);
+      expect(res.hookSpecificOutput.additionalContext).toContain("### type-safety\n");
+    }
+  });
+});
