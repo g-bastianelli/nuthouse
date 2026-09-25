@@ -5,6 +5,7 @@ import {
   isPluginChanged,
   planBumps,
   readPinnedPluginVersion,
+  replaceVersion,
 } from "../bump-plugin-versions.mjs";
 
 describe("bumpPatch", () => {
@@ -147,5 +148,38 @@ describe("Git reads", () => {
         options: { encoding: "utf8" },
       },
     ]);
+  });
+});
+
+describe("replaceVersion", () => {
+  test("rewrites the version and preserves every other byte", () => {
+    const source = `{
+  "name": "lore-hound",
+  "version": "1.0.3",
+  "skills": "./skills/",
+  "agents": ["./agents/source-fetcher.md", "./agents/claim-verifier.md"]
+}
+`;
+    expect(replaceVersion(source, "1.0.4")).toBe(source.replace('"1.0.3"', '"1.0.4"'));
+  });
+
+  test("leaves inline arrays inline", () => {
+    const source = '{\n  "version": "1.0.0",\n  "capabilities": ["Read", "Write"]\n}\n';
+    expect(replaceVersion(source, "1.0.1")).toContain('"capabilities": ["Read", "Write"]');
+  });
+
+  test("tolerates loose spacing around the key", () => {
+    expect(replaceVersion('{"version"  :  "1.0.0"}', "1.0.1")).toBe('{"version"  :  "1.0.1"}');
+  });
+
+  test("only rewrites the first version key", () => {
+    const source = '{\n  "version": "1.0.0",\n  "meta": { "version": "9.9.9" }\n}\n';
+    expect(replaceVersion(source, "1.0.1")).toBe(
+      '{\n  "version": "1.0.1",\n  "meta": { "version": "9.9.9" }\n}\n',
+    );
+  });
+
+  test("throws when no version key is present", () => {
+    expect(() => replaceVersion('{"name": "x"}', "1.0.1")).toThrow(/version/);
   });
 });

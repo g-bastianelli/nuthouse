@@ -20,6 +20,17 @@ export function bumpPatch(version) {
   return `${match[1]}.${match[2]}.${Number(match[3]) + 1}`;
 }
 
+const VERSION_KEY = /("version"\s*:\s*")[^"]+(")/;
+
+// Rewrites the version in place instead of re-serializing the parsed object:
+// JSON.stringify would expand short inline arrays and fail oxfmt --check.
+export function replaceVersion(source, nextVersion) {
+  if (!VERSION_KEY.test(source)) {
+    throw new Error('No "version" key found in manifest');
+  }
+  return source.replace(VERSION_KEY, (_match, open, close) => open + nextVersion + close);
+}
+
 export function decideBump({ changed, pinnedVersion, currentVersion }) {
   if (!changed) {
     return { action: "skip", reason: "unchanged" };
@@ -109,9 +120,7 @@ function main() {
       if (!existsSync(filePath)) {
         continue;
       }
-      const json = JSON.parse(readFileSync(filePath, "utf8"));
-      json.version = to;
-      writeFileSync(filePath, `${JSON.stringify(json, null, 2)}\n`);
+      writeFileSync(filePath, replaceVersion(readFileSync(filePath, "utf8"), to));
     }
   }
 
