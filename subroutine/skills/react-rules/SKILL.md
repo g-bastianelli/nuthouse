@@ -15,14 +15,15 @@ tests take precedence.
 ## Rules that apply every time
 
 1. Define one named React component per file; let folders mirror JSX ownership.
-   Siblings in the same role get the same shape: if one has its file, all do.
+   Siblings in the same role each get their own file; a childless one stays a
+   file.
 2. Pass IDs and primitives across boundaries, not domain objects; the child
    selects its data from the shared cache. For a collection, the owner maps it
-   and renders one child per item; pass the item only when an ID lookup is not
-   cheap, never the list.
-3. Never nest a `.map` inside a `.map`; each repeated level is a child
-   component. Only design-system, virtualized, and constant lists may be
-   passed as arrays.
+   and renders one child per item; pass the item when an ID lookup is not
+   cheap (large unkeyed list). Never pass the list, except to design-system,
+   virtualized, or constant-list components.
+3. In rendered JSX, never nest a `.map` inside a `.map`; each repeated level is
+   a child component.
 4. Keep UI encodings such as radio sentinels in the leaf; parents pass typed
    domain values (`null`/`undefined` already mean none/mixed).
 5. Put state at its highest durable owner: server cache, typed URL, focused

@@ -73,7 +73,8 @@ preparation too; an earlier review is stale after another structural edit.
      references and follow re-exports, aliases and test imports, not just literal
      relative paths. Code consumed by different subtrees belongs at their lowest
      common ancestor; code shared by distant branches (different features or
-     apps) moves into a library instead. A predicate used by both modes must not
+     apps) moves into the existing library that fits its domain; ask before
+     creating a new library. A predicate used by both modes must not
      stay private to one.
 
    Reuse a dependency analyzer only if the repo already configures it, with its

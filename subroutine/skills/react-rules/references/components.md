@@ -10,10 +10,12 @@ rendering a collection.
   `index.tsx` exports the parent and composes layout, even for a single child.
 - Move a component or hook shared by children up to their parent's folder, the
   lowest common ancestor. When distant branches share it (different features or
-  apps), extract it into a library instead of hoisting it to a far ancestor.
+  apps), move it into the existing library that fits its domain instead of
+  hoisting it to a far ancestor. Never create a new library without asking.
 - Colocate private hooks and types with their owner.
 - Treat siblings that play the same role the same way: if one submenu of a menu
-  has its own file, every submenu does.
+  has its own file, every submenu does. Same shape means each has its own file;
+  a sibling without private children stays a file, not a one-file folder.
 - Never create a folder that holds a single file.
 
 ```text
@@ -55,7 +57,7 @@ apps/admin/src/MembersTable/
 
 apps/admin/src/MembersTable/MemberRow/index.tsx  # renders <Avatar />
 apps/portal/src/ProfileCard/index.tsx            # renders <Avatar />
-libs/avatar/src/Avatar.tsx                       # extracted, not hoisted
+libs/ui/src/Avatar.tsx                           # moved to the existing lib
 ```
 
 After structural edits, follow `subroutine:code-organisation` and its folder
@@ -64,16 +66,17 @@ shape checkpoint.
 ## Pass identity, not snapshots
 
 Prefer IDs and display primitives over domain objects across component
-boundaries. The component that owns a collection maps it and renders one child per item. A
-component never contains a `.map` inside another `.map`: each repeated level
-becomes a child component. A domain component does not receive an array only to
+boundaries. The component that owns a collection maps it and renders one child
+per item. Rendered JSX never contains a `.map` inside another `.map`: each
+repeated level becomes a child component. Transforming data with nested `.map`
+outside JSX is fine. A domain component does not receive an array only to
 iterate over it.
 
-Pass the child an ID when it can find its item cheaply in the cache, through a
-selector hook over an already loaded query. Otherwise pass the item itself,
-never the list. Rows assembled from the pages of an infinite query have no
-per-ID cache entry: 5,000 children each looking up their row would run 5,000
-linear searches.
+Pass the child an ID when it can find its item cheaply: a per-ID query, a cache
+keyed by ID, or a small loaded list. Otherwise pass the item itself, never the
+list. A large unkeyed list is not cheap, whether it comes from a plain query or
+from the pages of an infinite query: 5,000 children each looking up their row
+would run 5,000 linear searches.
 
 Exceptions that legitimately take an array: generic design-system components
 (`Select`, `Combobox`, `Table`), virtualized lists that need the array to compute
