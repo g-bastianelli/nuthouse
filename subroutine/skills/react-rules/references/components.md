@@ -11,7 +11,8 @@ rendering a collection.
 - Move a component or hook shared by children up to their parent's folder, the
   lowest common ancestor. When distant branches share it (different features or
   apps), move it into the existing library that fits its domain instead of
-  hoisting it to a far ancestor. Never create a new library without asking.
+  hoisting it to a far ancestor. If none fits, propose a new library and create
+  it only after the user agrees.
 - Colocate private hooks and types with their owner.
 - Treat siblings that play the same role the same way: if one submenu of a menu
   has its own file, every submenu does. Same shape means each has its own file;
