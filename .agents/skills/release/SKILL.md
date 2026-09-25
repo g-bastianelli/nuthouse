@@ -24,13 +24,17 @@ printed, revert to the session's default voice.
 
 This skill is **rigid** — execute the steps in order.
 
-## Context
+## Preflight context
 
-> Auto-injected on Claude Code at skill load. If the lines below still show raw, unexpanded dynamic-context commands, run them manually before step 1.
+At the start of every invocation, read the current branch and working-tree status, then run
+`node scripts/bump-plugin-versions.mjs --dry-run`. Use the live output to select the phase; do not
+assume context from a previous invocation.
 
-- Branch: !`git branch --show-current 2>/dev/null || echo "not a git repo"`
-- Working tree: !`git status --porcelain | head -20`
-- Version bump plan: !`node scripts/bump-plugin-versions.mjs --dry-run 2>&1 | head -15`
+```text
+git branch --show-current
+git status --porcelain
+node scripts/bump-plugin-versions.mjs --dry-run
+```
 
 Nuthouse has two release phases because Claude Code discovers releases by plugin version,
 while the marketplace pins merged content by SHA. Therefore versions always land before
@@ -44,8 +48,9 @@ SHA pins, and every cross-runtime release verifies and reports both runtimes.
      - **Claude Code** requires `<plugin>/.claude-plugin/plugin.json` plus an entry in `.claude-plugin/marketplace.json`.
      - **Codex** requires `<plugin>/.codex-plugin/plugin.json` plus an entry in `.agents/plugins/marketplace.json`.
      - A plugin that declares both manifests must appear in both registries. Any missing manifest/registry pair is a release failure; report it and stop.
-   - Identify the phase from `$ARGUMENTS` if given (`versions` or `shas`); otherwise auto-detect:
-     - The `Version bump plan` line in `## Context` lists pending bumps → phase **versions**.
+   - Identify the phase from the invocation argument if given (`versions` or `shas`); otherwise
+     auto-detect:
+     - The version bump dry-run lists pending bumps → phase **versions**.
      - No pending bumps, on `main`, up to date with `origin/main` → phase **shas**.
      - Neither → report that there is nothing to release and stop.
 2. For phase **versions**, read

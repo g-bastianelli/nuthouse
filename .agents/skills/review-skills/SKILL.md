@@ -13,8 +13,9 @@ Review one skill at a time. Structure is necessary but behavior decides whether 
 
 ## Workflow
 
-1. Verify the repository root, then invoke `audit`. Preserve its complete output. If a critical
-   structural failure exists, stop and let the user decide whether to fix it before evaluation.
+1. Verify the repository root, then read and follow [the local audit skill](../audit/SKILL.md).
+   Preserve its complete output. If a critical structural failure exists, stop and let the user
+   decide whether to fix it before evaluation.
 2. Discover plugin skills from current marketplace entries, excluding `.claude/skills/` and
    `_templates/`. Group them by plugin and let the user select explicit skills or `all`; do not
    auto-select everything.
@@ -24,9 +25,9 @@ Review one skill at a time. Structure is necessary but behavior decides whether 
    - a direct request that should activate it;
    - an indirect or incomplete request that exercises routing or clarification;
    - a request that should not activate it, or a high-risk edge case.
-5. Establish the behavior before editing. Then use the available skill creator to evaluate the
-   current skill and any proposed revision against the same cases. Test one skill at a time so
-   failures remain attributable.
+5. Establish the behavior before editing. Evaluate the current skill and any proposed revision
+   against the same cases, using a runtime skill-authoring evaluator when available or a separate
+   evaluation pass otherwise. Test one skill at a time so failures remain attributable.
 6. Judge observable behavior, not wording similarity:
    - correct activation and non-activation;
    - required evidence and authorization retained;
