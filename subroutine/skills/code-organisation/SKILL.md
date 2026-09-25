@@ -41,6 +41,10 @@ barrel that exposes every internal module.
 - Prefer small autonomous libraries with explicit runtime/layer direction.
   Avoid catch-all `shared`/`utils` packages that hide ownership.
 - Search the repo and shared packages first; reuse established abstractions/imports.
+- A comment states a non-obvious why in one or two lines; keep API and
+  framework pitfall warnings. No bug narratives (the commit holds them), no
+  paraphrase of the code, no multi-paragraph blocks in JSX. Matching the
+  surrounding comment density never licenses narration.
 
 ## Check the settled folder
 
