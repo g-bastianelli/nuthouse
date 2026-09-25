@@ -8,7 +8,9 @@ rendering a collection.
 - Keep a leaf component in one file.
 - When it gains private children or support code, turn it into a folder whose
   `index.tsx` exports the parent and composes layout, even for a single child.
-- Put code shared by siblings at their lowest common ancestor.
+- Move a component or hook shared by children up to their parent's folder, the
+  lowest common ancestor. When distant branches share it (different features or
+  apps), extract it into a library instead of hoisting it to a far ancestor.
 - Colocate private hooks and types with their owner.
 - Treat siblings that play the same role the same way: if one submenu of a menu
   has its own file, every submenu does.
