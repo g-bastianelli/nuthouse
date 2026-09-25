@@ -7,14 +7,16 @@ rendering a collection.
 
 - Keep a leaf component in one file.
 - When it gains private children or support code, turn it into a folder whose
-  `index.tsx` exports the parent and composes layout.
+  `index.tsx` exports the parent and composes layout. Exception below: a chain
+  of single children.
 - Put code shared by siblings at their lowest common ancestor.
 - Colocate private hooks and types with their owner.
 - Treat siblings that play the same role the same way: if one submenu of a menu
   has its own file, every submenu does.
-- Keep nesting shallow; deep nesting makes code painful to read. When each level
-  has a single child component, use flat sibling files instead of a folder per
-  level. Never create a folder that holds a single file.
+- Keep nesting shallow; deep nesting makes code painful to read. A chain where
+  each component owns a single child component stays flat: sibling files in the
+  chain owner's folder, not a folder per level. Never create a folder that holds
+  a single file.
 
 ```text
 MembersTable/
@@ -41,7 +43,8 @@ shape checkpoint.
 
 ## Pass identity, not snapshots
 
-The component that owns a collection maps it and renders one child per item. A
+Prefer IDs and display primitives over domain objects across component
+boundaries. The component that owns a collection maps it and renders one child per item. A
 component never contains a `.map` inside another `.map`: each repeated level
 becomes a child component. A domain component does not receive an array only to
 iterate over it.

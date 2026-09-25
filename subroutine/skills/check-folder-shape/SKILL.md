@@ -61,7 +61,9 @@ preparation too; an earlier review is stale after another structural edit.
    - **Cohesion:** identify parent components/workflows and their private forms,
      components, hooks, logic and tests. Read importers and render/composition
      sites to determine ownership. A cohesive workflow belongs under its owner;
-     for React, the parent's `index.tsx` composes its children. A count such as
+     for React, the parent's `index.tsx` composes its children, except that a
+     chain where each component owns a single child stays as flat siblings in
+     the chain owner's folder. A count such as
      33 is a review cue, never a maximum or a reason to split unrelated leaves.
    - **Orphans:** inspect every removed entry point with survivors. Do the
      remaining files still share an owner? Move unrelated survivors to their

@@ -16,25 +16,28 @@ tests take precedence.
 
 1. Define one named React component per file; let folders mirror JSX ownership.
    Siblings in the same role get the same shape: if one has its file, all do.
-2. Never nest a `.map` inside a `.map`: the owner of a collection maps it and
-   renders one child per item. Pass an ID the child can select cheaply from
-   loaded cache, else the item, never the list (design-system, virtualized,
-   and constant lists excepted).
-3. Keep UI encodings such as radio sentinels in the leaf; parents pass typed
+2. Pass IDs and primitives across boundaries, not domain objects; the child
+   selects its data from the shared cache. For a collection, the owner maps it
+   and renders one child per item; pass the item only when an ID lookup is not
+   cheap, never the list.
+3. Never nest a `.map` inside a `.map`; each repeated level is a child
+   component. Only design-system, virtualized, and constant lists may be
+   passed as arrays.
+4. Keep UI encodings such as radio sentinels in the leaf; parents pass typed
    domain values (`null`/`undefined` already mean none/mixed).
-4. Put state at its highest durable owner: server cache, typed URL, focused
+5. Put state at its highest durable owner: server cache, typed URL, focused
    Context, then local state.
-5. Never mirror fetched data in `useState` or fetch it from `useEffect`.
-6. Let the parent own placement and the child own its visual root; merge a
+6. Never mirror fetched data in `useState` or fetch it from `useEffect`.
+7. Let the parent own placement and the child own its visual root; merge a
    caller-provided `className` onto that root.
-7. Prefer repository design-system components and tokens to raw controls and
+8. Prefer repository design-system components and tokens to raw controls and
    magic values.
-8. Preserve semantic markup, labels, keyboard behavior, and visible focus.
-9. Add memoization only for a measured need, and never when React Compiler owns
-   it.
-10. Follow the repository's test policy; do not invent component tests where
+9. Preserve semantic markup, labels, keyboard behavior, and visible focus.
+10. Add memoization only for a measured need, and never when React Compiler owns
+    it.
+11. Follow the repository's test policy; do not invent component tests where
     it deliberately tests extracted pure logic only.
-11. After creating, moving, or deleting TypeScript files, run the structural
+12. After creating, moving, or deleting TypeScript files, run the structural
     checkpoint required by `subroutine:code-organisation`.
 
 ## Read the relevant reference before changing code

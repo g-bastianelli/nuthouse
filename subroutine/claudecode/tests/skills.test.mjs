@@ -8,6 +8,7 @@ import {
   buildInjection,
   disciplineEnvelope,
   discoverSkills,
+  INJECTION_MARGIN,
   markSkillsSeen,
   matchSkills,
   parseSkill,
@@ -20,7 +21,8 @@ const SKILLS_DIR = path.resolve(import.meta.dir, "..", "..", "skills");
 const ADDITIONAL_CONTEXT_CAP = 10000;
 // Body budget of a real PostToolUse injection from a typical plugin-cache install.
 const INSTALL_SKILLS_DIR = "/Users/someone/.claude/plugins/cache/nuthouse/subroutine/9.9.9/skills";
-const HOOK_BUDGET = RUNTIME_CAP - 120 - disciplineEnvelope(INSTALL_SKILLS_DIR)("").length;
+const HOOK_BUDGET =
+  RUNTIME_CAP - INJECTION_MARGIN - disciplineEnvelope(INSTALL_SKILLS_DIR)("").length;
 
 function tmpMemo() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "subroutine-memo-"));
