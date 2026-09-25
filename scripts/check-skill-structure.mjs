@@ -25,6 +25,16 @@ function markdownLinks(content) {
   return [...content.matchAll(/\[[^\]]*\]\(([^)]+)\)/g)].map((match) => match[1]);
 }
 
+function inlineCodeReferences(content) {
+  return [...content.matchAll(/`(references\/[A-Za-z0-9._/-]+\.md(?:#[A-Za-z0-9._-]+)?)`/g)].map(
+    (match) => match[1],
+  );
+}
+
+function directReferenceTargets(content) {
+  return [...new Set([...markdownLinks(content), ...inlineCodeReferences(content)])];
+}
+
 function supportingReferences(skillFile, allFiles) {
   const referenceRoot = path.join(path.dirname(skillFile), "references") + path.sep;
   return allFiles.filter((file) => file.startsWith(referenceRoot) && file.endsWith(".md"));
@@ -47,7 +57,7 @@ export function checkSkillStructure(repoRoot) {
       );
     }
 
-    for (const target of markdownLinks(content)) {
+    for (const target of directReferenceTargets(content)) {
       if (!target.startsWith("references/") || target.includes("<")) continue;
       const cleanTarget = target.split("#", 1)[0];
       if (!fs.existsSync(path.join(repoRoot, path.dirname(skill), cleanTarget))) {

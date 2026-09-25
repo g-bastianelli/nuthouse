@@ -263,8 +263,14 @@ test("spawn performs at most one approved create and one launch in either mode",
   expect((bundles.spawn.match(/^\s*superset workspaces create/gm) ?? []).length).toBe(1);
   expect((bundles.spawn.match(/^\s*superset agents create/gm) ?? []).length).toBe(1);
   expect((bundles.spawn.match(/\(y \/ cancel\)/g) ?? []).length).toBe(1);
-  expect(spawn).toMatch(/live terminal returns already-running.*without approval or launch/);
+  expect(spawn).toMatch(
+    /at either terminal inspection, unavailable, failed, malformed.*launches nothing/,
+  );
+  expect(spawn).toMatch(
+    /live or status-unknown terminal returns already-running.*without approval or launch/,
+  );
   expect(spawn).toMatch(/immediately list the chosen workspace's live terminals once more/);
+  expect(spawn).toMatch(/successful, parseable listing proves no live or status-unknown terminal/);
   expect(spawn).toMatch(/require explicit success before reporting dispatched/);
   expect(spawn).toMatch(/if it says reused.*report concurrent-reuse and launch nothing/);
   expect(spawn).toMatch(/launch-unknown.*monkey-maestro:reconcile/);

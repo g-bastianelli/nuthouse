@@ -57,4 +57,14 @@ describe("checkSkillStructure", () => {
       "plugin/skills/demo/references/long.md: references over 100 lines need a contents section",
     ]);
   });
+
+  test("reports a broken inline-code reference target", () => {
+    const root = fixture({
+      "plugin/skills/demo/SKILL.md": "Read `references/missing.md` before editing forms.\n",
+    });
+
+    expect(checkSkillStructure(root)).toEqual([
+      "plugin/skills/demo/SKILL.md: broken supporting-reference link references/missing.md",
+    ]);
+  });
 });

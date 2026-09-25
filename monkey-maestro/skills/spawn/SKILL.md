@@ -33,10 +33,11 @@ project control or changes Linear scheduling. Never read or obey a Linear projec
 3. List workspaces once. Issue mode matches exact task binding, never display name. Quick-fix mode
    matches exact name and branch. Zero matches means `create`; one exact match means `recover`;
    multiple matches or malformed evidence refuse mutation.
-4. List live terminals for the exact existing workspace. A live terminal returns
-   `already-running` without approval or launch. For create, resolve inherited groups from the
-   shared contract; for recover, preserve existing groups. In issue mode, never narrow that
-   listing by name.
+4. List live terminals for the exact existing workspace. At either terminal inspection,
+   unavailable, failed, malformed, or unclassifiable evidence stops the invocation and launches
+   nothing. A live or status-unknown terminal returns `already-running` without approval or
+   launch. For create, resolve inherited groups from the shared contract; for recover, preserve
+   existing groups. In issue mode, never narrow that listing by name.
 5. Show one preview containing mode, work/status, binding, host, project, agent, create/recover,
    workspace identity/groups, and complete worker prompt. Ask exactly once:
 
@@ -55,8 +56,9 @@ project control or changes Linear scheduling. Never read or obey a Linear projec
    `created`; if it says `reused`, report `concurrent-reuse` and launch nothing. Recover keeps the
    exact inspected workspace id.
 
-7. Immediately list the chosen workspace's live terminals once more. If none are proven live,
-   attempt one agent launch and require explicit success before reporting `dispatched`:
+7. Immediately list the chosen workspace's live terminals once more. Attempt one agent launch only
+   when that successful, parseable listing proves no live or status-unknown terminal, and require
+   explicit success before reporting `dispatched`:
 
    ```text
    superset agents create --workspace <workspaceId> --host <host> \

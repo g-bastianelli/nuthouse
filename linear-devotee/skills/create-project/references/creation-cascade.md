@@ -77,9 +77,10 @@ topological dependency order, projecting every argument from the envelope. Resol
 confirmed Linear id before dependent writes.
 
 Create every approved blocking relation. A post-pass leaves the cascade incomplete until all edges
-confirm. Never retry an ambiguous creation without a field; recover by marker first. Append a
-human-readable confirmed id to `progress.md` immediately after each confirmed entity or relation.
-Never mark a timeout as created or improvise rollback of earlier successful writes.
+confirm. Never retry an ambiguous creation without a field; recover by marker first. Append one
+human-readable completed-step line with its confirmed id to the canonical
+`.nuthouse/<project-slug>/progress.md` immediately after each confirmed entity or relation. Never
+mark a timeout as created or improvise rollback of earlier successful writes.
 
 ## Resume and verification
 

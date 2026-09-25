@@ -33,9 +33,11 @@ one approval boundary. Standalone additions use their dedicated skills.
    criteria, but those criteria enter the same full preview and are never presented as previously
    approved source truth.
 4. Keep readable proposal artifacts in runtime plugin data or an ignored
-   `.nuthouse/<project-slug>/`: brief, Acceptance register, draft, `preview.md`, `graph.json`,
-   `envelope.json`, and append-only `progress.md`. These aid review and recovery; Linear remains
-   authoritative for remote state.
+   `.nuthouse/<project-slug>/`: brief, Acceptance register, draft, `preview.md`, `graph.json`, and
+   `envelope.json`. Keep recovery state in exactly one append-only
+   `.nuthouse/<project-slug>/progress.md`; its first line names the subject
+   (`# ledger — project: <project-slug>`) and each confirmed completed step gets one line. These aid
+   review and recovery; Linear remains authoritative for remote state.
 5. Before any write, show one validated exact preview and obtain authorization unless the user
    already approved that exact content and delegated choices. A content or source change invalidates
    prior approval.

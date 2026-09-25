@@ -8,6 +8,7 @@ Read this on the feature branch or `main` before SHA pins are updated.
    - `bunx bun test <plugin>/` for every bumped plugin with tests;
    - `bun run test:meta`;
    - `bun test scripts/tests/`;
+   - `bun run check:skills`;
    - `bun run check:workflow` for manifest version parity;
    - `bun run check:codex-agents` for generated agents and runtime maps;
    - `bun run lint` and `bun run fmt:check`;
