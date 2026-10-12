@@ -3,7 +3,7 @@ name: deliver
 description: Deliver one Linear issue through implementation, PR review, corrections, protected merge, and verified Linear completion. Reuse its workspace and PR after interruption. Use for full delivery, including an authorized Maestro worker; brief or plan-only requests keep their narrower scope.
 argument-hint: "[issue-id] [existing-pr-url]"
 effort: high
-allowed-tools: Read, Glob, Grep, Write, Edit, Agent, ToolSearch, Skill(linear-devotee:plan *), Skill(git-gremlin:finish-pr *), Bash(git status:*), Bash(git branch --show-current), Bash(git branch --list:*), Bash(git diff:*), Bash(git log:*), Bash(git rev-parse:*), Bash(git remote -v), Bash(git remote get-url:*), Bash(git switch -c:*), Bash(git ls-files:*), Bash(git check-ignore:*), Bash(gh auth status:*), Bash(gh repo view:*), Bash(gh pr list:*), Bash(gh pr view:*), mcp__claude_ai_Linear__get_issue, mcp__claude_ai_Linear__list_issue_statuses, mcp__claude_ai_Linear__save_issue
+allowed-tools: Read, Glob, Grep, Write, Edit, Agent, ToolSearch, Skill(linear-devotee:plan *), Skill(git-gremlin:finish-pr *), Bash(node:*), Bash(git status:*), Bash(git branch --show-current), Bash(git branch --list:*), Bash(git diff:*), Bash(git log:*), Bash(git rev-parse:*), Bash(git remote -v), Bash(git remote get-url:*), Bash(git switch -c:*), Bash(git ls-files:*), Bash(git check-ignore:*), Bash(gh auth status:*), Bash(gh repo view:*), Bash(gh pr list:*), Bash(gh pr view:*), mcp__claude_ai_Linear__get_issue, mcp__claude_ai_Linear__list_issue_statuses, mcp__claude_ai_Linear__save_issue
 ---
 
 # linear-devotee:deliver
@@ -29,6 +29,10 @@ report. Keep progress and questions concise: the offering is the delivered work.
    Claude's scoped tool grants apply only to the invoking turn; runtime permissions still
    apply on resume and to other providers or commands. Chained skills own their tool grants.
    Delivery authority never permits bypassing a denied tool or weakening permission settings.
+   If the caller supplies Maestro notification context, retain the actual master destination,
+   installed helper path, project/run/issue, and exact lead provider identity. Read its
+   supplied native-notification reference when first using that context. A manual delivery
+   without a supervisor remains valid and needs no master destination.
 2. **Reconcile actual work.** Resolve `PLUGIN_ROOT` from this skill's directory (`../..`) or
    the active runtime's plugin root. Read `../../shared/provider-selection.md` and
    `../../shared/planning-context.md`. Inspect the current repository, workspace, branch,
@@ -73,6 +77,17 @@ report. Keep progress and questions concise: the offering is the delivered work.
    required approval checks, and protected merge. Do not add a separate reviewer agent or infer
    review completion from a process exit code. Its `waiting` or `blocked` result returns here
    with the same PR and exact missing condition. A changed head requires refreshed evidence.
+   Pass a supervised worker's captured continuation context too. For external CI, reviews,
+   or the merge queue, read the conditional wait procedure supplied by `finish-pr`, capture
+   its baseline before the final readiness read, and start one bounded observer only when
+   the condition remains pending. Keep the exact operation id, PR/head/base, process handle,
+   and receiver identity through this handoff. Claude uses native background completion;
+   Codex uses the notification wrapper directed to its own loaded thread, with the captured
+   master as `failureDestination` for one blocked notice if the self callback fails or is
+   unknown. End the model turn while that completion route is pending, without periodic model reads or master
+   refresh prompts. A tool observation timeout does not authorize another observer.
+   On native completion or a matching `wait-result`, return to this same delivery from
+   fresh issue/PR facts. Observer output never substitutes for review or merge gates.
 
    **REQUIRED SUB-SKILL:** Use `git-gremlin:finish-pr` for the existing unmerged PR.
 
@@ -101,7 +116,9 @@ Repeat `git check-ignore` before creating the ledger; if exclusion cannot be con
 the optional ledger and report that continuity limit. Never include it in the delivery commit.
 
 Its first line is `# ledger — issue: <ISSUE_ID>`. Record the authorized scope, workspace/branch,
-PR, source/plan paths, outstanding question, and next action. Give each completed step one line
+PR, source/plan paths, outstanding question, and next action. When applicable, retain
+notification destinations/helper paths, the lead's actual source identity, pending event ids,
+and the bounded wait's operation/handle. Store no credentials or persistent message queue. Give each completed step one line
 with its observed result and the check command or evidence location needed to revalidate it.
 Re-read actual Linear, Git, and PR state on resume; the ledger is a reminder, not evidence of
 approval, clean checks, or completed work. No Claude environment variables or greet cache are
@@ -114,7 +131,19 @@ relies on progress reads, emit those details as ordinary assistant output before
 native question tool; its arguments may be absent from the supervisor's transcript. Continue
 independent work while the answer is pending. After three failed correction rounds for the same
 unresolved cause, return the concrete blocker. Pending external CI, approvals, or a merge queue
-return `waiting`; do not spin indefinitely or treat waiting as completion.
+remain `waiting` while the one bounded observer is active. If the observer expires/fails or
+its native completion route is unavailable, return the exact manual resume action; do not
+silently promise a later automatic wake-up or start an unbounded retry loop. A waiting state
+never establishes completion.
+
+For supervised delivery, send one event for a new actionable question, blocker, wait needing
+coordination, shared-resource release, or verified completion, using the captured helper
+contract. Retain its stable event id for a known retry. Send questions with their exact
+ordinary-prose text/options before yielding; no event can approve a tool permission. Keep
+normal result output available even if notification fails and report `failed`/`unknown`
+transport honestly. Native queue/socket acceptance is not evidence that the master processed
+it. Do not notify every observation or send acknowledgment events. Nested specialists and
+reviewers report to this issue lead, never impersonate its supervisor event.
 
 ## Report
 

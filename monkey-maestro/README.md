@@ -9,7 +9,7 @@ supervises one isolated Superset workspace per issue, using Codex or Claude Code
 
 `linear-devotee:deliver` owns each issue's context, plan, implementation, verification,
 draft PR, native runtime review, corrections, protected merge, and observed Linear
-completion. Maestro follows progress, relays questions, and starts newly unblocked issues
+completion. Workers notify Maestro of actionable changes; it relays questions and starts newly unblocked issues
 without asking the user to repeat every workflow command.
 
 Read the [operating guide](USAGE.md) for launch examples, review and merge conditions,
@@ -37,11 +37,22 @@ review findings/threads, and repository protections still govern merge. Enabling
 auto-merge or entering a merge queue is pending work. Completion requires observed merge
 and a completed Linear status readback; a quiet terminal proves neither.
 
-Supervision runs while the current agent session is active. It reads Superset terminals
-and provider transcripts, sends answers to the existing worker, and refills capacity from
-fresh Linear observations. It checkpoints when external decisions or unavailable transport
-prevent progress. Closing the supervisor stops supervision; an active control does not
-run a daemon. Scheduled Superset automation requires a separate explicit request.
+Supervision uses native messages while the master provider session remains loaded. Codex
+receives through its exact thread queue; Claude uses its messaging socket with inbound
+acceptance confined to the designated Maestro session. The master ends its turn while
+idle. It reads affected evidence on a worker event and refreshes Linear before filling
+capacity, without recurring terminal scans, Linear reads, or model heartbeat turns.
+
+Workers on another machine use Superset to run a short notification command on the master
+host, then clean up only that transport terminal. Startup proves actual reception through
+each selected route before dispatch. An enqueue/write receipt alone is insufficient.
+Command permissions remain in force; notification content never grants approval or scope.
+
+An issue lead owns its bounded PR wait. API observation may run every 30 seconds inside
+that operation without a model turn; completion resumes the same lead through its runtime.
+Expiration or failed transport produces an explicit manual recovery step. Closing the
+master, an unreported worker crash, or an external Linear edit has no automatic wake-up.
+An active control runs no daemon. Scheduled automation requires a separate explicit request.
 
 ## Skills
 
@@ -103,7 +114,8 @@ bun run check:runtime
 bun run check:workflow
 ```
 
-Control tests exercise authority parsing and successor writes. Workflow behavior is
+Control tests exercise authority parsing and successor writes; notification tests exercise
+validation, transport outcomes, and scoped cleanup. Workflow behavior is
 evaluated with the [delivery scenarios](evals/delivery.md) in both runtimes; static tests
 do not prove a Superset session, native review, or merge actually worked.
 

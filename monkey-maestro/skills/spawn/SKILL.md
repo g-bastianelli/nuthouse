@@ -33,7 +33,12 @@ authorized issue lifecycle; the launcher does not mutate Linear.
    cannot use the issue-only flag. Resolve host, project, and terminal-capable Codex/Claude
    agent with **Start discovery and approval** in the shared contract, without reading a
    project control. Preserve supplied configuration and ask only about unresolved choices.
-   Apply the shared **Worker boundary** to both issue and quick-fix prompts.
+   Apply the shared **Worker boundary** to both issue and quick-fix prompts. When a
+   supervisory caller supplies notification context, read
+   [native notifications](../orchestrate/references/notifications.md), preserve its actual
+   destination and probe evidence, and verify that the exact route still applies before
+   launch. Include the worker's actual lead identity once exposed. Manual spawn without
+   that caller keeps its ordinary result and never invents a master, control, or timer.
 3. List workspaces once. Issue mode matches exact task binding, never display name. Quick-fix mode
    matches exact name and branch. Zero matches means `create`; one exact match means `recover`;
    multiple matches or malformed evidence refuse mutation.
@@ -99,6 +104,7 @@ monkey-maestro:spawn
   Work:      <issue status/blockers | exact objective>
   Binding:   <task id | branch>
   Scope:     issue-through-merge | draft-pr | edit-and-check
+  Notify:    <verified caller destination | no supervisory caller>
   Workspace:created | reused | none
   Groups:    <inherited, existing, or root>
   Result:    dispatched | already-running | concurrent-reuse | launch-failed |

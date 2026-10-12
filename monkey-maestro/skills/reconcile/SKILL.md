@@ -38,6 +38,9 @@ dispatches work, calls GitHub, or blocks another skill.
    infer semantic completion from a missing or idle terminal.
 5. Report task, workspace, terminal, ambiguity, and unavailable evidence per issue. Do
    not create, update, delete, adopt, repair, retry, or write any resource or comment.
+   This is a user-requested observation, never a recurring fallback for missing worker
+   notifications. Report the exact manual resumption action for unavailable routes or
+   closed sessions without claiming that an active control will wake them.
 
 ## Report
 

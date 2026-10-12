@@ -104,3 +104,37 @@ an uncertain transport response. This session has no evidence that the existing 
 Full request resumes after compaction. A cache contains AC-L001 and started state. The issue
 provider now returns an authentication error, so current status, source decisions, and blockers
 cannot be read. PR 17 is open and GitHub is available. The old ledger names no unresolved work.
+
+## M — Worker-owned pending CI
+
+Full request from a Maestro supervisor, with verified master destination and this Codex lead's
+exact local self destination. PR 17 is OPEN; the current head/base match the readiness read,
+required CI remains pending, and the observer baseline was captured before that read. A bounded
+`wait-and-notify` operation is already live under a confirmed handle with operation id
+`ci-17-1`. The tool's latest observation window timed out without terminating the process.
+The master has ended its turn awaiting notifications.
+
+## N — Scoped continuation after change
+
+Same supplied scope as M. One `wait-result` for `ci-17-1` reaches the lead's exact thread with
+the expected repository/PR/head/base and outcome `changed`. CI is now green, but a fresh PR
+read shows a new unresolved external review thread. A duplicate of the same event then arrives.
+No merge or Linear completion evidence exists.
+
+## O — Expiration and unavailable callback
+
+Same PR as M. The bounded observer has ended with `expired`; callback transport to the lead
+returned `unknown`. Its required master `failureDestination` received one blocked fallback
+with the exact operation and original event. The ordinary process result remains readable.
+There is no active observer handle and no automatic master timer. Native permissions remain on-request; a tool approval
+is pending for an unrelated command. State the recoverable waiting condition and exact resume
+action without claiming callback processing, approving the command, or starting another wait
+from old evidence.
+
+## P — Manual full delivery
+
+Full request without a Maestro caller or notification destination. PR 17 remains in the merge
+queue with no observed merge. Repository checks and native review are complete for its current
+head. No verified native background completion route is available. Preserve normal standalone
+waiting and its precise continuation; no master address, control, or notification setup is
+invented.

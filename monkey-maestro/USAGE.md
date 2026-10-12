@@ -5,8 +5,9 @@ one Superset workspace per issue, using Codex or Claude Code, and follows the wo
 planning, implementation, review, CI, merge, and Linear completion. You provide product
 decisions when needed; you do not have to request each workflow step separately.
 
-Supervision runs in the active agent conversation. Keep that session running while you
-want Maestro to monitor workers and start newly available issues.
+Workers notify the loaded master conversation when something needs action. Keep that
+provider session open; Maestro ends its turn while idle and wakes on native input. There
+are no periodic master terminal scans, Linear reads, or heartbeat turns.
 
 ## Before starting
 
@@ -26,6 +27,28 @@ prerequisites, Linear access, GitHub access, and their runtime's local review co
 Start from the repository's Superset workspace when possible. Maestro discovers the host,
 repository, and agent from that context, and asks about ambiguous choices. Project
 orchestration groups its issue workspaces in a folder dedicated to that run.
+
+The notification helper must be available on each relevant host. Before dispatch, Maestro
+captures its actual provider session and proves receipt from every selected worker host.
+If a new host has no workspace yet, its proof follows the first selected workspace's setup,
+before the issue is reserved or its worker launched; that pending route is shown explicitly.
+Codex uses its exact loaded thread and runtime home. A Claude master needs session-scoped
+inbound acceptance; when authorized, start only that Maestro session with:
+
+```sh
+claude --settings '{"crossSessionInbound":"accept"}'
+```
+
+Retain other launch flags and command permissions. An already-running session is not
+silently restarted, and `/config` is not used because it writes user settings. A held
+message requires the native message-approval UI or an explicit session handoff. Stopping
+a run leaves this session setting in effect until the session ends.
+
+Remote workers use the existing Superset connection to create one short-lived notification
+command terminal on the master host. They never type into the master terminal. Startup
+checks actual receipt; a local probe, command-terminal creation, or `queued` response alone
+does not establish cross-machine delivery. A failed route blocks automatic dispatch with
+an exact preparation or manual recovery action.
 
 ## Start a project
 
@@ -48,7 +71,7 @@ your project or issue. Use `--agent claude` to select a configured Claude termin
 omit `--agent` to let Maestro resolve the available preset from the current runtime.
 
 Before activation, Maestro shows the exact Linear project, Superset host and repository,
-agent, workspace folder, concurrency, and delivery scope. It uses your existing authorization when that
+agent, workspace folder, concurrency, verified notification route, and delivery scope. It uses your existing authorization when that
 covers the displayed scope; otherwise it asks once. That authorization carries through
 plans, scoped commits and pushes, PRs, review fixes and replies, protected merge, and the
 issue's completion status. It does not repeat the same permission question at every stage.
@@ -154,7 +177,15 @@ issue's scope and explains feedback it declines. Fixes are pushed before replies
 they are available. Code or relevant base changes require refreshed review and checks.
 
 After native review and local verification, the owner marks the draft ready and waits for
-the repository's external reviews and CI. For a repository expecting CodeRabbit, require
+the repository's external reviews and CI. The lead starts one bounded PR observer and
+ends its model turn until native completion. Claude receives background task completion;
+Codex receives a callback to its own loaded thread. The observer may read the relevant
+GitHub API every 30 seconds, but does not wake the model between reads. It cannot approve
+or merge anything. A changed result sends the lead back through fresh finishing checks;
+expiration or failure reports a precise manual resume action. If a Codex self callback
+fails or is unknown, the wrapper sends one blocked notice to the captured master. Failure
+of both routes still requires explicit inspection; stdout cannot wake an idle model. The
+master supplies no timer. For a repository expecting CodeRabbit, require
 its completed review for the current PR head. A green status saying the review was skipped
 because the PR was a draft does not establish that review; wait for the actual completion
 after the PR becomes ready.
@@ -189,7 +220,7 @@ For example, a limit of four with two started issues leaves two slots.
 Candidates come from backlog, triage, or unstarted states. All current blockers must be
 known and terminal in the live project read; terminal means completed or canceled.
 Missing dependency information prevents selection. Ready issues are selected in stable
-identifier order. After progress, Maestro rereads Linear before filling another slot.
+identifier order. After an actionable completion event, Maestro rereads Linear before filling another slot.
 
 Sidebar groups do not restrict the Linear issue selection. Starting from a source folder
 named `lot 4` still authorizes the selected Linear project and uses that run's own folder. For an
@@ -209,7 +240,10 @@ Maestro handles routine technical choices within the authorized scope. It brings
 consequential product decisions, conflicting acceptance criteria, scope changes, missing
 authority, or persistent failures. A question includes the issue, the decision, available
 options, and what the answer unlocks. Reply in the supervisor conversation; Maestro
-relays the answer to the existing worker while independent issues keep moving.
+relays the answer to the existing worker while independent issues keep moving. The master
+acceptance setting is not inherited by Claude workers: a worker may hold a native message
+for its own approval. Maestro reports that exact UI instead of changing worker settings.
+A task answer is sent only to an identified session awaiting ordinary task input.
 
 Runtime permission dialogs still need to be handled through the runtime's approval
 interface. Required GitHub reviews still need the appropriate reviewer. Delivery
@@ -222,6 +256,11 @@ Reports distinguish these issue outcomes:
 | `done`    | The matching PR is merged and Linear completion has been verified.                                       |
 | `waiting` | A specific event or recovery step is pending, such as CI, approval, the merge queue, or a Linear update. |
 | `blocked` | A concrete decision, unavailable prerequisite, or persistent failure prevents dependent work.            |
+
+Workers notify only actionable changes, using a stable event id and their exact issue and
+lead-session identity. Duplicate events do not cause duplicate replies or dispatches.
+Acknowledgments and unchanged progress create no notification loop. Transport receipts
+mean queued/written, not that the recipient processed the message.
 
 An issue that is waiting or blocked still occupies its slot while its Linear status is
 started. A project report treats canceled issues as terminal without claiming they were
@@ -240,7 +279,7 @@ Use these requests in the agent conversation:
 | `monkey-maestro:start <PROJECT_ID>`                   | Activate or reactivate the project and enter supervision.                                                                    |
 
 To resume in another conversation, establish that the previous supervisor stopped, or
-explicitly hand the run over after ending the old loop. Maestro then rereads Linear,
+explicitly hand the run over after the old supervisor gives up ownership. Maestro then rereads Linear,
 GitHub, and worker state, preserves the workspace and PR, and resumes the next missing
 step. An active project configuration alone does not prove a supervisor is running or
 that the current conversation owns the run.
@@ -263,3 +302,17 @@ action. Neither completion nor project stop deletes issue workspaces or branches
 The detailed behavior lives in the [project execution contract](shared/project-execution-contract.md),
 the [issue delivery skill](../linear-devotee/skills/deliver/SKILL.md), and the
 [PR finishing skill](../git-gremlin/skills/finish-pr/SKILL.md).
+
+## Notification limits and verification
+
+An external Linear change does not send a worker event. A worker that disappears silently,
+a closed master, or unavailable host also has no automatic recovery timer. Use explicit
+`status`, `reconcile`, or `orchestrate` resumption to inspect the current facts. A new master
+requires a concrete ownership handoff, a proven route, and confirmed destination updates
+for existing workers; a copied ledger alone establishes none of those.
+
+Provider/socket behavior must be checked on installed versions. Before relying on mixed
+providers or remote hosts, run the [delivery scenarios](evals/delivery.md): actual receipt
+at rest and while busy, preserved permission prompts, duplicate/stale events, bounded PR
+continuation, and a real two-host path. Do not infer a pass from CLI help or unit fixtures.
+The optional dashboard/page is outside notification delivery.

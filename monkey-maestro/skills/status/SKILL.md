@@ -40,6 +40,8 @@ status, or relations.
    - unknown: any row or dependency decision lacking complete Linear facts.
 4. Compute `remaining = max(0, maxConcurrency - startedCount)` when control is usable.
    Report stable issue-id lists and counts. Never use runtime state to adjust them.
+   This explicit read does not establish a loaded supervisor, a working notification route,
+   or an automatic wake-up for later external Linear changes.
 
 ## Report
 

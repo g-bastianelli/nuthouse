@@ -42,7 +42,10 @@ Stop future Maestro dispatches? Existing Superset work keeps running. (y / cance
 5. With authorization, append one Linear project comment. On denial, do nothing. Dispatch the
    reader once more in `MODE: control` and require the exact successor with the same
    run/group pair; report failed
-   verification without rewriting.
+   verification without rewriting. Later notifications permit observation only: no new
+   worker instruction, dispatch, recovery, or group repair. Existing issue workers and
+   their own bounded waits retain their original scope. Stop neither closes the master
+   runtime nor changes a session-scoped inbound setting; that setting ends with the session.
 
 ## Report
 

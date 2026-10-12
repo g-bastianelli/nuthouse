@@ -1,6 +1,6 @@
 ---
 name: start
-description: Activate full issue delivery for a Linear project, resolve Superset transport, record the explicit delivery scope once, and enter session-based supervision.
+description: Activate full issue delivery for a Linear project, resolve Superset transport, record the explicit delivery scope once, and enter notification-driven supervision.
 argument-hint: "<linear-project-id> [--host <id>] [--superset-project <id>] [--agent <name>] [--max-concurrency <1-10>]"
 effort: high
 allowed-tools: Read, Bash(node:*), Bash(git rev-parse:*), Bash(superset status:*), Bash(superset hosts list:*), Bash(superset projects list:*), Bash(superset agents list:*), Bash(superset terminals list:*), Bash(superset agents read:*), Agent, mcp__claude_ai_Linear__save_comment
@@ -18,8 +18,9 @@ Read `../../persona.md`; it is canonical for this skill's user-facing output, an
 ## Contract
 
 Read `${CLAUDE_PLUGIN_ROOT}/shared/project-execution-contract.md`. Resolve the concrete
-delivery scope and transport before activation. This skill writes only the project control;
-the authorized supervisor and issue workers perform subsequent delivery mutations.
+delivery scope and transport before activation. Its durable mutation is the project control;
+bounded notification probes may use the exact temporary command-terminal boundary. The
+authorized supervisor and issue workers perform subsequent delivery mutations.
 
 ## Workflow
 
@@ -32,7 +33,7 @@ the authorized supervisor and issue workers perform subsequent delivery mutation
    With no overrides, report `already-active` without another control write.
    Establish **Supervisor ownership** from the shared contract before entering orchestration:
    same-session continuity can continue; a different known live owner is reported without
-   starting a loop here. Unknown ownership requires a concrete handoff clarification, not
+   starting a second supervisor here. Unknown ownership requires a concrete handoff clarification, not
    an assumption that an active control means this session owns the run.
    Apply that ownership check before updating an active control too. Unsupported schema,
    missing scope, or a missing/invalid group grants no authority; resolve fresh activation
@@ -76,23 +77,37 @@ the authorized supervisor and issue workers perform subsequent delivery mutation
    freshly resolved inputs and `previousRevision` from the highest observed orderable
    revision (zero when no control exists). Ambiguous or unorderable records need resolution
    before writing; never reset the revision or inherit unsupported authority.
-9. Show the complete project, run, workspace group, host, Superset project, agent, concurrency, revision, source
-   of every value, and the delivery scope: started reservations, isolated issue workspaces,
-   implementation/checks, commits/pushes/draft PR, native review/corrections, review replies
-   and resolution, protected merge, completed status readback, and dependency-ready refill.
-   State that supervision lasts for the active session, and that stopping dispatch leaves
-   existing workers running. If existing user authorization covers this exact scope and
-   target, proceed; otherwise ask once after the concrete preview:
+9. Before activation or a resumed dispatch, read
+   [native notification preparation](../orchestrate/references/notifications.md). Capture
+   the actual master provider destination and prove its local reception. Prove the route
+   from every selected worker host when an existing source workspace makes that possible.
+   Otherwise retain that host as `route unverified`: orchestration may create and complete
+   setup of its first selected issue workspace, then probe from there before reserving or
+   launching the issue. Create no extra probe workspace. Keep destination/probe evidence
+   in conversation, separate from the unchanged schema-v3 control. If reception needs the
+   current turn to finish, retain preparation and yield until the actual probe arrives.
+   An unavailable route reports exact preparation/resume steps without reserving issues or
+   claiming that host's automatic supervision. Claude's optional acceptance is confined to a designated
+   session launch; never silently restart this session or weaken command permissions.
+10. Show the complete project, run, workspace group, host, Superset project, agent, concurrency, revision, source
+    of every value, and the delivery scope: started reservations, isolated issue workspaces,
+    implementation/checks, commits/pushes/draft PR, native review/corrections, review replies
+    and resolution, protected merge, completed status readback, and dependency-ready refill.
+    State verified routes and any remote proof still pending before reservation, that supervision needs the master session to
+    remain loaded, and that stopping dispatch leaves existing workers running. External
+    Linear edits or silent worker loss need explicit inspection; no recurring fallback is
+    scheduled. If existing user authorization covers this exact scope and
+    target, proceed; otherwise ask once after the concrete preview:
 
 ```text
 Activate this project's displayed delivery scope through protected merge and supervise it in this session? (y / cancel)
 ```
 
-10. With authorization, append one Linear project control comment. On denial, do nothing. Dispatch the
+11. With authorization, append one Linear project control comment. On denial, do nothing. Dispatch the
     reader once more in `MODE: control` and require the exact successor, including the
     approved run/group pair; report a failed
     verification without blindly writing again.
-11. For a newly activated run, record that this current session starts supervision and
+12. For a newly activated run, record that this current session starts supervision and
     retain any actual runtime-exposed session identity. Pass the exact project and authority
     to the supervisor. Updating a control alone does not end a different existing supervisor;
     apply the same ownership precondition before handing over.
@@ -114,6 +129,7 @@ monkey-maestro:start report
   Group:       <exact workspaceGroup stored in control>
   Transport:   <host> / <Superset project> / <agent>
   Concurrency: <n>
-  Supervisor:  active session; no background automation created
+  Notifications: <verified master destination; per-host verified or pending proof before reservation>
+  Supervisor:  loaded session awaiting events; no background automation created
   Next:        monkey-maestro:orchestrate <project id>
 ```

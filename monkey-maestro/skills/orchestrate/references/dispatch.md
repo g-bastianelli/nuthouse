@@ -54,6 +54,15 @@ branch grants ownership. Ambiguous creation receives observation only.
 
 ## Reserve started before launch
 
+If this source host's notification route is still unverified because no workspace existed
+at activation, use the newly created and ready workspace for one bounded source-host probe
+through the captured master destination. Apply the notification reference's exact-id
+transport cleanup. Require actual master reception before the following reservation; a
+queued/written receipt alone is insufficient. If the master must end its turn to receive
+it, preserve creator/setup evidence and continue after that probe arrives. A failed route
+leaves the issue unreserved and worker unlaunched; it does not justify a separate probe
+workspace or a second issue workspace.
+
 For each created workspace, sequentially:
 
 1. Refresh the exact issue and direct blockers through `MODE: selected`, then refresh
@@ -88,6 +97,14 @@ missing information is `not specified in Linear`, not invented requirements.
 Apply **Worker boundary** and the result envelope from the shared contract. The scope
 authorizes started/completed, implementation and verification, commits/pushes/draft PR,
 native review, corrections and justified review replies/resolution, then protected merge.
+Include the verified master destination, absolute installed notification helper path on the
+worker, and expected host/workspace/provider. The lead captures its own actual provider
+session id before its first event; retain that same identity at the supervisor from launch
+or correlated transcript evidence. A claimed source field alone cannot establish it.
+Pass this context through `deliver` to its PR waiting handoff. Require each Codex lead to
+capture and prove its own local self-completion route after launch, before its first
+automatic wait, as described in the notification reference. Workers emit semantic events and own bounded waits; they
+must not rely on periodic prompts from the master.
 The issue is already reserved as started; continue idempotently. Resume prior PR/work and
 ask only about consequential unresolved choices. Optional specialists receive bounded
 responsibility; the issue lead owns integration and native review.

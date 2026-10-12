@@ -3,7 +3,7 @@ name: finish-pr
 description: Finish an existing GitHub PR through native Codex or Claude review, scoped fixes, CI, review comments, and a protected merge. Use for explicit PR completion or an authorized full-delivery handoff; inspection and review alone do not authorize merge.
 effort: high
 argument-hint: "<PR URL>"
-allowed-tools: Read, Edit, Write, Skill(git-gremlin:commit), Skill(git-gremlin:handle-review-comments), Skill(moon-moth:verify), Skill(code-review), Bash(git status:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(git remote:*), Bash(git config:*), Bash(git fetch:*), Bash(git merge-base:*), Bash(git merge --ff-only:*), Bash(git push:*), Bash(git check-ignore:*), Bash(gh auth status:*), Bash(gh repo view:*), Bash(gh pr view:*), Bash(gh pr checks:*), Bash(gh pr ready:*), Bash(gh pr merge:*), Bash(gh api:*), Bash(codex review:*)
+allowed-tools: Read, Edit, Write, Bash(node:*), Skill(git-gremlin:commit), Skill(git-gremlin:handle-review-comments), Skill(moon-moth:verify), Skill(code-review), Bash(git status:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(git remote:*), Bash(git config:*), Bash(git fetch:*), Bash(git merge-base:*), Bash(git merge --ff-only:*), Bash(git push:*), Bash(git check-ignore:*), Bash(gh auth status:*), Bash(gh repo view:*), Bash(gh pr view:*), Bash(gh pr checks:*), Bash(gh pr ready:*), Bash(gh pr merge:*), Bash(gh api:*), Bash(codex review:*)
 ---
 
 # git-gremlin:finish-pr
@@ -87,6 +87,12 @@ change permission modes or accept a permission prompt automatically to keep deli
    Compare head/base before and after fetching pages; changed or partial evidence requires a
    fresh read.
 
+   When a caller supplies an automatic continuation destination, read
+   [references/wait-for-pr.md](references/wait-for-pr.md) and capture its baseline **before** the
+   final readiness read. Return an exact pending condition and observation request as soon as
+   external progress is needed. The delivery owner starts one bounded observer; this skill
+   never waits by spending repeated model turns on unchanged GitHub reads.
+
    Require explicit completion evidence for each expected external reviewer on the current head,
    independently of CI buckets and approval requirements. A green draft-skipped CodeRabbit check
    does not satisfy this gate. Missing, pending, skipped, stale, or ambiguous review evidence
@@ -125,8 +131,13 @@ change permission modes or accept a permission prompt automatically to keep deli
 Keep moving while scoped repairs make observable progress. Two consecutive repair/review passes
 that leave the same blocker unchanged return `blocked` with the attempted fixes and the smallest
 decision needed. For external reviews, checks, approval, or queue progress, refresh after a
-relevant event or a short wait; after three unchanged observations return `waiting` with the next
-observation needed. Missing external approval is not a reason to ask the user to repeat merge authorization.
+relevant event; return `waiting` immediately with the exact PR, observed head/base, pending
+condition, and next observation needed. A standalone caller receives an explicit resume action.
+An automatic delivery caller owns the single observer described in
+[references/wait-for-pr.md](references/wait-for-pr.md), its runtime completion, and resuming this
+same PR. Expiration or observation failure returns control with a concrete manual next action;
+it does not silently start another observer. Missing external approval is not a reason to ask
+the user to repeat merge authorization.
 
 When a caller owns a compaction ledger, add only the PR, latest observed head/base, completed
 review/check summary, current reason/question, and next action there. Otherwise create a disposable
@@ -152,5 +163,6 @@ git-gremlin:finish-pr report
   Review:       <runtime, reviewed head/base, expected external-review completion evidence, finding dispositions>
   Verification: <local checks and current GitHub evidence>
   Merge:        <mergedAt + merge commit, queue/open state, or not requested>
+  Pending:      <exact external condition; operation/request for an automatic caller, otherwise resume action>
   Next:         <specific observation/action, or one question with context>
 ```
