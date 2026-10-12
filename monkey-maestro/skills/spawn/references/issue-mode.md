@@ -30,5 +30,9 @@ Issue mode starts from one exact Linear issue identifier. Before dispatch, read
    **Concurrent siblings** and **Worker boundary** from the shared contract to the proven
    sibling identifiers. Full delivery uses its done/waiting/blocked envelope. Started
    recovery continues the existing workspace/PR and does not repeat a status transition.
+   Preserve supplied master destination, notification helper path, lead source binding,
+   and worker-owned wait/continuation context. A recovered lead must confirm a changed
+   destination before future delivery is represented as automatic; never silently reuse
+   a closed or former master's address. No supervisory caller means no master notifications.
 6. For an unknown launch outcome, direct the user to read-only
    `monkey-maestro:reconcile <projectId> <issueId>`.

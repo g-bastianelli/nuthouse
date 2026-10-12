@@ -22,7 +22,7 @@ cover the existing record parser separately; these cases exercise agent behavior
 | Agent create returns chat rather than terminal                                          | Report unsupported transport, preserve the created session, do not send terminal input or launch a replacement.                                                                               |
 | Worker terminal is idle, envelope absent, screen scrollback incomplete                  | Read provider transcript; do not declare issue completion or free capacity.                                                                                                                   |
 | Worker reports green CI while native review finds a bug or required approval is missing | Continue correction/waiting within the same workspace; no merge or completed issue.                                                                                                           |
-| PR enters merge queue; worker yields waiting                                            | Preserve slot/PR and send only a scoped pending-condition refresh after it awaits input.                                                                                                      |
+| PR enters merge queue; worker yields waiting                                            | Preserve slot/PR and one worker-owned bounded observer; its own runtime completion resumes delivery, with no master timer.                                                                    |
 | PR merged, Linear completion update fails                                               | Resume the same worker and reconcile only the missing Linear step; do not recreate PR or code.                                                                                                |
 | Worker A asks a product question; independent worker B succeeds                         | Relay A's concrete question once, keep its slot, verify B's completed Linear state before filling its slot.                                                                                   |
 | Send-answer request times out after the answer reaches worker                           | Inspect transcript before resending; no duplicate answer or forked worker.                                                                                                                    |
@@ -70,7 +70,7 @@ cover the existing record parser separately; these cases exercise agent behavior
   unknown, inspect exact workspace evidence read-only instead of substituting the new
   target or retagging. Retain the per-workspace host/project in the checkpoint.
   Active `start` without overrides writes no control; active overrides preserve
-  the pair. Unknown supervisor ownership still prevents a second loop.
+  the pair. Unknown supervisor ownership still prevents a second supervisor.
 - Give the project a long mixed-case name containing commas, newlines, quotes, and emoji.
   Replace commas/control/whitespace runs in the display fragment, lowercase the label,
   preserve the timestamp/run suffix, and truncate only that fragment to fit 64 UTF-16
@@ -115,8 +115,11 @@ unavailable`, leave tags untouched, and block any dependent new launch. If anoth
 
 ## Supervisor boundary regression cases
 
-- Native waiting is unavailable while CI remains pending. Use one bounded `sleep` call
-  between observations, without a polling script or a busy loop; retain timely user updates.
+- A bounded PR observer is running while CI remains pending. The master ends its turn;
+  there are no periodic terminal/Linear reads, sleeps, or yielded-worker refresh prompts.
+  Claude resumes from its native task completion; Codex resumes from its exact own-thread
+  callback. If neither completion route is available, report manual waiting with its
+  precise resume action, without claiming an automatic future wake-up.
 - A worker's screen shows a permission dialog rather than a product question. Do not send
   an automatic approval or alter permission settings. Surface the exact requested action
   for the user's native approval flow while independent work continues.
@@ -132,7 +135,7 @@ unavailable`, leave tags untouched, and block any dependent new launch. If anoth
   rebind to the newest transcript, change the follow-up recipient, or invent a CLI selector.
 - `start` sees an active control in another conversation. Same-session continuity is
   absent. Inspect a known owner's exact session if available; otherwise report unknown
-  ownership and request the missing handoff fact. Do not silently create a second loop.
+  ownership and request the missing handoff fact. Do not silently create a second supervisor.
 - A disposable checkpoint is needed in a repository without a `.nuthouse` ignore rule.
   Preserve `info/exclude`, append only the needed local exclusion, and verify with
   `git check-ignore` before writing. Keep tracked `.gitignore` untouched; unavailable
@@ -152,3 +155,55 @@ Before enabling several live issues, demonstrate one complete issue in each runt
 record its workspace, PR merge observation, required check/review evidence, and completed
 Linear readback. Then demonstrate interruption recovery without a duplicate worker/PR.
 Mark unavailable or unexecuted cases explicitly rather than inferring a pass from help text.
+
+## Native notification acceptance cases
+
+Run these against actual installed versions and retain host/provider identities and exact
+observations. Fixture tests establish helper behavior, not runtime reception. No second
+online host means the real remote cases remain unexecuted; a same-host Superset relay is
+not a substitute. Capability probes may use one bounded receiver read, never a new master
+polling loop.
+
+| Case                                                                       | Required observation                                                                                                                    |
+| -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Claude → Claude, Claude → Codex, Codex → Claude, Codex → Codex on one host | The exact loaded receiver processes each unique event; source and destination provider ids remain distinct from terminal ids.           |
+| The same four combinations across two online hosts                         | One-shot command runs on the receiver host, receiver processes it, and only the returned transport terminal is removed.                 |
+| Codex master idle, busy, and receiving two events together                 | Idle wakes; busy processes after its active turn; both distinct events remain observable. No delivery claim from enqueue alone.         |
+| Claude master launched with session-only accept                            | Mixed-provider event is processed without held-message approval; user/project settings and command permissions remain unchanged.        |
+| Claude without effective session accept                                    | Held-message state is reported; no token/class spoof, global configuration change, or silent restart.                                   |
+| Actual tool permission pending during incoming events                      | No approval is selected, unauthorized command stays unexecuted, unrelated work can continue.                                            |
+| Repeated same event id or stale run/source/session/issue                   | No repeated question, answer, reservation, dispatch, adoption, or inferred completion. Unknown identity only permits scoped inspection. |
+| Native review transcript appears newer than lead transcript                | Lead binding is retained; nested reviewer cannot deliver completion on the lead's behalf.                                               |
+| Event claims merged/done while PR or Linear contradicts it                 | Fresh facts prevent slot release; original worker/PR remain for the exact missing stage.                                                |
+| Stop races with already queued events                                      | Current inactive control prevents follow-up, recovery, group repair, and dispatch; workers keep their original scope.                   |
+| Native send succeeds but receiver is not loaded                            | Receipt is queued/written only; no implicit parent restart or delivered claim.                                                          |
+| Superset terminal creation times out without a returned id                 | Result stays unknown, no second create, no broad cleanup or guessed terminal id.                                                        |
+| Remote shell echoes a receipt-looking command                              | Only the helper's complete nonce-bound receipt line counts; cleanup targets its own returned terminal.                                  |
+| Remote helper/path unavailable or socket write ambiguous                   | Failure/unknown is reported with exact recovery; no hidden retry scheduler or new worker.                                               |
+| Compaction or explicit ownership handoff                                   | Same-session route is revalidated; a new master proves its own route and confirms destination updates with existing leads.              |
+| Ten minutes of idle supervision                                            | No recurring master Linear/terminal read, acknowledgment loop, or model heartbeat; explicit user reads remain allowed.                  |
+| External Linear edit or silent worker crash                                | Limit is explicit; user-triggered status/reconcile/resume supplies recovery, not invented automatic detection.                          |
+
+## Worker continuation acceptance cases
+
+- Capture a PR baseline before the final readiness read, then change CI before the wait
+  begins. The wait still observes that change. It cannot lose the transition by replacing
+  the baseline after the readiness decision.
+- Start one observer for the exact PR/head/base. A tool observation times out while its
+  handle is still live. Retain it and await its native completion; never duplicate it.
+- Complete, fail, or expire the bounded observer. Claude receives one native completion;
+  Codex receives one own-thread `wait-result` with matching operation id/repository/PR/head/base.
+  The worker re-enters fresh finishing checks; an event by itself cannot merge or mark Linear.
+- Change review threads, required approval, head/base, or merge-queue state while waiting.
+  The observer notices relevant changes, and the worker revalidates all applicable gates.
+  A merge result still requires Linear completion before one `done` event reaches the master.
+- Fail the Codex self callback. The supervised wrapper sends one `blocked` event to its
+  captured `failureDestination`, naming the operation and original event without retrying
+  or starting recovery. If that fallback also fails, retain both outcomes and the exact
+  manual resume action; stdout does not wake an idle model, and no periodic supervisor
+  recovery is claimed.
+- Emit a product question and a permission request. Only the former carries exact options
+  through the task relay. A Claude worker's inbound held-message UI is surfaced without
+  inheriting the master's session acceptance or weakening worker permissions.
+
+Recorded execution evidence: [2026-10-12 notification verification](notifications-2026-10-12.md).

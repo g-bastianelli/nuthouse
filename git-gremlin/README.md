@@ -44,6 +44,12 @@ their own gates. A queued PR returns `waiting`; an unavailable reviewer or unres
 decision returns a specific blocker. Standalone commit, PR drafting, and review-only requests
 keep their original scope.
 
+For an automatic delivery caller, `scripts/wait-pr.mjs` observes one exact PR at a bounded
+interval, then reports a relevant change, expiration, or unavailable evidence. The worker owns
+its background completion and resumes `finish-pr`; unchanged API samples spend no model turns.
+The observer never merges or interprets repository policy. Standalone callers receive an
+explicit resume action without requiring a notification plugin.
+
 Behavioral evaluation scenarios are in [evals/finish-pr.md](evals/finish-pr.md).
 
 ## Install

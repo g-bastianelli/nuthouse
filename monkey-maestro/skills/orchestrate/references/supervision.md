@@ -1,7 +1,6 @@
 # Observe and continue issue delivery
 
-Read when workers have been launched, when a launch is uncertain, or when the supervisor
-resumes. Superset transports sessions; its task, terminal, and workspace counts never
+Read for a specific worker event, an uncertain launch, or an explicit supervisor resume. Superset transports sessions; its task, terminal, and workspace counts never
 replace Linear scheduling state.
 
 ## Contents
@@ -15,7 +14,9 @@ replace Linear scheduling state.
 ## Observe the exact session
 
 Keep a compact in-session map of issue, host, Superset project, workspace, terminal id, provider session id,
-PR, latest observed step, question, and next action. Retain exact creation-returned setup
+PR, notification destination, last accepted event id, latest observed step, question, and
+next action. Retain a compact set of processed event ids for this run; an event receipt
+does not establish completed work. Retain exact creation-returned setup
 terminal ids and the corresponding no-agent creation evidence when setup shells remain;
 refresh their output and readiness after resume, never reconstruct ownership from labels.
 Use **Checkpoint locally** only when compaction would lose needed context. Refresh
@@ -52,13 +53,12 @@ attached state, and absence from the live list do not identify a completed issue
 or conflicting identity stops follow-up and recovery until resolved.
 On resume, also verify the persisted run group using **Verify the run group** below.
 
-Poll active workers in short passes every 15–30 seconds. Use a native runtime wait/yield
-when it supports the pending operation; otherwise run one `sleep 15` or `sleep 30` shell
-call between passes. Bound each blocking wait to 60 seconds and avoid a long shell loop.
-Settle independent reads
-individually, and group visible progress updates at least every minute. Retry a failed
-read at most twice at that cadence; a persistent host/CLI failure checkpoints the affected
-work while healthy siblings continue. Do not close workers or restart services implicitly.
+Read only the affected session when an event needs transcript evidence, an action is
+uncertain, or explicit recovery requires it. A validated completion event with fresh PR
+and Linear evidence need not trigger a terminal read. Settle independent inspections
+separately and retry a failed read at most twice for this observation. Report persistent
+host/CLI failures; healthy sibling events remain actionable. End the turn while idle,
+with no periodic reads, sleeps, model updates, or implicit service restart.
 
 ## Verify the run group
 
@@ -121,10 +121,12 @@ nor changes readiness or capacity, and never targets the supervisor workspace.
 
 Inspect the result and surrounding transcript, not just its marker:
 
-- `waiting`: preserve the workspace/PR. CI or merge-queue latency is still pending. If the
-  worker is actively waiting, monitor it. If it yielded a result, send one scoped follow-up
-  at the next observation interval to refresh that exact pending condition.
-- `blocked`: resolve routine technical details within authority. Relay a real product
+- `waiting`: preserve the workspace/PR and the exact pending condition. A worker-owned
+  bounded PR observation supplies its own completion signal; retain its native handle or
+  operation id, and do not send a timer-based follow-up. A missing/failed wait or callback
+  is manual recovery, not a promise that the master will wake it later. An observation
+  timeout alone does not prove the existing operation ended or permit a second one.
+- `blocked` or `question`: resolve routine technical details within authority. Relay a real product
   question, contradiction, required human approval, or persistent failure with issue id,
   concrete options, and consequence. Native question-tool arguments may be absent from
   `agents read`; use the worker's preceding ordinary-prose question/options. If the terminal
@@ -151,12 +153,18 @@ while independent work continues. The delivery scope is not an answer to a permi
 Send an ordinary task answer or scoped follow-up only after evidence that the identified
 provider is awaiting that kind of input. Unknown prompt types require inspection, not a
 blind reply. Do not type into an unknown shell, interrupt active work, or resend an
-unchanged instruction every poll:
+unchanged instruction without a new actionable fact:
 
 ```text
 superset terminals send --workspace <workspaceId> --host <hostId> \
   --terminal <terminalId> --text '<scoped answer or next missing step>' --json
 ```
+
+The terminal command is only a scoped dialogue fallback for a verified ordinary input
+prompt, never the event channel and never a way to submit an approval. The master Claude
+session's inbound opt-in does not change a worker's settings. If a native message to a
+Claude worker is held, report its native message-approval UI and keep the worker waiting;
+do not relax its settings or treat the master's acceptance as inherited.
 
 Retain the question and last answer sent so retries do not duplicate replies. If sending
 times out, inspect output before resending; transport failure can occur after delivery.
@@ -176,12 +184,19 @@ cannot be established, keep the checkpoint in conversation and report the local 
 
 The first line names the subject: `# ledger — maestro: <project-id>`. Record the authorized
 project/run/revision/scope and exact workspace group, actual supervisor identity or known continuity,
+the verified master notification destination and helper paths, processed event ids,
 each issue's host/Superset project/workspace/session and PR bindings, setup provenance
 when needed, and one line per completed step. Include
-unresolved questions, any last answer sent, observed evidence, and the next missing action.
+unresolved questions, any last answer sent, pending wait operation/handle, observed
+evidence, and the next missing action.
 Do not save credentials or treat this disposable note as scheduling or mutation authority.
-On resume, refresh live control, Linear state, group placement, and session evidence before
-continuing. The live control supplies the group; the ledger never regenerates it.
+On explicit resume, refresh live control, Linear state, group placement, and session
+evidence before continuing. A same-session compaction retains its destination only after
+confirming that exact provider identity and route still apply. A different supervisor
+requires an ownership handoff and a newly proved destination; update existing leads with
+that scoped context only when their identified runtime can accept it, then confirm it.
+Until confirmed, do not claim their future events will reach the new master. The live
+control supplies the group; the ledger never regenerates it.
 
 ## Recover without a second worker
 
