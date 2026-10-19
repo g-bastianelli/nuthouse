@@ -2,7 +2,7 @@
   "name": "linear-devotee",
   "displayName": "Linear Devotee",
   "description": "Linear planning, recoverable project creation, and full issue delivery through native PR review, protected merge, and verified completion on Claude Code and Codex.",
-  "version": "1.1.5",
+  "version": "1.1.6",
   "author": {
     "name": "g-bastianelli"
   },

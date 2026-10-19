@@ -1,6 +1,6 @@
 {
   "name": "git-gremlin",
-  "version": "1.0.27",
+  "version": "1.0.28",
   "description": "Scoped commits, draft PRs, and full PR completion through native review, corrections, CI, and protected merge for Codex.",
   "author": {
     "name": "g-bastianelli"
