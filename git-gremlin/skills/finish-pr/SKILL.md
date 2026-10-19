@@ -3,7 +3,7 @@ name: finish-pr
 description: Finish an existing GitHub PR through native Codex or Claude review, scoped fixes, CI, review comments, and a protected merge. Use for explicit PR completion or an authorized full-delivery handoff; inspection and review alone do not authorize merge.
 effort: high
 argument-hint: "<PR URL>"
-allowed-tools: Read, Edit, Write, Bash(node:*), Skill(git-gremlin:commit), Skill(git-gremlin:handle-review-comments), Skill(moon-moth:verify), Skill(code-review), Bash(git status:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(git remote:*), Bash(git config:*), Bash(git fetch:*), Bash(git merge-base:*), Bash(git merge --ff-only:*), Bash(git push:*), Bash(git check-ignore:*), Bash(gh auth status:*), Bash(gh repo view:*), Bash(gh pr view:*), Bash(gh pr checks:*), Bash(gh pr ready:*), Bash(gh pr merge:*), Bash(gh api:*), Bash(codex review:*), Bash(claude -p:*)
+allowed-tools: Read, Edit, Write, Bash(node:*), Skill(git-gremlin:commit), Skill(git-gremlin:handle-review-comments), Skill(moon-moth:verify), Skill(simplify), Skill(code-review), Bash(git status:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(git remote:*), Bash(git config:*), Bash(git fetch:*), Bash(git merge-base:*), Bash(git merge --ff-only:*), Bash(git push:*), Bash(git check-ignore:*), Bash(gh auth status:*), Bash(gh repo view:*), Bash(gh pr view:*), Bash(gh pr checks:*), Bash(gh pr ready:*), Bash(gh pr merge:*), Bash(gh api:*), Bash(codex review:*), Bash(claude -p:*)
 ---
 
 # git-gremlin:finish-pr

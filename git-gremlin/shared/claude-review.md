@@ -1,12 +1,10 @@
 # Native Claude Code review
 
-With scoped implementation or cleanup authority, run the bundled `/simplify` first:
-
-```text
-claude -p "/simplify <verified-base-ref>...HEAD"
-```
-
-Supply the exact allowed paths and behavior-preservation constraint in the invocation context.
+With scoped implementation or cleanup authority, invoke the bundled `/simplify` through the
+Skill tool in the current Claude session, targeting `<verified-base-ref>...HEAD`. Supply the
+exact allowed paths and behavior-preservation constraint as invocation guidance. Keep this
+mutating pass in the caller's session so its existing Edit/Write grants remain available;
+do not start a child `claude -p` session or change permission modes for cleanup.
 Await completion and inspect the resulting diff; `/simplify` applies cleanup and does not
 replace correctness review. Verify and commit accepted edits before the command below.
 
