@@ -72,7 +72,8 @@ report. Keep progress and questions concise: the offering is the delivered work.
    **REQUIRED SUB-SKILL:** Use `linear-devotee:plan` when implementation or its reviewed plan is missing.
 
 5. **Finish the existing PR.** Supply its URL, expected repository/head/base, current head,
-   scoped unpublished commits if any, verification evidence, and full-delivery authority.
+   scoped unpublished commits if any, verification and pre-publication native-review evidence
+   when available, and full-delivery authority.
    `git-gremlin:finish-pr` owns runtime-native review, fixes, external comments, fresh CI and
    required approval checks, and protected merge. Do not add a separate reviewer agent or infer
    review completion from a process exit code. Its `waiting` or `blocked` result returns here

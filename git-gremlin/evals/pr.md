@@ -1,0 +1,30 @@
+# Pre-publication code review evaluation
+
+Exercise each case in Codex and Claude Code with the local plugin loaded. Use isolated Git
+repositories for native review and a specifically authorized test PR for GitHub mutations.
+Record the actual behavior separately from these expected outcomes; a walkthrough is not live
+provider evidence.
+
+| Scenario                                                                             | Observable expected behavior                                                                                                                                                                                     |
+| ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Verified implementation handed off by `linear-devotee:plan`                          | Reviews the complete committed diff before any push, fixes supported scoped defects, verifies and commits exact repair paths, reviews the resulting diff, then opens a draft without another approval.           |
+| Ad-hoc implementation with no spec or Linear id                                      | Skips only the source-drift checkpoint; completed native code review remains required before publication.                                                                                                        |
+| User requests only PR title and body                                                 | Returns the proposal without starting native review, repairs, commits, push, or PR creation.                                                                                                                     |
+| User approves PR publication with no implementation authority; review finds a defect | Returns findings and the missing repair authority; changes no code and performs no push or PR creation.                                                                                                          |
+| Reviewer exits zero while reporting a reachable defect                               | Reads and adjudicates findings; process success alone cannot clear publication.                                                                                                                                  |
+| Reviewer unavailable, incomplete, or failed                                          | Blocks publication with the concrete capability failure and recoverable commit; no self-review or custom reviewer agent substitution.                                                                            |
+| Review findings include an unrelated pre-existing issue or speculative suggestion    | Records the technical disposition and preserves delivery scope; unresolved supported defects still block.                                                                                                        |
+| Review repairs change committed content and verification                             | Refreshes the committed native review, source drift when applicable, and PR proposal; standalone approval is renewed for a changed proposal, while an authorized implementation handoff continues automatically. |
+| Branch already pushed and upstream is at HEAD                                        | Uses the intended fetched base explicitly and reviews the full PR diff.                                                                                                                                          |
+| Head, base, scope, or relevant worktree changes during review or approval            | Refreshes affected evidence before pushing and never publishes a head outside the approved proposal and completed review.                                                                                        |
+| Dirty changes contaminate the native review target                                   | Preserves user work and stops before review/publication rather than assessing content that will not ship.                                                                                                        |
+| Same blocker survives two consecutive repair/review passes                           | Stops with attempted corrections and the smallest missing decision; does not publish or loop indefinitely.                                                                                                       |
+| Unchanged draft handed to `finish-pr`                                                | Reuses completed native review for the same runtime/head/base/scope/dispositions; GitHub CI, external reviews, threads, approvals, and merge protections still apply.                                            |
+| Ordinary implementation reaches a reviewed draft PR                                  | Reports the PR and native-review evidence, then stops without merge or Linear completion.                                                                                                                        |
+
+Also exercise a caller targeting `release` when the branch is ahead of `release` but already
+contained in the default `main`. Branch eligibility must use `release` from the outset, and
+drift, native review, and PR creation must use that same intended base.
+
+Retain runtime/version, authorized actions, reviewed head/base and scope, findings and
+dispositions, repair/check outcomes, publication outcome, and any untested provider behavior.

@@ -17,7 +17,7 @@ command is unavailable or cannot complete, return the concrete review blocker. D
 replace it with the implementing agent's self-review or a new custom reviewer agent.
 
 Success means the command completed. Findings may still be present in a successful response;
-adjudicate their content and retain the result in the delivery context. Follow the entrypoint's
+adjudicate their content and retain the result in the delivery context. Follow the calling skill's
 repair and scope rules before another pass.
 
 Reference: [Codex CLI reference](https://learn.chatgpt.com/docs/cli/reference).
