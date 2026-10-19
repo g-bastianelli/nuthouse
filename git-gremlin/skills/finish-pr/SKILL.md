@@ -45,7 +45,8 @@ change permission modes or accept a permission prompt automatically to keep deli
      behind, fast-forward the clean owned branch; divergent history requires reconciliation,
      never a force-push. Refresh and verify the remote head after publishing.
 2. **Review the actual PR diff.** Read and apply
-   [the shared native-review procedure](../../shared/native-review.md). Reuse the pre-publication
+   [the shared native-review procedure](../../shared/native-review.md), including scoped
+   simplification before a fresh review. Reuse the pre-publication
    review supplied by `pr` only while its runtime, head, base, scope, and dispositions remain
    current; otherwise obtain a fresh completed review.
    - In Codex, read [native Codex review](../../shared/codex-review.md) before review.
@@ -154,6 +155,7 @@ git-gremlin:finish-pr report
   Outcome:      merged | waiting | blocked
   PR:           <url>
   Head:         <latest observed head OID>
+  Simplify:     <outcome or current evidence reused>
   Review:       <runtime, reviewed head/base, expected external-review completion evidence, finding dispositions>
   Verification: <local checks and current GitHub evidence>
   Merge:        <mergedAt + merge commit, queue/open state, or not requested>

@@ -1,5 +1,12 @@
 # Native Codex review
 
+With scoped implementation or cleanup authority, first perform a focused simplification pass
+in the active Codex session over `<verified-base-ref>...HEAD`: reuse existing helpers, remove
+unnecessary complexity and redundant work, and preserve observable behavior and Acceptance.
+Inspect surrounding code only as needed; edit only authorized delivery paths. This is an
+implementation pass, not the independent native review. Do not assume a built-in `/simplify`
+command or require another runtime. Verify and commit accepted edits before review below.
+
 Use the current runtime's built-in review facility. From the issue workspace, review against
 the fetched and verified base ref:
 

@@ -2,7 +2,7 @@
 name: pr
 description: Draft a GitHub PR, run native code review, and publish it as a draft after approval or an authorized implementation handoff. Text-only requests stop at the proposal; publication does not authorize merge.
 effort: high
-allowed-tools: Read, Edit, Write, Bash(git status:*), Bash(git log:*), Bash(git branch:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(git remote:*), Bash(git config:*), Bash(git fetch:*), Bash(git push:*), Bash(gh auth status:*), Bash(gh repo view:*), Bash(gh pr create:*), Bash(codex review:*), Bash(claude -p:*), Skill(code-review), Skill(git-gremlin:commit), Skill(moon-moth:verify)
+allowed-tools: Read, Edit, Write, Bash(git status:*), Bash(git log:*), Bash(git branch:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(git remote:*), Bash(git config:*), Bash(git fetch:*), Bash(git push:*), Bash(gh auth status:*), Bash(gh repo view:*), Bash(gh pr create:*), Bash(codex review:*), Bash(claude -p:*), Skill(simplify), Skill(code-review), Skill(git-gremlin:commit), Skill(moon-moth:verify)
 ---
 
 # git-gremlin:pr
@@ -73,7 +73,8 @@ than inventing PR content.
    comparisons if any changed during the approval wait; unresolved findings stop publication.
    If that changes the PR proposal, present the updated proposal for approval.
 5. Before publishing, read [the shared native-review procedure](../../shared/native-review.md)
-   and apply it to the complete committed PR diff. This gate also applies without a spec or
+   and apply its simplification pass under existing implementation/cleanup authority, then
+   native review of the complete committed PR diff. This gate also applies without a spec or
    Linear issue. Read only the active runtime's provider reference before invoking review:
    - Codex: [native Codex review](../../shared/codex-review.md).
    - Claude Code: [native Claude Code review](../../shared/claude-review.md).
@@ -83,7 +84,7 @@ than inventing PR content.
    pushing. An implementation handoff authorizes scoped repairs, their checks, and the
    following commit; it does not need another approval.
 
-   **REQUIRED SUB-SKILL:** Use `git-gremlin:commit` for verified authorized review repairs only.
+   **REQUIRED SUB-SKILL:** Use `git-gremlin:commit` for verified authorized simplification or review repairs.
 
    After repairs, refresh `HEAD_OID`, source drift when applicable, and the title/body from
    the final commits and verification. Under standalone PR approval, present a changed proposal
@@ -123,6 +124,7 @@ git-gremlin:pr report
   Title:  <pr title>
   Base:   <base branch>
   Branch: <branch> published via <remote>
+  Simplify: <completed/no changes, verified edits, skipped: no mutation authority, or failure>
   Review: <runtime, reviewed head/base, scope, findings and dispositions, repair/check results>
 ```
 

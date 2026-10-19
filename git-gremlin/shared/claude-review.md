@@ -1,5 +1,15 @@
 # Native Claude Code review
 
+With scoped implementation or cleanup authority, run the bundled `/simplify` first:
+
+```text
+claude -p "/simplify <verified-base-ref>...HEAD"
+```
+
+Supply the exact allowed paths and behavior-preservation constraint in the invocation context.
+Await completion and inspect the resulting diff; `/simplify` applies cleanup and does not
+replace correctness review. Verify and commit accepted edits before the command below.
+
 Use Claude Code's local `/code-review` (`/review` is an alias) with an explicit diff range:
 
 ```text
@@ -21,5 +31,6 @@ noninteractive variants return before review finishes. Use it only if the caller
 chose it with an understood completion path. Missing or failed local review returns a concrete
 blocker without a custom reviewer agent substitution.
 
-References: [Local code review](https://code.claude.com/docs/en/code-review#review-a-diff-locally),
+References: [Bundled commands including simplify](https://code.claude.com/docs/en/commands),
+[Local code review](https://code.claude.com/docs/en/code-review#review-a-diff-locally),
 [Ultrareview](https://code.claude.com/docs/en/ultrareview).

@@ -142,7 +142,8 @@ invented.
 ## Q — Ordinary implementation stops at a draft PR
 
 The user requested implementation of the planned issue and a draft PR, with no merge or
-Linear-completion authority. Verification passes and the implementation is committed. The
+Linear-completion authority. Verification passes and the implementation is committed. Scoped
+simplification produces a behavior-preserving cleanup. The
 native reviewer reports a supported reachable defect. Trace the remaining handoffs and
 required evidence through the draft-PR result; use no live GitHub mutations.
 

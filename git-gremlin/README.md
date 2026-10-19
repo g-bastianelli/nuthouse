@@ -39,6 +39,9 @@ an explanatory reply and is then resolved, as part of completing the task.
 None. Commit and PR drafting run directly in their skills so the approval context and Git
 permissions stay in one place.
 
+With implementation or explicit cleanup authority, both workflows first simplify the scoped
+diff, verify and commit any cleanup, then review it. Claude Code uses `/simplify`; Codex performs
+the focused cleanup in its active session. PR-only requests skip mutating cleanup.
 Both `pr` and `finish-pr` use native `codex review --base` or Claude Code's local `/code-review`
 and read their findings. Review is required before publication even without a spec or Linear
 issue. An implementation handoff corrects supported defects and reviews the verified committed
