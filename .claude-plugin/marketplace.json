@@ -22,7 +22,7 @@
         "source": "git-subdir",
         "url": "https://github.com/g-bastianelli/nuthouse",
         "path": "linear-devotee",
-        "sha": "83784ce6c383c082a24f8bebb4639262283dcb66"
+        "sha": "f3ae10543e8007d7e9be3117c714d514c101166e"
       },
       "category": "productivity"
     },
@@ -42,7 +42,7 @@
         "source": "git-subdir",
         "url": "https://github.com/g-bastianelli/nuthouse",
         "path": "git-gremlin",
-        "sha": "83784ce6c383c082a24f8bebb4639262283dcb66"
+        "sha": "f3ae10543e8007d7e9be3117c714d514c101166e"
       },
       "category": "productivity"
     },
