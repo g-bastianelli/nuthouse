@@ -1,6 +1,6 @@
 {
   "name": "linear-devotee",
-  "version": "1.1.6",
+  "version": "1.1.7",
   "description": "Linear planning, recoverable project creation, and full issue delivery through native PR review, protected merge, and verified completion on Claude Code and Codex.",
   "author": {
     "name": "g-bastianelli"
