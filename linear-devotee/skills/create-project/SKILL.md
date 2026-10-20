@@ -21,8 +21,10 @@ one approval boundary. Standalone additions use their dedicated skills.
 
 1. Resolve the repository and authoritative source before local state. Prefer the complete named
    Acid Prophet handoff (`SPEC_FILE`, `PLAN_FILE`, `CONTRACTS_DIR`, `QUICKSTART_FILE`,
-   `CODEBASE_MAP_FILE`, `CONSTITUTION_FILE`); read every supplied path and preserve `_none_` for
-   absent optional artifacts. A missing named path blocks work.
+   `CODEBASE_MAP_FILE`, `CONSTITUTION_FILE`); verify every supplied path and preserve `_none_` for
+   absent optional artifacts. Read the active Acceptance and approval-relevant source decisions;
+   delegate detailed artifact/code discovery to the drafter instead of repeating it beforehand.
+   A missing named path blocks work.
 2. Choose exactly one path:
    - review or revise an existing Linear project → read
      [references/review-existing.md](references/review-existing.md), return its correction preview,

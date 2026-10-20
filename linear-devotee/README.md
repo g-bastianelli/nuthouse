@@ -89,6 +89,9 @@ repeating the entire review at every handoff. Issue count does not dictate phase
 Creation skills show complete content and apply existing explicit authorization; otherwise they
 ask for approval of the finished preview. The full project cascade has one mutation approval,
 with all bodies, dates, labels, memberships, and relations resolved before writing.
+Detailed source/code discovery belongs to the drafter; the caller checks source authority and
+Acceptance without repeating that discovery. Reviews return findings instead of repeating the
+proposal. Revisions replace affected sections while preserving the complete draft for approval.
 
 The existing graph helper checks structure and exact mutation-envelope consistency. The agent
 reviews source coverage and deliverability. Stable markers identify potentially successful writes

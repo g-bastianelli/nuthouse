@@ -91,6 +91,15 @@ coverage without checking it. A missing source or unfinished review cannot be `r
 
 ## Output
 
+In `MODE: review`, return only the verdict, substantive findings keyed to draft ids/source paths,
+coverage and coordination evidence, cycle-check result, and remaining decisions. Do not emit the
+draft-mode proposal below or copy unchanged issue bodies. Check all source criteria and the whole
+proposal even when the resulting report is short.
+
+In `MODE: draft`, return the complete proposal below once. Revisions preserve valid packets and
+return replacements only for changed sections, with any affected coverage or relations; the caller
+assembles the complete revised draft before review and approval.
+
 Start with a concise Project-SDD: **Vision**, **Why / Context**, **Outcomes**, **Scope** (in/out),
 **Constraints**, **Architecture / Components** with observed roles and proposed changes,
 **Open decisions**, and **Suggested clarifying questions**. Use `_none_` for non-applicable

@@ -47,6 +47,10 @@ Review the brief, milestones, full issue packets, and coverage table together:
 For interacting issues, shared criteria, or substantial architecture, run a fresh drafter in
 `MODE: review` without the author's verdict. A small independent one-issue proposal may be reviewed
 locally. After three unsuccessful review rounds, stop with the unresolved evidence or decision.
+The reviewer returns findings and review evidence, not a second copy of all packets. Apply scoped
+corrections to the existing draft; recheck affected coverage, interactions, and dependency closure.
+Unchanged valid sections need no rewrite. Source or structural changes require renewed review of
+everything they affect.
 
 ## Exact preview
 
@@ -68,6 +72,9 @@ Run `node ${PLUGIN_ROOT}/scripts/project-graph.mjs validate-envelope <file>` and
 envelope. Render every complete field and the returned payload hash in `preview.md`; do not maintain
 a friendly summary that can diverge from the payload. Include source/register paths and any proposed
 source-link update.
+Link the complete preview for approval with entity counts and consequential decisions in chat;
+do not repeat every issue body in chat unless requested. The linked artifact must be readable and
+contain the complete exact content being authorized.
 
 ## Authorization and writes
 
