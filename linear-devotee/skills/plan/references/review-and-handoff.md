@@ -62,14 +62,22 @@ invoking `pr` again. Its `finish-pr` handoff publishes the scoped commits and ve
 remote head before review. If no commit is missing, reuse the existing commit. This avoids a
 second PR or duplicate publication during recovery.
 
-Otherwise continue the authorized implementation handoff with a draft PR.
+Otherwise continue the authorized implementation handoff with a draft PR. Pass the intended
+base, exact implementation scope, source Acceptance, current verification, and scoped repair
+authority to `pr`. It first simplifies the scoped diff without changing behavior, verifies and
+commits any cleanup, then completes native code review, corrects supported defects, verifies and
+commits the repairs, and reviews the resulting diff before publication. Passing tests, plan
+review, and source-drift checks do not replace this code review.
 
 **REQUIRED SUB-SKILL:** Use `git-gremlin:pr` when no matching PR was supplied by `deliver`.
 
-If Git Gremlin is unavailable, report the work as uncommitted instead of delivering it by hand.
+If a required Git Gremlin skill is unavailable, report the actual commit/publication state and
+missing capability instead of delivering it by hand.
 
 Report the issue, plan version/path, source and project plan, audit result, and
-`implementation_ready | blocked | stopped`, plus the draft PR URL when implementation ran.
+`implementation_ready | blocked | stopped`, plus the draft PR URL and completed native-review
+evidence when implementation ran. A failed/unavailable reviewer or unresolved supported
+finding returns `blocked` with the recoverable commit and concrete next action; no draft is published.
 With a `deliver` caller, return control and evidence there; an open draft is an intermediate
 result, not completed full delivery. Without that caller, stop at this requested handoff and
-do not add review, merge, or Linear completion authority.
+do not add PR finishing, merge, or Linear completion authority.

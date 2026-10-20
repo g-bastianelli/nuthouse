@@ -3,7 +3,7 @@ name: finish-pr
 description: Finish an existing GitHub PR through native Codex or Claude review, scoped fixes, CI, review comments, and a protected merge. Use for explicit PR completion or an authorized full-delivery handoff; inspection and review alone do not authorize merge.
 effort: high
 argument-hint: "<PR URL>"
-allowed-tools: Read, Edit, Write, Bash(node:*), Skill(git-gremlin:commit), Skill(git-gremlin:handle-review-comments), Skill(moon-moth:verify), Skill(code-review), Bash(git status:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(git remote:*), Bash(git config:*), Bash(git fetch:*), Bash(git merge-base:*), Bash(git merge --ff-only:*), Bash(git push:*), Bash(git check-ignore:*), Bash(gh auth status:*), Bash(gh repo view:*), Bash(gh pr view:*), Bash(gh pr checks:*), Bash(gh pr ready:*), Bash(gh pr merge:*), Bash(gh api:*), Bash(codex review:*)
+allowed-tools: Read, Edit, Write, Bash(node:*), Skill(git-gremlin:commit), Skill(git-gremlin:handle-review-comments), Skill(moon-moth:verify), Skill(simplify), Skill(code-review), Bash(git status:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(git remote:*), Bash(git config:*), Bash(git fetch:*), Bash(git merge-base:*), Bash(git merge --ff-only:*), Bash(git push:*), Bash(git check-ignore:*), Bash(gh auth status:*), Bash(gh repo view:*), Bash(gh pr view:*), Bash(gh pr checks:*), Bash(gh pr ready:*), Bash(gh pr merge:*), Bash(gh api:*), Bash(codex review:*), Bash(claude -p:*)
 ---
 
 # git-gremlin:finish-pr
@@ -44,18 +44,13 @@ change permission modes or accept a permission prompt automatically to keep deli
      only when the observed remote PR head is an ancestor of local HEAD. If local HEAD is
      behind, fast-forward the clean owned branch; divergent history requires reconciliation,
      never a force-push. Refresh and verify the remote head after publishing.
-2. **Review the actual PR diff.** Fetch the intended base through its verified remote and record
-   local HEAD plus base OID. Reuse a completed native review only if its head, base, scope, and
-   finding dispositions still match. Otherwise start the runtime's native reviewer, await its
-   completed findings, and read the result. An exit code of zero, successful tool envelope, or neutral GitHub review
-   check is not a clean review.
-   - In Codex, read [references/codex-review.md](references/codex-review.md) before review.
-   - In Claude Code, read [references/claude-review.md](references/claude-review.md) before review.
-
-   Adjudicate each finding against reachable code, intended behavior, and source Acceptance.
-   Repair supported defects within scope; record the technical reason for a false positive or
-   out-of-scope suggestion. Do not expand the issue to satisfy speculative reviewer text. A
-   material product tradeoff or contradictory requirement becomes one actionable question.
+2. **Review the actual PR diff.** Read and apply
+   [the shared native-review procedure](../../shared/native-review.md), including scoped
+   simplification before a fresh review. Reuse the pre-publication
+   review supplied by `pr` only while its runtime, head, base, scope, and dispositions remain
+   current; otherwise obtain a fresh completed review.
+   - In Codex, read [native Codex review](../../shared/codex-review.md) before review.
+   - In Claude Code, read [native Claude Code review](../../shared/claude-review.md) before review.
 
 3. **Repair and verify.** Read all current review threads and review bodies with pagination;
    include outdated unresolved threads and actionable feedback in ordinary PR comments. Fix
@@ -160,6 +155,7 @@ git-gremlin:finish-pr report
   Outcome:      merged | waiting | blocked
   PR:           <url>
   Head:         <latest observed head OID>
+  Simplify:     <outcome or current evidence reused>
   Review:       <runtime, reviewed head/base, expected external-review completion evidence, finding dispositions>
   Verification: <local checks and current GitHub evidence>
   Merge:        <mergedAt + merge commit, queue/open state, or not requested>

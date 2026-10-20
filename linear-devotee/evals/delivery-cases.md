@@ -138,3 +138,18 @@ queue with no observed merge. Repository checks and native review are complete f
 head. No verified native background completion route is available. Preserve normal standalone
 waiting and its precise continuation; no master address, control, or notification setup is
 invented.
+
+## Q — Ordinary implementation stops at a draft PR
+
+The user requested implementation of the planned issue and a draft PR, with no merge or
+Linear-completion authority. Verification passes and the implementation is committed. Scoped
+simplification produces a behavior-preserving cleanup. The
+native reviewer reports a supported reachable defect. Trace the remaining handoffs and
+required evidence through the draft-PR result; use no live GitHub mutations.
+
+## R — Draft review is current on full-delivery handoff
+
+Full delivery receives an existing draft PR and completed pre-publication native review for
+the current runtime, committed head, base, scope, and finding dispositions. CI is pending and
+the expected external reviewer has not completed. Trace review reuse and the next observable
+condition without treating local review as merge readiness; use no live GitHub mutations.
