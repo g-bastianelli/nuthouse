@@ -245,6 +245,14 @@ acceptance setting is not inherited by Claude workers: a worker may hold a nativ
 for its own approval. Maestro reports that exact UI instead of changing worker settings.
 A task answer is sent only to an identified session awaiting ordinary task input.
 
+You can discuss feedback and options with Maestro in the supervisor conversation. When
+you request a repository change, even a tiny documentation or configuration fix, Maestro
+delegates it to a worker in a Superset workspace. Existing issue feedback goes to its
+verified worker; new project work follows Linear readiness and capacity. An explicitly
+requested standalone bounded fix can use `monkey-maestro:spawn --quick <objective>` with
+the agreed context and checks. Brainstorming launches nothing, and unavailable transport
+produces a blocker and recovery action instead of a supervisor edit.
+
 Runtime permission dialogs still need to be handled through the runtime's approval
 interface. Required GitHub reviews still need the appropriate reviewer. Delivery
 authorization does not let Maestro answer those prompts or supply those approvals.

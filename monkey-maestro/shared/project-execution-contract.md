@@ -2,7 +2,7 @@
 
 This contract is shared by every public Monkey Maestro skill.
 
-Read **Authority**, **Delivery control**, and **Mutation boundary** for every invocation.
+Read **Authority**, **Delivery control**, **Supervisor role**, and **Mutation boundary** for every invocation.
 For dispatch, also read **Workspace identities**, **Exact tracker binding**, **Workspace
 groups**, **Workspace setup**, and **Worker boundary**. Project supervisors use **Project orchestration**;
 manual launches use **Manual spawn**. Status and stop do not need transport procedures.
@@ -266,6 +266,20 @@ ownership is unknown, perform read-only inspection and ask for the missing hando
 do not silently claim the run. Preserve established ownership in session context across
 ordinary notification turns, without asking again. There is no global supervisor registry
 or automatic cross-session attachment in this skill.
+
+## Supervisor role
+
+The supervisor may discuss user feedback, analyze options, and diagnose read-only. It
+owns authorized control, transport, coordination, and disposable ledger operations.
+Repository implementation belongs to workers in Superset workspaces: never edit code,
+tests, configuration, or documentation in the supervisor, even for a tiny fix, and never
+invoke an implementation skill there. Keeping one implementation owner prevents feedback
+from creating competing edits outside the assigned worker's workspace.
+
+For actionable feedback, read [User feedback](../skills/orchestrate/references/supervision.md#user-feedback).
+Preserve the user's agreed scope and authorization; discussion
+alone launches no work. Unavailable worker transport requires a concrete blocker and
+recovery action, never implementation by the supervisor.
 
 ## Project orchestration
 
