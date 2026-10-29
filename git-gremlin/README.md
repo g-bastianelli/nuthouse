@@ -22,17 +22,20 @@ for drift. Workspace orchestration stays outside Git Gremlin.
 | Skill                                | Purpose                                                                          |
 | ------------------------------------ | -------------------------------------------------------------------------------- |
 | `git-gremlin:commit`                 | Commit a staged selection, or stage dirty changes when no selection exists       |
-| `git-gremlin:handle-review-comments` | Push before announcing a fix; reply, then resolve every refused comment          |
+| `git-gremlin:handle-review-comments` | Verify each comment, fix and push the valid ones, answer and resolve the rest    |
 | `git-gremlin:pr`                     | Draft, run native code review, then publish the branch and create a draft PR     |
 | `git-gremlin:finish-pr`              | Review, repair, verify, and merge an existing PR under scoped delivery authority |
 
-`handle-review-comments` is an ambient discipline, not a triage workflow. It never decides
-whether feedback is valid, and it orders no `git commit` or `git push` of its own. It adds
-two laws to whatever workflow the acting agent already has. A reply announcing a fix must
-not precede the push of that fix: until the code is on the remote, the thread would be
-claiming a correction no later agent and no human reader can see. And every comment the
-agent excludes, judges invalid, rules out of scope, or otherwise refuses to act on receives
-an explanatory reply and is then resolved, as part of completing the task.
+`handle-review-comments` runs the whole review-comment loop: the request to handle the
+comments is the approval to fix, commit, push to the PR branch, reply, and resolve. It asks the
+user only about comments it judges sensitive (security, data, public behavior, cost),
+overengineered, needing a large refactor, out of scope, or otherwise a priority call, grouped
+in one question with its recommendation. Each comment is first checked against the code at the current head; only a claim
+the code proves right gets fixed. Two laws order the rest. A reply announcing a fix must not
+precede the push of that fix: until the code is on the remote, the thread would be claiming a
+correction no later agent and no human reader can see. And every comment the agent declines —
+wrong or no longer applicable — receives an explanatory reply and is then
+resolved. It never force-pushes, merges, or dismisses a review; `finish-pr` owns that path.
 
 ## Agents
 
