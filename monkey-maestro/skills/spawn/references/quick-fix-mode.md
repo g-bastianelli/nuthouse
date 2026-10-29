@@ -15,6 +15,9 @@ Linear issue, task, project control, or capacity calculation in this mode.
 5. The worker prompt must not invoke `linear-devotee:greet`; it starts directly with the exact objective, reads repository instructions before
    edits, scopes ownership to this fix/workspace, runs appropriate checks, and forbids reverting
    others, merging, pushing, changing dependencies, or changing Linear. It reads no Linear project,
-   so it names no sibling. End with a concise `DONE`/`BLOCKED` handoff.
+   so it names no sibling. After the unchanged objective, include any agreed behavior,
+   relevant discussion context, and observable checks supplied by the caller. Keep these
+   separate from the objective used for identity; do not invent requirements or broaden
+   the fix. End with a concise `DONE`/`BLOCKED` handoff.
 6. For launch failure, report the exact workspace. A later identical spawn must repeat workspace
    and terminal inspection before recovery.

@@ -8,6 +8,7 @@ replace Linear scheduling state.
 - [Observe the exact session](#observe-the-exact-session)
 - [Verify the run group](#verify-the-run-group)
 - [Continue in place](#continue-in-place)
+- [User feedback](#user-feedback)
 - [Checkpoint locally](#checkpoint-locally)
 - [Recover without a second worker](#recover-without-a-second-worker)
 
@@ -170,6 +171,32 @@ Retain the question and last answer sent so retries do not duplicate replies. If
 times out, inspect output before resending; transport failure can occur after delivery.
 Do not send new instructions under an inactive control. Already-authorized issue workers
 keep their original scope until explicitly stopped by the user.
+
+## User feedback
+
+Discuss and analyze feedback in this conversation. Brainstorming or a request for an
+opinion does not authorize a launch. When the user requests a change, keep its agreed
+behavior, relevant discussion context, and observable checks in the handoff:
+
+- For an existing issue, verify its owned workspace and lead session, refresh the active
+  control, and use **Continue in place** to relay the scoped change when that session can
+  accept it. Keep active work undisturbed and retain pending input until it can be sent;
+  do not create a second worker or expand the issue's authorized scope.
+- New project issue work follows the normal fresh Linear selection and capacity checks.
+  Any needed issue creation requires its own authority. A full slot, blocked issue, or
+  stopped control is not a reason to relabel project work as a quick fix.
+- For an explicitly requested standalone bounded fix, pass `--quick`, the exact objective,
+  and agreed context to the handoff below. Its edit/check scope does not imply commit,
+  push, or merge authority.
+
+For that standalone fix, create or recover and launch the Superset worker when scope and
+transport suffice:
+
+**REQUIRED SUB-SKILL:** Use `monkey-maestro:spawn`
+
+If the verified session, host, or launch route is unavailable, report the exact blocker
+and next recovery action. Preserve the intended worker/workspace; the supervisor never
+implements the fix or invokes an implementation skill as a fallback.
 
 ## Checkpoint locally
 

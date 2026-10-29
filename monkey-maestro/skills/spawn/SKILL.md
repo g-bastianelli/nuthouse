@@ -11,6 +11,10 @@ allowed-tools: Read, Bash(node:*), Bash(sleep:*), Bash(git rev-parse:*), Bash(su
 Read `../../persona.md`; it is canonical for this skill's user-facing output until the report. Read
 `${CLAUDE_PLUGIN_ROOT}/shared/project-execution-contract.md` for identities, groups, worker
 ownership, and handoff rules.
+Apply its **Supervisor role** boundary: this launcher delegates repository fixes, including
+tiny ones, to the worker. When called from project feedback, read **User feedback** in
+[supervision](../orchestrate/references/supervision.md) first; manual spawn must not bypass
+project scheduling or a stopped control.
 
 This path launches or recovers at most one worker within explicit caller authority. It
 never reads or creates project controls or calculates project capacity. It allocates no

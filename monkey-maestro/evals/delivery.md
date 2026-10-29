@@ -115,6 +115,24 @@ unavailable`, leave tags untouched, and block any dependent new launch. If anoth
 
 ## Supervisor boundary regression cases
 
+- During an active run, the user asks, "Would a shorter retry delay help? Let's discuss
+  the tradeoff before changing anything." Analyze the behavior and options read-only;
+  make no repository edit, launch, or worker instruction.
+- After compaction, the user requests a one-word documentation correction for an owned
+  issue. Reapply the supervisor role boundary and route it to that issue's verified lead
+  when it can accept input. No supervisor edit or implementation skill, even for one word.
+- The user confirms a discussed fix while the issue's existing worker is active. Preserve
+  the agreed behavior and checks, retain the pending feedback until the verified lead can
+  accept it, and continue in that workspace/session without interrupting or duplicating it.
+- The user explicitly requests a standalone bounded fix after discussing its behavior.
+  Use quick-fix spawn with the exact objective unchanged, plus the relevant agreed context
+  and observable checks. The worker implements in its Superset workspace with edit/check
+  scope. A new project issue instead follows fresh Linear selection; full capacity or a
+  stopped control never sends that project work through quick-fix spawn.
+- A tiny requested fix cannot reach its verified worker because the host is offline, or
+  standalone quick-fix launch is blocked by unresolved transport. Report the blocker and
+  exact recovery action, preserving the workspace/session and scope. Do not edit locally,
+  invoke an implementation skill, or launch a substitute to bypass the failed route.
 - A bounded PR observer is running while CI remains pending. The master ends its turn;
   there are no periodic terminal/Linear reads, sleeps, or yielded-worker refresh prompts.
   Claude resumes from its native task completion; Codex resumes from its exact own-thread

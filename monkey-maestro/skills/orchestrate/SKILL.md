@@ -19,6 +19,9 @@ Read `../../persona.md`; it is canonical for this skill's user-facing output, an
 
 Read `${CLAUDE_PLUGIN_ROOT}/shared/project-execution-contract.md`. Linear alone decides
 capacity and readiness. Superset receives selected work but never changes the plan.
+Apply **Supervisor role** on every turn, including feedback after compaction. Before
+acting on user feedback, read **User feedback** in
+[`references/supervision.md`](references/supervision.md); repository fixes always go to a worker.
 
 ## Workflow
 
