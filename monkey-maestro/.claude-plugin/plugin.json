@@ -2,7 +2,7 @@
   "name": "monkey-maestro",
   "displayName": "Monkey Maestro",
   "description": "Supervise authorized Linear issue delivery through native review and protected merge in isolated Superset workspaces.",
-  "version": "1.0.29",
+  "version": "1.0.30",
   "author": {
     "name": "g-bastianelli"
   },

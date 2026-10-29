@@ -2,7 +2,7 @@
   "name": "git-gremlin",
   "displayName": "Git Gremlin",
   "description": "Git gremlin — scoped commits, draft PRs, and full PR completion through native review, corrections, CI, and protected merge",
-  "version": "1.0.28",
+  "version": "1.0.29",
   "author": {
     "name": "g-bastianelli"
   },

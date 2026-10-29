@@ -1,6 +1,6 @@
 {
   "name": "monkey-maestro",
-  "version": "1.0.29",
+  "version": "1.0.30",
   "description": "Linear-first delivery supervision through native review and protected merge, with scoped Superset recovery.",
   "author": {
     "name": "g-bastianelli"
