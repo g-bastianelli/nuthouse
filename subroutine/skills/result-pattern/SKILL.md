@@ -26,10 +26,10 @@ Backend domain/services and transport handlers only. Reuse the repository's
   (`field` names a form input; a named entity gets its own carrier,
   `dataSource: { id, name }`).
 - A refusal's `reason` is a union of literals, never `string`, so a new reason
-  breaks the build until its copy exists. Every identifier is declared once, in
-  `snake_case`, in one refusal-reason catalogue (a leaf module of the contract
-  package); a resource derives its subset from it, and the same situation keeps
-  the same identifier on every endpoint. The subset type reaches domain code via
+  breaks the build until its copy exists. Every reason is declared once, with a
+  camelCase key and a `snake_case` wire value, in one refusal-reason catalogue
+  (a leaf module of the contract package); a resource derives its subset from
+  it, and the same situation keeps the same identifier on every endpoint. The subset type reaches domain code via
   `import type`, its only contract-side import. One `CONFLICT` per resource
   unless reason sets or client reactions differ.
 - Propagate a failed dependency result as-is: `if (!r.ok) return r;`.

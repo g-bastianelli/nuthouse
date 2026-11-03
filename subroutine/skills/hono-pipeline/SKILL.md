@@ -24,11 +24,14 @@ complete neighboring resource first; reuse its stack and commands.
 
 ```ts
 // contracts/shared/refusal-reasons.ts — leaf module, one catalogue for every
-// resource: each snake_case id declared once with a one-line comment
-export const RefusalReasonSchema = z.enum([
-  "duplicate_reference", // the reference is already used
-  "concurrent_write", // a concurrent write won; reload and retry
-]);
+// resource: each reason declared once, camelCase key, snake_case wire value
+export const REFUSAL_REASON = {
+  /** The reference is already used. */
+  duplicateReference: "duplicate_reference",
+  /** A concurrent write won; reload and retry. */
+  concurrentWrite: "concurrent_write",
+} as const;
+export const RefusalReasonSchema = z.enum(REFUSAL_REASON);
 
 // contracts/orders/errors.ts — the resource derives its subset, never a literal
 export const OrderConflictReasonSchema = RefusalReasonSchema.extract(["duplicate_reference"]);
