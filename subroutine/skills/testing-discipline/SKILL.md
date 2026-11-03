@@ -24,7 +24,7 @@ allowed layers, and React test policy.
 test("returns CONFLICT for a duplicate reference", async () => {
   store.insert.mockRejectedValue(uniqueViolation);
   await expect(createOrder({ input, store })).resolves.toEqual(
-    err({ code: "CONFLICT", reason: "duplicate-reference" }),
+    err({ code: "CONFLICT", reason: "duplicate_reference" }),
   );
 });
 
