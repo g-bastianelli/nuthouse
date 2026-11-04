@@ -8,10 +8,18 @@ do not start a child `claude -p` session or change permission modes for cleanup.
 Await completion and inspect the resulting diff; `/simplify` applies cleanup and does not
 replace correctness review. Verify and commit accepted edits before the command below.
 
-Use Claude Code's local `/code-review` (`/review` is an alias) with an explicit diff range:
+Use Claude Code's local `/code-review` (`/review` is an alias) with an explicit level and diff
+range. The command reuses the last level typed anywhere, so an omitted level can silently run
+at `xhigh`, which adds uncertain findings that each start another fix:
 
 ```text
-claude -p "/code-review <verified-base-ref>...HEAD"
+claude -p "/code-review high <verified-base-ref>...HEAD"
+```
+
+For the confirmation, target only the commits after the last reviewed head:
+
+```text
+claude -p "/code-review medium <last-reviewed-head>...HEAD"
 ```
 
 Noninteractive local review waits for completion. In an interactive session, await the local

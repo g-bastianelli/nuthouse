@@ -172,9 +172,10 @@ findings:
 | Claude Code    | Local `/code-review <verified-base-ref>...HEAD`, awaited through completion. |
 
 You do not need to invoke these commands manually during full delivery. A successful
-review command can still contain findings. The owner fixes supported defects within the
+review command can still contain findings. The owner fixes blocking defects within the
 issue's scope and explains feedback it declines. Fixes are pushed before replies claim
-they are available. Code or relevant base changes require refreshed review and checks.
+they are available. Each run makes at most two native reviews: one full review, then one confirmation of later
+commits before merge. Code or base changes refresh checks.
 
 After native review and local verification, the owner marks the draft ready and waits for
 the repository's external reviews and CI. The lead starts one bounded PR observer and

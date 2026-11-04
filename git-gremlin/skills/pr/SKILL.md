@@ -80,7 +80,7 @@ than inventing PR content.
    - Claude Code: [native Claude Code review](../../shared/claude-review.md).
 
    Await findings and resolve them under the existing implementation authority. A PR-only
-   request with supported defects returns the findings and missing repair authority without
+   request with blocking defects returns the findings and missing repair authority without
    pushing. An implementation handoff authorizes scoped repairs, their checks, and the
    following commit; it does not need another approval.
 
@@ -92,7 +92,7 @@ than inventing PR content.
    Retain the completed review evidence for the caller. Immediately before pushing, compare
    branch, head, base OID, scope, and relevant worktree with that review and the approved
    proposal; refresh affected review/drift evidence and approval if they changed. Unavailable
-   review, unresolved supported findings, or stale evidence prevents publication.
+   review, unresolved blocking findings, or stale evidence prevents publication.
 
 6. Resolve the push remote in this order: `branch.<BRANCH>.pushRemote`,
    `remote.pushDefault`, `branch.<BRANCH>.remote`, `origin`, then the sole configured remote.
@@ -125,7 +125,7 @@ git-gremlin:pr report
   Base:   <base branch>
   Branch: <branch> published via <remote>
   Simplify: <completed/no changes, verified edits, skipped: no mutation authority, or failure>
-  Review: <runtime, reviewed head/base, scope, findings and dispositions, repair/check results>
+  Review: <runtime, last reviewed head/base, scope, findings and dispositions, repair/check results>
 ```
 
 ## Never

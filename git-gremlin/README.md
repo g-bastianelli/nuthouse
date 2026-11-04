@@ -9,7 +9,7 @@ dirty changes when an actual commit needs them, and publishes local branches as 
 after the PR confirmation gate and completed native code review. When `linear-devotee:plan`
 chains to `commit` and `pr` after a verified implementation, that chain authorizes scoped review
 corrections, their verification and commits, and the draft PR opens without asking once the
-resulting diff clears review.
+repair commits clear the confirmation review.
 An explicit PR-completion request or an authorized `linear-devotee:deliver` handoff continues
 through native review, scoped corrections, local verification, review comments, CI, and a
 protected merge. It reuses the PR on resume and reports completion only after GitHub confirms
@@ -47,8 +47,9 @@ diff, verify and commit any cleanup, then review it. Claude Code uses `/simplify
 the focused cleanup in its active session. PR-only requests skip mutating cleanup.
 Both `pr` and `finish-pr` use native `codex review --base` or Claude Code's local `/code-review`
 and read their findings. Review is required before publication even without a spec or Linear
-issue. An implementation handoff corrects supported defects and reviews the verified committed
-repairs; a PR-only request reports defects without acquiring repair authority. Text-only PR
+issue. Each run makes at most two native reviews: one full review, then one confirmation of
+later commits. An implementation handoff corrects blocking defects and confirms the verified
+committed repairs; a PR-only request reports defects without acquiring repair authority. Text-only PR
 drafting stops at the proposal. `finish-pr` reuses current pre-publication review evidence and
 checks GitHub directly through `gh`. A successful reviewer command is not a clean review.
 CI, outstanding change requests, unresolved threads, and branch protections retain

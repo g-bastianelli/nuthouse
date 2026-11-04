@@ -45,10 +45,10 @@ change permission modes or accept a permission prompt automatically to keep deli
      behind, fast-forward the clean owned branch; divergent history requires reconciliation,
      never a force-push. Refresh and verify the remote head after publishing.
 2. **Review the actual PR diff.** Read and apply
-   [the shared native-review procedure](../../shared/native-review.md), including scoped
-   simplification before a fresh review. Reuse the pre-publication
-   review supplied by `pr` only while its runtime, head, base, scope, and dispositions remain
-   current; otherwise obtain a fresh completed review.
+   [the shared native-review procedure](../../shared/native-review.md). Reuse the
+   pre-publication simplification and review evidence supplied by `pr`; commits after its last
+   reviewed head get this run's single confirmation before the merge request. Without that
+   evidence, run the procedure's simplification and full review.
    - In Codex, read [native Codex review](../../shared/codex-review.md) before review.
    - In Claude Code, read [native Claude Code review](../../shared/claude-review.md) before review.
 
@@ -71,8 +71,8 @@ change permission modes or accept a permission prompt automatically to keep deli
    requested product decision stays open; do not classify it as a refusal just to clear the
    gate. Never dismiss a review or invent approval. A review requesting changes remains a
    blocker until the reviewer or authorized owner clears it through GitHub's normal process.
-   After code or relevant base changes, refresh checks and native review against the new diff.
-   Reuse a completed review only when its head, base, and scope still match.
+   After code or base changes, refresh checks. Feedback fixes do not restart native review; the
+   run's single confirmation covers their commits after the last feedback round.
 
 4. **Observe readiness.** Once native findings are addressed and local verification is current,
    mark an owned draft ready if authorized. For an open PR, read
@@ -123,9 +123,9 @@ change permission modes or accept a permission prompt automatically to keep deli
 
 ## Waiting and recovery
 
-Keep moving while scoped repairs make observable progress. Two consecutive repair/review passes
-that leave the same blocker unchanged return `blocked` with the attempted fixes and the smallest
-decision needed. For external reviews, checks, approval, or queue progress, refresh after a
+Keep moving while scoped CI and feedback repairs make observable progress. Two consecutive
+repair passes that leave the same blocker unchanged return `blocked` with the attempted fixes
+and the smallest decision needed. Native review follows the shared two-review cap. For external reviews, checks, approval, or queue progress, refresh after a
 relevant event; return `waiting` immediately with the exact PR, observed head/base, pending
 condition, and next observation needed. A standalone caller receives an explicit resume action.
 An automatic delivery caller owns the single observer described in
