@@ -46,15 +46,15 @@ change permission modes or accept a permission prompt automatically to keep deli
      never a force-push. Refresh and verify the remote head after publishing.
 2. **Review the actual PR diff.** Read and apply
    [the shared native-review procedure](../../shared/native-review.md). Reuse the
-   pre-publication simplification and review evidence supplied by `pr`; commits after its last
-   reviewed head get this run's single confirmation before the merge request. Without that
-   evidence, run the procedure's simplification and full review.
+   simplification and review evidence supplied by `pr` or the ledger while it covers the current
+   head; commits after its last reviewed head form a new batch. Without usable evidence, run a
+   full review.
    - In Codex, read [native Codex review](../../shared/codex-review.md) before review.
    - In Claude Code, read [native Claude Code review](../../shared/claude-review.md) before review.
 
 3. **Repair and verify.** Read all current review threads and review bodies with pagination;
    include outdated unresolved threads and actionable feedback in ordinary PR comments. Fix
-   supported defects and relevant CI failures. Run repository-required checks and tests that
+   blocking defects and relevant CI failures. Run repository-required checks and tests that
    demonstrate the repair. In a configured Moon workspace, use the available `moon-moth:verify`.
    Preserve the existing authority and stage only this delivery's paths.
 
@@ -71,8 +71,8 @@ change permission modes or accept a permission prompt automatically to keep deli
    requested product decision stays open; do not classify it as a refusal just to clear the
    gate. Never dismiss a review or invent approval. A review requesting changes remains a
    blocker until the reviewer or authorized owner clears it through GitHub's normal process.
-   After code or base changes, refresh checks. Feedback fixes do not restart native review; the
-   run's single confirmation covers their commits after the last feedback round.
+   After code changes, review the new commits as one batch; a base change alone refreshes
+   checks. Feedback fixes never restart the full review.
 
 4. **Observe readiness.** Once native findings are addressed and local verification is current,
    mark an owned draft ready if authorized. For an open PR, read
@@ -117,8 +117,9 @@ change permission modes or accept a permission prompt automatically to keep deli
 
 6. **Confirm the result.** Read back GitHub state after every merge attempt, including errors or
    timeouts. Return `merged` only with the actual merged timestamp and commit. Auto-merge enabled,
-   accepted queue entry, and a successful command with an open PR are `waiting`. If the head or
-   base moved, refresh the affected review/checks before any further merge request. Do not resend
+   accepted queue entry, and a successful command with an open PR are `waiting`. If the head moved,
+   review the new commits as a batch; if only the base moved, refresh checks before any further
+   merge request. Do not resend
    a merge request while the matching PR is already queued.
 
 ## Waiting and recovery
@@ -134,8 +135,8 @@ same PR. Expiration or observation failure returns control with a concrete manua
 it does not silently start another observer. Missing external approval is not a reason to ask
 the user to repeat merge authorization.
 
-When a caller owns a compaction ledger, add only the PR, latest observed head/base, completed
-review/check summary, current reason/question, and next action there. Otherwise create a disposable
+When a caller owns a compaction ledger, add only the PR, latest observed head/base, last
+reviewed head, simplification outcome, review/check summary, current reason/question, and next action there. Otherwise create a disposable
 `.nuthouse/pr-<number>/progress.md` at the repository root only if continuity needs it, starting
 with `# ledger — PR: <URL>`. Before writing, confirm the path is untracked and ignored with
 `git check-ignore`; if needed, append `/.nuthouse/` to the local exclude file resolved by

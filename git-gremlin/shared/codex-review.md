@@ -14,8 +14,8 @@ the fetched and verified base ref:
 codex review --base <verified-base-ref>
 ```
 
-For the confirmation, use the last reviewed head as the base, so one run covers every later
-commit:
+For a later batch or a confirmation, use the last reviewed head as the base, so one run covers
+every later commit:
 
 ```text
 codex review --base <last-reviewed-head-oid>

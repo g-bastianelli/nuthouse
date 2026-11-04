@@ -166,16 +166,15 @@ review facility.
 The delivery owner runs the native review against the verified PR base and reads its
 findings:
 
-| Worker runtime | Native review                                                                |
-| -------------- | ---------------------------------------------------------------------------- |
-| Codex          | `codex review --base <verified-base-ref>`                                    |
-| Claude Code    | Local `/code-review <verified-base-ref>...HEAD`, awaited through completion. |
+| Worker runtime | Native review                                                                     |
+| -------------- | --------------------------------------------------------------------------------- |
+| Codex          | `codex review --base <verified-base-ref>`                                         |
+| Claude Code    | Local `/code-review high <verified-base-ref>...HEAD`, awaited through completion. |
 
 You do not need to invoke these commands manually during full delivery. A successful
 review command can still contain findings. The owner fixes blocking defects within the
 issue's scope and explains feedback it declines. Fixes are pushed before replies claim
-they are available. Each run makes at most two native reviews: one full review, then one confirmation of later
-commits before merge. Code or base changes refresh checks.
+they are available. Native review follows git-gremlin's two-review cap per change batch.
 
 After native review and local verification, the owner marks the draft ready and waits for
 the repository's external reviews and CI. The lead starts one bounded PR observer and

@@ -47,8 +47,8 @@ diff, verify and commit any cleanup, then review it. Claude Code uses `/simplify
 the focused cleanup in its active session. PR-only requests skip mutating cleanup.
 Both `pr` and `finish-pr` use native `codex review --base` or Claude Code's local `/code-review`
 and read their findings. Review is required before publication even without a spec or Linear
-issue. Each run makes at most two native reviews: one full review, then one confirmation of
-later commits. An implementation handoff corrects blocking defects and confirms the verified
+issue. Each change batch gets at most two native reviews: its review and one confirmation of
+the repairs. An implementation handoff corrects blocking defects and confirms the verified
 committed repairs; a PR-only request reports defects without acquiring repair authority. Text-only PR
 drafting stops at the proposal. `finish-pr` reuses current pre-publication review evidence and
 checks GitHub directly through `gh`. A successful reviewer command is not a clean review.

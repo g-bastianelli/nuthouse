@@ -24,15 +24,17 @@ native review. If nothing changes, retain the existing commit and checks. Record
 the concrete failure; an incomplete requested pass blocks publication. Repairs, feedback fixes,
 and a later `finish-pr` run do not rerun a completed pass.
 
-Each run of `pr` or `finish-pr` makes at most two native reviews: one full review of the
-complete diff, then one confirmation of every commit after the last reviewed head. A third pass
-costs more than it finds: a nondeterministic reviewer reports new findings on already-reviewed
-code each pass, so review/fix cycles do not converge on their own. Evidence stays current while
-reviews cover every commit up to the current head for the same delivery scope; a later run
-reuses it and spends only its confirmation on newer commits. A changed delivery scope needs a
-new full review. A clean base integration needs refreshed checks only and becomes the last
-reviewed head; a conflict resolution in this delivery's own code makes the next review a full
-review against the new base.
+A change batch gets at most two native reviews: its review, then one confirmation of the repairs
+that review caused. The delivery's first batch gets the full review of the complete diff; each
+later batch, such as feedback fixes or other commits after the last reviewed head, gets a review
+of those commits only. A third pass on one batch costs more than it finds: a nondeterministic
+reviewer reports new findings on already-reviewed code each pass, so review/fix cycles do not
+converge on their own. Evidence stays current while reviews cover every commit up to the current
+head for the same delivery scope with every finding dispositioned; any run or runtime reuses it.
+A changed delivery scope, or a last reviewed head that is no longer an ancestor of HEAD, needs a
+new full review. A base move alone needs refreshed checks. A clean base integration directly on
+top of the last reviewed head becomes the last reviewed head; a conflict resolution in this
+delivery's own code makes the next review a full review against the new base.
 
 Invoke the active runtime's native reviewer using the provider reference routed by the calling
 skill, await completion, and read its actual findings. A successful process, tool envelope, or
@@ -52,11 +54,9 @@ After repairs, check each original blocking finding against the repaired code an
 repository-required checks and tests that demonstrate the correction; use `moon-moth:verify` in
 a configured Moon workspace when available. Commit only the scoped repair paths through
 `git-gremlin:commit`, under the caller's existing authority, and refresh any source-drift check.
-Then spend the confirmation with the provider reference's confirmation command; `finish-pr`
-spends it once, after its last feedback round and before the merge request, not after each push.
-The confirmation blocks on a blocking defect in the confirmed commits. When it still reports
-one, return `blocked` with the attempted corrections and the smallest missing decision instead
-of starting a third review. An unavailable or failed reviewer is a blocker; self-review and a
+Then confirm the repair commits with the provider reference's command for later commits. When
+the confirmation still reports a blocking finding, return `blocked` with the attempted
+corrections and the smallest missing decision instead of a third pass on that batch. An unavailable or failed reviewer is a blocker; self-review and a
 custom reviewer agent do not substitute for the native result.
 
 Return the simplification outcome, runtime, last reviewed head/base, scope, findings and dispositions,

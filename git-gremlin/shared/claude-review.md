@@ -9,17 +9,17 @@ Await completion and inspect the resulting diff; `/simplify` applies cleanup and
 replace correctness review. Verify and commit accepted edits before the command below.
 
 Use Claude Code's local `/code-review` (`/review` is an alias) with an explicit level and diff
-range. The command reuses the last level typed anywhere, so an omitted level can silently run
-at `xhigh`, which adds uncertain findings that each start another fix:
+range. The command reuses the last level typed anywhere, as it does `--max-findings`, so omitting
+them can silently run at `xhigh`, which adds uncertain findings that each start another fix:
 
 ```text
-claude -p "/code-review high <verified-base-ref>...HEAD"
+claude -p "/code-review high <verified-base-ref>...HEAD --max-findings default"
 ```
 
-For the confirmation, target only the commits after the last reviewed head:
+For a later batch or a confirmation, target only the commits after the last reviewed head:
 
 ```text
-claude -p "/code-review medium <last-reviewed-head>...HEAD"
+claude -p "/code-review medium <last-reviewed-head>...HEAD --max-findings default"
 ```
 
 Noninteractive local review waits for completion. In an interactive session, await the local
