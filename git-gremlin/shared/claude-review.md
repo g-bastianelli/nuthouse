@@ -16,9 +16,11 @@ them can silently run at `xhigh`, which adds uncertain findings that each start 
 claude -p "/code-review high <verified-base-ref>...HEAD --max-findings default"
 ```
 
-For a later batch or a confirmation, target only the commits after the last reviewed head:
+For a later batch, target only the commits after the last reviewed head at the full-review
+level; for a confirmation, use `medium`:
 
 ```text
+claude -p "/code-review high <last-reviewed-head>...HEAD --max-findings default"
 claude -p "/code-review medium <last-reviewed-head>...HEAD --max-findings default"
 ```
 

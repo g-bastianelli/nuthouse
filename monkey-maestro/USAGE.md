@@ -166,10 +166,10 @@ review facility.
 The delivery owner runs the native review against the verified PR base and reads its
 findings:
 
-| Worker runtime | Native review                                                                     |
-| -------------- | --------------------------------------------------------------------------------- |
-| Codex          | `codex review --base <verified-base-ref>`                                         |
-| Claude Code    | Local `/code-review high <verified-base-ref>...HEAD`, awaited through completion. |
+| Worker runtime | Native review                                                                                            |
+| -------------- | -------------------------------------------------------------------------------------------------------- |
+| Codex          | `codex review --base <verified-base-ref>`                                                                |
+| Claude Code    | Local `/code-review high <verified-base-ref>...HEAD --max-findings default`, awaited through completion. |
 
 You do not need to invoke these commands manually during full delivery. A successful
 review command can still contain findings. The owner fixes blocking defects within the

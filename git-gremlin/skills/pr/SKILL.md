@@ -91,8 +91,9 @@ than inventing PR content.
    for confirmation; under an authorized implementation handoff, display it and continue.
    Retain the completed review evidence for the caller. Immediately before pushing, compare
    branch, head, base OID, scope, and relevant worktree with that review and the approved
-   proposal. New commits get a batch review, a moved base refreshes checks and drift, and a
-   changed proposal needs renewed approval. Unavailable
+   proposal. New commits get a batch review, a changed scope gets a full review, a moved base
+   refreshes checks and drift, relevant dirty changes stop publication, and a changed proposal
+   needs renewed approval. Unavailable
    review, unresolved blocking findings, or stale evidence prevents publication.
 
 6. Resolve the push remote in this order: `branch.<BRANCH>.pushRemote`,
