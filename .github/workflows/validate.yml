@@ -28,6 +28,12 @@ jobs:
         run: bun run fmt:check
       - name: Frontmatter meta tests
         run: bun run test:meta
+      - name: Repository structure and generated runtime
+        run: |
+          bun run check:skills
+          bun run check:workflow
+          bun run check:runtime
+          bun run check:duplication
       - name: Plugin tests
         # Covers every non-hidden test file: <plugin>/tests/,
         # <plugin>/claudecode/tests/, _shared/, shared/.

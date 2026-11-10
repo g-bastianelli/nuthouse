@@ -1,14 +1,16 @@
 <!-- template-meta
-required_frontmatter: [name, description]
-optional_frontmatter: [model, effort, tools, skills, memory, maxTurns, color, disallowedTools]
+required_frontmatter: [name, description, tools]
+optional_frontmatter: [model, effort, skills, memory, maxTurns, color, disallowedTools]
 required_sections: []
-variables: [agent, description]
+variables: [agent, description, tools]
 -->
 
 ---
 
 name: {{agent}}
 description: {{description}}
+tools:
+{{tools}}
 
 # model: haiku # haiku = fetch/parse/scout · omit = reasoning/audit
 

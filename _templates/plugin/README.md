@@ -15,7 +15,7 @@
 ### Codex CLI
 
 ```
-codex plugin install {{plugin}}@nuthouse
+codex plugin add {{plugin}}@nuthouse
 ```
 
 ## Skills

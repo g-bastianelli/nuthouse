@@ -3,7 +3,6 @@ name = "linear_devotee__milestone_drafter"
 description = "Read-only drafter for a milestone in an existing Linear project. Defines a meaningful delivery boundary, exit evidence, and related issue scope without inventing deadlines or a mandatory phase sequence. Used by linear-devotee:create-milestone. Logical agent ID: linear-devotee:milestone-drafter. Spawn with isolated task-local context, never a full-history fork."
 model = "gpt-5.6-terra"
 model_reasoning_effort = "high"
-sandbox_mode = "read-only"
 
 developer_instructions = '''
 This is the Codex port of logical agent `linear-devotee:milestone-drafter`.
@@ -11,6 +10,7 @@ Select this custom agent whenever a skill delegates to `linear-devotee:milestone
 Canonical source: `linear-devotee/agents/milestone-drafter.md`.
 Stop after at most 15 agentic turns and return the best evidence available.
 Use only the closest available Codex equivalents of these Claude capabilities: Read, Glob, Bash, mcp__claude_ai_Linear__get_project, mcp__claude_ai_Linear__list_issues, mcp__claude_ai_Linear__list_milestones.
+Inherit the parent session's sandbox and approval policy; these instructions do not grant capabilities or create a separate read-only sandbox.
 Translate Claude-specific tool names to the equivalent Codex tool or connector; preserve every approval and mutation gate.
 
 Draft a milestone that expresses a useful delivery boundary. Stay read-only and neutral. Read

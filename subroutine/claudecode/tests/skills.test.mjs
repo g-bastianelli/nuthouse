@@ -92,6 +92,33 @@ test("discoverSkills returns [] for a missing dir", () => {
   expect(discoverSkills("/no/such/dir/here")).toEqual([]);
 });
 
+test("frontend helpers and hooks do not receive backend disciplines", () => {
+  const skills = discoverSkills(SKILLS_DIR);
+  for (const file of [
+    "/repo/web/src/utils/format-date.ts",
+    "/repo/web/src/hooks/use-theme.ts",
+    "/repo/web/src/useTheme.ts",
+  ]) {
+    const names = matchSkills(skills, [file]).map((skill) => skill.name);
+    expect(names).toContain("type-safety");
+    expect(names).not.toContain("result-pattern");
+    expect(names).not.toContain("hono-pipeline");
+  }
+});
+
+test("React hook names match without treating a users route as a hook", () => {
+  const skills = discoverSkills(SKILLS_DIR);
+  for (const file of ["/repo/src/useTheme.ts", "/repo/src/use-theme.ts"]) {
+    expect(matchSkills(skills, [file]).map((skill) => skill.name)).toContain("react-rules");
+  }
+  const route = matchSkills(skills, ["/repo/src/server/routes/users.ts"]).map(
+    (skill) => skill.name,
+  );
+  expect(route).not.toContain("react-rules");
+  expect(route).toContain("result-pattern");
+  expect(route).toContain("hono-pipeline");
+});
+
 test("matchSkills: a backend .ts pulls type/validation/org/result/hono (not react)", () => {
   const skills = discoverSkills(SKILLS_DIR);
   const names = matchSkills(skills, ["/repo/src/service.ts"]).map((s) => s.name);
@@ -101,6 +128,15 @@ test("matchSkills: a backend .ts pulls type/validation/org/result/hono (not reac
   expect(names).toContain("result-pattern");
   expect(names).toContain("hono-pipeline");
   expect(names).not.toContain("react-rules");
+});
+
+test("standalone transport routers retain Result boundary discipline", () => {
+  const skills = discoverSkills(SKILLS_DIR);
+  for (const file of ["/repo/src/orders/router.ts", "/repo/src/users.router.ts"]) {
+    const names = matchSkills(skills, [file]).map((skill) => skill.name);
+    expect(names).toContain("hono-pipeline");
+    expect(names).toContain("result-pattern");
+  }
 });
 
 test("matchSkills: a .tsx pulls react-rules but not the .ts-only domain skills", () => {
@@ -237,11 +273,13 @@ test("form-rules stays off files that only look like forms", () => {
   }
 });
 
-test("a React hook .ts keeps react-rules in full when backend fallbacks overflow", () => {
+test("a React hook receives its full discipline without backend overflow", () => {
   const matched = matchSkills(discoverSkills(SKILLS_DIR), ["/repo/src/hooks/useMember.ts"]);
   const payload = buildDisciplinePayload(matched, { capChars: HOOK_BUDGET });
   expect(payload).toContain("### react-rules\n");
-  expect(payload).toContain("also binding");
+  expect(payload).not.toContain("also binding");
+  expect(payload).not.toContain("hono-pipeline");
+  expect(payload).not.toContain("result-pattern");
 });
 
 test("focused test and state-machine disciplines stay full under the hook budget", () => {

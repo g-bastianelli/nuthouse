@@ -31,7 +31,8 @@ status, or relations.
    `scripts/records.mjs resolve-controls`. Treat an unavailable or conflicting latest
    control as unusable; do not guess. Read the run group only from a usable control;
    report it as unavailable when missing or invalid, without inspecting Superset.
-3. Classify the live issues directly:
+3. Classify only the live `projectIssueIds` members directly; external rows provide blocker
+   evidence, never additional members or capacity:
    - terminal: `completed` or `canceled`;
    - started: every known `started` row;
    - ready: `backlog`, `triage`, or `unstarted`, with every current `blockedBy` row

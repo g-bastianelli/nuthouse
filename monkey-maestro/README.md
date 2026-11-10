@@ -17,8 +17,9 @@ questions, recovery, and stopping a run.
 
 ## Project supervision
 
-Linear is the sole scheduling authority. Every started issue occupies one concurrency
-slot, including work started elsewhere or waiting for a decision. Candidates are selected
+Linear is the sole scheduling authority. Every started project member occupies one concurrency
+slot, including work started elsewhere or waiting for a decision. External blockers provide
+readiness evidence without consuming project capacity. Candidates are selected
 in stable identifier order only when every current blocker is terminal. Unknown facts
 never become ready facts.
 
@@ -123,7 +124,7 @@ do not prove a Superset session, native review, or merge actually worked.
 
 ```text
 /plugin install monkey-maestro@nuthouse
-codex plugin install monkey-maestro@nuthouse
+codex plugin add monkey-maestro@nuthouse
 ```
 
 ## License

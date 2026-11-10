@@ -27,9 +27,10 @@ without an additional confirmation for the same issue and scope.
 
 - If the status type is already `started`, record `Status: <name> (unchanged)` and continue.
   Maestro may already have reserved the issue; started status does not prove any implementation.
-- Otherwise use a current brief's `Started state id`, verified against the team's statuses.
-  When several states have type `started`, prefer the one named `In Progress`; ask only if no
-  started state exists or remaining candidates are indistinguishable.
+- Otherwise use an explicit selected state, or a current brief's `Started state id`, verified
+  against the team's `started` statuses. Without either, use the sole `started` state; with
+  several, use the unique one named exactly `In Progress`. Ask only when this policy leaves
+  no unique choice. Scouts and Maestro reservations use this same selection policy.
 - Move to that state and verify the readback before implementation. A refused update blocks
   delivery because the project coordinator counts live started issues for capacity.
 

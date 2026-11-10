@@ -35,28 +35,30 @@ export function decideBump({ changed, pinnedVersion, currentVersion }) {
   if (!changed) {
     return { action: "skip", reason: "unchanged" };
   }
+  if (pinnedVersion === null) {
+    return { action: "skip", reason: "new-plugin" };
+  }
   if (pinnedVersion !== currentVersion) {
     return { action: "skip", reason: "already-bumped" };
   }
   return { action: "bump", nextVersion: bumpPatch(currentVersion) };
 }
 
-export function planBumps(manifest, { isChanged, readCurrentVersion, readPinnedVersion }) {
+export function planRelease(manifest, { isChanged, readCurrentVersion, readPinnedVersion }) {
   const plan = [];
   for (const plugin of manifest.plugins) {
     if (typeof plugin.source !== "object" || plugin.source.source !== "git-subdir") {
       continue;
     }
     const { path, sha } = plugin.source;
+    if (!isChanged(path, sha)) continue;
     const currentVersion = readCurrentVersion(path);
     const decision = decideBump({
-      changed: isChanged(path, sha),
+      changed: true,
       pinnedVersion: readPinnedVersion(path, sha),
       currentVersion,
     });
-    if (decision.action === "bump") {
-      plan.push({ name: plugin.name, path, from: currentVersion, to: decision.nextVersion });
-    }
+    plan.push({ name: plugin.name, path, version: currentVersion, ...decision });
   }
   return plan;
 }
@@ -85,9 +87,11 @@ export function readPinnedPluginVersion(pluginPath, sha, execute = execFileSync)
       ["show", "--end-of-options", `${sha}:${pluginPath}/.claude-plugin/plugin.json`],
       execute,
     );
-    return JSON.parse(manifest).version;
-  } catch {
-    return null;
+    const version = JSON.parse(manifest).version;
+    bumpPatch(version); // Validate the published version before deciding whether it changed.
+    return version;
+  } catch (cause) {
+    throw new Error(`Cannot read pinned version for ${pluginPath} at ${sha}`, { cause });
   }
 }
 
@@ -96,7 +100,7 @@ function main() {
   const ref = process.env.BUMP_REF ?? "HEAD";
   const manifest = JSON.parse(readFileSync(MARKETPLACE_PATH, "utf8"));
 
-  const plan = planBumps(manifest, {
+  const plan = planRelease(manifest, {
     isChanged: (path, sha) => isPluginChanged(path, ref, sha),
     readCurrentVersion: (path) => {
       const json = JSON.parse(readFileSync(`${path}/.claude-plugin/plugin.json`, "utf8"));
@@ -106,12 +110,16 @@ function main() {
   });
 
   if (plan.length === 0) {
-    console.log("No version bumps needed — every changed plugin is already bumped or untouched.");
+    console.log("Nothing to release — plugin content matches the marketplace pins.");
     return;
   }
 
-  for (const { name, path, from, to } of plan) {
-    console.log(`  ${name}: ${from} → ${to}${dryRun ? " (dry-run)" : ""}`);
+  for (const { name, path, version, action, nextVersion, reason } of plan) {
+    if (action !== "bump") {
+      console.log(`  ${name}@${version}: ${reason}; include in release verification`);
+      continue;
+    }
+    console.log(`  ${name}: ${version} → ${nextVersion}${dryRun ? " (dry-run)" : ""}`);
     if (dryRun) {
       continue;
     }
@@ -120,13 +128,14 @@ function main() {
       if (!existsSync(filePath)) {
         continue;
       }
-      writeFileSync(filePath, replaceVersion(readFileSync(filePath, "utf8"), to));
+      writeFileSync(filePath, replaceVersion(readFileSync(filePath, "utf8"), nextVersion));
     }
   }
 
   if (!dryRun) {
+    const bumped = plan.filter(({ action }) => action === "bump").length;
     console.log(
-      `\nBumped ${plan.length} plugin(s). Review the diff, commit, merge, then run: bun run bump:shas`,
+      `\nBumped ${bumped} of ${plan.length} release plugin(s). Verify the complete release set, review the diff, commit, merge, then run: bun run bump:shas`,
     );
   }
 }

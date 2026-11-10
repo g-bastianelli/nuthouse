@@ -1,7 +1,7 @@
 # Research agent contracts
 
-Read this before the fetch and verification dispatches. Both steps use one concurrent
-batch through the runtime's native delegation mechanism; do not dispatch sequentially.
+Read this before the fetch and verification dispatches. Use concurrent waves bounded by
+the runtime's available slots. Completed results survive capacity failures and follow-ups.
 Resolve both logical agent names through
 `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md`; outside Claude Code, use the same
 path under the resolved `PLUGIN_ROOT`.
@@ -40,21 +40,31 @@ The agent is fetch-optimized and must not fill source gaps from memory.
 
 ## `lore-hound:claim-verifier`
 
-Purpose: test one load-bearing claim against the supplied evidence, preferring recent
-reliable sources and defaulting to `refuted` when uncertainty cannot be resolved.
+Purpose: test one load-bearing claim against retrieved evidence. Require direct support
+for `confirmed`, direct contradiction for `refuted`, and return `uncertain` for gaps or
+unresolved conflicts. Judge source authority, relevance, and applicable date together.
 
 Input prompt:
 
 ```text
 claim: <claim>
+as_of: <today's YYYY-MM-DD date>
 sources: [{ "url": "<URL>", "excerpt": "<verbatim excerpt>" }]
 ```
 
 Expected final-message JSON:
 
 ```json
-{ "verdict": "confirmed | refuted | uncertain", "reasoning": "<evidence-based reason>" }
+{
+  "verdict": "confirmed | refuted | uncertain",
+  "reasoning": "<evidence-based reason>",
+  "sources": [
+    { "url": "<decisive fetched URL>", "excerpt": "<exact supporting or contradicting excerpt>" }
+  ]
+}
 ```
 
-Parse the structured final message. Preserve the extracted claims in context so a later
-synthesis failure can be retried without refetching the sources.
+Include newly fetched evidence, not just the input sources. `confirmed` and `refuted`
+require at least one decisive source; an unsuccessful search can return `uncertain` with
+an empty source list. A missing proof is never a contradiction. Preserve the final sources
+alongside the extracted claims so synthesis can cite the actual evidence without refetching.

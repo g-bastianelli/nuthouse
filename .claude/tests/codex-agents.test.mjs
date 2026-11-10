@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
 import {
   applyAgentPlan,
   checkAgents,
@@ -9,7 +10,6 @@ import {
   codexAgentName,
   expectedAgentFiles,
   expectedRuntimeMapFiles,
-  legacyExpectedAgentFiles,
   listAgentSources,
   planAgentSync,
   renderCodexAgent,
@@ -29,6 +29,28 @@ function markdownFiles(directory) {
 }
 
 describe("Codex agent parity", () => {
+  test("preserves a scaffolded agent's tool allowlist in the Codex instructions", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "nuthouse-agent-template-"));
+    const tools = ["Read", "Glob"];
+    const template = fs.readFileSync(path.join(REPO_ROOT, "_templates/agent/AGENT.md"), "utf8");
+    const source = template
+      .replace(/^<!-- template-meta[\s\S]*?-->\s*/, "")
+      .replaceAll("{{agent}}", "context-reader")
+      .replaceAll("{{description}}", "Read bounded repository context.")
+      .replaceAll("{{tools}}", tools.map((tool) => `  - ${tool}`).join("\n"));
+    const directory = path.join(root, "test-plugin", "agents");
+    try {
+      fs.mkdirSync(directory, { recursive: true });
+      fs.writeFileSync(path.join(directory, "context-reader.md"), source);
+      const [agent] = listAgentSources(root);
+      expect(agent.tools).toEqual(tools);
+      const generated = expectedAgentFiles(root).get("test_plugin__context_reader.toml");
+      expect(generated).toContain("Claude capabilities: Read, Glob.");
+    } finally {
+      fs.rmSync(root, { recursive: true });
+    }
+  });
+
   test("ports every canonical Claude agent with a unique Codex name", () => {
     const sources = listAgentSources(REPO_ROOT);
     const outputs = expectedAgentFiles(REPO_ROOT);
@@ -61,16 +83,37 @@ describe("Codex agent parity", () => {
     );
   });
 
-  test("assigns sandbox capabilities required by each command-running agent", () => {
-    const sources = listAgentSources(REPO_ROOT);
-    const byAlias = new Map(sources.map((agent) => [`${agent.plugin}:${agent.name}`, agent]));
-    const render = (alias) => renderCodexAgent(byAlias.get(alias));
+  test("customizes agents without promising a separate permission policy", () => {
+    for (const agent of listAgentSources(REPO_ROOT)) {
+      const rendered = renderCodexAgent(agent);
+      const settings = rendered.split("developer_instructions =")[0];
+      expect(settings).not.toMatch(
+        /^(?:sandbox_mode|sandbox_workspace_write|approval_policy|default_permissions|permissions)[ .=]/m,
+      );
+      expect(rendered).toContain("Inherit the parent session's sandbox and approval policy");
+    }
+  });
 
-    expect(render("stack-golem:platform-scout")).toContain(
-      "sandbox_workspace_write.network_access = true",
-    );
-    expect(render("linear-devotee:project-graph-loader")).toContain('sandbox_mode = "read-only"');
-    expect(render("lore-hound:source-fetcher")).toContain('sandbox_mode = "read-only"');
+  test("previews exact personal changes under CODEX_HOME without writing them", () => {
+    const codexHome = fs.mkdtempSync(path.join(os.tmpdir(), "nuthouse-codex-home-"));
+    const destination = path.join(codexHome, "agents");
+    const orphan = path.join(destination, "orphaned_nuthouse_agent.toml");
+    const [filename, content] = expectedAgentFiles(REPO_ROOT).entries().next().value;
+    fs.mkdirSync(destination);
+    fs.writeFileSync(orphan, content);
+    try {
+      const output = execFileSync(
+        process.execPath,
+        [path.join(REPO_ROOT, "scripts/sync-codex-agents.mjs"), "--install", "--dry-run"],
+        { encoding: "utf8", env: { ...process.env, CODEX_HOME: codexHome } },
+      );
+      expect(output).toContain(`write ${path.join(destination, filename)} (missing)`);
+      expect(output).toContain(`remove ${orphan} (orphaned)`);
+      expect(fs.readdirSync(destination)).toEqual([path.basename(orphan)]);
+      expect(fs.readFileSync(orphan, "utf8")).toBe(content);
+    } finally {
+      fs.rmSync(codexHome, { recursive: true });
+    }
   });
 
   test("keeps runtime-specific Codex names out of shared skill bodies", () => {
@@ -147,39 +190,18 @@ describe("Codex agent parity", () => {
     }
   });
 
-  test("migrates only exact legacy outputs and preserves unrelated personal agents", () => {
-    const destination = fs.mkdtempSync(path.join(os.tmpdir(), "nuthouse-codex-migration-"));
-    const legacyFiles = legacyExpectedAgentFiles(REPO_ROOT);
-    const [legacyFilename, legacyContent] = legacyFiles.entries().next().value;
+  test("removes orphaned managed agents and preserves unrelated personal agents", () => {
+    const destination = fs.mkdtempSync(path.join(os.tmpdir(), "nuthouse-codex-cleanup-"));
     const unrelated = path.join(destination, "personal_reviewer.toml");
     const orphan = path.join(destination, "orphaned_nuthouse_agent.toml");
-    fs.writeFileSync(path.join(destination, legacyFilename), legacyContent);
     fs.writeFileSync(unrelated, "# personal agent\n");
     fs.writeFileSync(orphan, expectedAgentFiles(REPO_ROOT).values().next().value);
 
     try {
       expect(syncAgents(REPO_ROOT, destination)).toBe(expectedAgentFiles(REPO_ROOT).size);
-      expect(fs.existsSync(path.join(destination, legacyFilename))).toBe(false);
       expect(fs.existsSync(orphan)).toBe(false);
       expect(fs.readFileSync(unrelated, "utf8")).toBe("# personal agent\n");
       expect(checkAgents(REPO_ROOT, destination)).toEqual([]);
-    } finally {
-      fs.rmSync(destination, { recursive: true });
-    }
-  });
-
-  test("refuses to remove a locally modified legacy output", () => {
-    const destination = fs.mkdtempSync(path.join(os.tmpdir(), "nuthouse-codex-legacy-edit-"));
-    const [legacyFilename, legacyContent] = legacyExpectedAgentFiles(REPO_ROOT)
-      .entries()
-      .next().value;
-    const legacyTarget = path.join(destination, legacyFilename);
-    fs.writeFileSync(legacyTarget, `${legacyContent}# local edit\n`);
-
-    try {
-      expect(() => syncAgents(REPO_ROOT, destination)).toThrow(/modified; refusing to remove/);
-      expect(fs.readFileSync(legacyTarget, "utf8")).toEndWith("# local edit\n");
-      expect(fs.readdirSync(destination)).toEqual([legacyFilename]);
     } finally {
       fs.rmSync(destination, { recursive: true });
     }

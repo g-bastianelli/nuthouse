@@ -10,12 +10,18 @@ import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
-// Every plugin shipped to Codex must keep its two manifests in version parity.
-// Derived from the Codex registry so retiring a plugin never leaves a stale gate.
-function manifestPlugins(repoRoot) {
-  const registry = path.join(repoRoot, ".agents", "plugins", "marketplace.json");
-  return (JSON.parse(fs.readFileSync(registry, "utf8")).plugins ?? []).map((p) => p.name);
-}
+const RUNTIMES = [
+  {
+    name: "Claude",
+    manifest: ".claude-plugin/plugin.json",
+    registry: ".claude-plugin/marketplace.json",
+  },
+  {
+    name: "Codex",
+    manifest: ".codex-plugin/plugin.json",
+    registry: ".agents/plugins/marketplace.json",
+  },
+];
 
 const SOURCE_EXTENSIONS = new Set([".json", ".md", ".mjs", ".yaml", ".yml"]);
 const EXCLUDED_SEGMENTS = new Set(["assets", "tests"]);
@@ -33,27 +39,91 @@ function filesBelow(root, relativePath) {
 
 function readJson(repoRoot, filename, problems) {
   try {
-    return JSON.parse(fs.readFileSync(path.join(repoRoot, filename), "utf8"));
+    const value = JSON.parse(fs.readFileSync(path.join(repoRoot, filename), "utf8"));
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      problems.push(`${filename}: expected JSON object`);
+      return undefined;
+    }
+    return value;
   } catch (error) {
     problems.push(`${filename}: invalid JSON (${error instanceof Error ? error.message : error})`);
     return undefined;
   }
 }
 
-// The Claude and Codex manifests are separate files keyed by the same version. Bumping one
-// and forgetting the other is invisible on read and silently breaks installed updates
-// (see _adr/0004-plugin-version-bump-on-release.md).
-function checkManifestPair(repoRoot, plugin, problems) {
-  const claude = readJson(repoRoot, `${plugin}/.claude-plugin/plugin.json`, problems);
-  const codex = readJson(repoRoot, `${plugin}/.codex-plugin/plugin.json`, problems);
-  if (!claude || !codex) return;
-  if (claude.version !== codex.version) {
-    problems.push(
-      `${plugin}: Claude/Codex versions differ (${claude.version} != ${codex.version})`,
-    );
+// Discover install units from manifests, so an omitted registry entry cannot hide itself.
+function checkRegistries(repoRoot, problems) {
+  const plugins = new Map();
+  for (const entry of fs.readdirSync(repoRoot, { withFileTypes: true })) {
+    if (!entry.isDirectory() || entry.name.startsWith(".") || entry.name.startsWith("_")) continue;
+    const manifests = new Map();
+    for (const runtime of RUNTIMES) {
+      const filename = `${entry.name}/${runtime.manifest}`;
+      if (!fs.existsSync(path.join(repoRoot, filename))) continue;
+      const manifest = readJson(repoRoot, filename, problems);
+      if (!manifest) continue;
+      manifests.set(runtime.name, manifest);
+      if (typeof manifest.name !== "string" || !manifest.name)
+        problems.push(`${filename}: missing name`);
+      if (!/^\d+\.\d+\.\d+$/.test(String(manifest.version)))
+        problems.push(`${filename}: version is not semver (${manifest.version})`);
+    }
+    if (manifests.size) plugins.set(path.resolve(repoRoot, entry.name), manifests);
   }
-  if (!/^\d+\.\d+\.\d+$/.test(String(claude.version))) {
-    problems.push(`${plugin}: version is not semver (${claude.version})`);
+
+  for (const runtime of RUNTIMES) {
+    const registry = readJson(repoRoot, runtime.registry, problems);
+    if (!registry) continue;
+    if (!Array.isArray(registry.plugins)) {
+      problems.push(`${runtime.registry}: plugins must be an array`);
+      continue;
+    }
+    const registered = new Set();
+    const names = new Set();
+    for (const entry of registry.plugins) {
+      if (!entry || typeof entry.name !== "string" || !entry.name) {
+        problems.push(`${runtime.registry}: plugin entry has no name`);
+        continue;
+      }
+      if (names.has(entry.name))
+        problems.push(`${runtime.registry}: duplicate plugin name ${entry.name}`);
+      names.add(entry.name);
+      const sourcePath = typeof entry.source === "string" ? entry.source : entry.source?.path;
+      const target =
+        typeof sourcePath === "string" ? path.resolve(repoRoot, sourcePath) : undefined;
+      const manifests = plugins.get(target);
+      const manifest =
+        manifests?.get(runtime.name) ??
+        (runtime.name === "Claude" ? manifests?.get("Codex") : undefined);
+      if (!manifest) {
+        problems.push(
+          `${entry.name}: ${runtime.name} registry path ${sourcePath} has no matching plugin manifest`,
+        );
+      } else if (entry.name !== manifest.name) {
+        problems.push(
+          `${runtime.registry}: ${entry.name} does not match manifest name ${manifest.name}`,
+        );
+      } else {
+        registered.add(target);
+      }
+    }
+    for (const [target, manifests] of plugins) {
+      if ((runtime.name === "Claude" || manifests.has(runtime.name)) && !registered.has(target)) {
+        problems.push(`${path.basename(target)}: missing ${runtime.name} registry entry`);
+      }
+    }
+  }
+
+  for (const [target, manifests] of plugins) {
+    const claude = manifests.get("Claude");
+    const codex = manifests.get("Codex");
+    if (!claude || !codex) continue;
+    if (claude.name !== codex.name)
+      problems.push(`${path.basename(target)}: Claude/Codex manifest names differ`);
+    if (claude.version !== codex.version)
+      problems.push(
+        `${path.basename(target)}: Claude/Codex versions differ (${claude.version} != ${codex.version})`,
+      );
   }
 }
 
@@ -100,7 +170,7 @@ export function checkPluginInvariants(repoRoot) {
     }
   }
 
-  for (const plugin of manifestPlugins(repoRoot)) checkManifestPair(repoRoot, plugin, problems);
+  checkRegistries(repoRoot, problems);
 
   return [...new Set(problems)].sort();
 }

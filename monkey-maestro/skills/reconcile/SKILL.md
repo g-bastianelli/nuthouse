@@ -24,10 +24,11 @@ dispatches work, calls GitHub, or blocks another skill.
 ## Workflow
 
 1. Require one exact Linear project id and dispatch `monkey-maestro:linear-reader` in
-   `MODE: project`. Resolve its complete marker-bearing comment set with
-   `scripts/records.mjs resolve-controls` and use only its minimal status/blocker rows.
+   `MODE: members` with `INCLUDE_CONTROL: true`. Resolve its complete marker-bearing
+   comment set with `scripts/records.mjs resolve-controls` and use its member/status rows.
 2. Use the user's exact issue identifiers when supplied; otherwise select the stable list
-   of current known `started` issues. Exclude terminal issues before Superset inspection.
+   of current known `started` project members. Require explicitly requested issues to be
+   in that complete membership list. Exclude terminal issues before Superset inspection.
 3. If the usable control does not provide host and Superset project, report the scope as
    non-auditable. If the issue scope is empty, return a successful no-op.
 4. Read each exact task with explicit `--tracker linear` using **Exact tracker binding**,

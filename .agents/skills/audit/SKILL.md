@@ -28,8 +28,10 @@ This is a read-only audit. It separates mechanically proven failures from semant
 
 3. Read the `template-meta` blocks in `_templates/skill/`, `_templates/agent/AGENT.md`,
    `_templates/persona/persona.md`, and `_templates/plugin/BANNER_PROMPT.md`.
-4. Discover current plugin artifacts from the two marketplace registries; do not infer the
-   inventory from remembered plugin names.
+4. Discover plugin artifacts from both marketplace registries and repository workflows from
+   `.agents/skills/*/SKILL.md`. Include their routed references, templates, and shared persona;
+   count `.claude/skills/` symlinks only as links to the canonical sources. Do not infer inventory
+   from remembered names. Report plugin and repository-workflow coverage separately.
 5. Read [references/review-criteria.md](references/review-criteria.md), then apply only the
    sections relevant to each discovered artifact. For skills, classify the artifact as a
    workflow or a background contract before reviewing its shape.
@@ -46,7 +48,7 @@ Mechanical gates
   check:workflow: PASS | FAIL | UNVERIFIED — <evidence>
   test:meta:      PASS | FAIL | UNVERIFIED — <evidence>
 
-<plugin>
+<plugin | repository workflows>
   CRITICAL <path> — <broken invariant and evidence>
   WARNING  <path> — <quality risk and evidence>
   OK       <artifact group>

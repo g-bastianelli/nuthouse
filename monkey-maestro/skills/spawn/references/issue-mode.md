@@ -9,11 +9,11 @@ Issue mode starts from one exact Linear issue identifier. Before dispatch, read
 2. A completed or canceled issue returns `already-terminal`. A blocked issue or any unknown
    membership, project, status, or blocker fact refuses dispatch. Ready and explicitly named
    started issues may proceed; manual spawn never calculates project capacity.
-3. Dispatch `MODE: project` once for the same project solely to build the sibling set. Include
-   every issue counted `started` except the spawned issue itself. Discard everything else that read
-   returns, including its marker comments. Capacity, readiness, and the control stay outside manual
-   spawn. Missing project evidence makes the sibling set unknown but does not itself refuse
-   dispatch.
+3. Dispatch `MODE: members` once for the same project with `INCLUDE_CONTROL: false` to
+   build the sibling set. Include every member counted `started` except the spawned issue
+   itself. Read no relations or control comments for this step. Capacity and the control stay
+   outside manual spawn. Missing membership evidence makes the sibling set unknown but does
+   not itself refuse dispatch.
 4. Resolve the task with explicit `--tracker linear` using **Exact tracker binding** from
    the shared contract. Require its exact Linear issue and project binding. Set
    `bindingArgs = --task <rawLinearIssueUuid> --branch '<verifiedLinearBranch>'

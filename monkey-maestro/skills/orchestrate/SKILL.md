@@ -54,14 +54,17 @@ acting on user feedback, read **User feedback** in
    worker's claimed completion before using it to advance to the full project read.
 4. At entry, explicit resume, or before a capacity decision, dispatch `MODE: project` if
    the current observation has not already supplied it and require a complete live Linear
-   project issue set. Revalidate its current control. A failed project, page, or issue read
-   creates no workspace. Classify only from current status types and `blockedBy`
+   project issue set. Revalidate its current control. A failed project or membership page,
+   or an unknown member status, leaves capacity unknown and creates no workspace. An
+   unavailable external blocker prevents only its dependent candidates from being ready.
+   Classify only from current status types and `blockedBy`
    identifiers:
-   - count every known `started` issue;
-   - candidates are known `backlog`, `triage`, and `unstarted` issues;
-   - a candidate is ready only when every blocker is present and terminal;
+   - count only `projectIssueIds` members with known `started` status;
+   - candidates are those members with known `backlog`, `triage`, or `unstarted` status;
+   - a candidate is ready only when every blocker is present and terminal, including
+     blockers outside this project;
    - terminal issues are `completed` or `canceled`.
-     If no nonterminal or unknown issue remains, report `complete` from the observed Linear
+     If no nonterminal or unknown project member remains, report `complete` from the observed Linear
      facts. Report owned issue delivery evidence separately; never invent a PR for externally
      completed or canceled work.
 5. Compute `slots = max(0, maxConcurrency - startedCount)`. Sort ready issues by Linear

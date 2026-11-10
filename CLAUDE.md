@@ -138,7 +138,7 @@ rationalisations, but they are evidence-driven exceptions rather than the defaul
 ## Stack & tooling
 
 - **Hooks**: a hook is executable code the runtime runs, so write it in Node.js ESM with the `.mjs` extension (no `package.json` needed, self-contained regardless of install context), and its tests in `.mjs` too. Reference: `linear-devotee/claudecode/hooks/*.mjs`; Codex discovers plugin hooks through `<plugin>/hooks/hooks.json`, which may point at shared runtime scripts.
-- **Workflow implementation**: choose instructions, native tools, or a small script according to the task's need for judgment, repeatability, and reuse. Scripts are optional: a concrete reliability or reuse benefit can justify one; neither the skill format nor a deterministic operation requires one. Account for existing capabilities and maintenance cost.
+- **Workflow implementation**: start with instructions and native tools. Add or extend a small script only for a demonstrated reliability or repeated-work need that those tools do not cover. Neither the skill format nor a deterministic operation requires a script. Keep decisions in prose and account for maintenance cost.
 - **Package manager**: `bun@1.3.x` (declared in root `package.json`).
 - **Tests**: `bun test` (built-in, no dep added). Claude Code tests live in `<plugin>/claudecode/tests/`; Codex/root helper tests live in `<plugin>/tests/`.
 - **Lint/format**: `oxlint` (config in `.oxlintrc.json`) and `oxfmt` (config in `.oxfmtrc.json`). Local rule: empty blocks are allowed when intentional; use `catch {}` (not `catch (e)`) when the binding is unused.
@@ -178,7 +178,9 @@ side of it. A removal only has to be **complete**; it never has to be **defended
 
 Global guidance — applies everywhere, not just at scaffold time:
 
-- ❌ Pollute main context with MCP fetches / massive reads → **always dispatch to a subagent**
+- Delegate large retrievals and independent investigations with bounded inputs and concise
+  evidence-bearing outputs. Keep small reads and mechanical commands inline when delegation
+  adds no useful isolation. Bound parallel work by available slots and separate write ownership.
 - ❌ STAR format for briefs targeting an agent → **SDD**
 - ❌ Linear (or any external service) mutations without user confirmation, unless explicitly authorized and documented
 - ❌ `git push`, `git commit`, `git rebase` silently executed by a skill → **never** — exception: an explicitly authorized issue-delivery workflow may commit, push, respond to reviews, and merge its verified PR under GitHub protections; a request to handle PR review comments commits and pushes the verified fixes to that PR's branch (never force-push or merge); ordinary verified `linear-devotee` implementation on a feature branch chains to git-gremlin's `commit` (implemented paths only) + `pr`, and the PR is a draft

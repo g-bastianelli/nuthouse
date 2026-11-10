@@ -65,18 +65,23 @@ workspace or a second issue workspace.
 
 For each created workspace, sequentially:
 
-1. Refresh the exact issue and direct blockers through `MODE: selected`, then refresh
-   control and the complete project. Require the same active control/run/revision, a
-   currently ready issue, and a free slot. An issue that another actor already started is
-   not this supervisor's newly acquired work.
+1. Refresh the exact issue and direct blockers through `MODE: selected`, and refresh the
+   complete membership/status list and control with `MODE: members`, `INCLUDE_CONTROL: true`.
+   These read-only calls may run concurrently. Require consistent issue membership/status,
+   the same active control/run/revision, a currently ready issue, and a free slot counted
+   from members alone. Conflicting observations require a fresh read before mutation.
+   An issue another actor already started is not this supervisor's newly acquired work.
 2. Read that exact issue's team/status id and its team's statuses with the available Linear
-   read tools. Require one resolved started status id. If several team started statuses are
-   plausible, collect that missing choice; never guess by display name.
+   read tools. Resolve the installed `linear-devotee:deliver` skill and read its plugin's
+   `shared/issue-lifecycle.md`, **Start authorized work**, for the same started-state policy
+   used by direct delivery. Require one resolved status id under that policy.
    Save only the exact issue's status to that id. Existing scope, relations, assignee,
    description, and project are not mutation fields.
-3. Read back the exact issue and refresh the complete project/control. Require the intended
-   status id/type, same membership and active run/revision, all blockers terminal, and
-   `startedCount <= maxConcurrency`. Unknown write results are inspected, not written again.
+3. Read back the exact issue/status id and refresh `MODE: selected` plus `MODE: members`
+   with `INCLUDE_CONTROL: true`. Require the intended status id/type, consistent membership
+   and status across reads, same active run/revision, every current direct blocker terminal,
+   and `startedCount <= maxConcurrency`. Missing pages, changed relations, or conflicting
+   observations require reassessment before launch. Unknown writes are inspected, not repeated.
 4. If any check fails, do not launch. Preserve the workspace and observed reservation;
    report the concrete recovery need. Do not reset Linear automatically: another actor may
    have relied on the started state.
@@ -109,7 +114,7 @@ The issue is already reserved as started; continue idempotently. Resume prior PR
 ask only about consequential unresolved choices. Optional specialists receive bounded
 responsibility; the issue lead owns integration and native review.
 
-Apply **Concurrent siblings** from the shared contract. Include every issue counted started
+Apply **Concurrent siblings** from the shared contract. Include every project member counted started
 in the fresh snapshot except this issue, plus other explicitly created batch workspaces
 whose issue remains selected. Do not infer file ownership or sibling requirements.
 

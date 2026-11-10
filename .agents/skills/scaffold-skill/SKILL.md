@@ -1,6 +1,6 @@
 ---
 name: scaffold-skill
-description: Scaffold a focused workflow or background-contract skill inside an existing nuthouse plugin. Use when adding a skill; derives the smallest useful entrypoint from repository templates and validates progressive disclosure.
+description: Scaffold a focused plugin skill or repository workflow. Use when adding a skill; creates one canonical source from repository templates and validates progressive disclosure.
 model: haiku
 ---
 
@@ -9,17 +9,19 @@ model: haiku
 Read `../persona.md`; it is canonical for this skill's user-facing output until the report. Match
 the user's language and keep technical identifiers unchanged.
 
-Create one canonical `<plugin>/skills/<skill>/SKILL.md`; runtime manifests expose that same tree.
+Create one canonical skill. Plugin skills live in `<plugin>/skills/`; repository workflows live
+in `.agents/skills/`, with a matching `.claude/skills/` symlink.
 
 ## Workflow
 
-1. Verify the repository root through both marketplace registries. Discover parent plugins from
-   root `persona.md` files and require the selected parent to have a matching runtime manifest.
+1. Verify the repository root through both marketplace registries. Resolve the destination from
+   the request: `plugin` or `repository`. For a plugin skill, discover parent plugins from root
+   `persona.md` files and require the selected parent to have a matching runtime manifest.
 2. Resolve only consequential inputs not already supplied:
-   - parent plugin and kebab-case action-oriented skill name, without plugin prefix;
+   - parent plugin when applicable, and kebab-case action-oriented name without plugin prefix;
    - what the skill does and when it activates;
    - workflow or background contract;
-   - supported runtime intersection with the parent;
+   - supported runtime intersection with the parent; repository workflows target both runtimes;
    - required tools, arguments, subagent, mutation/approval boundary, and output;
    - optional model/effort override only when the default is demonstrably unsuitable.
 3. Reject vague (`helper`, `utils`, `tool`) or persona-coded names. Refuse a collision unless the
@@ -37,17 +39,20 @@ Create one canonical `<plugin>/skills/<skill>/SKILL.md`; runtime manifests expos
    - route every reference with an explicit “read when” condition;
    - choose instructions or executable resources according to the need for judgment,
      repeatability, and reuse; consider existing tools before introducing code.
-7. Preserve root conventions: unprefixed frontmatter `name`, `../../persona.md` for user-facing
-   skills, `genre: contract` for background contracts, and no runtime-specific copies.
-8. Run `bun run check:skills`, `bun run test:meta`, and the narrow plugin tests. Fix generated
-   structural failures before reporting; disclose unavailable checks.
+7. Preserve root conventions: unprefixed frontmatter `name`, `genre: contract` for background
+   contracts, and no runtime-specific copies. User-facing plugin skills read `../../persona.md`.
+   Repository workflows read `../persona.md`; create `.claude/skills/<skill>` as a relative
+   symlink to `../../.agents/skills/<skill>`, without editing either marketplace or a plugin
+   manifest. Check both paths for collisions and verify the symlink resolves to the source.
+8. Run `bun run check:skills`, `bun run test:meta`, and relevant plugin or repository-helper
+   tests. Fix generated structural failures before reporting; disclose unavailable checks.
 
 ## Report
 
 ```text
 scaffold-skill
-  Plugin:      <plugin>
-  Skill:       <plugin>:<skill>
+  Scope:       plugin | repository
+  Skill:       <plugin>:<skill> | <skill>
   Genre:       workflow | contract
   Runtime:     Claude Code | Codex | both
   Entrypoint:  <path and line count>

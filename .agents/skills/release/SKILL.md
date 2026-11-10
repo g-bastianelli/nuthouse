@@ -27,8 +27,10 @@ This skill is **rigid** — execute the steps in order.
 ## Preflight context
 
 At the start of every invocation, read the current branch and working-tree status, then run
-`node scripts/bump-plugin-versions.mjs --dry-run`. Use the live output to select the phase; do not
-assume context from a previous invocation.
+`node scripts/bump-plugin-versions.mjs --dry-run`. Its release set includes changed plugins whose
+versions are already bumped and new plugins retaining their initial version. Use the live output
+to select the phase; do not assume context from a previous invocation. An unreadable existing
+pin is an error, not evidence that a version is ready.
 
 ```text
 git branch --show-current
@@ -44,15 +46,18 @@ SHA pins, and every cross-runtime release verifies and reports both runtimes.
 
 1. Preflight:
    - Run `git fetch origin main --quiet`.
-   - Start a runtime matrix for every plugin in the version bump plan. In phase **shas**, complete it from the `bump:shas` output and resulting diff before reporting:
+   - Start a runtime matrix for every plugin in the complete release set, including already-bumped and new plugins. In phase **shas**, complete it from the `bump:shas` output and resulting diff before reporting:
      - **Claude Code** requires `<plugin>/.claude-plugin/plugin.json` plus an entry in `.claude-plugin/marketplace.json`.
      - **Codex** requires `<plugin>/.codex-plugin/plugin.json` plus an entry in `.agents/plugins/marketplace.json`.
      - A plugin that declares both manifests must appear in both registries. Any missing manifest/registry pair is a release failure; report it and stop.
    - Identify the phase from the invocation argument if given (`versions` or `shas`); otherwise
      auto-detect:
      - The version bump dry-run lists pending bumps → phase **versions**.
-     - No pending bumps, on `main`, up to date with `origin/main` → phase **shas**.
+     - No pending bumps, on clean `main`, up to date with `origin/main` → phase **shas**.
+     - Otherwise, changed plugins remain in the release set → phase **versions**; resume
+       verification even if no additional version write is needed.
      - Neither → report that there is nothing to release and stop.
+       An explicit **shas** request with pending version bumps must complete **versions** first.
 2. For phase **versions**, read
    [`references/versions-phase.md`](references/versions-phase.md) and complete it before
    reporting or moving to SHA pins.
@@ -65,6 +70,10 @@ SHA pins, and every cross-runtime release verifies and reports both runtimes.
 - **Versions before shas, always.** Running `bump:shas` while a content change has no version bump ships an invisible release. If the sha pins are already ahead of the versions (the plan shows nothing but plugin content changed since the last installed release), bump the affected versions manually with `bumpPatch` semantics and say so.
 - **Both runtimes, every time.** Never call a cross-runtime release complete when either the Claude Code or Codex manifest, registry validation, runtime coverage, or user refresh instruction is missing.
 - Never invent `codex plugin update`; that command does not exist. Existing Codex installs refresh with `codex plugin marketplace upgrade nuthouse` and a new session. First installs additionally use `codex plugin add <plugin>@nuthouse`.
+- Codex's personal agent registry is separate from plugin updates. From the matching published
+  checkout, preview `bun run plan:codex-agents`, install when authorized, then run
+  `bun run check:installed-codex-agents`. Report this refresh step whenever agents changed;
+  never claim the current session reloaded them.
 - Never run `git commit`, `git push`, or `git rebase` directly — commits go through `git-gremlin:commit`, pushes stay with the user.
 - Never bypass lefthook with `--no-verify`.
 - Report failing checks with their verbatim output; no silent retries, no silent fixes.
@@ -81,6 +90,7 @@ phase merely to summarize it.
 release report
   Phase:        versions | shas | nothing-to-release
   Bumped:       <plugin>@<old> → <new> (one line per plugin, or none)
+  Release set:  <all changed plugins, including already-bumped and new>
   Claude Code:  <covered plugin names | none>
   Codex:        <covered plugin names | none>
   Verification: <each check: pass/fail>
@@ -89,4 +99,5 @@ release report
   User refresh: Claude Code: claude plugin update <plugin>@nuthouse + restart
                 Codex: codex plugin marketplace upgrade nuthouse + new session
                 Codex first install only: codex plugin add <plugin>@nuthouse
+  Codex agents: <unchanged | refresh pending | installed and checked; new session needed>
 ```

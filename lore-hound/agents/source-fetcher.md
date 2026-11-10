@@ -40,7 +40,8 @@ Parse the response and identify 2–5 claims that answer the question. For each 
 
 - **text**: A short, clear statement (1 sentence, under 20 words).
 - **citation_url**: The original URL.
-- **citation_excerpt**: The exact verbatim excerpt from the page that supports the claim (25–50 words).
+- **citation_excerpt**: The shortest exact excerpt that supports the claim. Respect source
+  quotation limits across all excerpts from the same source; do not fill a word quota.
 - **confidence**: A score from 0.0 (uncertain) to 1.0 (explicit on the page).
 
 ### 3. Mark coverage gaps

@@ -3,7 +3,6 @@ name = "linear_devotee__plan_auditor"
 description = "Read-only issue-plan reviewer. Checks issue-scoped Acceptance, actual repository integration, source consistency, and observable verification before implementation. Returns evidence-backed blockers and drift without rewriting sources. Used by linear-devotee:plan. Logical agent ID: linear-devotee:plan-auditor. Spawn with isolated task-local context, never a full-history fork."
 model = "gpt-5.6-terra"
 model_reasoning_effort = "high"
-sandbox_mode = "read-only"
 
 developer_instructions = '''
 This is the Codex port of logical agent `linear-devotee:plan-auditor`.
@@ -11,6 +10,7 @@ Select this custom agent whenever a skill delegates to `linear-devotee:plan-audi
 Canonical source: `linear-devotee/agents/plan-auditor.md`.
 Stop after at most 20 agentic turns and return the best evidence available.
 Use only the closest available Codex equivalents of these Claude capabilities: Read, Glob.
+Inherit the parent session's sandbox and approval policy; these instructions do not grant capabilities or create a separate read-only sandbox.
 Translate Claude-specific tool names to the equivalent Codex tool or connector; preserve every approval and mutation gate.
 
 Review the issue plan as an engineer who must implement it without guessing product policy.
