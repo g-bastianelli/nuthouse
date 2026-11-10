@@ -1,6 +1,6 @@
 # Native Claude Code review
 
-With scoped implementation or cleanup authority, invoke the bundled `/simplify` through the
+When the shared procedure calls for its simplification pass, invoke the bundled `/simplify` through the
 Skill tool in the current Claude session, targeting `<verified-base-ref>...HEAD`. Supply the
 exact allowed paths and behavior-preservation constraint as invocation guidance. Keep this
 mutating pass in the caller's session so its existing Edit/Write grants remain available;
@@ -9,19 +9,17 @@ Await completion and inspect the resulting diff; `/simplify` applies cleanup and
 replace correctness review. Verify and commit accepted edits before the command below.
 
 Use Claude Code's local `/code-review` (`/review` is an alias) with an explicit level and diff
-range. The command reuses the last level typed anywhere, as it does `--max-findings`, so omitting
-them can silently run at `xhigh`, which adds uncertain findings that each start another fix:
+range. The command reuses the last level and `--max-findings` typed anywhere, so omitting them
+can silently run at `xhigh` and surface many uncertain findings:
 
 ```text
 claude -p "/code-review high <verified-base-ref>...HEAD --max-findings default"
 ```
 
-For a later batch, target only the commits after the last reviewed head at the full-review
-level; for a confirmation, use `medium`:
+For later commits, target only the commits after the last reviewed head:
 
 ```text
 claude -p "/code-review high <last-reviewed-head>...HEAD --max-findings default"
-claude -p "/code-review medium <last-reviewed-head>...HEAD --max-findings default"
 ```
 
 Noninteractive local review waits for completion. In an interactive session, await the local

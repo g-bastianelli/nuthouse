@@ -22,7 +22,7 @@ gh pr checks <PR-URL> --json name,state,bucket,link
 
 `gh pr checks` fetches all status-check pages. Read the JSON buckets and actual states; a
 successful JSON command may contain failing checks. `pass` is successful, `pending` waits,
-`fail`/`cancel` need a supported repair, and `skipping` must be a completed conditional skip.
+`fail`/`cancel` need a repair, and `skipping` must be a completed conditional skip.
 All-skipped or missing CI does not establish successful verification. Unknown states or an
 API/parse/authentication failure leave evidence unavailable.
 
@@ -71,8 +71,8 @@ ambiguous/conflicting provider evidence cannot satisfy the gate.
 
 Read all resulting feedback and refresh threads, approvals, head/base, and checks after that
 completion. New findings return to the repair loop; completion alone does not clear them. A new
-head invalidates the old completion evidence, and a relevant base change requires reconciliation
-of the reviewed diff. Retain the provider, reviewed SHA, completion URL/time, and finding
+head invalidates the old completion evidence; a base change refreshes checks, and the shared
+native-review procedure decides whether anything needs review. Retain the provider, reviewed SHA, completion URL/time, and finding
 dispositions in the report or existing continuity notes. If completion cannot be established,
 return `waiting` with the missing evidence and next observation or required trigger; never
 silently waive the review because CI is green or no threads exist.

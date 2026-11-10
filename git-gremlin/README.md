@@ -8,8 +8,8 @@ It recognizes commit or PR intent, drafts the boring text from the current git s
 dirty changes when an actual commit needs them, and publishes local branches as draft PRs
 after the PR confirmation gate and completed native code review. When `linear-devotee:plan`
 chains to `commit` and `pr` after a verified implementation, that chain authorizes scoped review
-corrections, their verification and commits, and the draft PR opens without asking once the
-repair commits clear the confirmation review.
+corrections, their verification and commits, and the draft PR opens without asking once native
+review clears.
 An explicit PR-completion request or an authorized `linear-devotee:deliver` handoff continues
 through native review, scoped corrections, local verification, review comments, CI, and a
 protected merge. It reuses the PR on resume and reports completion only after GitHub confirms
@@ -42,14 +42,13 @@ resolved. It never force-pushes, merges, or dismisses a review; `finish-pr` owns
 None. Commit and PR drafting run directly in their skills so the approval context and Git
 permissions stay in one place.
 
-With implementation or explicit cleanup authority, both workflows first simplify the scoped
-diff, verify and commit any cleanup, then review it. Claude Code uses `/simplify`; Codex performs
+With implementation or explicit cleanup authority, the delivery simplifies the scoped diff
+once, verifies and commits any cleanup, then reviews it. Claude Code uses `/simplify`; Codex performs
 the focused cleanup in its active session. PR-only requests skip mutating cleanup.
 Both `pr` and `finish-pr` use native `codex review --base` or Claude Code's local `/code-review`
 and read their findings. Review is required before publication even without a spec or Linear
-issue. Each change batch gets at most two native reviews: its review and one confirmation of
-the repairs. An implementation handoff corrects blocking defects and confirms the verified
-committed repairs; a PR-only request reports defects without acquiring repair authority. Text-only PR
+issue. [`shared/native-review.md`](shared/native-review.md) owns the review target,
+blocking findings, and the stop rule. An implementation handoff corrects blocking defects; a PR-only request reports defects without acquiring repair authority. Text-only PR
 drafting stops at the proposal. `finish-pr` reuses current pre-publication review evidence and
 checks GitHub directly through `gh`. A successful reviewer command is not a clean review.
 CI, outstanding change requests, unresolved threads, and branch protections retain

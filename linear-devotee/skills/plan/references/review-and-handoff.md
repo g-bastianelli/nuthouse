@@ -65,8 +65,7 @@ second PR or duplicate publication during recovery.
 Otherwise continue the authorized implementation handoff with a draft PR. Pass the intended
 base, exact implementation scope, source Acceptance, current verification, and scoped repair
 authority to `pr`. It first simplifies the scoped diff without changing behavior, verifies and
-commits any cleanup, then completes native code review, corrects blocking defects, verifies and
-commits the repairs, and confirms only the repair commits before publication. Passing tests, plan
+commits any cleanup, then completes native code review and its scoped repairs before publication. Passing tests, plan
 review, and source-drift checks do not replace this code review.
 
 **REQUIRED SUB-SKILL:** Use `git-gremlin:pr` when no matching PR was supplied by `deliver`.

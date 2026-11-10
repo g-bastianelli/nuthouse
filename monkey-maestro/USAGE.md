@@ -163,8 +163,8 @@ review facility.
 
 ## Reviews and merge conditions
 
-The delivery owner runs the native review against the verified PR base and reads its
-findings:
+The delivery owner runs the native review and reads its findings; git-gremlin's
+`shared/native-review.md` decides the target and the stop rule. The full review is:
 
 | Worker runtime | Native review                                                                                            |
 | -------------- | -------------------------------------------------------------------------------------------------------- |
@@ -174,7 +174,7 @@ findings:
 You do not need to invoke these commands manually during full delivery. A successful
 review command can still contain findings. The owner fixes blocking defects within the
 issue's scope and explains feedback it declines. Fixes are pushed before replies claim
-they are available. Native review follows git-gremlin's two-review cap per change batch.
+they are available.
 
 After native review and local verification, the owner marks the draft ready and waits for
 the repository's external reviews and CI. The lead starts one bounded PR observer and

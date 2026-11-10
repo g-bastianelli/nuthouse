@@ -1,6 +1,6 @@
 # Native Codex review
 
-With scoped implementation or cleanup authority, first perform a focused simplification pass
+When the shared procedure calls for its simplification pass, perform a focused simplification pass
 in the active Codex session over `<verified-base-ref>...HEAD`: reuse existing helpers, remove
 unnecessary complexity and redundant work, and preserve observable behavior and Acceptance.
 Inspect surrounding code only as needed; edit only authorized delivery paths. This is an
@@ -14,7 +14,7 @@ the fetched and verified base ref:
 codex review --base <verified-base-ref>
 ```
 
-For a later batch or a confirmation, use the last reviewed head as the base, so one run covers
+For later commits, use the last reviewed head as the base, so one run covers
 every later commit:
 
 ```text
@@ -25,13 +25,13 @@ Await completion and read the findings. Do not combine `--base` with a positiona
 prompt; these are alternative targets. `--uncommitted` alone does not review the published PR
 diff. A pushed branch still needs the explicit base.
 
-Capture HEAD and base before review and compare both afterward. Local review must cover exactly
-the scope about to merge; dirty changes or a moving ref invalidate that assumption. If the native
+Capture HEAD before review and compare it afterward; dirty changes or a head that moved during
+review invalidate the result. If the native
 command is unavailable or cannot complete, return the concrete review blocker. Do not silently
 replace it with the implementing agent's self-review or a new custom reviewer agent.
 
 Success means the command completed. Findings may still be present in a successful response;
-adjudicate their content and retain the result in the delivery context. Follow the calling skill's
-repair and scope rules before another pass.
+adjudicate their content and retain the result in the delivery context. Follow the shared native-review
+procedure's repair, target, and stop rules before another pass.
 
 Reference: [Codex CLI reference](https://learn.chatgpt.com/docs/cli/reference).

@@ -45,10 +45,8 @@ change permission modes or accept a permission prompt automatically to keep deli
      behind, fast-forward the clean owned branch; divergent history requires reconciliation,
      never a force-push. Refresh and verify the remote head after publishing.
 2. **Review the actual PR diff.** Read and apply
-   [the shared native-review procedure](../../shared/native-review.md). Reuse the
-   simplification and review evidence supplied by `pr` or the ledger while it covers the current
-   head; delivery commits after its last reviewed head form a new batch; a clean base integration does not. Without usable evidence, run a
-   full review.
+   [the shared native-review procedure](../../shared/native-review.md). Use the
+   review record supplied by `pr` or kept in the ledger as that procedure allows.
    - In Codex, read [native Codex review](../../shared/codex-review.md) before review.
    - In Claude Code, read [native Claude Code review](../../shared/claude-review.md) before review.
 
@@ -60,7 +58,8 @@ change permission modes or accept a permission prompt automatically to keep deli
 
    **REQUIRED SUB-SKILL:** Use `git-gremlin:commit` for verified scoped changes.
 
-   Publish commits to the verified PR head repository/branch using a normal fast-forward push,
+   Review the new delivery commits under the shared procedure before publishing them. Publish
+   commits to the verified PR head repository/branch using a normal fast-forward push,
    with each argument separately quoted. Compare GitHub's new head with local HEAD before any
    reply claiming a fix. On push failure, read back the remote before deciding what landed;
    stop retries until the failure is understood. Do not call `pr` to create another PR.
@@ -71,8 +70,6 @@ change permission modes or accept a permission prompt automatically to keep deli
    requested product decision stays open; do not classify it as a refusal just to clear the
    gate. Never dismiss a review or invent approval. A review requesting changes remains a
    blocker until the reviewer or authorized owner clears it through GitHub's normal process.
-   After code changes, review the new commits as one batch; a base change alone refreshes
-   checks. Feedback fixes never restart the full review.
 
 4. **Observe readiness.** Once native findings are addressed and local verification is current,
    mark an owned draft ready if authorized. For an open PR, read
@@ -101,7 +98,7 @@ change permission modes or accept a permission prompt automatically to keep deli
    no CI needs an explicit verification-policy decision; do not silently waive the user's CI gate.
 
 5. **Request the protected merge.** Immediately before merging, confirm a clean relevant worktree,
-   local/remote head equality, the reviewed base, fresh GitHub readiness, completed native and
+   local/remote head equality, checks for the current base, fresh GitHub readiness, completed native and
    expected external reviews with addressed findings, and the repository's permitted merge
    method. Follow its configured method; use the sole allowed method when unambiguous. If a merge
    queue is required, use its native queue path.
@@ -117,18 +114,15 @@ change permission modes or accept a permission prompt automatically to keep deli
 
 6. **Confirm the result.** Read back GitHub state after every merge attempt, including errors or
    timeouts. Return `merged` only with the actual merged timestamp and commit. Auto-merge enabled,
-   accepted queue entry, and a successful command with an open PR are `waiting`. If new delivery
-   commits landed, review them as a batch; if only the base moved, refresh checks before any further
-   merge request. Do not resend
-   a merge request while the matching PR is already queued.
+   accepted queue entry, and a successful command with an open PR are `waiting`. Apply the shared
+   procedure to any head or base movement before another merge request. Do not resend a merge
+   request while the matching PR is already queued.
 
 ## Waiting and recovery
 
-Keep moving while scoped CI and feedback repairs make observable progress. Two consecutive
-repair passes that leave the same blocker unchanged return `blocked` with the attempted fixes
-and the smallest decision needed. Native review follows the shared two-review cap. After two feedback rounds whose
-fixes each drew new external findings, return `blocked` with the open comments instead of a
-third round. For external reviews, checks, approval, or queue progress, refresh after a
+Keep moving while scoped repairs make observable progress. Native and external review rounds
+follow the shared stop rule; two consecutive CI repair passes that leave the same failure
+unchanged return `blocked` with the attempted fixes and the smallest decision needed. For external reviews, checks, approval, or queue progress, refresh after a
 relevant event; return `waiting` immediately with the exact PR, observed head/base, pending
 condition, and next observation needed. A standalone caller receives an explicit resume action.
 An automatic delivery caller owns the single observer described in
@@ -137,8 +131,8 @@ same PR. Expiration or observation failure returns control with a concrete manua
 it does not silently start another observer. Missing external approval is not a reason to ask
 the user to repeat merge authorization.
 
-When a caller owns a compaction ledger, add only the PR, latest observed head/base, last
-reviewed head, scope, open findings, simplification outcome, review/check summary, current reason/question, and next action there. Otherwise create a disposable
+When a caller owns a compaction ledger, add only the PR, latest observed head/base, the
+shared procedure's review record, check summary, current reason/question, and next action there. Otherwise create a disposable
 `.nuthouse/pr-<number>/progress.md` at the repository root only if continuity needs it, starting
 with `# ledger — PR: <URL>`. Before writing, confirm the path is untracked and ignored with
 `git check-ignore`; if needed, append `/.nuthouse/` to the local exclude file resolved by
@@ -159,7 +153,7 @@ git-gremlin:finish-pr report
   PR:           <url>
   Head:         <latest observed head OID>
   Simplify:     <outcome or current evidence reused>
-  Review:       <runtime, reviewed head/base, expected external-review completion evidence, finding dispositions>
+  Review:       <runtime, last reviewed head/base, round count, expected external-review completion evidence, finding dispositions>
   Verification: <local checks and current GitHub evidence>
   Merge:        <mergedAt + merge commit, queue/open state, or not requested>
   Pending:      <exact external condition; operation/request for an automatic caller, otherwise resume action>
