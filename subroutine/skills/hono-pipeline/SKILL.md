@@ -14,7 +14,7 @@ complete neighboring resource first; reuse its stack and commands.
 ## Implement the whole vertical slice
 
 1. **Contract** — input/output schemas plus every error code with an explicit
-   `status` and `data` schema; refusal reasons are enums.
+   `status` and `data` schema; refusal reasons derive from the shared catalogue.
 2. **Resource error** — discriminated variants for expected failures.
 3. **Service** — framework-pure `Promise<Result<T, ResourceError>>`;
    auth/session read at the edge, only required values passed in.
@@ -23,9 +23,19 @@ complete neighboring resource first; reuse its stack and commands.
 6. **Wiring** — mount new resources only; an existing router is already wired.
 
 ```ts
-// contracts/orders/reasons.ts — leaf module, no routes, no framework imports
-export const conflictReasons = ["duplicate-reference"] as const;
-export type ConflictReason = (typeof conflictReasons)[number];
+// contracts/shared/refusal-reasons.ts — leaf module, one catalogue for every
+// resource: each reason declared once, camelCase key, snake_case wire value
+export const REFUSAL_REASON = {
+  /** The reference is already used. */
+  duplicateReference: "duplicate_reference",
+  /** A concurrent write won; reload and retry. */
+  concurrentWrite: "concurrent_write",
+} as const;
+export const RefusalReasonSchema = z.enum(REFUSAL_REASON);
+
+// contracts/orders/errors.ts — the resource derives its subset, never a literal
+export const OrderConflictReasonSchema = RefusalReasonSchema.extract(["duplicate_reference"]);
+export type OrderConflictReason = z.infer<typeof OrderConflictReasonSchema>;
 
 // contract.ts — declare the full error set once on a shared builder so every
 // procedure (`base.route().input().output()`) carries every code the shared
@@ -33,7 +43,7 @@ export type ConflictReason = (typeof conflictReasons)[number];
 // 500.
 const base = oc.errors({
   NOT_FOUND: { status: 404, data: z.object({ orderId: z.uuid() }) },
-  CONFLICT: { status: 409, data: z.object({ reason: z.enum(conflictReasons) }) },
+  CONFLICT: { status: 409, data: z.object({ reason: OrderConflictReasonSchema }) },
 });
 
 // router.ts — the handler's contract-typed `errors` constructors feed the
