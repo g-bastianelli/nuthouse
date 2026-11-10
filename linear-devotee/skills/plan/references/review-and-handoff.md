@@ -65,8 +65,7 @@ second PR or duplicate publication during recovery.
 Otherwise continue the authorized implementation handoff with a draft PR. Pass the intended
 base, exact implementation scope, source Acceptance, current verification, and scoped repair
 authority to `pr`. It first simplifies the scoped diff without changing behavior, verifies and
-commits any cleanup, then completes native code review, corrects supported defects, verifies and
-commits the repairs, and reviews the resulting diff before publication. Passing tests, plan
+commits any cleanup, then completes native code review and its scoped repairs before publication. Passing tests, plan
 review, and source-drift checks do not replace this code review.
 
 **REQUIRED SUB-SKILL:** Use `git-gremlin:pr` when no matching PR was supplied by `deliver`.
@@ -76,7 +75,7 @@ missing capability instead of delivering it by hand.
 
 Report the issue, plan version/path, source and project plan, audit result, and
 `implementation_ready | blocked | stopped`, plus the draft PR URL and completed native-review
-evidence when implementation ran. A failed/unavailable reviewer or unresolved supported
+evidence when implementation ran. A failed/unavailable reviewer or unresolved blocking
 finding returns `blocked` with the recoverable commit and concrete next action; no draft is published.
 With a `deliver` caller, return control and evidence there; an open draft is an intermediate
 result, not completed full delivery. Without that caller, stop at this requested handoff and

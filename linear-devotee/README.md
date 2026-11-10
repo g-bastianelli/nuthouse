@@ -43,8 +43,8 @@ prove the requested integration works. Review loops stop on a specific unresolve
 
 Once a requested implementation is complete and verified, the plan hands it to
 `git-gremlin:commit` and `git-gremlin:pr`. Scoped simplification runs first, with verification and
-a commit for any cleanup. Native code review then runs before publication, supported
-defects are corrected within scope, and the verified committed repairs are reviewed again.
+a commit for any cleanup. Native code review then runs before publication, and blocking
+defects are corrected within scope under git-gremlin's review procedure.
 The draft PR opens without another approval once that review clears. An unavailable reviewer
 or unresolved finding blocks publication with a concrete next action. This also applies to
 ordinary implementation that stops at the draft PR.

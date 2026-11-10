@@ -144,7 +144,7 @@ invented.
 The user requested implementation of the planned issue and a draft PR, with no merge or
 Linear-completion authority. Verification passes and the implementation is committed. Scoped
 simplification produces a behavior-preserving cleanup. The
-native reviewer reports a supported reachable defect. Trace the remaining handoffs and
+native reviewer reports a blocking reachable defect. Trace the remaining handoffs and
 required evidence through the draft-PR result; use no live GitHub mutations.
 
 ## R — Draft review is current on full-delivery handoff
