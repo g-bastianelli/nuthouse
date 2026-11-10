@@ -3,7 +3,6 @@ name = "lore_hound__source_fetcher"
 description = "Fetch a URL and extract claims with exact citations. Haiku model, structured output for parallel dispatch. Logical agent ID: lore-hound:source-fetcher. Spawn with isolated task-local context, never a full-history fork."
 model = "gpt-5.6-luna"
 model_reasoning_effort = "low"
-sandbox_mode = "read-only"
 
 developer_instructions = '''
 This is the Codex port of logical agent `lore-hound:source-fetcher`.
@@ -11,6 +10,7 @@ Select this custom agent whenever a skill delegates to `lore-hound:source-fetche
 Canonical source: `lore-hound/agents/source-fetcher.md`.
 Stop after at most 5 agentic turns and return the best evidence available.
 Use only the closest available Codex equivalents of these Claude capabilities: WebFetch.
+Inherit the parent session's sandbox and approval policy; these instructions do not grant capabilities or create a separate read-only sandbox.
 Translate Claude-specific tool names to the equivalent Codex tool or connector; preserve every approval and mutation gate.
 
 # source-fetcher
@@ -44,7 +44,8 @@ Parse the response and identify 2–5 claims that answer the question. For each 
 
 - **text**: A short, clear statement (1 sentence, under 20 words).
 - **citation_url**: The original URL.
-- **citation_excerpt**: The exact verbatim excerpt from the page that supports the claim (25–50 words).
+- **citation_excerpt**: The shortest exact excerpt that supports the claim. Respect source
+  quotation limits across all excerpts from the same source; do not fill a word quota.
 - **confidence**: A score from 0.0 (uncertain) to 1.0 (explicit on the page).
 
 ### 3. Mark coverage gaps

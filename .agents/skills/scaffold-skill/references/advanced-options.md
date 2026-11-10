@@ -6,16 +6,20 @@ Read only the sections enabled by the requested skill.
 
 - Prefer a dedicated functional agent when the same read-only task recurs. Generic one-shot
   agents are for genuinely local context.
-- Dispatch the logical `<plugin>:<agent>` id. Read
-  `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md` before resolving runtime names.
+- For a plugin agent, dispatch its logical `<plugin>:<agent>` id and read that plugin's
+  `shared/agent-runtime-map.md` before resolving runtime names. Repository workflows resolve
+  the target plugin from its installed skill; they have no `CLAUDE_PLUGIN_ROOT` of their own.
+  Use a scoped generic agent for a one-off repository task without a plugin owner.
 - Reject generic or persona-coded agent names. Create a missing dedicated agent separately with
   `scaffold-agent`.
 
 ## Project artifacts
 
 - Resolve `PROJECT_ROOT` with `git rev-parse --show-toplevel`.
-- Store user-facing artifacts under
+- Plugin workflows store user-facing artifacts under
   `${PROJECT_ROOT}/docs/<plugin>/<artifact-type>/<identifier>.md`, never plugin install data.
+  Repository workflows use an existing repository-owned location appropriate to the artifact;
+  omit artifact creation when the result belongs only in the conversation.
 - Report the absolute artifact path. When the artifact is an implementation plan, use Context,
   Files, atomic checkbox Steps, Verify, Risks, and Out of scope.
 

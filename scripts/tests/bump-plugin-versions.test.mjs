@@ -3,7 +3,7 @@ import {
   bumpPatch,
   decideBump,
   isPluginChanged,
-  planBumps,
+  planRelease,
   readPinnedPluginVersion,
   replaceVersion,
 } from "../bump-plugin-versions.mjs";
@@ -43,15 +43,15 @@ describe("decideBump", () => {
     });
   });
 
-  test("bumps from current version when no pinned version exists (new plugin)", () => {
+  test("keeps a new plugin's initial version without calling it already bumped", () => {
     expect(decideBump({ changed: true, pinnedVersion: null, currentVersion: "1.0.0" })).toEqual({
       action: "skip",
-      reason: "already-bumped",
+      reason: "new-plugin",
     });
   });
 });
 
-describe("planBumps", () => {
+describe("planRelease", () => {
   const manifest = {
     plugins: [
       { name: "local-one", source: "./local-one" },
@@ -66,26 +66,42 @@ describe("planBumps", () => {
     ],
   };
 
-  test("plans bumps only for changed git-subdir plugins with untouched versions", () => {
-    const plan = planBumps(manifest, {
+  test("plans bumps for changed git-subdir plugins with untouched versions", () => {
+    const plan = planRelease(manifest, {
       isChanged: (path) => path === "alpha",
       readCurrentVersion: () => "1.0.0",
       readPinnedVersion: () => "1.0.0",
     });
-    expect(plan).toEqual([{ name: "alpha", path: "alpha", from: "1.0.0", to: "1.0.1" }]);
+    expect(plan).toEqual([
+      { name: "alpha", path: "alpha", version: "1.0.0", action: "bump", nextVersion: "1.0.1" },
+    ]);
   });
 
-  test("ignores local-path plugins and already-bumped plugins", () => {
-    const plan = planBumps(manifest, {
+  test("keeps already-bumped plugins in the release set so verification can resume", () => {
+    const plan = planRelease(manifest, {
       isChanged: () => true,
       readCurrentVersion: (path) => (path === "alpha" ? "1.1.0" : "1.0.0"),
       readPinnedVersion: () => "1.0.0",
     });
-    expect(plan).toEqual([{ name: "beta", path: "beta", from: "1.0.0", to: "1.0.1" }]);
+    expect(plan).toEqual([
+      { name: "alpha", path: "alpha", version: "1.1.0", action: "skip", reason: "already-bumped" },
+      { name: "beta", path: "beta", version: "1.0.0", action: "bump", nextVersion: "1.0.1" },
+    ]);
+  });
+
+  test("keeps new plugins in the release set without increasing their initial version", () => {
+    const plan = planRelease(manifest, {
+      isChanged: (path) => path === "alpha",
+      readCurrentVersion: () => "1.0.0",
+      readPinnedVersion: () => null,
+    });
+    expect(plan).toEqual([
+      { name: "alpha", path: "alpha", version: "1.0.0", action: "skip", reason: "new-plugin" },
+    ]);
   });
 
   test("returns an empty plan when nothing changed", () => {
-    const plan = planBumps(manifest, {
+    const plan = planRelease(manifest, {
       isChanged: () => false,
       readCurrentVersion: () => "1.0.0",
       readPinnedVersion: () => "1.0.0",
@@ -95,6 +111,25 @@ describe("planBumps", () => {
 });
 
 describe("Git reads", () => {
+  test("only an absent pin denotes a new plugin", () => {
+    expect(
+      readPinnedPluginVersion("new-plugin", undefined, () => {
+        throw new Error("must not read Git without a pin");
+      }),
+    ).toBeNull();
+    expect(() =>
+      readPinnedPluginVersion("alpha", "a".repeat(40), () => {
+        throw new Error("unknown revision");
+      }),
+    ).toThrow(/alpha/);
+  });
+
+  test("malformed pinned manifests cannot be mistaken for already-bumped versions", () => {
+    for (const manifest of ["not JSON", "{}", '{"version":12}', '{"version":"invalid"}']) {
+      expect(() => readPinnedPluginVersion("alpha", "a".repeat(40), () => manifest)).toThrow();
+    }
+  });
+
   test("passes refs and paths to Git as literal arguments", () => {
     const calls = [];
     const execute = (command, args, options) => {

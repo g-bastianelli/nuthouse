@@ -3,7 +3,10 @@ name: result-pattern
 genre: contract
 description: Result/error discipline for backend domain and service code — expected outcomes return Result variants, infrastructure failures stay exceptional, and one exhaustive unwrap translates at the transport edge.
 user-invocable: false
-paths: ["**/*.ts"]
+paths:
+  - "**/{api,backend,server,domain,services}/**/*.ts"
+  - "**/{service,router}{,.test,.spec}.ts"
+  - "**/*.{service,router}{,.test,.spec}.ts"
 ---
 
 # subroutine — Result / error discipline

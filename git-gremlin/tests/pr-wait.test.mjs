@@ -109,6 +109,53 @@ async function statusSnapshot(statuses) {
 }
 
 describe("exact PR observations", () => {
+  test("overlaps independent REST reads with at most three commands in flight", async () => {
+    const source = reader();
+    let active = 0;
+    let peak = 0;
+    const read = async (args, options) => {
+      if (args[1] === "graphql") {
+        expect(active).toBe(0);
+        return source.read(args, options);
+      }
+      active += 1;
+      peak = Math.max(peak, active);
+      try {
+        await new Promise((resolve) => setImmediate(resolve));
+        return await source.read(args, options);
+      } finally {
+        active -= 1;
+      }
+    };
+    const result = await observePullRequest(identity, { read });
+    expect(result.signals.comments).toEqual([]);
+    expect(source.calls.filter(({ args }) => args[1] !== "graphql")).toHaveLength(5);
+    expect(peak).toBe(3);
+    expect(active).toBe(0);
+  });
+
+  test("settles the current batch and rejects unavailable evidence without a partial snapshot", async () => {
+    const source = reader();
+    let active = 0;
+    let started = 0;
+    const read = async (args, options) => {
+      if (args[1] === "graphql") return source.read(args, options);
+      started += 1;
+      active += 1;
+      try {
+        if (args.some((arg) => arg.includes("/statuses?"))) throw new Error("status unavailable");
+        await new Promise((resolve) => setImmediate(resolve));
+        return await source.read(args, options);
+      } finally {
+        active -= 1;
+      }
+    };
+    await expect(observePullRequest(identity, { read })).rejects.toThrow("status unavailable");
+    expect(active).toBe(0);
+    expect(started).toBe(3);
+    expect(source.calls.filter(({ args }) => args[1] === "graphql")).toHaveLength(1);
+  });
+
   test("rejects ambiguous repository, PR, revision, operation and unbounded timing inputs", () => {
     for (const bad of [
       { repository: "owner/repo;touch /tmp/no" },

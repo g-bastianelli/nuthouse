@@ -2,8 +2,6 @@
 name = "stack_golem__platform_scout"
 description = "Read-only investigation scout for the notom platform. Creates a temporary cockpit token, queries Loki logs + Prometheus metrics + Scaleway CLI state (and SSHes into Authentik VMs when needed), deletes the token, and returns a structured diagnosis — keeps voluminous log/metric dumps out of the main context. Logical agent ID: stack-golem:platform-scout. Spawn with isolated task-local context, never a full-history fork."
 model = "gpt-5.6-luna"
-sandbox_mode = "workspace-write"
-sandbox_workspace_write.network_access = true
 
 developer_instructions = '''
 This is the Codex port of logical agent `stack-golem:platform-scout`.
@@ -12,6 +10,7 @@ Canonical source: `stack-golem/agents/platform-scout.md`.
 Stop after at most 15 agentic turns and return the best evidence available.
 Load and follow these available skills before acting: `stack-golem:observe-platform`.
 Use only the closest available Codex equivalents of these Claude capabilities: Bash, Read.
+Inherit the parent session's sandbox and approval policy; these instructions do not grant capabilities or create a separate read-only sandbox.
 Translate Claude-specific tool names to the equivalent Codex tool or connector; preserve every approval and mutation gate.
 
 # platform-scout

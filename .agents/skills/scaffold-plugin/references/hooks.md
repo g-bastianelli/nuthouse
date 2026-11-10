@@ -1,27 +1,32 @@
-# Claude Code hook scaffolding
+# Runtime hook scaffolding
 
-Read only when the new plugin requested `SessionStart`, `UserPromptSubmit`, or both.
+Read only when the new plugin requested hooks. Use events supported by its selected runtimes.
 
 ## Layout and manifest
 
-- Put hooks under `<plugin>/claudecode/hooks/` and ephemeral state under
-  `<plugin>/claudecode/data/`.
-- Manifest commands start at `${CLAUDE_PLUGIN_ROOT}/claudecode/hooks/<event>.mjs` because the
-  plugin root, not `claudecode/`, is the install unit.
-- Add only selected events to `.claude-plugin/plugin.json`.
+- Put shared hook scripts under `<plugin>/hooks/` and declare selected events once in
+  `<plugin>/hooks/hooks.json`. Both runtimes discover this file; never duplicate its events
+  inline in a plugin manifest.
+- Commands resolve the install root with `${PLUGIN_ROOT:-$CLAUDE_PLUGIN_ROOT}`, for example
+  `node "${PLUGIN_ROOT:-$CLAUDE_PLUGIN_ROOT}/hooks/session-start.mjs"`.
+- Add ephemeral state only when the hook needs it. Use the runtime's `PLUGIN_DATA` or
+  `CLAUDE_PLUGIN_DATA` directory, and stay silent when required state storage is unavailable.
+  Never assume an installed plugin directory is writable.
 
 ## Implementation
 
 - Use ESM `.mjs` and Node built-ins only.
-- Read the current `linear-devotee/claudecode/hooks/state.mjs` as a state-management example. Copy
-  only generic atomic read/write and cleanup behavior; remove Linear-specific extraction.
-- Each event handler guards `CLAUDE_PLUGIN_ROOT`, reads stdin JSON, and emits the exact
-  `hookSpecificOutput` shape for its event.
+- For a stateful hook, inspect the existing Linear Devotee hooks and their runtime helper.
+  Reuse only applicable state handling and cleanup; remove Linear-specific extraction.
+- Each event handler reads stdin JSON and emits the event's `hookSpecificOutput` shape. Accept
+  both runtime environment names when a root or data directory is required; use the installed
+  script's location for static relative resources when no environment variable is needed.
 - Leave a narrow domain TODO for trigger detection rather than copying another plugin's trigger.
-- Ignore ephemeral `state-*.json` files in `claudecode/data/.gitignore`.
 
 ## Verification
 
-- Add focused tests for malformed stdin, missing environment, no-trigger behavior, and emitted
-  event names.
+- Add focused tests for malformed stdin, missing required environment, no-trigger behavior,
+  emitted event names, and the Claude/Codex inputs and environment names the hook consumes.
+- Confirm every declared command resolves inside the generated plugin and no event is declared
+  twice.
 - Run the hook tests plus `bun run test:meta` and `bun run check:workflow`.

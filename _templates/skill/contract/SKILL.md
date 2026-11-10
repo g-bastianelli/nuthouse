@@ -11,7 +11,7 @@ variables: [plugin, skill, description]
 
 name: {{skill}}
 genre: contract
-description: {{description}} Background knowledge contract, preloaded into {{plugin}} agents; not a user-facing workflow.
+description: {{description}}
 
 # user-invocable: false # set when only Claude and this plugin's agents should read it
 
@@ -56,8 +56,8 @@ preconditions, no ordered steps, no approval gate, and no final report — so `#
 `## Final Report`, and `## Never` do not apply, and `/audit` skips those checks for this
 genre.
 
-Declare the genre in the description with the exact phrase
-`not a user-facing workflow`. That phrase is what routes `/audit` to this template.
+Declare `genre: contract` in frontmatter. That field selects contract criteria during audit;
+the description explains applicability and does not need a routing phrase.
 
 Choose the workflow template instead whenever the skill performs ordered actions, gates a
 mutation, dispatches subagents, or reports a result. A skill that does anything is a

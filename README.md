@@ -40,9 +40,27 @@ Codex CLI:
 
 ```text
 codex plugin marketplace add g-bastianelli/nuthouse
+codex plugin add <plugin>@nuthouse
 ```
 
-Then open `/plugins` and install the plugin you want.
+You can also choose plugins from `/plugins`.
+
+Plugins with dedicated agents need one additional Codex setup step. From a checkout of
+Nuthouse matching the installed release, preview and synchronize the generated agents:
+
+```bash
+bun run plan:codex-agents
+bun run install:codex-agents
+bun run check:installed-codex-agents
+```
+
+The plan lists every write and removal. Installation preserves unrelated personal agents
+and refuses unmanaged conflicts. It targets `$CODEX_HOME/agents`, or `~/.codex/agents`
+when `CODEX_HOME` is unset; use the same environment as your Codex session.
+
+After a published update, run `codex plugin marketplace upgrade nuthouse`, refresh the
+agents from that published revision with the same three commands, and start a new session.
+Marketplace upgrades alone do not synchronize personal agents.
 
 ## Layout
 
@@ -72,6 +90,9 @@ bun test
 bun run test:meta
 bun run check:workflow
 bun run check:skills
+bun run check:codex-agents
+bun run check:runtime
+bun run check:duplication
 bun run lint
 bun run fmt:check
 ```

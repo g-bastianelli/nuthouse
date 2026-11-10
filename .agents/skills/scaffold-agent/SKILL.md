@@ -29,11 +29,14 @@ Create one canonical `<plugin>/agents/<agent>.md` and derive the Codex port from
    complete fixed shape before generation.
 5. Read `_templates/agent/AGENT.md` immediately before writing. Keep Mission ordered, input fields
    explained, output machine-consumable, missing evidence `_unclear_`, and the agent voice neutral.
+   Expand `{{tools}}` into contiguous `  - ToolName` lines, indented by two spaces, with no blank
+   lines between entries. Keep `tools:` on its own line; the Codex generator reads a block list.
 6. If a shared contract applies, reference
    `${CLAUDE_PLUGIN_ROOT}/shared/<contract>.md`; do not use cwd-relative paths.
 7. Run `bun run sync:codex-agents`, `bun run check:codex-agents`, `bun run test:meta`, and relevant
-   plugin tests. Update the sync capability matrix and parity tests when commands need write,
-   build/cache, or network capabilities.
+   plugin tests. Document required write, build/cache, or network access in the task contract;
+   Codex agents inherit the parent session's permissions. Do not claim that generated agent
+   fields grant access or enforce a separate sandbox.
 
 ## Report
 

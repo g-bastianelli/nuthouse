@@ -18,8 +18,12 @@ Use these checks after the mechanical gates. A criterion applies only to its art
   or correctness invariants.
 - Mechanically enforceable repository rules point to a real command. Do not duplicate the
   checker's implementation in prose.
-- User-facing skills read `../../persona.md`. Background contracts remain neutral.
+- User-facing plugin skills read `../../persona.md`; repository workflows read `../persona.md`.
+  Background contracts remain neutral.
 - No runtime-specific duplicate skill tree exists under `claudecode/skills/` or `codex/skills/`.
+- Repository workflows live in `.agents/skills/`; their `.claude/skills/` entries resolve to
+  those canonical directories. Templates and generation instructions agree with these criteria
+  and the runtime commands they emit.
 
 ## Agents
 

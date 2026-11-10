@@ -5,16 +5,17 @@
 > source-hunting bloodhound / fact-tracker / nose-to-ground truffle-digger
 
 A feral research agent that digs for sources and retrieves facts with zero parametric knowledge.
-Web search fan-out → specialized source-fetchers (haiku model, exact citations) → adversarial claim
-verification (challenge each fact, prefer recent sources) → synthesis with inline attribution.
+Simple facts use direct retrieval and verification. Broader questions use bounded search
+and source-fetcher waves, then adversarial verification with decisive citations. Concurrency
+adapts to the runtime's available slots; missing evidence stays uncertain, not refuted.
 The lore-hound's nose stays on the ground. Answers come from fetched sources alone. No training
 data, no hallucinations, no unsourced claims — only what the teeth can hold.
 
 ## Skills
 
-| Skill      | What it does                                                                                        |
-| ---------- | --------------------------------------------------------------------------------------------------- |
-| `research` | Deep web research with zero parametric knowledge: fan-out search → fetch + verify → cited synthesis |
+| Skill      | What it does                                                                                         |
+| ---------- | ---------------------------------------------------------------------------------------------------- |
+| `research` | Evidence-based research: direct lookup or bounded parallel search → fetch + verify → cited synthesis |
 
 ## Agents
 
@@ -34,7 +35,7 @@ data, no hallucinations, no unsourced claims — only what the teeth can hold.
 ### Codex CLI
 
 ```
-codex plugin install lore-hound@nuthouse
+codex plugin add lore-hound@nuthouse
 ```
 
 Codex's native web search is enabled by default; pass `--search` for live fetches.

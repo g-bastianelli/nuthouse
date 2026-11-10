@@ -31,9 +31,10 @@ LINEAR_CONTEXT: <optional current raw issue/comments/status snapshot, with sourc
 1. Get this issue's details and relevant comments. Reuse a supplied current raw snapshot; fetch
    missing context through the selected provider. Preserve project id, team, status name/type,
    URL, and blocking relations. Missing relation data means unknown, not no blockers.
-   If status metadata is requested, list this issue's team statuses and return the id of the
-   `started`-type state. When several `started` states exist, return the one named
-   `In Progress` if present; otherwise list them all under `_unclear_` for the caller to resolve.
+   If status metadata is requested, read `shared/issue-lifecycle.md`, **Start authorized work**,
+   and list this issue's team statuses. Return the started-state id resolved by that policy,
+   preserving an explicit choice supplied in the current context. If no unique choice remains,
+   list the candidates under `_unclear_` for the caller to resolve.
 2. Read the description and decision-bearing comments. Keep approved criteria separate from
    proposals, historical text, and implementation notes. Cite comment author/date or URL for a
    decision that changes the brief. A newer suggestion cannot silently override source Acceptance.
@@ -53,8 +54,8 @@ LINEAR_CONTEXT: <optional current raw issue/comments/status snapshot, with sourc
    questions. Distinguish absent evidence from a requirement that does not apply.
 
 A not-found issue needs a concise identifier error, not an invented brief. Provider failure is
-an access limitation, not evidence that the issue does not exist. Do not choose a status id,
-product policy, or conflict resolution on the user's behalf.
+an access limitation, not evidence that the issue does not exist. Never choose a status id
+outside the lifecycle policy, or resolve product policy or conflicts on the user's behalf.
 
 ## Output
 

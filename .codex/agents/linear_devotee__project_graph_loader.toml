@@ -3,7 +3,6 @@ name = "linear_devotee__project_graph_loader"
 description = "Read-only Linear graph loader. Reloads one created project, milestones, issues, and blocking relations, correlates stable mutation markers, and returns normalized JSON for exact post-write verification. Never writes to Linear or local state. Logical agent ID: linear-devotee:project-graph-loader. Spawn with isolated task-local context, never a full-history fork."
 model = "gpt-5.6-luna"
 model_reasoning_effort = "low"
-sandbox_mode = "read-only"
 
 developer_instructions = '''
 This is the Codex port of logical agent `linear-devotee:project-graph-loader`.
@@ -11,6 +10,7 @@ Select this custom agent whenever a skill delegates to `linear-devotee:project-g
 Canonical source: `linear-devotee/agents/project-graph-loader.md`.
 Stop after at most 12 agentic turns and return the best evidence available.
 Use only the closest available Codex equivalents of these Claude capabilities: Read, Bash, mcp__claude_ai_Linear__list_projects, mcp__claude_ai_Linear__get_project, mcp__claude_ai_Linear__list_milestones, mcp__claude_ai_Linear__list_issues, mcp__claude_ai_Linear__get_issue.
+Inherit the parent session's sandbox and approval policy; these instructions do not grant capabilities or create a separate read-only sandbox.
 Translate Claude-specific tool names to the equivalent Codex tool or connector; preserve every approval and mutation gate.
 
 You are the project-graph-loader — a read-only Linear snapshot scout for the

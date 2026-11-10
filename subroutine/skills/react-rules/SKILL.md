@@ -3,7 +3,10 @@ name: react-rules
 genre: contract
 description: React implementation discipline for composition, component ownership, stable props, durable state, styling boundaries, accessibility, and measured optimization.
 user-invocable: false
-paths: ["**/*.tsx", "**/use*.ts", "**/hooks/**/*.ts"]
+paths:
+  - "**/*.tsx"
+  - "**/use{-,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z}*.ts"
+  - "**/hooks/**/*.ts"
 ---
 
 # subroutine — React discipline

@@ -273,9 +273,23 @@ export async function observePullRequest(input, options = {}) {
   );
   const rest = (path) =>
     api(["--method", "GET", "--paginate", "--slurp", `repos/${request.repository}/${path}`]);
-  const checks = await rest(
+  const endpoints = [
     `commits/${request.expectedHeadOid}/check-runs?filter=latest&per_page=100`,
-  );
+    `commits/${request.expectedHeadOid}/statuses?per_page=100`,
+    `pulls/${request.number}/reviews?per_page=100`,
+    `pulls/${request.number}/comments?per_page=100`,
+    `issues/${request.number}/comments?per_page=100`,
+  ];
+  const pages = [];
+  // Bound gh processes; settle each batch before rejecting so no reads outlive an observation.
+  for (let offset = 0; offset < endpoints.length; offset += 3) {
+    const results = await Promise.allSettled(endpoints.slice(offset, offset + 3).map(rest));
+    for (const result of results) {
+      if (result.status === "rejected") throw result.reason;
+      pages.push(result.value);
+    }
+  }
+  const [checks, statusPages, reviewPages, reviewCommentPages, commentPages] = pages;
   requireValue(
     Array.isArray(checks) &&
       checks.length > 0 &&
@@ -314,7 +328,7 @@ export async function observePullRequest(input, options = {}) {
     "incomplete check revision/status",
   );
   const statuses = records(
-    await rest(`commits/${request.expectedHeadOid}/statuses?per_page=100`),
+    statusPages,
     ["id", "context", "state", "description", "target_url"],
     "status",
   );
@@ -329,22 +343,18 @@ export async function observePullRequest(input, options = {}) {
       latestStatuses.set(status.context, status);
   }
   const reviews = records(
-    await rest(`pulls/${request.number}/reviews?per_page=100`),
+    reviewPages,
     ["id", "state", "body", "commit_id", "submitted_at"],
     "review",
     ["id", "state", "body"],
   );
   const reviewComments = records(
-    await rest(`pulls/${request.number}/comments?per_page=100`),
+    reviewCommentPages,
     ["id", "body", "commit_id", "original_commit_id", "in_reply_to_id"],
     "review comment",
     ["id", "body", "commit_id", "original_commit_id"],
   );
-  const comments = records(
-    await rest(`issues/${request.number}/comments?per_page=100`),
-    ["id", "body"],
-    "comment",
-  );
+  const comments = records(commentPages, ["id", "body"], "comment");
   const final = await getPr();
   if (revisionChanged(request, final))
     return { ...revision(request, final), reason: "revision-changed" };
