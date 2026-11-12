@@ -98,3 +98,11 @@ bun run fmt:check
 ```
 
 See the **Plugin Structure** section of [CLAUDE.md](./CLAUDE.md) for the current structure contract.
+
+CodeRabbit reviews use [`.coderabbit.yaml`](./.coderabbit.yaml) and the repository's
+`CLAUDE.md`/`AGENTS.md` guidance. Install the [CodeRabbit GitHub app](https://github.com/apps/coderabbitai)
+for this repository, then comment `@coderabbitai review` on a PR to review its latest changes
+or `@coderabbitai full review` to review it from scratch. Public repositories with fewer
+than 10 stars [require a manual trigger](https://docs.coderabbit.ai/management/plans#rate-limits).
+Automatic reviews skip drafts and pause after three reviewed commits; generated copies
+are excluded, and CodeRabbit's code-writing features are disabled.
