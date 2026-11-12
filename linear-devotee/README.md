@@ -41,9 +41,10 @@ and delegates ordinary reversible implementation choices within the user's autho
 challenge behavior and observable verification: an AC label or a passing helper test does not
 prove the requested integration works. Review loops stop on a specific unresolved decision.
 
-Once a requested implementation is complete and verified, the plan hands it to
-`git-gremlin:commit` and `git-gremlin:pr`. Scoped simplification runs first, with verification and
-a commit for any cleanup. Native code review then runs before publication, and blocking
+Once a requested implementation is settled, scoped simplification includes its staged, unstaged,
+untracked, and already committed changes before final verification. The plan hands implementation
+and accepted cleanup together to `git-gremlin:commit`, then `git-gremlin:pr` reuses that pass.
+Native code review runs before publication, and blocking
 defects are corrected within scope under git-gremlin's review procedure.
 The draft PR opens without another approval once that review clears. An unavailable reviewer
 or unresolved finding blocks publication with a concrete next action. This also applies to
@@ -58,8 +59,10 @@ and the issue's started/completed transitions. Briefs, plans, and draft-only req
 their own scope. The startup hooks yield to an explicit delivery owner.
 
 `deliver` reads context directly, reuses the reviewed plan and existing PR, and delegates the
-GitHub lifecycle to `git-gremlin:finish-pr`. Code review uses the active Codex or Claude native
-command. The issue owner may use bounded specialists with distinct file ownership and reviews
+GitHub lifecycle to `git-gremlin:finish-pr`. Fresh issue/source and Git reconciliation routes a
+CI/review-only continuation directly there when plan and implementation evidence remain current;
+changed sources or relevant dirty work reopen only affected work. Code review uses the active
+Codex or Claude native command. The issue owner may use bounded specialists with distinct file ownership and reviews
 integration after meaningful changes. Missing tools, product decisions, persistent failures,
 and external waits produce an actionable `blocked` or `waiting` result for the coordinator.
 

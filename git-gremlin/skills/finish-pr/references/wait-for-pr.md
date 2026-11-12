@@ -105,15 +105,19 @@ exits one. The result contains no decision that the PR may merge.
   account/host or API access, then the same resume command. Do not infer completion or retry
   after an ambiguous result without inspecting the existing operation.
 
-Changes include check identities/status/results and completed provider output, current commit statuses, review decisions and
-submitted review bodies, all thread resolution states, review comments and ordinary PR feedback,
-queue admission/state/departure, PR closure/merge, and head/base movement. Labels, title changes,
-reactions, generic `updatedAt`, queue position, streaming output or links from unfinished
-checks, and repeated pending status IDs/descriptions/links alone do not wake the model. Pending
-status context/state/author changes and terminal status details still count. The observer
-traverses thread cursors and REST pages, rejects incomplete evidence, and verifies the PR's
-revision again after observation. It deliberately leaves review interpretation and repository
-policy to `finish-pr`.
+Changes include check identities/status/results and completed provider output, current commit
+statuses, review decisions and submitted review bodies, all thread resolution states, review
+comments and ordinary PR feedback, queue admission/state/departure, PR closure/merge, and
+head/base movement. For the same check run without a conclusion, `queued` and `in_progress`
+share one pending comparison value; moving between them alone does not wake the model. New
+check IDs, names, apps, other statuses (including unknown ones), conclusions, and a completed
+check returning to pending still count. Human and bot comment bodies remain fully observed.
+Labels, title changes, reactions, generic `updatedAt`, queue position, streaming output or
+links from unfinished checks, and repeated pending status IDs/descriptions/links alone do not
+wake the model. Pending status context/state/author changes and terminal status details still
+count. The observer traverses thread cursors and REST pages, rejects incomplete evidence, and
+verifies the PR's revision again after observation. It deliberately leaves review
+interpretation and repository policy to `finish-pr`.
 
 Sources: [GitHub API pagination](https://cli.github.com/manual/gh_api),
 [PR and queue GraphQL fields](https://docs.github.com/en/graphql/reference/pulls),

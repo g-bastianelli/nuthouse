@@ -67,20 +67,27 @@ acting on user feedback, read **User feedback** in
      If no nonterminal or unknown project member remains, report `complete` from the observed Linear
      facts. Report owned issue delivery evidence separately; never invent a PR for externally
      completed or canceled work.
-5. Compute `slots = max(0, maxConcurrency - startedCount)`. Sort ready issues by Linear
-   identifier and select the first `slots`. Started issues consume capacity but are never
+5. Compute `slots = max(0, maxConcurrency - startedCount)`. Apply the shared **Authority**
+   ordering: user priority, observed Linear priority, downstream candidate chain, identifier.
+   Select the first `slots` and retain their ids as this invocation's attempted set. Unknown
+   or cyclic graph ranks fall back to priority/identifier without blocking known-ready work.
+   Started issues consume capacity but are never
    redispatched. No free slot means await existing workers' notifications. If no owned worker or ready
    issue can progress, report the blocking Linear facts and checkpoint; do not spin.
-6. For a non-empty selection, dispatch the reader in `MODE: selected` with exactly those ids. It
-   refreshes those candidates plus their direct blockers. Reclassify every selected issue
-   from this bounded result and require it to remain ready. In parallel, fetch each exact
-   Superset task using the shared contract's exact tracker binding. A changed, unknown,
+6. For a non-empty selection, begin independent per-issue preparations: dispatch the reader
+   in `MODE: selected` for that exact id and fetch its exact Superset task in parallel using
+   the shared contract's exact tracker binding. The bounded issue/direct-blocker result must
+   still prove readiness before that issue's workspace creation. A changed, unknown,
    terminal, or non-ready issue, or a failed detail/task read, fails only that selected issue;
-   do not backfill from this snapshot.
+   do not backfill from this snapshot or hold ready siblings behind the failed read.
 7. Before creating any workspace, read
    [`references/dispatch.md`](references/dispatch.md). Apply its placement,
    create-or-reuse with binding readback, setup readiness, started reservation, current-control recheck, worker-prompt, and launch
-   contract. This writes only an authorized issue's started state; `deliver` owns completion.
+   contract. As each workspace becomes ready, serialize only its reservation/verify/launch;
+   all-settled collection is for outcomes, never a launch barrier. After the initial attempts
+   settle, apply the contract's single fresh refill only for a definitive pre-reservation
+   failure with capacity, excluding all attempted ids. This writes only an authorized
+   issue's started state; `deliver` owns completion.
 8. On explicit resume, when a prior launch needs inspection, or when a proven owned
    workspace needs group verification/repair, read
    [`references/supervision.md`](references/supervision.md). Inspect the affected owned worker,

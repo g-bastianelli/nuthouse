@@ -3,7 +3,7 @@ name: finish-pr
 description: Finish an existing GitHub PR through native Codex or Claude review, scoped fixes, CI, review comments, and a protected merge. Use for explicit PR completion or an authorized full-delivery handoff; inspection and review alone do not authorize merge.
 effort: high
 argument-hint: "<PR URL>"
-allowed-tools: Read, Edit, Write, Bash(node:*), Skill(git-gremlin:commit), Skill(git-gremlin:handle-review-comments), Skill(moon-moth:verify), Skill(simplify), Skill(code-review), Bash(git status:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(git remote:*), Bash(git config:*), Bash(git fetch:*), Bash(git merge-base:*), Bash(git merge --ff-only:*), Bash(git push:*), Bash(git check-ignore:*), Bash(gh auth status:*), Bash(gh repo view:*), Bash(gh pr view:*), Bash(gh pr checks:*), Bash(gh pr ready:*), Bash(gh pr merge:*), Bash(gh api:*), Bash(codex review:*), Bash(claude -p:*)
+allowed-tools: Read, Edit, Write, Bash(node:*), Skill(git-gremlin:commit), Skill(git-gremlin:handle-review-comments), Skill(moon-moth:verify), Skill(simplify), Skill(code-review), Bash(git status:*), Bash(git log:*), Bash(git show:*), Bash(git ls-files:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(git remote:*), Bash(git config:*), Bash(git fetch:*), Bash(git merge-base:*), Bash(git merge --ff-only:*), Bash(git push:*), Bash(git check-ignore:*), Bash(gh auth status:*), Bash(gh repo view:*), Bash(gh pr view:*), Bash(gh pr checks:*), Bash(gh pr ready:*), Bash(gh pr merge:*), Bash(gh api:*), Bash(codex review:*), Bash(claude -p:*)
 ---
 
 # git-gremlin:finish-pr
@@ -19,7 +19,8 @@ report. Match the user's language and keep technical identifiers unchanged.
 
 An explicit request to finish the PR, or a full-delivery caller that already includes merge,
 authorizes scoped fixes, checks, commits, pushes, review-thread replies/resolution, marking the
-draft ready, and merging that PR under repository policy. Preserve narrower user limits. An
+draft ready, supported external-review triggers, and merging that PR under repository policy.
+Preserve narrower user limits. An
 inspection, review-only request, or ordinary `git-gremlin:pr` draft handoff supplies no merge
 authority. Report the missing boundary rather than acquiring it through a skill chain.
 
@@ -40,13 +41,16 @@ change permission modes or accept a permission prompt automatically to keep deli
      earlier session never reported completion. Do not replay review or merge.
    - Closed without merge, conflicting identities, or an unrelated dirty/staged selection:
      return `blocked` with the concrete mismatch. Do not reopen or create a replacement.
-   - Local commits ahead on the authorized branch: inspect their scope and verify them. Push
-     only when the observed remote PR head is an ancestor of local HEAD. If local HEAD is
+   - Local commits ahead on the authorized branch: inspect scope, retain current verification,
+     and require the observed remote PR head to be an ancestor of local HEAD. Keep those commits
+     local through step 2's review; publish them in step 3 afterward. If local HEAD is
      behind, fast-forward the clean owned branch; divergent history requires reconciliation,
-     never a force-push. Refresh and verify the remote head after publishing.
+     never a force-push.
 2. **Review the actual PR diff.** Read and apply
    [the shared native-review procedure](../../shared/native-review.md). Use the
-   review record supplied by `pr` or kept in the ledger as that procedure allows.
+   review and simplification records supplied by the implementer, `pr`, or ledger. Run the
+   initial full review or uncovered delivery delta; run neither another simplify pass nor
+   another native review when their existing completion remains valid and the delta is empty.
    - In Codex, read [native Codex review](../../shared/codex-review.md) before review.
    - In Claude Code, read [native Claude Code review](../../shared/claude-review.md) before review.
 
@@ -58,8 +62,9 @@ change permission modes or accept a permission prompt automatically to keep deli
 
    **REQUIRED SUB-SKILL:** Use `git-gremlin:commit` for verified scoped changes.
 
-   Review the new delivery commits under the shared procedure before publishing them. Publish
-   commits to the verified PR head repository/branch using a normal fast-forward push,
+   Review any newly repaired delivery commits under the shared procedure before publishing them.
+   Publish these and any recovered local commits already reviewed in step 2, even when no
+   repair was needed, to the verified PR head repository/branch using a normal fast-forward push,
    with each argument separately quoted. Compare GitHub's new head with local HEAD before any
    reply claiming a fix. On push failure, read back the remote before deciding what landed;
    stop retries until the failure is understood. Do not call `pr` to create another PR.
@@ -87,8 +92,9 @@ change permission modes or accept a permission prompt automatically to keep deli
 
    Require explicit completion evidence for each expected external reviewer on the current head,
    independently of CI buckets and approval requirements. A green draft-skipped CodeRabbit check
-   does not satisfy this gate. Missing, pending, skipped, stale, or ambiguous review evidence
-   keeps the PR waiting. After external review completes, reload its findings and all threads;
+   does not satisfy this gate. Follow the readiness reference's supported trigger and quota
+   recovery procedure; missing, pending, skipped, stale, rate-limited, or ambiguous evidence
+   cannot clear the gate. After external review completes, reload its findings and all threads;
    return to repair and verification when needed, then refresh readiness for the resulting head.
 
    All reported CI must be successful or completed conditional skips, with at least one
@@ -153,7 +159,7 @@ git-gremlin:finish-pr report
   PR:           <url>
   Head:         <latest observed head OID>
   Simplify:     <outcome or current evidence reused>
-  Review:       <runtime, last reviewed head/base, round count, expected external-review completion evidence, finding dispositions>
+  Review:       <runtime, actual reviewed head/base, coverage anchor, round count, expected external-review completion evidence, finding dispositions>
   Verification: <local checks and current GitHub evidence>
   Merge:        <mergedAt + merge commit, queue/open state, or not requested>
   Pending:      <exact external condition; operation/request for an automatic caller, otherwise resume action>

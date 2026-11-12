@@ -2,7 +2,7 @@
 name: pr
 description: Draft a GitHub PR, run native code review, and publish it as a draft after approval or an authorized implementation handoff. Text-only requests stop at the proposal; publication does not authorize merge.
 effort: high
-allowed-tools: Read, Edit, Write, Bash(git status:*), Bash(git log:*), Bash(git branch:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(git remote:*), Bash(git config:*), Bash(git fetch:*), Bash(git push:*), Bash(gh auth status:*), Bash(gh repo view:*), Bash(gh pr create:*), Bash(codex review:*), Bash(claude -p:*), Skill(simplify), Skill(code-review), Skill(git-gremlin:commit), Skill(moon-moth:verify)
+allowed-tools: Read, Edit, Write, Bash(git status:*), Bash(git log:*), Bash(git show:*), Bash(git ls-files:*), Bash(git merge-base:*), Bash(git branch:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(git remote:*), Bash(git config:*), Bash(git fetch:*), Bash(git push:*), Bash(gh auth status:*), Bash(gh repo view:*), Bash(gh pr create:*), Bash(codex review:*), Bash(claude -p:*), Skill(simplify), Skill(code-review), Skill(git-gremlin:commit), Skill(moon-moth:verify)
 ---
 
 # git-gremlin:pr
@@ -73,9 +73,11 @@ than inventing PR content.
    comparisons if any changed during the approval wait; unresolved findings stop publication.
    If that changes the PR proposal, present the updated proposal for approval.
 5. Before publishing, read [the shared native-review procedure](../../shared/native-review.md)
-   and apply its simplification pass under existing implementation/cleanup authority, then
-   native review of the complete committed PR diff. This gate also applies without a spec or
-   Linear issue. Read only the active runtime's provider reference before invoking review:
+   and reuse the implementation's completed simplification; perform a missing authorized pass
+   only as that procedure requires. Review the full committed PR diff initially, uncovered
+   delivery commits subsequently, or reuse valid zero-delta review evidence. This gate also
+   applies without a spec or Linear issue. Read only the active runtime's provider reference
+   before invoking simplification or review:
    - Codex: [native Codex review](../../shared/codex-review.md).
    - Claude Code: [native Claude Code review](../../shared/claude-review.md).
 
@@ -127,7 +129,7 @@ git-gremlin:pr report
   Base:   <base branch>
   Branch: <branch> published via <remote>
   Simplify: <completed/no changes, verified edits, skipped: no mutation authority, or failure>
-  Review: <runtime, last reviewed head/base, scope, findings and dispositions, repair/check results>
+  Review: <runtime, actual reviewed head/base, coverage anchor, scope, findings and dispositions, repair/check results>
 ```
 
 ## Never

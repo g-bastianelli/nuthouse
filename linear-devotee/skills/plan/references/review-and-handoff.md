@@ -49,7 +49,15 @@ installed Acid Prophet `shared/development-drift.md`, retains source/issue ident
 after each functional block and before a PR, and runs `moon-moth:verify` in a moon workspace.
 If Acid Prophet is unavailable, report the limit instead of claiming the checks ran.
 
-Once the implementation is complete and its verification passes, deliver it without asking.
+Once implementation is settled, apply the installed Git Gremlin `shared/native-review.md`
+implementation-simplification section and active provider reference under the existing
+implementation authority. Include scoped staged, unstaged, and untracked work plus any already
+committed implementation; inspect accepted cleanup, then run final repository verification and
+source-drift checks. Reuse a valid completed pass on recovery. This puts implementation and
+cleanup in the same verified commit, rather than adding a cleanup commit at PR publication.
+If the shared procedure or required runtime capability is unavailable, report that boundary.
+
+Once these checks pass, deliver it without asking.
 Deliver only from a feature branch: on the base branch or a detached `HEAD`, report the work as
 uncommitted and stop. Pass `git-gremlin:commit` the exact paths the implementation created,
 changed, or deleted, never "all changes", so unrelated work in the tree stays out.
@@ -58,14 +66,14 @@ changed, or deleted, never "all changes", so unrelated work in the tree stays ou
 
 When `linear-devotee:deliver` supplied an existing matching PR, commit only missing authorized
 changes and return its URL, branch, local head, and verification to that caller instead of
-invoking `pr` again. Its `finish-pr` handoff publishes the scoped commits and verifies the
-remote head before review. If no commit is missing, reuse the existing commit. This avoids a
-second PR or duplicate publication during recovery.
+invoking `pr` again. Include the simplification completion. Its `finish-pr` handoff reviews
+unpublished commits before pushing, then verifies the remote head. If no commit is missing,
+reuse the existing commit. This avoids a second PR or duplicate publication during recovery.
 
 Otherwise continue the authorized implementation handoff with a draft PR. Pass the intended
-base, exact implementation scope, source Acceptance, current verification, and scoped repair
-authority to `pr`. It first simplifies the scoped diff without changing behavior, verifies and
-commits any cleanup, then completes native code review and its scoped repairs before publication. Passing tests, plan
+base, exact implementation scope, source Acceptance, simplification completion, current
+verification, and scoped repair authority to `pr`. It reuses that simplification and completes
+native code review and its scoped repairs before publication. Passing tests, plan
 review, and source-drift checks do not replace this code review.
 
 **REQUIRED SUB-SKILL:** Use `git-gremlin:pr` when no matching PR was supplied by `deliver`.

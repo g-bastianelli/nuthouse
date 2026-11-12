@@ -1,35 +1,66 @@
 # Native code review
 
-Read before publishing a draft PR or finishing an existing PR. The caller supplies the
+Read the simplification section before final implementation checks, and the review sections
+before publishing a draft PR or finishing an existing PR. The caller supplies the
 repository, intended base, committed head, delivery scope, source Acceptance when present,
 verification evidence, and repair authority. A request to publish a PR alone authorizes review,
 not implementation changes; an authorized implementation handoff includes scoped corrections.
 
-Fetch the intended base through its verified remote and record the base OID and local HEAD.
-Require the relevant worktree to be clean: otherwise the native reviewer could assess changes
-that will not ship. Preserve unrelated work and stop if it contaminates the review target.
-Run one simplification pass per delivery, before its first full review, when implementation or
-explicit cleanup authority exists. Preserve observable behavior and Acceptance; focus on reuse,
-unnecessary complexity, and redundant work inside the delivery scope. Use the active runtime's
-provider reference for execution. A PR-only or review-only request skips mutating cleanup and
-reports that limit. Text-only drafting never starts this pass.
+## Implementation simplification
 
-Inspect the simplifier's actual changes, discard unsupported suggestions, and verify any edits
-with repository-required checks. Commit only authorized cleanup paths through
-`git-gremlin:commit`, refresh head, source drift when applicable, and the PR proposal before
-native review. If nothing changes, retain the existing commit and checks. Record completion or
-the concrete failure; an incomplete requested pass blocks publication.
+Run one simplification pass after the authorized implementation is settled, before its final
+repository checks and implementation commit. Preserve observable behavior and Acceptance;
+focus on reuse, unnecessary complexity, and redundant work inside the delivery scope. Supply
+the exact allowed paths and changes: scoped staged and unstaged diffs, untracked implementation
+files (`git ls-files --others --exclude-standard -- <paths>`), and the relevant committed
+base-to-HEAD diff when implementation already spans commits. A committed range alone omits
+the work that is about to ship. Preserve unrelated paths and changes within shared files.
+Read only the active runtime's provider reference for execution.
+
+Inspect actual changes and discard unsupported suggestions, then run final required checks and
+commit the implementation and accepted cleanup together through `git-gremlin:commit`. Record
+the completed scope, source context, and outcome, including no useful changes. `pr` and
+`finish-pr` reuse that completion; committing, pushing, or making scoped review repairs does
+not itself call for another simplification pass. New implementation scope or changed Acceptance
+requires reassessing the affected completion. If an authorized implementation arrives committed
+without a completed pass, run it before the next checks/commit and first native review; verify
+and commit only accepted cleanup paths, retaining current checks and HEAD if nothing changed.
+A PR-only or review-only request skips mutating cleanup and reports that limit. Text-only
+drafting never starts it. An incomplete requested pass blocks publication.
 
 ## Review target
 
-The first review of a delivery covers the complete diff from the intended base. After that,
-review only this delivery's commits after the last reviewed head, and review local commits
-before pushing them: a defect found after the push costs another push, CI run, and external
-review. Base integrations are not delivery commits. Review pending delivery commits before
-integrating the base, so the later-commits range never spans a base merge. An empty
-`git show --remerge-diff <merge>` proves a clean merge, which refreshes checks only; a
-non-empty one, a changed delivery scope, or a last reviewed head that is no longer an ancestor
-of HEAD (`git merge-base --is-ancestor`) makes the next review a full review against the base.
+Fetch the intended base through its verified remote and record the base OID and local HEAD.
+Require the relevant worktree to be clean: otherwise the native reviewer could assess changes
+that will not ship. Preserve unrelated work and stop if it contaminates the review target.
+
+The first review covers the complete committed diff from the intended base. After that,
+review only uncovered delivery commits, locally before pushing: a defect found after the push
+costs another push, CI run, and external review. Keep the actual last reviewed head separate
+from a coverage anchor, initially that same head. Use the anchor as the later-commits review
+base. Confirm its ancestry with `git merge-base --is-ancestor` and inspect intervening commits
+and parents with `git log --first-parent --format='%H %P' <anchor>..HEAD`.
+If a recorded anchor differs from the actual reviewed head, revalidate the clean-integration
+chain connecting them before using it; a ledger entry alone does not prove that coverage.
+
+Review pending delivery commits before integrating the base. A clean base merge can advance
+the anchor without another native review only when its first parent is the current anchor,
+its sole other parent belongs to the fetched intended-base history, and
+`git show --format= --remerge-diff <merge>` has no output. Prove each link for consecutive
+merges; this excludes a hidden unreviewed delivery commit or an unrelated merged branch.
+Refresh checks and applicable source drift for the integration. Keep the actual reviewed head
+and review base unchanged: for reviewed `R`, clean integration `M`, and later repair `F`,
+the next target is `M..F`; `M` was not itself reviewed. Never use `R..F` and sweep base commits
+into that delta. Unreviewed commits before an already-created merge, conflict-resolution edits,
+changed scope or Acceptance, rewritten ancestry, or an unprovable merge chain require a full
+review against the fetched intended base.
+
+When no delivery commits remain after the validated anchor, reuse completed review evidence
+and run no native review, including across runtimes. This zero-delta path still requires current
+scope/source, clean relevant worktree, valid ancestry, and disposition of all blocking findings.
+Base movement requires refreshed checks/drift, not relabeling an older review's base. Missing or
+invalid review evidence requires a full review. A completed native review with a stable target
+updates both the actual reviewed head and anchor to its captured HEAD.
 
 Invoke the active runtime's native reviewer using the provider reference routed by the calling
 skill, await completion, and read its actual findings. A successful process, tool envelope, or
@@ -66,9 +97,9 @@ finding, and only the resulting commits are reviewed.
 
 ## Evidence
 
-Return the simplification outcome, runtime, last reviewed head and base, scope, round count,
+Return the simplification outcome, runtime, actual last reviewed head and base, coverage anchor
+with any clean-merge evidence, source/scope, round count,
 findings and dispositions, and repair/check results to the caller, and keep them in the
-caller's ledger when one exists. Any later run or runtime uses this record to target its next
-review, never to skip one: confirm the recorded head is an ancestor of HEAD, then review only
-the delivery commits after it; without a record, run a full review. Review evidence grants no
-merge authority.
+caller's existing ledger when one exists. Revalidate those notes against Git and current source
+on resume, then select full review, uncovered delta, or zero-delta reuse above. Do not create a
+separate state store. Review evidence grants no merge authority.

@@ -219,8 +219,19 @@ For example, a limit of four with two started issues leaves two slots.
 
 Candidates come from backlog, triage, or unstarted states. All current blockers must be
 known and terminal in the live project read; terminal means completed or canceled.
-Missing dependency information prevents selection. Ready issues are selected in stable
-identifier order. After an actionable completion event, Maestro rereads Linear before filling another slot.
+Missing blocker information prevents that issue's selection. Ready issues follow your
+explicit priorities, then observed Linear priority, then the longest downstream candidate
+dependency chain, with issue identifier breaking ties. The chain is a heuristic for
+unlocking later work, not a duration estimate. Unknown or cyclic candidate graphs disable
+that tie-break without blocking unrelated known-ready work.
+
+Each selected workspace prepares independently. Once its binding, placement, setup, and
+notification route are verified, it enters a short serial reservation and launch sequence;
+a slow setup does not hold ready siblings. A selected/planned sibling is labeled separately
+from a worker confirmed running. A definitive failure before reservation permits one fresh
+refill that excludes already attempted issues. Reserved or uncertain launches keep their
+slots and recovery evidence. After an actionable completion event, Maestro rereads Linear
+before filling another slot.
 
 Sidebar groups do not restrict the Linear issue selection. Starting from a source folder
 named `lot 4` still authorizes the selected Linear project and uses that run's own folder. For an

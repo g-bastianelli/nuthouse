@@ -311,6 +311,8 @@ export async function observePullRequest(input, options = {}) {
   ).map((check) => ({
     ...check,
     app: check.app ? project(check.app, ["id", "slug"]) : null,
+    // Queue/start progress of the same unfinished run cannot change readiness.
+    status: check.status === "in_progress" && check.conclusion === null ? "queued" : check.status,
     // Running providers stream progress here; only terminal output can resume readiness.
     details_url: check.status === "completed" ? check.details_url : null,
     output:

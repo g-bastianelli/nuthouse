@@ -1,11 +1,13 @@
 # Native Codex review
 
-When the shared procedure calls for its simplification pass, perform a focused simplification pass
-in the active Codex session over `<verified-base-ref>...HEAD`: reuse existing helpers, remove
+When the shared procedure calls for its implementation simplification pass, work in the active
+Codex session over the supplied scoped staged, unstaged, and untracked implementation changes,
+plus the relevant `<verified-base-ref>...HEAD` changes already committed: reuse existing helpers, remove
 unnecessary complexity and redundant work, and preserve observable behavior and Acceptance.
 Inspect surrounding code only as needed; edit only authorized delivery paths. This is an
 implementation pass, not the independent native review. Do not assume a built-in `/simplify`
-command or require another runtime. Verify and commit accepted edits before review below.
+command or require another runtime. Return to the caller's final checks and implementation
+commit before review below; reuse a completed pass as the shared procedure permits.
 
 Use the current runtime's built-in review facility. From the issue workspace, review against
 the fetched and verified base ref:
@@ -14,14 +16,15 @@ the fetched and verified base ref:
 codex review --base <verified-base-ref>
 ```
 
-For later commits, use the last reviewed head as the base, so one run covers
-every later commit:
+For later commits, use the validated coverage anchor from the shared procedure as the base,
+so one run covers every uncovered delivery commit without including proven clean base merges:
 
 ```text
-codex review --base <last-reviewed-head-oid>
+codex review --base <coverage-anchor-oid>
 ```
 
-Await completion and read the findings. Do not combine `--base` with a positional custom review
+If the shared procedure establishes zero uncovered commits, reuse its valid evidence without
+running this command. Otherwise await completion and read the findings. Do not combine `--base` with a positional custom review
 prompt; these are alternative targets. `--uncommitted` alone does not review the published PR
 diff. A pushed branch still needs the explicit base.
 

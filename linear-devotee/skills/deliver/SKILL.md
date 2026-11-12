@@ -22,7 +22,8 @@ report. Keep progress and questions concise: the offering is the delivered work.
    or authorized caller. Read repository instructions. An explicit execution of this full-delivery
    skill, including a Maestro dispatch carrying that authority, authorizes scoped implementation,
    status transitions, commits, pushes, a draft PR, review fixes and replies, thread resolution,
-   and a merge that respects repository protections. Reuse that authority at every handoff.
+   supported external-review triggers, and a merge that respects repository protections. Reuse
+   that authority at every handoff.
    A brief, plan-only, draft-PR-only, review-only, or read-only request retains that boundary;
    route to its requested skill and stop before any broader delivery. An issue id, hook, or
    ledger alone cannot enlarge the user's request. Conflicting scope requires a decision.
@@ -45,18 +46,39 @@ report. Keep progress and questions concise: the offering is the delivered work.
    delivery. Never silently reopen terminal work. If the matching PR is already merged, skip
    implementation, planning, starting, and review; continue with step 6. A completed issue
    without matching merge evidence blocks this workflow rather than restarting it.
+   Before choosing either route for unmerged work, require known satisfied prerequisites,
+   including current states of referenced blockers outside the project. Missing or unreadable
+   blocker data is unknown; unresolved prerequisites, contradictory Acceptance, or consequential
+   product decisions stop dependent work, including PR-finishing writes and merge. Reuse fresh
+   raw issue/blocker/source records and workspace facts already obtained; read only missing or
+   stale inputs rather than dispatching a scout just to repeat them.
+   Confirm ownership of the workspace and issue branch, inspect dirty/staged scope, and ensure
+   no competing writer is active. Base branch, detached HEAD, unrelated changes, conflicting
+   ownership, or another active writer require resolution before delivery writes or finishing.
+   Use the existing task-linked workspace and issue branch. In Superset, workspace setup belongs
+   to Maestro; do not create a replacement workspace or switch its branch in place. Outside
+   Superset, the delivery request permits preparing the issue feature branch while preserving
+   user work.
+   Compare current Acceptance, decision sources, local source changes, intended scope, and
+   relevant worktree against the existing reviewed plan and implementation evidence. If the
+   matching open PR has a complete verified implementation, including scoped local commits
+   ahead of its remote head, apply **Start authorized work** in
+   `../../shared/issue-lifecycle.md` and require an observed `started` state before step 5.
+   Reuse fresh issue/team/status metadata and read only missing or stale inputs. Already-started
+   work, including a coordinator's reservation, continues without another status write; an
+   unknown status or failed/unverified transition blocks finishing. A CI/review/queue-only
+   continuation does not dispatch `issue-context` or rerun planning. Reuse current
+   raw issue/source records for this reconciliation; a status-only read or ledger assertion is
+   insufficient. Changed sources, missing/stale plan or verification, newly relevant dirty work,
+   or incomplete implementation route to steps 3–4 for only the affected work. Unknown current
+   issue/source evidence blocks dependent actions rather than treating the fast route as valid.
 3. **Prepare missing implementation.** Before dispatch, read
    `${CLAUDE_PLUGIN_ROOT}/shared/agent-runtime-map.md` (using the resolved `PLUGIN_ROOT` outside
    Claude Code) and resolve `linear-devotee:issue-context` for the active runtime with isolated
    task-local inputs: issue id, repository root, and
    `NEEDS_STATUS_METADATA: true`. Reuse current raw records and retain exact Acceptance and
-   decision sources. Missing blocker data is unknown; unresolved prerequisites, contradictory
-   Acceptance, or consequential product decisions stop the dependent work. Use the existing
-   task-linked workspace and issue branch. In Superset, workspace setup belongs to Maestro;
-   do not create a replacement workspace or switch its branch in place. Outside Superset,
-   the delivery request permits preparing the issue feature branch while preserving user work.
-   Base branch, detached HEAD, unrelated changes, or another active writer require resolution
-   before delivery writes. Apply the started transition in `../../shared/issue-lifecycle.md`;
+   decision sources. Preserve step 2's prerequisite and ownership decisions; newly discovered
+   blockers stop dependent work. Apply the started transition in `../../shared/issue-lifecycle.md`;
    already-started work continues unchanged, including a coordinator's reservation.
 4. **Plan, implement, and verify missing work.** Never invoke `greet`: its fresh-session trigger
    is unsuitable for resumed delivery. Pass the current brief, existing plan, source paths,
@@ -72,8 +94,8 @@ report. Keep progress and questions concise: the offering is the delivered work.
    **REQUIRED SUB-SKILL:** Use `linear-devotee:plan` when implementation or its reviewed plan is missing.
 
 5. **Finish the existing PR.** Supply its URL, expected repository/head/base, current head,
-   scoped unpublished commits if any, verification and pre-publication native-review evidence
-   when available, and full-delivery authority.
+   scoped unpublished commits if any, simplification completion, verification and native-review
+   evidence when available, and full-delivery authority.
    `git-gremlin:finish-pr` owns runtime-native review, fixes, external comments, fresh CI and
    required approval checks, and protected merge. Do not add a separate reviewer agent or infer
    review completion from a process exit code. Its `waiting` or `blocked` result returns here

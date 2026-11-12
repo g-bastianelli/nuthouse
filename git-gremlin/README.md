@@ -42,14 +42,17 @@ resolved. It never force-pushes, merges, or dismisses a review; `finish-pr` owns
 None. Commit and PR drafting run directly in their skills so the approval context and Git
 permissions stay in one place.
 
-With implementation or explicit cleanup authority, the delivery simplifies the scoped diff
-once, verifies and commits any cleanup, then reviews it. Claude Code uses `/simplify`; Codex performs
-the focused cleanup in its active session. PR-only requests skip mutating cleanup.
+With implementation or explicit cleanup authority, the delivery simplifies its scoped staged,
+unstaged, untracked, and already committed implementation once before final checks and the
+implementation commit. Claude Code uses `/simplify`; Codex performs focused cleanup in its active
+session. PR publication reuses that completion. PR-only requests skip mutating cleanup.
 Both `pr` and `finish-pr` use native `codex review --base` or Claude Code's local `/code-review`
 and read their findings. Review is required before publication even without a spec or Linear
 issue. [`shared/native-review.md`](shared/native-review.md) owns the review target,
 blocking findings, and the stop rule. An implementation handoff corrects blocking defects; a PR-only request reports defects without acquiring repair authority. Text-only PR
-drafting stops at the proposal. `finish-pr` reuses current pre-publication review evidence and
+drafting stops at the proposal. Later reviews cover only uncovered delivery commits before push;
+a proven clean base integration advances coverage without being called a reviewed head.
+`finish-pr` reuses current zero-delta pre-publication review evidence and
 checks GitHub directly through `gh`. A successful reviewer command is not a clean review.
 CI, outstanding change requests, unresolved threads, and branch protections retain
 their own gates. A queued PR returns `waiting`; an unavailable reviewer or unresolved product

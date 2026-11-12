@@ -26,8 +26,21 @@ For project orchestration:
 
 ```text
 slots = max(0, maxConcurrency - startedIssueCount)
-selected = first slots ready issues, sorted by issue identifier
+selected = first slots ready issues under the ordering below
 ```
+
+Order ready issues by explicit user priorities, then observed Linear priority (urgent,
+high, normal, low; no priority or unavailable last), then longest downstream candidate
+dependency chain, then identifier. Preserve any explicit user ordering in session context;
+it changes neither membership nor readiness. Build the chain from all candidate
+`blockedBy` edges whose two endpoints are candidates, directed from blocker to dependent;
+its length counts edges, not time.
+Use that tie-break only when every candidate's relations are known and the candidate graph
+is acyclic. Otherwise report the rank unavailable and fall back to priority/identifier.
+Unknown relations or cycles never manufacture readiness or prevent an unrelated issue
+with known terminal blockers from starting. Do not fetch terminal/started relations or
+invent durations to rank candidates. Selection order does not make a ready workspace wait
+for a slower selected sibling.
 
 Started issues reserve capacity. Existing workers notify and resume in place, never
 redispatched merely because their issue is started. Superset workspace or terminal counts
@@ -107,6 +120,13 @@ membership before formatting. Its complete successful result must contain the ex
 workspace id. Never infer membership by splitting or searching the displayed `tags`:
 Superset permits commas inside tags, so one tag `design, review` and two tags `design`
 and `review` have the same display. Show the stored run group in previews and reports.
+
+Within one dispatch observation, share a complete successful filtered listing across all
+already-created, binding-verified workspace ids on that same host/project/run group.
+Each id must actually appear. A workspace created after that listing needs a later read;
+an observed placement change, tag write, or conflicting evidence invalidates the affected
+proof. Coalesce checks for siblings already available, but never wait for a pending create
+or setup merely to batch a listing. Retain no placement cache across invocations.
 
 On resume, verify placement for workspaces already proven owned by this run. A missing
 group may be restored only after the supervision reference's ownership checks, with a
@@ -299,18 +319,30 @@ For a selected issue, refresh its details, blockers, and exact Superset task. At
 workspace create-or-reuse without an embedded launch, and verify the returned branch,
 task association, run group, and setup readiness before reserving or launching. Superset reuse is branch-based; it is not
 an atomic task lock. Only the explicit creator may claim it; reuse, uncertain creation, or an unknown prior launch never
-grants permission to launch. Before reservation, refresh selected issue/blocker facts and
-complete member statuses/control. Reserve the exact issue as `started`, read back the actual
-status, then repeat those targeted reads before launch. Require the same
+grants permission to launch. Immediately before reservation, one `MODE: reservation`
+request supplies the exact issue/blockers, complete member statuses, and latest control.
+Reserve the exact issue as `started`, then use one new reservation request as both exact
+status-id readback and refreshed launch evidence. Require the same
 active run/revision, terminal blockers, and `startedCount <= maxConcurrency`. This makes
 the new reservation visible to later scheduling reads. A failed or uncertain reservation
 launches nothing; preserve and report the reservation/workspace for recovery without
 rolling another actor's status back.
 
-Run independent workspace attempts with all-settled semantics. Claim and recheck each
-created issue sequentially. Failed transport does not cancel successful siblings and never
-frees a started slot. Do not replace a failed selection from a stale snapshot. Refill only
-after a complete fresh Linear project read and successful current-control validation.
+Run each workspace creation, binding/group verification, and setup as an independent
+pipeline. As each becomes ready, serialize only its fresh reservation, verification, and
+launch; do not wait for the slowest sibling. Collect final outcomes with all-settled
+semantics, not a barrier before launch. Setup waits, pending notification probes, and
+ambiguous transport recovery stay outside that short sequence. Failed transport does not
+cancel successful siblings and never frees a started slot.
+
+After the initial pipelines settle, one bounded refill is allowed when a selected attempt
+definitively failed before reservation and capacity remains. First reload the complete
+project/control and recompute readiness/order/capacity. Exclude every issue already
+selected in this invocation, including failed, reused, pending, or uncertain attempts;
+select only fresh candidates for free slots. Run them through the same dispatch contract,
+then report; no second refill in this invocation. Never backfill a stale snapshot, retry
+an unknown launch, or clear a started reservation to make room. Later worker completion
+events make their own fresh capacity decisions.
 
 Supervision is event-driven while the owning provider session remains loaded. Establish a
 verified native notification route before dispatch; keep its actual provider destination,
@@ -453,9 +485,11 @@ the next worker refreshes the relevant evidence before proceeding.
 
 ### Concurrent siblings
 
-When other issues of the same Linear project are being implemented concurrently, the worker
-prompt names them by identifier, adds the title only when the calling skill already holds
-it, and states that they run in separate workspaces off the same base. A worker still owns
+The worker prompt names relevant same-project siblings by identifier and adds the title
+only when the caller already holds it. Distinguish observed `started` issues (worker state
+may be unknown), confirmed running workers, and selected/planned siblings whose workspace
+or setup may still be pending. Do not call a selected issue running. Explain that issue
+workers use separate workspaces off the same base. A worker still owns
 its issue alone; shared files and interfering verification need their respective coordination.
 Instruct it to treat a file a sibling also owns as shared: the smallest change the issue
 needs, no restructuring, no drive-by cleanup, and no edit justified only by a sibling's
