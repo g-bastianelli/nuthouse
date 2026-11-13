@@ -19,7 +19,22 @@ separate; bound parallel calls by available runtime capacity.
 Use the exact `workspaceGroup` from the validated active control under **Workspace groups**
 in the shared contract. Pass only that tag, regardless of the supervisor workspace's groups.
 An absent or invalid group creates nothing. Render the display name from the exact issue title;
-the exact provider task binding carries identity. Create without an embedded agent launch:
+the exact provider task binding carries identity.
+
+After that issue's detail/task preparation, immediately before each create call, dispatch
+`MODE: control` for the exact project and resolve its complete marker set with
+`scripts/records.mjs resolve-controls`. Require the same active run and revision that authorized
+selection, with `deliveryScope: issue-through-merge` and the same valid `workspaceGroup`.
+Inactive, unavailable, invalid, or changed control prevents creation from that selection;
+report the stop or missing evidence, or reconcile a changed active control before reselecting.
+Do not reuse the initial batch control or another issue's pre-create read. This check belongs
+to each independent preparation and does not wait for sibling setup.
+
+A stop racing after this read cannot cancel a create already in flight. Preserve any returned
+workspace/setup evidence without retrying or deleting it; the reservation rechecks below still
+prevent reservation or worker launch once inactive control is observed.
+
+Create without an embedded agent launch:
 
 ```text
 superset workspaces create \

@@ -315,7 +315,10 @@ Establish **Supervisor ownership** before mutation. Linear status writes are not
 compare-and-swap locks: the following checks reduce races but cannot promise a global
 transactional concurrency cap against unrelated concurrent writers.
 
-For a selected issue, refresh its details, blockers, and exact Superset task. Attempt one
+For a selected issue, refresh its details, blockers, and exact Superset task. Immediately
+before each workspace creation, refresh and resolve `MODE: control` as the dispatch reference
+specifies; require the same active run/revision, scope, and group that authorized selection.
+Stopped, unavailable, or changed control permits no create from the old selection. Attempt one
 workspace create-or-reuse without an embedded launch, and verify the returned branch,
 task association, run group, and setup readiness before reserving or launching. Superset reuse is branch-based; it is not
 an atomic task lock. Only the explicit creator may claim it; reuse, uncertain creation, or an unknown prior launch never

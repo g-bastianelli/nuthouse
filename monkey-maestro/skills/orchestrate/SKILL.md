@@ -81,7 +81,9 @@ acting on user feedback, read **User feedback** in
    terminal, or non-ready issue, or a failed detail/task read, fails only that selected issue;
    do not backfill from this snapshot or hold ready siblings behind the failed read.
 7. Before creating any workspace, read
-   [`references/dispatch.md`](references/dispatch.md). Apply its placement,
+   [`references/dispatch.md`](references/dispatch.md). Apply its fresh control check immediately
+   before each creation; a stopped or changed run cannot create from the earlier selection.
+   Apply its placement,
    create-or-reuse with binding readback, setup readiness, started reservation, current-control recheck, worker-prompt, and launch
    contract. As each workspace becomes ready, serialize only its reservation/verify/launch;
    all-settled collection is for outcomes, never a launch barrier. After the initial attempts
