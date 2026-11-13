@@ -297,6 +297,169 @@ describe("exact PR observations", () => {
 });
 
 describe("bounded change observer", () => {
+  test.each([
+    ["queued", "in_progress"],
+    ["in_progress", "queued"],
+  ])("the same pending check moving from %s to %s does not wake the worker", async (from, to) => {
+    const baseline = await checkSnapshot(checkRun({ status: from }));
+    const progress = await checkSnapshot(
+      checkRun({
+        status: to,
+        details_url: "https://ci.example/run/7?step=2",
+        output: { title: "Still reviewing", summary: "Read two files", text: "Progress: 30%" },
+      }),
+    );
+    let observations = 0;
+    const result = await waitForPullRequest(
+      { ...identity, baseline, timeoutMs: 2000, intervalMs: 1000 },
+      {
+        ...clock(),
+        observe: async () => {
+          observations += 1;
+          return progress;
+        },
+      },
+    );
+    expect(result.outcome).toBe("expired");
+    expect(observations).toBe(2);
+  });
+
+  test.each([
+    ["new run", { id: 8 }],
+    ["renamed check", { name: "other review" }],
+    ["new app", { app: { id: 2, slug: "reviewer" } }],
+    ["renamed app", { app: { id: 1, slug: "other-reviewer" } }],
+    ["new author", { user: { login: "other-bot" } }],
+    ["pending status", { status: "pending" }],
+    ["waiting status", { status: "waiting" }],
+    ["requested status", { status: "requested" }],
+    ["unknown status", { status: "provider-paused" }],
+    ["cancelled status", { status: "cancelled" }],
+    ["action-required status", { status: "action_required" }],
+    ["unfinished conclusion", { conclusion: "failure" }],
+  ])("%s still wakes during pending check progress", async (_, change) => {
+    const baseline = await checkSnapshot(checkRun({ status: "queued" }));
+    const changed = await checkSnapshot(checkRun(change));
+    const result = await waitForPullRequest(
+      { ...identity, baseline },
+      { ...clock(), observe: async () => changed },
+    );
+    expect(result).toMatchObject({ outcome: "changed", reason: "pr-evidence-changed" });
+  });
+
+  test.each(["success", "failure", "cancelled", "action_required", "timed_out"])(
+    "the %s conclusion wakes after suppressed pending progress",
+    async (conclusion) => {
+      const baseline = await checkSnapshot(checkRun({ status: "queued" }));
+      const progress = await checkSnapshot(checkRun());
+      const completed = await checkSnapshot(checkRun({ status: "completed", conclusion }));
+      let observations = 0;
+      const result = await waitForPullRequest(
+        { ...identity, baseline, timeoutMs: 2000, intervalMs: 1000 },
+        {
+          ...clock(),
+          observe: async () => {
+            observations += 1;
+            return observations === 1 ? progress : completed;
+          },
+        },
+      );
+      expect(result).toMatchObject({ outcome: "changed", reason: "pr-evidence-changed" });
+      expect(observations).toBe(2);
+    },
+  );
+
+  test.each(["queued", "in_progress"])(
+    "a completed check rerun in %s wakes even with the same run identity",
+    async (status) => {
+      const baseline = await checkSnapshot(
+        checkRun({ status: "completed", conclusion: "failure" }),
+      );
+      const rerun = await checkSnapshot(checkRun({ status }));
+      const result = await waitForPullRequest(
+        { ...identity, baseline },
+        { ...clock(), observe: async () => rerun },
+      );
+      expect(result.outcome).toBe("changed");
+    },
+  );
+
+  test("non-null conclusions do not collapse queued and running statuses", async () => {
+    const baseline = await checkSnapshot(checkRun({ status: "queued", conclusion: "failure" }));
+    const changed = await checkSnapshot(checkRun({ conclusion: "failure" }));
+    const result = await waitForPullRequest(
+      { ...identity, baseline },
+      { ...clock(), observe: async () => changed },
+    );
+    expect(result.outcome).toBe("changed");
+  });
+
+  test("a check from another head fails instead of being normalized into pending evidence", async () => {
+    const baseline = await checkSnapshot(checkRun({ status: "queued" }));
+    const source = reader({
+      pages: {
+        checks: [{ total_count: 1, check_runs: [checkRun({ head_sha: "c".repeat(40) })] }],
+      },
+    });
+    const result = await waitForPullRequest(
+      { ...identity, baseline },
+      { ...clock(), read: source.read },
+    );
+    expect(result).toMatchObject({ outcome: "failed", reason: "incomplete check revision/status" });
+  });
+
+  test.each(["reviewer", "review-bot[bot]"])(
+    "new and edited feedback from %s wakes even when its body looks like progress",
+    async (author) => {
+      for (const channel of ["comments", "reviewComments"]) {
+        const comment = {
+          id: 1,
+          body: "Review progress: 10%",
+          commit_id: head,
+          original_commit_id: head,
+          user: { login: author },
+        };
+        const initial = await snapshot();
+        const added = await snapshot({ pages: { [channel]: [[comment]] } });
+        const edited = await snapshot({
+          pages: { [channel]: [[{ ...comment, body: "Review progress: 30%" }]] },
+        });
+        for (const [baseline, changed] of [
+          [initial, added],
+          [added, edited],
+        ]) {
+          const result = await waitForPullRequest(
+            { ...identity, baseline },
+            { ...clock(), observe: async () => changed },
+          );
+          expect(result.outcome).toBe("changed");
+        }
+      }
+    },
+  );
+
+  test.each([
+    ["resolution", false, true, false],
+    ["reopening", true, false, false],
+    ["outdated state", false, false, true],
+  ])("thread %s still wakes", async (_, before, after, outdated) => {
+    const baseline = await snapshot({
+      pr: pullRequest({
+        reviewThreads: connection([{ id: "thread", isResolved: before, isOutdated: false }]),
+      }),
+    });
+    const changed = await snapshot({
+      pr: pullRequest({
+        reviewThreads: connection([{ id: "thread", isResolved: after, isOutdated: outdated }]),
+      }),
+    });
+    const result = await waitForPullRequest(
+      { ...identity, baseline },
+      { ...clock(), observe: async () => changed },
+    );
+    expect(result.outcome).toBe("changed");
+  });
+
   test("repeated pending status IDs and progress details do not wake the worker", async () => {
     const first = commitStatus();
     const baseline = await statusSnapshot([first]);
@@ -513,16 +676,18 @@ describe("bounded change observer", () => {
     expect(calls).toBe(2);
   });
 
-  test("compares against supplied baseline immediately, including changes before launch", async () => {
-    const baseline = await snapshot();
-    const changed = structuredClone(baseline);
-    changed.baseOid = "c".repeat(40);
-    const result = await waitForPullRequest(
-      { ...identity, baseline },
-      { ...clock(), observe: async () => changed },
-    );
-    expect(result).toMatchObject({ outcome: "changed", reason: "revision-changed" });
-  });
+  test.each(["headRefOid", "baseRefOid"])(
+    "%s changes before launch wake immediately",
+    async (field) => {
+      const baseline = await snapshot();
+      const source = reader({ pr: pullRequest({ [field]: "c".repeat(40) }) });
+      const result = await waitForPullRequest(
+        { ...identity, baseline },
+        { ...clock(), read: source.read },
+      );
+      expect(result).toMatchObject({ outcome: "changed", reason: "revision-changed" });
+    },
+  );
 
   test("a failed observation terminates once with unavailable evidence", async () => {
     const baseline = await snapshot();

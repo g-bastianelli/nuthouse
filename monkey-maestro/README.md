@@ -19,12 +19,17 @@ questions, recovery, and stopping a run.
 
 Linear is the sole scheduling authority. Every started project member occupies one concurrency
 slot, including work started elsewhere or waiting for a decision. External blockers provide
-readiness evidence without consuming project capacity. Candidates are selected
-in stable identifier order only when every current blocker is terminal. Unknown facts
-never become ready facts.
+readiness evidence without consuming project capacity. Ready candidates follow explicit
+user priorities, observed Linear priority, then the longest known downstream candidate
+chain, with identifier as the final tie-break. Unknown or cyclic graph ranks fall back to
+priority/identifier; unknown blocker facts never become ready facts.
 
-The supervisor creates a workspace, verifies its exact task/branch binding, reserves the issue as started,
-then rereads the project and control before launching. A reused workspace is inspected;
+Workspace creation and setup proceed independently. As each becomes ready, the supervisor
+serializes its fresh reservation, readback, and launch without waiting for slower siblings.
+One bounded Linear observation before and after reservation supplies current control,
+complete membership/statuses, and that issue's blockers and exact status id. A definitive
+failure before reservation permits one fresh refill, excluding already attempted issues.
+A reused workspace is inspected;
 it never causes a duplicate launch. One active supervisor per run is a precondition;
 an active control does not identify that owner. Another session needs observed stopped-owner
 evidence or an explicit handoff before starting supervision. Linear's ordinary

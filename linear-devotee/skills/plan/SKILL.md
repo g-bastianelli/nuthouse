@@ -4,7 +4,7 @@ description: Plan one Linear issue from its source and repository, review scope 
 argument-hint: "[issue-id] [--fresh]"
 model: opus
 effort: high
-allowed-tools: Read, Glob, Grep, Bash, Write, Edit, Agent
+allowed-tools: Read, Glob, Grep, Bash, Write, Edit, Agent, Skill(simplify)
 ---
 
 # linear-devotee:plan
@@ -59,3 +59,8 @@ Linear, commits, pushes, or rebases. A requested implementation that follows it 
 as a draft PR through Git Gremlin, as the reference describes. With a `deliver` caller, return
 the resulting or reused PR to that caller for finishing; standalone planning does not authorize
 merge or Linear completion.
+
+When implementing under that handoff, read the installed Git Gremlin
+`shared/native-review.md` implementation-simplification section before final checks and the
+implementation commit. Read only its active provider reference (`shared/codex-review.md` or
+`shared/claude-review.md`) to execute the pass; carry its completion into the PR handoff.

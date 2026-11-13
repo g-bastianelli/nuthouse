@@ -31,7 +31,7 @@ without an additional confirmation for the same issue and scope.
   against the team's `started` statuses. Without either, use the sole `started` state; with
   several, use the unique one named exactly `In Progress`. Ask only when this policy leaves
   no unique choice. Scouts and Maestro reservations use this same selection policy.
-- Move to that state and verify the readback before implementation. A refused update blocks
+- Move to that state and verify the readback before implementation or PR finishing. A refused update blocks
   delivery because the project coordinator counts live started issues for capacity.
 
 ## Complete observed delivery

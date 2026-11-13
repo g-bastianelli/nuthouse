@@ -1,7 +1,8 @@
 # Observe GitHub before merge
 
-Use direct `gh` commands. These are observations; the acting agent owns finding dispositions and
-the entrypoint's merge boundary. Substitute verified values as separate arguments, without `eval`.
+Use direct `gh` commands. Reads establish readiness; the conditional review request below uses
+the caller's existing delivery authority. The acting agent owns finding dispositions and the
+entrypoint's merge boundary. Substitute verified values as separate arguments, without `eval`.
 
 Set `OWNER`, `REPO`, and `NUMBER` to the verified base repository and PR number, and `PR_HEAD`
 to its current head OID. For a GitHub Enterprise host, pass the matching `--hostname` to each
@@ -11,6 +12,7 @@ to its current head OID. For a GitHub Enterprise host, pass the matching `--host
 
 - [PR and CI](#pr-and-ci)
 - [Expected external reviews](#expected-external-reviews)
+- [Request a missing review](#request-a-missing-review)
 - [All threads and outstanding reviews](#all-threads-and-outstanding-reviews)
 
 ## PR and CI
@@ -64,7 +66,8 @@ verified commit binding is insufficient.
 Inspect the newest status per provider/context, and the latest matching check's `head_sha`,
 app, timestamps, and output. A status description or check output must establish actual review
 completion, not merely `success`, `completed`, `pass`, or a provider name. For CodeRabbit,
-`Review skipped` because the PR was a draft leaves this gate closed even if the check is green.
+`Review skipped` because the PR was a draft, or `Review rate limited`, leaves this gate closed
+even if the check is green.
 Do not count it as a permissible conditional CI skip. Wait for an actual completed review of
 the current head; an older head's review, missing result, pending rerun, failed review, or
 ambiguous/conflicting provider evidence cannot satisfy the gate.
@@ -74,8 +77,49 @@ completion. New findings return to the repair loop; completion alone does not cl
 head invalidates the old completion evidence; a base change refreshes checks, and the shared
 native-review procedure decides whether anything needs review. Retain the provider, reviewed SHA, completion URL/time, and finding
 dispositions in the report or existing continuity notes. If completion cannot be established,
-return `waiting` with the missing evidence and next observation or required trigger; never
-silently waive the review because CI is green or no threads exist.
+apply the request procedure below before waiting. Never silently waive the review because CI
+is green or no threads exist.
+
+## Request a missing review
+
+Only a full-delivery owner may request an already expected reviewer on the verified ready PR.
+An inspection-only caller reports the needed command. Do not install integrations, change
+review configuration, enable billing, or request an unrelated reviewer through this authority.
+
+Read current provider output and the PR's paginated ordinary comments before sending anything:
+
+```sh
+gh api --paginate --slurp "repos/$OWNER/$REPO/issues/$NUMBER/comments?per_page=100"
+```
+
+Reuse these comments for feedback inspection. A completed current-head review needs no request;
+a queued/running review or a previously accepted request still awaiting a result needs no second
+request. Missing output alone is not proof that an automatic review needs manual triggering.
+Establish the supported trigger from provider evidence or current documented configuration.
+
+For an expected CodeRabbit review that requires an explicit trigger, write the exact JSON
+`{"body":"@coderabbitai review"}` to a temporary file and use:
+
+```sh
+gh api --method POST "repos/$OWNER/$REPO/issues/$NUMBER/comments" --input <comment-json-file>
+```
+
+Remove the temporary file after the request. Request the latest changes, not a repeated full
+review. Check that the PR still has `PR_HEAD` immediately before sending, and refresh its head
+afterward. Retain provider, head, request time/comment URL, and outcome in the report or existing
+ledger. The comment is a request receipt, not review completion. If the head moved, reconcile the
+new head and provider activity before another request. On timeout or an uncertain response,
+inspect comments/provider state; lack of an immediately visible comment is not proof of failure.
+Do not repeat an unknown request or lose its identity across a wait/resume.
+
+A quota refusal or explicit pause is a distinct pending condition. Read the provider's stated
+availability and next eligible time; do not keep issuing review requests while unavailable.
+Once fresh provider evidence establishes capacity or an ended pause, and no review is running,
+the owner may make one new request for the current head and record that changed condition.
+Another refusal returns its concrete wait/recovery action. Other failures need their cause
+resolved first; a missing integration or unknown trigger remains blocked for configuration.
+Keep the existing bounded observer and manual-expiration behavior: no timer, billing change,
+automatic rearm, or successful-review claim follows from a quota message or a green skipped check.
 
 ## All threads and outstanding reviews
 
@@ -133,5 +177,7 @@ References: [Checks CLI](https://cli.github.com/manual/gh_pr_checks),
 [commit statuses](https://docs.github.com/en/rest/commits/statuses#list-commit-statuses-for-a-reference),
 [check runs](https://docs.github.com/en/rest/checks/runs#list-check-runs-for-a-git-reference),
 [CodeRabbit skipped-review causes](https://kb.coderabbit.ai/articles/1442026547-troubleshoot-why-coderabbit-reviews-might-not-trigger),
+[CodeRabbit manual-trigger policy](https://docs.coderabbit.ai/management/plans),
+[CodeRabbit review quotas and recovery](https://docs.coderabbit.ai/management/rate-limits),
 [PR review and merge states](https://docs.github.com/en/graphql/reference/pulls),
 [protected merge command](https://cli.github.com/manual/gh_pr_merge).

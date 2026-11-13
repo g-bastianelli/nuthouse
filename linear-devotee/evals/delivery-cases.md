@@ -142,14 +142,100 @@ invented.
 ## Q — Ordinary implementation stops at a draft PR
 
 The user requested implementation of the planned issue and a draft PR, with no merge or
-Linear-completion authority. Verification passes and the implementation is committed. Scoped
-simplification produces a behavior-preserving cleanup. The
+Linear-completion authority. Implementation is settled across staged, unstaged, and untracked
+scoped paths; one earlier scoped commit also exists. Scoped simplification produces a
+behavior-preserving cleanup before final verification and the implementation commit. The
 native reviewer reports a blocking reachable defect. Trace the remaining handoffs and
 required evidence through the draft-PR result; use no live GitHub mutations.
 
 ## R — Draft review is current on full-delivery handoff
 
 Full delivery receives an existing draft PR and completed pre-publication native review for
-the current runtime, committed head, base, scope, and finding dispositions. CI is pending and
+the current runtime, committed head, base, scope, and finding dispositions. Simplification is
+complete, the reviewed plan and implementation checks remain valid, and freshly read source
+Acceptance/decisions match. CI is pending and
 the expected external reviewer has not completed. Trace review reuse and the next observable
 condition without treating local review as merge readiness; use no live GitHub mutations.
+
+## S — CI-only continuation with current implementation
+
+Full delivery receives a matching `wait-result` for PR 17. Fresh issue and source records show
+In Progress, no blockers, unchanged AC-L001 and decisions. The reviewed plan, implementation,
+simplification and native-review evidence all cover the current clean local/remote head.
+Current CI has finished successfully; external review is still pending. Trace the direct
+finishing route without an issue-context dispatch, planning revision, simplify pass, or native
+review. Keep all live GitHub finishing gates and full-delivery boundaries.
+
+## T — Resume with invalidated implementation evidence
+
+Same continuation as S, but the current issue adds a consequential note-normalization decision
+and a relevant local uncommitted change is not covered by implementation verification. Trace
+source reconciliation and only the missing planning/implementation work; an old completed plan
+and green CI do not justify the direct finishing route. Preserve the dirty change and resolve
+its ownership before writing or publishing.
+
+## U — Verified PR with a newly blocked prerequisite
+
+Same unchanged reviewed plan, clean owned branch, verified implementation and green CI as S.
+Fresh issue relations now identify `EXT-4` in another project as a prerequisite. Exercise both
+current observations: `EXT-4` is still In Progress; or its current state cannot be read because
+access is denied. No other writer is active. Neither variant permits the direct finishing
+handoff, review triggers, pushes, ready transition, or merge. Report the active prerequisite or
+unknown evidence and required resolution, reusing the fresh records without redundant scout
+dispatch or planning. An old no-blocker ledger entry cannot clear this condition.
+
+## V — Verified PR with a competing writer
+
+Same unchanged verified PR, satisfied prerequisites, and source records as S. The current Git
+snapshot is clean, but a live session owns edits to this issue's invitation module and there is
+no evidence it released ownership. This recovery session was launched after an uncertain
+acknowledgment. Do not enter finishing or perform delivery writes or merge; resolve the active
+writer and retain the existing workspace/branch. A clean snapshot and current review do not
+establish exclusive ownership.
+
+## W — Verified PR with an issue not yet started
+
+Same current verified PR, source records, satisfied prerequisites, and exclusive ownership as S,
+but the live issue is `todo-1` / Ready / `unstarted`. Repeat with observed `backlog` and `triage`
+states. The team's sole started state is `work-1` / In Progress. Apply the existing lifecycle
+transition, update only the status, and observe `work-1` / `started` before entering `finish-pr`.
+Reuse fresh metadata and fetch only missing or stale inputs; do not dispatch `issue-context`,
+replan, or repeat valid simplification/native review merely to establish started status.
+Repeat with the issue already `started`, including a Maestro reservation: no status write.
+An open PR or an old started-state ledger entry cannot substitute for current status evidence.
+
+## X — Started transition cannot be verified
+
+Same unstarted issue and verified PR as W. Exercise a refused update, a timeout followed by
+readback still showing Ready, and an unreadable readback. None permits the finishing handoff,
+PR repairs, review triggers, pushes, merge, or a finishing CI wait. Report the status-transition
+failure or unknown result and follow the existing lifecycle recovery policy; do not blindly
+repeat an uncertain write or fall back to planning to bypass it. A later readback confirming
+the intended `work-1` / `started` allows the direct finishing route without another status write.
+An unreadable initial status also blocks dependent work before any transition.
+
+## Y — Merged PR with an issue outside started
+
+Same observed matching merge and delivered scope as E, but the current issue is Ready. Go
+directly to completion reconciliation without an intermediate started transition, planning,
+or PR finishing. The canceled variant still stops delivery; the already-completed variant F
+retains its unchanged status. The started requirement applies only to unmerged work.
+
+## Source-based comparison
+
+The following are predicted outcomes from the entrypoints and their routed references, not
+executed runtime or service results.
+
+| Case                                                                     | Prior source behavior                                                                                                    | Revised predicted behavior                                                                                                                                                              |
+| ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D: existing draft, verified local commit ahead                           | Plan handoff explicitly publishes before review; deliver reaches issue-context before discovering finishing readiness.   | Fresh source/plan/check reconciliation routes directly to finish-pr, which reviews the local delta before push.                                                                         |
+| Q: ordinary implementation                                               | Simplify follows the implementation commit and can require another cleanup commit/check cycle.                           | Simplify includes uncommitted scope before final checks and commit; PR reuses completion, reviews, and stops at a draft.                                                                |
+| R/S: reviewed implementation, CI-only wait                               | Unconditional preparation dispatch precedes a late current-evidence reuse branch; shared review rule disallows skipping. | Routes from fresh reconciliation straight to finish-pr; no issue-context, replan, simplify, or native review for valid zero delta.                                                      |
+| T: changed source and dirty implementation                               | Current source and ownership still need reconciliation.                                                                  | Fast-route eligibility fails; only affected work is reopened, with dirty-scope and source safeguards retained.                                                                          |
+| U: unchanged verified PR with active or unreadable external prerequisite | Preparation guards unresolved/unknown blockers, but an early finishing route could skip that guard.                      | Shared reconciliation requires known satisfied prerequisites before either unmerged route; no finishing writes or merge, and fresh raw records avoid duplicate reads or scout dispatch. |
+| V: unchanged verified PR with competing writer                           | Preparation guards another active writer, but an early finishing route could skip that guard.                            | Ownership and active-writer checks precede the finishing jump; no concurrent delivery writes or merge even with a clean Git snapshot.                                                   |
+| W: verified PR with backlog/triage/unstarted issue                       | Fast finishing bypasses the only started transition in preparation; the issue remains outside occupied capacity.         | Uses the existing lifecycle transition and requires observed started status before finishing; already-started work adds no write, scout, or planning.                                   |
+| X: refused or unverified started transition                              | Fast finishing never attempts or verifies the missing transition.                                                        | Blocks finishing until the intended started state is observed; ambiguous writes use existing readback/recovery rules.                                                                   |
+| Y: merged PR with issue still Ready                                      | Goes directly to completion reconciliation.                                                                              | Preserves direct completion with no intermediate started transition; canceled and completed policies remain intact.                                                                     |
+| E/F: matching PR already merged                                          | Goes directly to Linear completion reconciliation.                                                                       | Keeps that shortcut before unmerged prerequisites and branch-ownership guards; does not replay planning, review, or merge.                                                              |
+| C: plan-only request                                                     | No implementation or full-delivery authority.                                                                            | Same narrow scope; the fast route cannot grant publication or merge authority.                                                                                                          |
