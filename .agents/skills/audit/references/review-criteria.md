@@ -42,7 +42,7 @@ Use these checks after the mechanical gates. A criterion applies only to its art
 
 ## Manifests and banners
 
-- Claude and Codex manifests have matching versions when both exist, and both registries expose
+- Claude, Codex, and Antigravity manifests have matching versions when they exist, and both registries expose
   every cross-runtime plugin.
 - A README reference to `./assets/banner.png` resolves to a real file and every banner asset is
   referenced by its README.

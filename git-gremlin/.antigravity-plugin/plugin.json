@@ -1,0 +1,13 @@
+{
+  "$schema": "https://antigravity.google/schemas/v1/plugin.json",
+  "name": "git-gremlin",
+  "displayName": "Git Gremlin",
+  "version": "1.0.30",
+  "description": "Git gremlin — scoped commits, draft PRs, and full PR completion through native review, corrections, CI, and protected merge",
+  "author": {
+    "name": "g-bastianelli"
+  },
+  "homepage": "https://github.com/g-bastianelli/nuthouse",
+  "repository": "https://github.com/g-bastianelli/nuthouse",
+  "logo": "assets/banner.png"
+}

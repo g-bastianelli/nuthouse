@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import {
+  agentNeeds,
   applyAgentPlan,
   checkAgents,
   checkRuntimeMaps,
@@ -154,6 +155,39 @@ describe("Codex agent parity", () => {
     }
 
     expect(expectedRuntimeMapFiles(REPO_ROOT).size).toBeGreaterThan(0);
+  });
+
+  test("derives prompt-defined subagent capabilities from the Claude allowlist", () => {
+    const byAlias = new Map(
+      listAgentSources(REPO_ROOT).map((agent) => [`${agent.plugin}:${agent.name}`, agent]),
+    );
+    expect(agentNeeds(byAlias.get("linear-devotee:issue-context"))).toEqual([
+      "read",
+      "shell",
+      "mcp",
+    ]);
+    expect(agentNeeds(byAlias.get("linear-devotee:plan-auditor"))).toEqual(["read"]);
+    expect(agentNeeds(byAlias.get("lore-hound:source-fetcher"))).toEqual(["web"]);
+    expect(agentNeeds({ sourcePath: "x.md", tools: [] })).toEqual(["all"]);
+    expect(() => agentNeeds({ sourcePath: "x.md", tools: ["Read", "Frobnicate"] })).toThrow(
+      "x.md: no capability mapping for tool Frobnicate",
+    );
+  });
+
+  test("gives every runtime map the named, prompt-defined, and inline routes", () => {
+    const maps = [...expectedRuntimeMapFiles(REPO_ROOT).values()];
+    expect(maps.length).toBeGreaterThan(0);
+    for (const map of maps) {
+      expect(map).toContain("1. **Named agent.**");
+      expect(map).toContain("2. **Prompt-defined subagent.**");
+      expect(map).toContain("3. **Inline.**");
+      expect(map).toContain("| Tier ");
+    }
+    const lore = expectedRuntimeMapFiles(REPO_ROOT).get(
+      path.join(REPO_ROOT, "lore-hound", "shared", "agent-runtime-map.md"),
+    );
+    expect(lore).toMatch(/`lore-hound:source-fetcher` .*\| fast \(`flash_lite`\) \| web /);
+    expect(lore).toMatch(/`lore-hound:claim-verifier` .*\| balanced \(`flash`\) +\| web /);
   });
 
   test("keeps generated project agents synchronized", () => {

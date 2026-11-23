@@ -64,10 +64,10 @@ function validateRuntime(value) {
     uuid(value.threadId, "runtime.threadId");
     absolute(value.executable, "runtime.executable");
     absolute(value.home, "runtime.home");
-  } else if (value.provider === "claude") {
+  } else if (value.provider === "claude" || value.provider === "antigravity") {
     object(value, "runtime", ["provider", "socketPath"]);
     absolute(value.socketPath, "runtime.socketPath");
-  } else invalid("runtime.provider must be codex or claude");
+  } else invalid("runtime.provider must be codex, claude, or antigravity");
 }
 function validateOperation(value) {
   object(value, "event.operation", [
@@ -111,7 +111,8 @@ export function validateRequest(value) {
   object(event.source, "event.source", ["hostId", "workspaceId", "provider", "sessionId"]);
   for (const key of ["hostId", "workspaceId", "sessionId"])
     identifier(event.source[key], `event.source.${key}`);
-  if (!["claude", "codex"].includes(event.source.provider)) invalid("unsupported source.provider");
+  if (!["claude", "codex", "antigravity"].includes(event.source.provider))
+    invalid("unsupported source.provider");
   string(event.summary, "event.summary", 4000);
   if (event.evidence !== undefined) {
     if (!Array.isArray(event.evidence) || event.evidence.length > 8)
@@ -211,7 +212,124 @@ function commandFailure(event, command, label) {
     `${label}: ${command.timedOut ? "timed out; acceptance is unknown" : (command.error || command.stderr || `exit ${command.code}`).slice(0, 500)}`,
   );
 }
-async function sendLocal(event, runtime, run) {
+// Antigravity has no native inbound route into a live session (a second `agy acp` client
+// forks the conversation), but a finished background task wakes it. Its receiver therefore
+// runs one bounded `listen` task; this sends one frame to that listener's socket.
+function sendListener(event, socketPath, dependencies) {
+  const now = dependencies.now ?? Date.now;
+  const sleep = dependencies.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
+  const deadline = now() + (dependencies.connectWindowMs ?? OPERATION_TIMEOUT_MS);
+  const attempt = () =>
+    new Promise((resolve) => {
+      let written = false;
+      let reply = "";
+      const socket = net.createConnection(socketPath);
+      const finish = (outcome) => {
+        socket.destroy();
+        resolve(outcome);
+      };
+      socket.setTimeout(OPERATION_TIMEOUT_MS, () =>
+        finish(result(event, written ? "unknown" : "failed", "Antigravity listener timed out")),
+      );
+      socket.on("error", (error) =>
+        finish(
+          written
+            ? result(event, "unknown", error.message)
+            : { rearm: ["ENOENT", "ECONNREFUSED"].includes(error.code), reason: error.message },
+        ),
+      );
+      socket.on("connect", () => {
+        socket.write(`${JSON.stringify({ event })}\n`, () => {
+          written = true;
+        });
+      });
+      socket.setEncoding("utf8");
+      socket.on("data", (chunk) => {
+        reply += chunk;
+        if (reply.startsWith("accepted\n"))
+          finish(
+            result(
+              event,
+              "written",
+              "Antigravity listener accepted; the session wakes when its listen task ends, processing is not confirmed",
+            ),
+          );
+      });
+      socket.on("close", () =>
+        finish(result(event, written ? "unknown" : "failed", "listener closed without accepting")),
+      );
+    });
+  return (async () => {
+    for (;;) {
+      const outcome = await attempt();
+      if (!outcome.rearm) return outcome;
+      // Nothing was delivered, so waiting for the receiver to re-arm cannot duplicate the event.
+      if (now() >= deadline)
+        return result(event, "failed", `no armed Antigravity listener: ${outcome.reason}`);
+      await sleep(Math.min(250, deadline - now()));
+    }
+  })();
+}
+
+export function listen({ socketPath, timeoutMs = 3600000, batchMs = 1000 }) {
+  absolute(socketPath, "socketPath");
+  if (Buffer.byteLength(socketPath) > 100) invalid("socketPath must be at most 100 bytes");
+  integer(timeoutMs, "timeoutMs", 1000, 86400000);
+  integer(batchMs, "batchMs", 0, 10000);
+  const destination = { kind: "local", runtime: { provider: "antigravity", socketPath } };
+  return new Promise((resolve, reject) => {
+    const events = [];
+    let batch;
+    const server = net.createServer((socket) => {
+      let buffer = "";
+      socket.setEncoding("utf8");
+      socket.on("error", () => {});
+      socket.on("data", (chunk) => {
+        buffer += chunk;
+        if (Buffer.byteLength(buffer) > MAX_INPUT_BYTES * 2) return socket.destroy();
+        const newline = buffer.indexOf("\n");
+        if (newline === -1) return;
+        let event;
+        try {
+          // Any local process can connect; accept only a valid Maestro event.
+          ({ event } = validateRequest({
+            event: parseJson(buffer.slice(0, newline))?.event,
+            destination,
+          }));
+        } catch {
+          return socket.destroy();
+        }
+        events.push(event);
+        socket.end("accepted\n");
+        // Brief batching collects concurrent workers into one wake-up.
+        batch ??= setTimeout(done, batchMs);
+      });
+    });
+    const expiry = setTimeout(done, timeoutMs);
+    function done() {
+      clearTimeout(expiry);
+      clearTimeout(batch);
+      // Node removes the socket file on close.
+      server.close(() =>
+        resolve(events.length ? { status: "received", events } : { status: "expired" }),
+      );
+    }
+    server.on("error", (error) => {
+      clearTimeout(expiry);
+      reject(error);
+    });
+    server.listen(socketPath);
+  });
+}
+
+export function renderReceived(events) {
+  return events.map(message).join("\n\n");
+}
+
+async function sendLocal(event, runtime, dependencies) {
+  const run = dependencies.run ?? runBounded;
+  if (runtime.provider === "antigravity")
+    return sendListener(event, runtime.socketPath, dependencies);
   if (runtime.provider === "codex") {
     const env = { ...process.env, CODEX_HOME: runtime.home };
     // Queueing is not a new Superset agent lifecycle or a turn in the sender's TUI log.
@@ -362,7 +480,7 @@ async function sendRemote(event, destination, dependencies) {
 export async function notify(value, dependencies = {}) {
   const { event, destination } = validateRequest(value);
   return destination.kind === "local"
-    ? sendLocal(event, destination.runtime, dependencies.run ?? runBounded)
+    ? sendLocal(event, destination.runtime, dependencies)
     : sendRemote(event, destination, dependencies);
 }
 

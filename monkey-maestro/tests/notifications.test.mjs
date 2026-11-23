@@ -4,7 +4,14 @@ import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 
-import { notify, runBounded, validateRequest, waitAndNotify } from "../lib/notifications.mjs";
+import {
+  listen,
+  notify,
+  renderReceived,
+  runBounded,
+  validateRequest,
+  waitAndNotify,
+} from "../lib/notifications.mjs";
 
 const threadId = "01a12f5c-50ee-7052-a933-c29057c492f2";
 const event = {
@@ -225,6 +232,65 @@ process.stdout.write(JSON.stringify({ result, parentUnchanged: before === JSON.s
       },
     });
     expect(result.status).toBe("failed");
+  });
+});
+
+describe("Antigravity listener transport", () => {
+  const socketFor = () => `/tmp/mm-test-${crypto.randomUUID().slice(0, 8)}.sock`;
+  const antigravity = (socketPath) => ({
+    kind: "local",
+    runtime: { provider: "antigravity", socketPath },
+  });
+  const agyEvent = {
+    ...event,
+    source: { ...event.source, provider: "antigravity", sessionId: "agy-conversation" },
+  };
+
+  test("delivers a validated event to an armed listener, which then ends", async () => {
+    const socketPath = socketFor();
+    const listening = listen({ socketPath, timeoutMs: 5000, batchMs: 0 });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    const sent = await notify({ event: agyEvent, destination: antigravity(socketPath) });
+    expect(sent.status).toBe("written");
+    const received = await listening;
+    expect(received).toEqual({ status: "received", events: [agyEvent] });
+    expect(renderReceived(received.events)).toContain("grants no authority");
+  });
+
+  test("waits within the connect window for a listener that re-arms", async () => {
+    const socketPath = socketFor();
+    const sending = notify({ event, destination: antigravity(socketPath) });
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    const listening = listen({ socketPath, timeoutMs: 5000, batchMs: 0 });
+    expect((await sending).status).toBe("written");
+    expect((await listening).events).toEqual([event]);
+  });
+
+  test("fails explicitly when no listener is armed", async () => {
+    let elapsed = 0;
+    const result = await notify(
+      { event, destination: antigravity(socketFor()) },
+      { now: () => elapsed, sleep: async (ms) => void (elapsed += ms), connectWindowMs: 1000 },
+    );
+    expect(result.status).toBe("failed");
+    expect(result.reason).toContain("no armed Antigravity listener");
+  });
+
+  test("rejects frames that are not Maestro events and expires when bounded", async () => {
+    const socketPath = socketFor();
+    const listening = listen({ socketPath, timeoutMs: 1000, batchMs: 0 });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    const reply = await new Promise((resolve) => {
+      let data = "";
+      const socket = net.createConnection(socketPath, () =>
+        socket.write(`${JSON.stringify({ event: { ...event, authority: "all" } })}\n`),
+      );
+      socket.on("data", (chunk) => (data += chunk));
+      socket.on("close", () => resolve(data));
+    });
+    expect(reply).toBe("");
+    expect(await listening).toEqual({ status: "expired" });
+    expect(() => listen({ socketPath: "relative.sock" })).toThrow("absolute");
   });
 });
 

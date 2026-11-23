@@ -9,7 +9,7 @@ allowed-tools: Read, Glob, Grep, Write, Edit, Agent, ToolSearch, Skill(linear-de
 # linear-devotee:deliver
 
 Own one issue until its PR is merged and Linear completion is observed, or return the specific
-waiting condition or decision. Work in the current runtime on Claude Code or Codex.
+waiting condition or decision. Work in the current runtime on Claude Code, Codex, or Antigravity.
 
 ## Voice
 

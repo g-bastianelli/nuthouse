@@ -2,12 +2,29 @@
 
 # Agent runtime map
 
-Resolve every logical agent id through this table before delegation. Select the exact name
-for the active runtime.
+Resolve every logical agent id through this table before delegation, then take the first
+route the active runtime supports:
 
-| Logical id                     | Claude Code                    | Codex                           |
-| ------------------------------ | ------------------------------ | ------------------------------- |
-| `monkey-maestro:linear-reader` | `monkey-maestro:linear-reader` | `monkey_maestro__linear_reader` |
+1. **Named agent.** Claude Code and Codex register these agents: dispatch the exact name in
+   the active runtime's column. On Codex, spawn the typed custom agent with isolated
+   task-local context. Never use a full-history fork.
+2. **Prompt-defined subagent.** A runtime without that named agent but able to define a
+   subagent from a prompt (Antigravity: `define_subagent`, then `invoke_subagent`)
+   defines it once per conversation and reuses it for every invocation:
+   - name: the Codex column's name;
+   - system prompt: the body of `agents/<agent>.md` in this plugin root, after its
+     frontmatter;
+   - capabilities: exactly **Needs**. `shell` or `write` enables write tools (on
+     Antigravity that switch also gates command execution), `mcp` enables MCP tools,
+     `agents` enables subagent tools, `all` enables every switch; enable nothing else;
+   - model: **Tier**, using the parenthesized Antigravity value as `invoke_subagent`'s
+     `Model` or the runtime's closest equivalent.
+3. **Inline.** Without subagent support, read that same body and perform its task yourself
+   as one bounded step under its input and output contract.
 
-On Codex, spawn a typed custom agent with isolated task-local context. Never use a
-full-history fork. Pass only the input contract required by the delegated task.
+| Logical id                     | Claude Code                    | Codex                           | Tier                | Needs |
+| ------------------------------ | ------------------------------ | ------------------------------- | ------------------- | ----- |
+| `monkey-maestro:linear-reader` | `monkey-maestro:linear-reader` | `monkey_maestro__linear_reader` | fast (`flash_lite`) | mcp   |
+
+On every route, pass only the input contract required by the delegated task and restate the
+agent's required output format in the delegation prompt.

@@ -1,0 +1,10 @@
+{
+  "moon-moth": {
+    "SessionStart": [
+      {
+        "type": "command",
+        "command": "node ./claudecode/hooks/antigravity-hook.mjs SessionStart ./claudecode/hooks/session-start.mjs"
+      }
+    ]
+  }
+}

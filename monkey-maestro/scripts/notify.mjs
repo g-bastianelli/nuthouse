@@ -2,10 +2,40 @@
 import {
   MAX_CONTINUATION_BYTES,
   MAX_INPUT_BYTES,
+  listen,
   notify,
+  renderReceived,
   validateRequest,
   waitAndNotify,
 } from "../lib/notifications.mjs";
+
+// Antigravity receiver: one bounded background task that ends on the first event batch.
+if (process.argv[2] === "listen") {
+  const args = process.argv.slice(3);
+  const option = (name) => {
+    const index = args.indexOf(name);
+    return index === -1 ? undefined : args[index + 1];
+  };
+  try {
+    if (args.length !== 2 && args.length !== 4)
+      throw new Error("usage: notify.mjs listen --socket <absolute path> [--timeout-ms <n>]");
+    const timeout = option("--timeout-ms");
+    const outcome = await listen({
+      socketPath: option("--socket"),
+      ...(timeout !== undefined && { timeoutMs: Number(timeout) }),
+    });
+    if (outcome.status === "received") process.stdout.write(`${renderReceived(outcome.events)}\n`);
+    process.stdout.write(
+      `${JSON.stringify({ status: outcome.status, eventIds: (outcome.events ?? []).map((event) => event.eventId) })}\n`,
+    );
+  } catch (error) {
+    process.stderr.write(
+      `${JSON.stringify({ status: "failed", reason: error instanceof Error ? error.message : String(error) })}\n`,
+    );
+    process.exitCode = 1;
+  }
+  process.exit();
+}
 
 async function readInput(maximum) {
   const chunks = [];

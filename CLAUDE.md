@@ -1,6 +1,6 @@
 # nuthouse
 
-Personal Claude Code (sometimes Codex) plugin marketplace. Eight plugins right now: `subroutine`, `linear-devotee`, `acid-prophet`, `git-gremlin`, `lore-hound`, `stack-golem`, `moon-moth`, `monkey-maestro`.
+Personal Claude Code (sometimes Codex or Antigravity) plugin marketplace. Eight plugins right now: `subroutine`, `linear-devotee`, `acid-prophet`, `git-gremlin`, `lore-hound`, `stack-golem`, `moon-moth`, `monkey-maestro`.
 
 > **Pour créer un nouveau plugin / skill / agent**, invoque les skills locaux :
 > `/scaffold-plugin`, `/scaffold-skill`, `/scaffold-agent`. Ils embarquent
@@ -54,12 +54,15 @@ Nuthouse plugins follow the Superpowers-style root install model: the plugin dir
 
 > **Two marketplace registries.** `.claude-plugin/marketplace.json` is read by **Claude Code**; `.agents/plugins/marketplace.json` is read by **Codex**. Every `codex`/`both` plugin MUST be registered in **both** — a plugin absent from the Codex registry is invisible to `codex plugin list` even with a valid `.codex-plugin/plugin.json`. The Codex format differs: `path` has a leading `./`, entries carry a `policy` block, there is **no `sha`** field, and `category` is TitleCase. Codex also serves from a cached Git snapshot — after a plugin lands on the remote, `codex plugin marketplace upgrade` + session restart are required to see it. `/scaffold-plugin` step 3a-bis writes both registries by construction.
 
+> **Antigravity has no registry.** `agy plugin install https://github.com/g-bastianelli/nuthouse/<plugin>` reads `<plugin>/.antigravity-plugin/plugin.json`, whose `name`/`version` stay in parity with the other manifests (`check:workflow`, `bump:versions`). It loads root `skills/` unchanged, skips Claude-format agents (skills reach them through the runtime map's prompt-defined route instead), and reads hooks only from a root `hooks.json` whose commands go through the shared `claudecode/hooks/antigravity-hook.mjs` bridge (source `_shared/runtime/src/`, copied by `build:runtime`) — see `_adr/0010-antigravity-runtime.md`. Check a plugin with `agy plugin validate ./<plugin>`.
+
 Canonical layout for cross-runtime plugins:
 
 ```text
 <plugin>/
   .claude-plugin/plugin.json      # Claude Code manifest; skills: ./skills/
   .codex-plugin/plugin.json       # Codex manifest; skills: ./skills/
+  .antigravity-plugin/plugin.json # Antigravity manifest; reads ./skills/ by default
   README.md
   persona.md
   assets/
@@ -225,6 +228,10 @@ Architecture Decision Records live in `_adr/`, numbered sequentially (`NNNN-keba
 - `_adr/0009-progressive-disclosure-for-skills.md` — `SKILL.md` is a focused entrypoint;
   conditional detail belongs in directly routed references and workflows reuse native tools.
   It governs skill creation and refactoring.
+- `_adr/0010-antigravity-runtime.md` — Antigravity CLI is a third runtime:
+  `.antigravity-plugin/plugin.json` in version parity, no registry, cross-agent delegation
+  (named agent → prompt-defined subagent → inline) generated into each runtime map, and the
+  verified list of what its loader skips (Claude agents, `hooks/hooks.json`).
 
 ---
 

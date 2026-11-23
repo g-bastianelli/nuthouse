@@ -4,12 +4,13 @@
 
 <h1 align="center">nuthouse</h1>
 
-<p align="center">Claude Code + Codex plugins with one shared root layout.</p>
+<p align="center">Claude Code + Codex + Antigravity plugins with one shared root layout.</p>
 
 <p align="center">
   <a href="https://github.com/g-bastianelli/nuthouse/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/g-bastianelli/nuthouse?style=flat-square&color=fbbf24" /></a>
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-compatible-8B5CF6?style=flat-square" />
   <img alt="Codex" src="https://img.shields.io/badge/Codex-compatible-10B981?style=flat-square" />
+  <img alt="Antigravity" src="https://img.shields.io/badge/Antigravity-skills-4285F4?style=flat-square" />
   <img alt="License" src="https://img.shields.io/github/license/g-bastianelli/nuthouse?style=flat-square" />
   <img alt="bun" src="https://img.shields.io/badge/bun-1.3-f472b6?style=flat-square&logo=bun" />
 </p>
@@ -62,6 +63,17 @@ After a published update, run `codex plugin marketplace upgrade nuthouse`, refre
 agents from that published revision with the same three commands, and start a new session.
 Marketplace upgrades alone do not synchronize personal agents.
 
+Antigravity CLI installs a plugin folder straight from this repository; re-run the same
+command after a published update to replace the installed copy:
+
+```text
+agy plugin install https://github.com/g-bastianelli/nuthouse/<plugin>
+```
+
+On Antigravity the skills load as-is and dedicated agents run as prompt-defined subagents
+through each plugin's `shared/agent-runtime-map.md`. Hooks run through each plugin's root
+`hooks.json` and a small bridge — see [ADR 0010](./_adr/0010-antigravity-runtime.md).
+
 ## Layout
 
 Cross-runtime plugins use one canonical root tree:
@@ -70,6 +82,7 @@ Cross-runtime plugins use one canonical root tree:
 <plugin>/
   .claude-plugin/plugin.json      # skills: ./skills/, agents: ./agents/*.md
   .codex-plugin/plugin.json       # skills: ./skills/
+  .antigravity-plugin/plugin.json # Antigravity reads ./skills/ by default
   assets/
   persona.md
   shared/

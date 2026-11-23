@@ -1,0 +1,13 @@
+{
+  "$schema": "https://antigravity.google/schemas/v1/plugin.json",
+  "name": "monkey-maestro",
+  "displayName": "Monkey Maestro",
+  "version": "1.0.31",
+  "description": "Supervise authorized Linear issue delivery through native review and protected merge in isolated Superset workspaces.",
+  "author": {
+    "name": "g-bastianelli"
+  },
+  "homepage": "https://github.com/g-bastianelli/nuthouse",
+  "repository": "https://github.com/g-bastianelli/nuthouse",
+  "logo": "assets/banner.png"
+}

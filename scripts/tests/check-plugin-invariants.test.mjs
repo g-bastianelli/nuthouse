@@ -79,6 +79,22 @@ describe("plugin registry coherence", () => {
     expect(problems).toContain("versions differ");
   });
 
+  test("holds an Antigravity manifest to the same name and version without a registry", () => {
+    const root = fixture();
+    writeJson(root, "shell-wisp/.antigravity-plugin/plugin.json", {
+      name: "shell-wisp",
+      version: "1.0.0",
+    });
+    expect(checkPluginInvariants(root)).toEqual([]);
+    writeJson(root, "shell-wisp/.antigravity-plugin/plugin.json", {
+      name: "shell-wisp",
+      version: "1.0.1",
+    });
+    expect(checkPluginInvariants(root).join("\n")).toContain(
+      "shell-wisp: Claude/Antigravity versions differ (1.0.0 != 1.0.1)",
+    );
+  });
+
   test("reports malformed registries without crashing", () => {
     const root = fixture();
     fs.writeFileSync(path.join(root, REGISTRIES.codex), "{");

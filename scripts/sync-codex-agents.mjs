@@ -16,6 +16,52 @@ const MODEL_MAP = new Map([
   ["opus", "gpt-5.6-sol"],
 ]);
 
+// Runtime-neutral tier for prompt-defined subagents; the parenthesized value is
+// Antigravity's `invoke_subagent` Model (verified with agy 1.5.15, ADR 0010).
+const TIER_MAP = new Map([
+  ["haiku", "fast (`flash_lite`)"],
+  ["sonnet", "balanced (`flash`)"],
+  ["opus", "strong (`pro`)"],
+]);
+
+// Capabilities a prompt-defined subagent must be granted, derived from the Claude allowlist.
+const TOOL_NEEDS = new Map([
+  ["Read", "read"],
+  ["Glob", "read"],
+  ["Grep", "read"],
+  ["Bash", "shell"],
+  ["Write", "write"],
+  ["Edit", "write"],
+  ["MultiEdit", "write"],
+  ["NotebookEdit", "write"],
+  ["WebFetch", "web"],
+  ["WebSearch", "web"],
+  ["Agent", "agents"],
+  ["Task", "agents"],
+]);
+const NEED_ORDER = ["read", "shell", "write", "mcp", "web", "agents"];
+
+function agentTier(agent) {
+  if (!agent.model || agent.model === "inherit") return "inherit";
+  const tier = TIER_MAP.get(agent.model);
+  if (!tier) throw new Error(`${agent.sourcePath}: unsupported Claude model ${agent.model}`);
+  return tier;
+}
+
+export function agentNeeds(agent) {
+  // An omitted Claude allowlist inherits every tool.
+  if (agent.tools.length === 0) return ["all"];
+  const needs = new Set(
+    agent.tools.map((tool) => {
+      if (tool.startsWith("mcp__")) return "mcp";
+      const need = TOOL_NEEDS.get(tool);
+      if (!need) throw new Error(`${agent.sourcePath}: no capability mapping for tool ${tool}`);
+      return need;
+    }),
+  );
+  return NEED_ORDER.filter((need) => needs.has(need));
+}
+
 function parseScalar(frontmatter, key) {
   const match = frontmatter.match(new RegExp(`^${key}:[ \\t]*([^\\n]*)$`, "m"));
   if (!match) return undefined;
@@ -188,13 +234,15 @@ export function expectedAgentFiles(repoRoot) {
 }
 
 function renderRuntimeMap(agents) {
-  const headers = ["Logical id", "Claude Code", "Codex"];
+  const headers = ["Logical id", "Claude Code", "Codex", "Tier", "Needs"];
   const rows = agents.map((agent) => {
     const logicalName = `${agent.plugin}:${agent.name}`;
     return [
       `\`${logicalName}\``,
       `\`${logicalName}\``,
       `\`${codexAgentName(agent.plugin, agent.name)}\``,
+      agentTier(agent),
+      agentNeeds(agent).join(", "),
     ];
   });
   const widths = headers.map((header, index) =>
@@ -212,13 +260,30 @@ function renderRuntimeMap(agents) {
 
 # Agent runtime map
 
-Resolve every logical agent id through this table before delegation. Select the exact name
-for the active runtime.
+Resolve every logical agent id through this table before delegation, then take the first
+route the active runtime supports:
+
+1. **Named agent.** Claude Code and Codex register these agents: dispatch the exact name in
+   the active runtime's column. On Codex, spawn the typed custom agent with isolated
+   task-local context. Never use a full-history fork.
+2. **Prompt-defined subagent.** A runtime without that named agent but able to define a
+   subagent from a prompt (Antigravity: \`define_subagent\`, then \`invoke_subagent\`)
+   defines it once per conversation and reuses it for every invocation:
+   - name: the Codex column's name;
+   - system prompt: the body of \`agents/<agent>.md\` in this plugin root, after its
+     frontmatter;
+   - capabilities: exactly **Needs**. \`shell\` or \`write\` enables write tools (on
+     Antigravity that switch also gates command execution), \`mcp\` enables MCP tools,
+     \`agents\` enables subagent tools, \`all\` enables every switch; enable nothing else;
+   - model: **Tier**, using the parenthesized Antigravity value as \`invoke_subagent\`'s
+     \`Model\` or the runtime's closest equivalent.
+3. **Inline.** Without subagent support, read that same body and perform its task yourself
+   as one bounded step under its input and output contract.
 
 ${table}
 
-On Codex, spawn a typed custom agent with isolated task-local context. Never use a
-full-history fork. Pass only the input contract required by the delegated task.
+On every route, pass only the input contract required by the delegated task and restate the
+agent's required output format in the delegation prompt.
 `;
 }
 

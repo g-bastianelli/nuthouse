@@ -50,6 +50,7 @@ SHA pins, and every cross-runtime release verifies and reports both runtimes.
      - **Claude Code** requires `<plugin>/.claude-plugin/plugin.json` plus an entry in `.claude-plugin/marketplace.json`.
      - **Codex** requires `<plugin>/.codex-plugin/plugin.json` plus an entry in `.agents/plugins/marketplace.json`.
      - A plugin that declares both manifests must appear in both registries. Any missing manifest/registry pair is a release failure; report it and stop.
+     - **Antigravity** requires `<plugin>/.antigravity-plugin/plugin.json` only; it has no registry (users install the repository folder), and `check:workflow` holds its version to the others.
    - Identify the phase from the invocation argument if given (`versions` or `shas`); otherwise
      auto-detect:
      - The version bump dry-run lists pending bumps → phase **versions**.
@@ -93,11 +94,13 @@ release report
   Release set:  <all changed plugins, including already-bumped and new>
   Claude Code:  <covered plugin names | none>
   Codex:        <covered plugin names | none>
+  Antigravity:  <covered plugin names | none>
   Verification: <each check: pass/fail>
   Commit:       <sha or "handed to git-gremlin:commit" or none>
   Next step:    merge PR then /release shas | push main
   User refresh: Claude Code: claude plugin update <plugin>@nuthouse + restart
                 Codex: codex plugin marketplace upgrade nuthouse + new session
                 Codex first install only: codex plugin add <plugin>@nuthouse
+                Antigravity: agy plugin install https://github.com/g-bastianelli/nuthouse/<plugin>
   Codex agents: <unchanged | refresh pending | installed and checked; new session needed>
 ```

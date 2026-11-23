@@ -1,0 +1,13 @@
+{
+  "$schema": "https://antigravity.google/schemas/v1/plugin.json",
+  "name": "subroutine",
+  "displayName": "Subroutine",
+  "version": "2.1.14",
+  "description": "TypeScript implementation discipline for monorepos: type-safety, Result/unwrap, Zod validation, code organisation, React, form, testing, state-machine, and Hono-pipeline rules, plus a settled-folder checkpoint. Defers to the repo's own AGENTS.md.",
+  "author": {
+    "name": "g-bastianelli"
+  },
+  "homepage": "https://github.com/g-bastianelli/nuthouse",
+  "repository": "https://github.com/g-bastianelli/nuthouse",
+  "logo": "assets/banner.png"
+}

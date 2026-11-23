@@ -2,17 +2,34 @@
 
 # Agent runtime map
 
-Resolve every logical agent id through this table before delegation. Select the exact name
-for the active runtime.
+Resolve every logical agent id through this table before delegation, then take the first
+route the active runtime supports:
 
-| Logical id                            | Claude Code                           | Codex                                  |
-| ------------------------------------- | ------------------------------------- | -------------------------------------- |
-| `linear-devotee:issue-context`        | `linear-devotee:issue-context`        | `linear_devotee__issue_context`        |
-| `linear-devotee:issue-drafter`        | `linear-devotee:issue-drafter`        | `linear_devotee__issue_drafter`        |
-| `linear-devotee:milestone-drafter`    | `linear-devotee:milestone-drafter`    | `linear_devotee__milestone_drafter`    |
-| `linear-devotee:plan-auditor`         | `linear-devotee:plan-auditor`         | `linear_devotee__plan_auditor`         |
-| `linear-devotee:project-drafter`      | `linear-devotee:project-drafter`      | `linear_devotee__project_drafter`      |
-| `linear-devotee:project-graph-loader` | `linear-devotee:project-graph-loader` | `linear_devotee__project_graph_loader` |
+1. **Named agent.** Claude Code and Codex register these agents: dispatch the exact name in
+   the active runtime's column. On Codex, spawn the typed custom agent with isolated
+   task-local context. Never use a full-history fork.
+2. **Prompt-defined subagent.** A runtime without that named agent but able to define a
+   subagent from a prompt (Antigravity: `define_subagent`, then `invoke_subagent`)
+   defines it once per conversation and reuses it for every invocation:
+   - name: the Codex column's name;
+   - system prompt: the body of `agents/<agent>.md` in this plugin root, after its
+     frontmatter;
+   - capabilities: exactly **Needs**. `shell` or `write` enables write tools (on
+     Antigravity that switch also gates command execution), `mcp` enables MCP tools,
+     `agents` enables subagent tools, `all` enables every switch; enable nothing else;
+   - model: **Tier**, using the parenthesized Antigravity value as `invoke_subagent`'s
+     `Model` or the runtime's closest equivalent.
+3. **Inline.** Without subagent support, read that same body and perform its task yourself
+   as one bounded step under its input and output contract.
 
-On Codex, spawn a typed custom agent with isolated task-local context. Never use a
-full-history fork. Pass only the input contract required by the delegated task.
+| Logical id                            | Claude Code                           | Codex                                  | Tier                | Needs            |
+| ------------------------------------- | ------------------------------------- | -------------------------------------- | ------------------- | ---------------- |
+| `linear-devotee:issue-context`        | `linear-devotee:issue-context`        | `linear_devotee__issue_context`        | fast (`flash_lite`) | read, shell, mcp |
+| `linear-devotee:issue-drafter`        | `linear-devotee:issue-drafter`        | `linear_devotee__issue_drafter`        | balanced (`flash`)  | read, shell, mcp |
+| `linear-devotee:milestone-drafter`    | `linear-devotee:milestone-drafter`    | `linear_devotee__milestone_drafter`    | balanced (`flash`)  | read, shell, mcp |
+| `linear-devotee:plan-auditor`         | `linear-devotee:plan-auditor`         | `linear_devotee__plan_auditor`         | balanced (`flash`)  | read             |
+| `linear-devotee:project-drafter`      | `linear-devotee:project-drafter`      | `linear_devotee__project_drafter`      | strong (`pro`)      | read, shell, mcp |
+| `linear-devotee:project-graph-loader` | `linear-devotee:project-graph-loader` | `linear_devotee__project_graph_loader` | fast (`flash_lite`) | read, shell, mcp |
+
+On every route, pass only the input contract required by the delegated task and restate the
+agent's required output format in the delegation prompt.

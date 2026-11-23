@@ -9,6 +9,11 @@ Read only when the new plugin requested hooks. Use events supported by its selec
   inline in a plugin manifest.
 - Commands resolve the install root with `${PLUGIN_ROOT:-$CLAUDE_PLUGIN_ROOT}`, for example
   `node "${PLUGIN_ROOT:-$CLAUDE_PLUGIN_ROOT}/hooks/session-start.mjs"`.
+- Antigravity reads only a root `<plugin>/hooks.json` (named group, camelCase stdin). Route
+  each command through the bridge as `node ./claudecode/hooks/antigravity-hook.mjs <event>
+  <script>`. Map `UserPromptSubmit` to `PreInvocation`, and an edit hook to `PostToolUse` plus
+  a bare `PreInvocation` flush. Add the plugin to the `build:runtime` and `check:runtime` loops
+  in `package.json`.
 - Add ephemeral state only when the hook needs it. Use the runtime's `PLUGIN_DATA` or
   `CLAUDE_PLUGIN_DATA` directory, and stay silent when required state storage is unavailable.
   Never assume an installed plugin directory is writable.
