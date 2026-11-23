@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { spawn } from "node:child_process";
+import { existsSync } from "node:fs";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import net from "node:net";
 import os from "node:os";
@@ -291,6 +293,125 @@ describe("Antigravity listener transport", () => {
     expect(reply).toBe("");
     expect(await listening).toEqual({ status: "expired" });
     expect(() => listen({ socketPath: "relative.sock" })).toThrow("absolute");
+  });
+
+  test("reports a non-retryable connect error as an explicit failure", async () => {
+    // Node (the production runtime) reports ENOTDIR here; Bun reports a retryable ENOENT.
+    const script = path.resolve(import.meta.dir, "..", "scripts", "notify.mjs");
+    const sent = await runBounded("node", [script, "send"], {
+      input: JSON.stringify({ event, destination: antigravity("/etc/hosts/mm.sock") }),
+    });
+    expect(sent.code).toBe(1);
+    expect(JSON.parse(sent.stdout)).toMatchObject({ status: "failed", eventId: event.eventId });
+    expect(() =>
+      validateRequest({ event, destination: antigravity(`/tmp/${"x".repeat(100)}.sock`) }),
+    ).toThrow("at most 100 bytes");
+  });
+
+  test("an idle client cannot keep a bounded listener open", async () => {
+    const socketPath = socketFor();
+    const listening = listen({ socketPath, timeoutMs: 1000, batchMs: 0 });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    const idle = net.createConnection(socketPath);
+    idle.on("error", () => {});
+    const started = Date.now();
+    expect(await listening).toEqual({ status: "expired" });
+    expect(Date.now() - started).toBeLessThan(2000);
+    idle.destroy();
+  });
+
+  test("accepts one frame per connection even when more data follows", async () => {
+    const socketPath = socketFor();
+    const listening = listen({ socketPath, timeoutMs: 5000, batchMs: 200 });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    const socket = net.createConnection(socketPath);
+    socket.on("error", () => {});
+    socket.write(`${JSON.stringify({ event })}\n`);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    socket.write("trailing bytes\n");
+    expect((await listening).events).toEqual([event]);
+  });
+
+  test("refuses a second listener on a live socket", async () => {
+    const socketPath = socketFor();
+    const first = listen({ socketPath, timeoutMs: 5000, batchMs: 0 });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    await expect(listen({ socketPath, timeoutMs: 1000 })).rejects.toThrow("another listener");
+    await notify({ event, destination: antigravity(socketPath) });
+    expect((await first).events).toEqual([event]);
+  });
+});
+
+describe("Antigravity listen command", () => {
+  const script = path.resolve(import.meta.dir, "..", "scripts", "notify.mjs");
+  const socketFor = () => `/tmp/mm-cli-${crypto.randomUUID().slice(0, 8)}.sock`;
+  const destination = (socketPath) => ({
+    kind: "local",
+    runtime: { provider: "antigravity", socketPath },
+  });
+  // Node is the production runtime; its pipe writes are the ones an early exit truncates.
+  const start = (socketPath, slowReader = false) => {
+    const command = `node '${script}' listen --socket '${socketPath}'`;
+    // A slow reader lets the batch outgrow the pipe buffer before anything drains it.
+    const child = slowReader
+      ? spawn("sh", ["-c", `${command} | (sleep 2; cat)`], { stdio: ["ignore", "pipe", "pipe"] })
+      : spawn("node", [script, "listen", "--socket", socketPath], {
+          stdio: ["ignore", "pipe", "pipe"],
+        });
+    let stdout = "";
+    child.stdout.setEncoding("utf8").on("data", (chunk) => (stdout += chunk));
+    const exited = new Promise((resolve) =>
+      child.on("close", (code, signal) => resolve({ code, signal, stdout })),
+    );
+    return { child, exited };
+  };
+  const armed = async (socketPath) => {
+    for (let i = 0; i < 100 && !existsSync(socketPath); i++)
+      await new Promise((resolve) => setTimeout(resolve, 20));
+  };
+
+  test("prints every received event and its status through a pipe", async () => {
+    const socketPath = socketFor();
+    const { exited } = start(socketPath, true);
+    await armed(socketPath);
+    const big = (index) => ({
+      ...event,
+      eventId: crypto.randomUUID(),
+      summary: `event ${index}`,
+      evidence: Array.from({ length: 8 }, () => "e".repeat(2000)),
+    });
+    const sent = await Promise.all(
+      Array.from({ length: 6 }, (_, index) =>
+        notify({ event: big(index), destination: destination(socketPath) }),
+      ),
+    );
+    expect(sent.every((result) => result.status === "written")).toBe(true);
+    const { code, stdout } = await exited;
+    expect(code).toBe(0);
+    expect(Buffer.byteLength(stdout)).toBeGreaterThan(65536);
+    const status = JSON.parse(stdout.trimEnd().split("\n").at(-1));
+    expect(status.status).toBe("received");
+    expect(status.eventIds).toHaveLength(6);
+  });
+
+  test("a cancelled listener removes its socket and a killed one does not block re-arming", async () => {
+    const socketPath = socketFor();
+    const cancelled = start(socketPath);
+    await armed(socketPath);
+    cancelled.child.kill("SIGTERM");
+    expect((await cancelled.exited).stdout).toContain('"status":"expired"');
+    expect(existsSync(socketPath)).toBe(false);
+
+    const killed = start(socketPath);
+    await armed(socketPath);
+    killed.child.kill("SIGKILL");
+    await killed.exited;
+    expect(existsSync(socketPath)).toBe(true);
+
+    const listening = listen({ socketPath, timeoutMs: 5000, batchMs: 0 });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect((await notify({ event, destination: destination(socketPath) })).status).toBe("written");
+    expect((await listening).events).toEqual([event]);
   });
 });
 

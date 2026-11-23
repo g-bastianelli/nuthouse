@@ -12,20 +12,24 @@ route the active runtime supports:
    subagent from a prompt (Antigravity: `define_subagent`, then `invoke_subagent`)
    defines it once per conversation and reuses it for every invocation:
    - name: the Codex column's name;
-   - system prompt: the body of `agents/<agent>.md` in this plugin root, after its
-     frontmatter;
+   - system prompt: the **Limits** cell as opening instructions (stop within the turn cap,
+     read and follow each preloaded skill first, call no MCP tool outside the list), then
+     the body of `agents/<agent>.md` in the root of the plugin named by the logical id,
+     after its frontmatter;
    - capabilities: exactly **Needs**. `shell` or `write` enables write tools (on
      Antigravity that switch also gates command execution), `mcp` enables MCP tools,
-     `agents` enables subagent tools, `all` enables every switch; enable nothing else;
+     `agents` enables subagent tools, `all` enables every switch; enable nothing else.
+     Antigravity's MCP switch grants every MCP tool, so the **Limits** list is enforced by
+     the prompt alone;
    - model: **Tier**, using the parenthesized Antigravity value as `invoke_subagent`'s
      `Model` or the runtime's closest equivalent.
 3. **Inline.** Without subagent support, read that same body and perform its task yourself
-   as one bounded step under its input and output contract.
+   as one bounded step under its **Limits** and its input and output contract.
 
-| Logical id                  | Claude Code                 | Codex                        | Tier                | Needs |
-| --------------------------- | --------------------------- | ---------------------------- | ------------------- | ----- |
-| `lore-hound:claim-verifier` | `lore-hound:claim-verifier` | `lore_hound__claim_verifier` | balanced (`flash`)  | web   |
-| `lore-hound:source-fetcher` | `lore-hound:source-fetcher` | `lore_hound__source_fetcher` | fast (`flash_lite`) | web   |
+| Logical id                  | Claude Code                 | Codex                        | Tier                | Needs | Limits    |
+| --------------------------- | --------------------------- | ---------------------------- | ------------------- | ----- | --------- |
+| `lore-hound:claim-verifier` | `lore-hound:claim-verifier` | `lore_hound__claim_verifier` | balanced (`flash`)  | web   | ≤15 turns |
+| `lore-hound:source-fetcher` | `lore-hound:source-fetcher` | `lore_hound__source_fetcher` | fast (`flash_lite`) | web   | ≤5 turns  |
 
 On every route, pass only the input contract required by the delegated task and restate the
 agent's required output format in the delegation prompt.

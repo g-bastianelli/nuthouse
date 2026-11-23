@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
+import fs from "node:fs";
 import net from "node:net";
 import path from "node:path";
 
@@ -17,6 +18,9 @@ const TYPES = new Set([
 ]);
 const STATUSES = new Set(["queued", "written", "failed", "unknown"]);
 const OPERATION_TIMEOUT_MS = 10000;
+// An Antigravity master re-arms only when its current turn ends, so a sender waits out one turn.
+const ANTIGRAVITY_CONNECT_WINDOW_MS = 15 * 60 * 1000;
+const MAX_SOCKET_PATH_BYTES = 100;
 
 function invalid(message) {
   throw new Error(message);
@@ -67,6 +71,11 @@ function validateRuntime(value) {
   } else if (value.provider === "claude" || value.provider === "antigravity") {
     object(value, "runtime", ["provider", "socketPath"]);
     absolute(value.socketPath, "runtime.socketPath");
+    if (
+      value.provider === "antigravity" &&
+      Buffer.byteLength(value.socketPath) > MAX_SOCKET_PATH_BYTES
+    )
+      invalid(`runtime.socketPath must be at most ${MAX_SOCKET_PATH_BYTES} bytes`);
   } else invalid("runtime.provider must be codex, claude, or antigravity");
 }
 function validateOperation(value) {
@@ -218,7 +227,7 @@ function commandFailure(event, command, label) {
 function sendListener(event, socketPath, dependencies) {
   const now = dependencies.now ?? Date.now;
   const sleep = dependencies.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
-  const deadline = now() + (dependencies.connectWindowMs ?? OPERATION_TIMEOUT_MS);
+  const deadline = now() + (dependencies.connectWindowMs ?? ANTIGRAVITY_CONNECT_WINDOW_MS);
   const attempt = () =>
     new Promise((resolve) => {
       let written = false;
@@ -235,7 +244,9 @@ function sendListener(event, socketPath, dependencies) {
         finish(
           written
             ? result(event, "unknown", error.message)
-            : { rearm: ["ENOENT", "ECONNREFUSED"].includes(error.code), reason: error.message },
+            : ["ENOENT", "ECONNREFUSED"].includes(error.code)
+              ? { rearm: true, reason: error.message }
+              : result(event, "failed", error.message),
         ),
       );
       socket.on("connect", () => {
@@ -273,22 +284,32 @@ function sendListener(event, socketPath, dependencies) {
 
 export function listen({ socketPath, timeoutMs = 3600000, batchMs = 1000 }) {
   absolute(socketPath, "socketPath");
-  if (Buffer.byteLength(socketPath) > 100) invalid("socketPath must be at most 100 bytes");
+  if (Buffer.byteLength(socketPath) > MAX_SOCKET_PATH_BYTES)
+    invalid(`socketPath must be at most ${MAX_SOCKET_PATH_BYTES} bytes`);
   integer(timeoutMs, "timeoutMs", 1000, 86400000);
   integer(batchMs, "batchMs", 0, 10000);
   const destination = { kind: "local", runtime: { provider: "antigravity", socketPath } };
   return new Promise((resolve, reject) => {
     const events = [];
+    // Connections without an accepted frame; destroyed on close so an idle client cannot hold the task open.
+    const pending = new Set();
     let batch;
-    const server = net.createServer((socket) => {
+    let expiry;
+    let recovered = false;
+    let server;
+    const accept = (socket) => {
       let buffer = "";
+      pending.add(socket);
       socket.setEncoding("utf8");
       socket.on("error", () => {});
+      socket.on("close", () => pending.delete(socket));
       socket.on("data", (chunk) => {
+        if (!pending.has(socket)) return;
         buffer += chunk;
         if (Buffer.byteLength(buffer) > MAX_INPUT_BYTES * 2) return socket.destroy();
         const newline = buffer.indexOf("\n");
         if (newline === -1) return;
+        pending.delete(socket);
         let event;
         try {
           // Any local process can connect; accept only a valid Maestro event.
@@ -300,25 +321,54 @@ export function listen({ socketPath, timeoutMs = 3600000, batchMs = 1000 }) {
           return socket.destroy();
         }
         events.push(event);
-        socket.end("accepted\n");
+        socket.end("accepted\n", () => socket.destroy());
         // Brief batching collects concurrent workers into one wake-up.
         batch ??= setTimeout(done, batchMs);
       });
-    });
-    const expiry = setTimeout(done, timeoutMs);
+    };
     function done() {
       clearTimeout(expiry);
       clearTimeout(batch);
+      process.off("SIGTERM", done);
+      process.off("SIGINT", done);
+      for (const socket of pending) socket.destroy();
       // Node removes the socket file on close.
       server.close(() =>
         resolve(events.length ? { status: "received", events } : { status: "expired" }),
       );
     }
-    server.on("error", (error) => {
-      clearTimeout(expiry);
-      reject(error);
-    });
-    server.listen(socketPath);
+    function armed() {
+      expiry = setTimeout(done, timeoutMs);
+      // A cancelled task closes cleanly, so its socket file does not block the next listener.
+      process.once("SIGTERM", done);
+      process.once("SIGINT", done);
+    }
+    function failed(error) {
+      if (error.code !== "EADDRINUSE" || recovered) return reject(error);
+      recovered = true;
+      // A killed listener leaves its socket file; remove it only when nothing answers there.
+      const probe = net.createConnection(socketPath);
+      probe.on("connect", () => {
+        probe.destroy();
+        reject(new Error(`another listener is armed on ${socketPath}`));
+      });
+      probe.on("error", (probeError) => {
+        // Bun reports a refused Unix socket as ENOENT; either way nothing answers.
+        if (!["ECONNREFUSED", "ENOENT"].includes(probeError.code)) return reject(error);
+        fs.promises
+          .unlink(socketPath)
+          .catch((unlinkError) => {
+            if (unlinkError.code !== "ENOENT") throw unlinkError;
+          })
+          .then(bind, reject);
+      });
+    }
+    // A fresh server per attempt: Bun cannot rebind one whose listen failed.
+    function bind() {
+      server = net.createServer(accept).on("error", failed).on("listening", armed);
+      server.listen(socketPath);
+    }
+    bind();
   });
 }
 
@@ -439,7 +489,9 @@ async function sendRemote(event, destination, dependencies) {
     );
   let outcome = result(event, "unknown", "No runtime receipt; acceptance is unknown");
   const now = dependencies.now ?? Date.now;
-  const receiptDeadline = now() + 30000;
+  const antigravity = destination.runtime.provider === "antigravity";
+  // The remote helper may wait out the receiving master's turn before it prints a receipt.
+  const receiptDeadline = now() + (antigravity ? ANTIGRAVITY_CONNECT_WINDOW_MS : 0) + 30000;
   try {
     while (now() < receiptDeadline) {
       const read = await run(
@@ -465,7 +517,7 @@ async function sendRemote(event, destination, dependencies) {
         break;
       }
       const remaining = receiptDeadline - now();
-      if (remaining > 0) await sleep(Math.min(250, remaining));
+      if (remaining > 0) await sleep(Math.min(antigravity ? 2000 : 250, remaining));
     }
   } finally {
     const cleanup = await run(

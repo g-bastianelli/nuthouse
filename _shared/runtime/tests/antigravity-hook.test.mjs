@@ -68,6 +68,8 @@ describe("antigravity hook bridge", () => {
       `PostToolUse|c-1|${workspace}|/a.ts`,
     );
     expect(runBridge("PreInvocation", undefined, base(workspace), data)).toEqual({});
+    // The claimed copy is consumed, so nothing is left to inject twice.
+    expect(fs.readdirSync(path.join(data, "antigravity-pending"))).toEqual([]);
   });
 
   test("runs the prompt script only on a turn's first model call", () => {

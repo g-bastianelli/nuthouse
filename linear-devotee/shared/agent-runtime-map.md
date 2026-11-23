@@ -12,24 +12,28 @@ route the active runtime supports:
    subagent from a prompt (Antigravity: `define_subagent`, then `invoke_subagent`)
    defines it once per conversation and reuses it for every invocation:
    - name: the Codex column's name;
-   - system prompt: the body of `agents/<agent>.md` in this plugin root, after its
-     frontmatter;
+   - system prompt: the **Limits** cell as opening instructions (stop within the turn cap,
+     read and follow each preloaded skill first, call no MCP tool outside the list), then
+     the body of `agents/<agent>.md` in the root of the plugin named by the logical id,
+     after its frontmatter;
    - capabilities: exactly **Needs**. `shell` or `write` enables write tools (on
      Antigravity that switch also gates command execution), `mcp` enables MCP tools,
-     `agents` enables subagent tools, `all` enables every switch; enable nothing else;
+     `agents` enables subagent tools, `all` enables every switch; enable nothing else.
+     Antigravity's MCP switch grants every MCP tool, so the **Limits** list is enforced by
+     the prompt alone;
    - model: **Tier**, using the parenthesized Antigravity value as `invoke_subagent`'s
      `Model` or the runtime's closest equivalent.
 3. **Inline.** Without subagent support, read that same body and perform its task yourself
-   as one bounded step under its input and output contract.
+   as one bounded step under its **Limits** and its input and output contract.
 
-| Logical id                            | Claude Code                           | Codex                                  | Tier                | Needs            |
-| ------------------------------------- | ------------------------------------- | -------------------------------------- | ------------------- | ---------------- |
-| `linear-devotee:issue-context`        | `linear-devotee:issue-context`        | `linear_devotee__issue_context`        | fast (`flash_lite`) | read, shell, mcp |
-| `linear-devotee:issue-drafter`        | `linear-devotee:issue-drafter`        | `linear_devotee__issue_drafter`        | balanced (`flash`)  | read, shell, mcp |
-| `linear-devotee:milestone-drafter`    | `linear-devotee:milestone-drafter`    | `linear_devotee__milestone_drafter`    | balanced (`flash`)  | read, shell, mcp |
-| `linear-devotee:plan-auditor`         | `linear-devotee:plan-auditor`         | `linear_devotee__plan_auditor`         | balanced (`flash`)  | read             |
-| `linear-devotee:project-drafter`      | `linear-devotee:project-drafter`      | `linear_devotee__project_drafter`      | strong (`pro`)      | read, shell, mcp |
-| `linear-devotee:project-graph-loader` | `linear-devotee:project-graph-loader` | `linear_devotee__project_graph_loader` | fast (`flash_lite`) | read, shell, mcp |
+| Logical id                            | Claude Code                           | Codex                                  | Tier                | Needs            | Limits                                                                                            |
+| ------------------------------------- | ------------------------------------- | -------------------------------------- | ------------------- | ---------------- | ------------------------------------------------------------------------------------------------- |
+| `linear-devotee:issue-context`        | `linear-devotee:issue-context`        | `linear_devotee__issue_context`        | fast (`flash_lite`) | read, shell, mcp | ≤10 turns; MCP only `get_issue`, `list_comments`, `list_issue_statuses`                           |
+| `linear-devotee:issue-drafter`        | `linear-devotee:issue-drafter`        | `linear_devotee__issue_drafter`        | balanced (`flash`)  | read, shell, mcp | ≤15 turns; MCP only `get_milestone`, `get_project`, `list_issue_labels`, `list_issues`            |
+| `linear-devotee:milestone-drafter`    | `linear-devotee:milestone-drafter`    | `linear_devotee__milestone_drafter`    | balanced (`flash`)  | read, shell, mcp | ≤15 turns; MCP only `get_project`, `list_issues`, `list_milestones`                               |
+| `linear-devotee:plan-auditor`         | `linear-devotee:plan-auditor`         | `linear_devotee__plan_auditor`         | balanced (`flash`)  | read             | ≤20 turns                                                                                         |
+| `linear-devotee:project-drafter`      | `linear-devotee:project-drafter`      | `linear_devotee__project_drafter`      | strong (`pro`)      | read, shell, mcp | ≤15 turns; MCP only `list_projects`, `list_teams`, `list_issue_labels`                            |
+| `linear-devotee:project-graph-loader` | `linear-devotee:project-graph-loader` | `linear_devotee__project_graph_loader` | fast (`flash_lite`) | read, shell, mcp | ≤12 turns; MCP only `list_projects`, `get_project`, `list_milestones`, `list_issues`, `get_issue` |
 
 On every route, pass only the input contract required by the delegated task and restate the
 agent's required output format in the delegation prompt.

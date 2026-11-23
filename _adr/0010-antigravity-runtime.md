@@ -60,14 +60,17 @@ first route the runtime supports:
 1. **Named agent** for runtimes that register these agents (Claude Code, Codex).
 2. **Prompt-defined subagent** for runtimes that can define one at runtime. On
    Antigravity this means `define_subagent` followed by `invoke_subagent`:
-   - the system prompt is the canonical agent body;
-   - capability switches come from the Claude allowlist;
+   - the system prompt is the canonical agent body, prefixed with a generated **Limits**
+     cell (`maxTurns`, preloaded `skills`, and the exact MCP tool names);
+   - capability switches come from the Claude allowlist. Antigravity's MCP switch is
+     all-or-nothing, so the MCP allowlist is enforced only by that prompt;
    - a neutral **Tier** comes from the Claude model (`haiku`→`flash_lite`,
      `sonnet`→`flash`, `opus`→`pro`).
 3. **Inline** execution of the same body when the runtime has no subagent support.
 
-The generator derives **Tier** and **Needs** mechanically and fails on a tool it cannot
-classify, so the map never guesses a capability. Skills do not change: they already read the
+The generator derives **Tier**, **Needs** and **Limits** mechanically. It fails on a tool it
+cannot classify and on a `tools` key it cannot parse as a block list, so the map never
+guesses or widens a capability. Skills do not change: they already read the
 map before delegating.
 
 The following was checked with `agy` 1.5.15 on 2026-11-23:
@@ -109,6 +112,15 @@ The following was checked with `agy` 1.5.15 on 2026-11-23:
 - Moon Moth's workspace hint and Subroutine's digest arrive at session start.
 - Subroutine's full discipline bodies arrive right after a `.ts` write.
 - Linear Devotee detects an issue from the branch and from the first prompt.
+- SessionStart fires only for a new conversation. Resuming with `--conversation <id>` or
+  `-c` fires no SessionStart, so the bridge's fixed `source: "startup"` cannot repeat
+  Linear Devotee's greeting.
+- `invocationNum` restarts at 0 on every user prompt, which matches `UserPromptSubmit`.
+- `PLUGIN_DATA` is set to `~/.gemini/antigravity-cli/plugin_data/<plugin>`.
+
+Antigravity has no compaction event, so Subroutine cannot reset its delivered-discipline
+memo after a context compaction there. Later edits then get the one-line reminder rather
+than the full rule text.
 
 ## Consequences
 
@@ -124,8 +136,13 @@ The following was checked with `agy` 1.5.15 on 2026-11-23:
   background task does wake it, so the receiver works like this:
   - it runs `notify.mjs listen --socket <path>` as one bounded background task;
   - that task ends on the first event batch;
-  - the session re-arms a listener before handling those events;
-  - a sender waits up to 10 seconds for an armed listener, then reports `failed`.
+  - the session re-arms a listener on the same captured socket path before handling those
+    events;
+  - a listener that ends while the master is busy only wakes it after that turn, so a
+    sender waits up to 15 minutes for an armed listener, then reports `failed`. Nothing
+    was delivered while it waits, so the retry cannot duplicate an event;
+  - an idle client cannot keep a listener open, a cancelled listener removes its socket,
+    and the next listener reclaims the socket of a killed one.
 
   There is no queue, no daemon and no disk state. A live run on `agy` 1.5.15 delivered a
   worker `done` event to a listening session, which woke and read it.

@@ -31,11 +31,14 @@ A local destination is one of:
 Antigravity has no native inbound route into a live session: a second `agy acp` client
 forks the conversation instead of waking it. A finished background task does wake it. An
 Antigravity receiver therefore runs one bounded background task,
-`node <NOTIFY_HELPER> listen --socket <path> [--timeout-ms <n>]`. Pick a fresh absolute
-path of at most 100 bytes. The task ends with the received events or `expired`, prints each
-event as data, and Node removes the socket. Its session id is `ANTIGRAVITY_CONVERSATION_ID`.
-A sender waits up to 10 seconds for an armed listener and reports `failed` when none is
-armed; nothing is queued for later.
+`node <NOTIFY_HELPER> listen --socket <path> [--timeout-ms <n>]`. Choose one fresh absolute
+path of at most 100 bytes when capturing the destination, and re-arm every later listener on
+that same path: workers keep the captured one. The task ends with the received events or
+`expired`, prints each event as data, and removes the socket; the next listener reclaims a
+killed listener's stale socket. Its session id is `ANTIGRAVITY_CONVERSATION_ID`. Between two
+listeners the master may be busy with a whole turn, so a sender waits up to 15 minutes for
+an armed listener and reports `failed` when none appears; nothing is queued for later. Run
+a `send` to an Antigravity destination as a background task, not a blocking tool call.
 
 Codex must be loaded in the runtime serving that exact home/thread. A CLI binary, valid
 UUID, or daemon-version response alone does not establish the route. Do not change the
@@ -186,9 +189,10 @@ reserving/refilling. Other events normally need only their scoped facts. Do not 
 unrelated transcripts or the full project for an acknowledgment or duplicate.
 
 End the master turn when no immediate action remains. Native input wakes the loaded
-session. An Antigravity master re-arms a new listener as the first action after each wake,
-before handling the delivered events. This keeps the gap within a sender's connect window,
-and the master never holds more than one listener at a time. External Linear edits, silent worker loss, or a closed master require explicit
+session. An Antigravity master re-arms a listener on the captured path as the first action
+after each wake, before handling the delivered events, and never holds more than one
+listener at a time. A listener that ends while the master is still busy wakes it after that
+turn; senders arriving in between wait within their connect window. External Linear edits, silent worker loss, or a closed master require explicit
 inspection/resumption; there is no periodic fallback hidden in this workflow.
 
 ## Bounded worker waits

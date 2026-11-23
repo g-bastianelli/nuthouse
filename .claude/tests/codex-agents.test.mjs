@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import {
+  agentLimits,
   agentNeeds,
   applyAgentPlan,
   checkAgents,
@@ -157,21 +158,43 @@ describe("Codex agent parity", () => {
     expect(expectedRuntimeMapFiles(REPO_ROOT).size).toBeGreaterThan(0);
   });
 
-  test("derives prompt-defined subagent capabilities from the Claude allowlist", () => {
-    const byAlias = new Map(
-      listAgentSources(REPO_ROOT).map((agent) => [`${agent.plugin}:${agent.name}`, agent]),
-    );
-    expect(agentNeeds(byAlias.get("linear-devotee:issue-context"))).toEqual([
+  test("derives prompt-defined subagent capabilities and limits from the Claude frontmatter", () => {
+    const agent = (fields) => ({ sourcePath: "x.md", skills: [], tools: [], ...fields });
+    expect(agentNeeds(agent({ tools: ["Glob", "Bash", "mcp__srv__get_issue"] }))).toEqual([
       "read",
       "shell",
       "mcp",
     ]);
-    expect(agentNeeds(byAlias.get("linear-devotee:plan-auditor"))).toEqual(["read"]);
-    expect(agentNeeds(byAlias.get("lore-hound:source-fetcher"))).toEqual(["web"]);
-    expect(agentNeeds({ sourcePath: "x.md", tools: [] })).toEqual(["all"]);
-    expect(() => agentNeeds({ sourcePath: "x.md", tools: ["Read", "Frobnicate"] })).toThrow(
+    expect(agentNeeds(agent({ tools: ["WebFetch"] }))).toEqual(["web"]);
+    expect(agentNeeds(agent({}))).toEqual(["all"]);
+    expect(() => agentNeeds(agent({ tools: ["Read", "Frobnicate"] }))).toThrow(
       "x.md: no capability mapping for tool Frobnicate",
     );
+    expect(
+      agentLimits(
+        agent({
+          maxTurns: "7",
+          skills: ["p:s"],
+          tools: ["Read", "mcp__srv__get_issue", "mcp__srv__list_comments"],
+        }),
+      ),
+    ).toBe("≤7 turns; preload `p:s`; MCP only `get_issue`, `list_comments`");
+    expect(agentLimits(agent({}))).toBe("");
+  });
+
+  test("refuses an allowlist it cannot parse instead of widening it", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "nuthouse-agent-tools-"));
+    const directory = path.join(root, "test-plugin", "agents");
+    try {
+      fs.mkdirSync(directory, { recursive: true });
+      fs.writeFileSync(
+        path.join(directory, "reader.md"),
+        "---\nname: reader\ndescription: Reads.\ntools: Read, Grep\n---\nBody\n",
+      );
+      expect(() => listAgentSources(root)).toThrow("tools must be a block list");
+    } finally {
+      fs.rmSync(root, { recursive: true });
+    }
   });
 
   test("gives every runtime map the named, prompt-defined, and inline routes", () => {
@@ -182,12 +205,8 @@ describe("Codex agent parity", () => {
       expect(map).toContain("2. **Prompt-defined subagent.**");
       expect(map).toContain("3. **Inline.**");
       expect(map).toContain("| Tier ");
+      expect(map).toContain("| Limits ");
     }
-    const lore = expectedRuntimeMapFiles(REPO_ROOT).get(
-      path.join(REPO_ROOT, "lore-hound", "shared", "agent-runtime-map.md"),
-    );
-    expect(lore).toMatch(/`lore-hound:source-fetcher` .*\| fast \(`flash_lite`\) \| web /);
-    expect(lore).toMatch(/`lore-hound:claim-verifier` .*\| balanced \(`flash`\) +\| web /);
   });
 
   test("keeps generated project agents synchronized", () => {

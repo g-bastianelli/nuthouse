@@ -62,6 +62,23 @@ export function agentNeeds(agent) {
   return NEED_ORDER.filter((need) => needs.has(need));
 }
 
+// Per-agent constraints a prompt-defined subagent must state itself: no runtime switch carries
+// them, and Antigravity's MCP switch grants every MCP tool.
+export function agentLimits(agent) {
+  const mcp = agent.tools
+    .filter((tool) => tool.startsWith("mcp__"))
+    .map((tool) => `\`${tool.split("__").at(-1)}\``);
+  return [
+    agent.maxTurns ? `≤${agent.maxTurns} turns` : null,
+    agent.skills.length > 0
+      ? `preload ${agent.skills.map((skill) => `\`${skill}\``).join(", ")}`
+      : null,
+    mcp.length > 0 ? `MCP only ${mcp.join(", ")}` : null,
+  ]
+    .filter(Boolean)
+    .join("; ");
+}
+
 function parseScalar(frontmatter, key) {
   const match = frontmatter.match(new RegExp(`^${key}:[ \\t]*([^\\n]*)$`, "m"));
   if (!match) return undefined;
@@ -101,6 +118,10 @@ function parseClaudeAgent(source, sourcePath, plugin) {
   const name = parseScalar(frontmatter, "name");
   const description = parseScalar(frontmatter, "description");
   if (!name || !description) throw new Error(`${sourcePath}: missing name or description`);
+  const tools = parseBlockList(frontmatter, "tools");
+  // An unparsed allowlist would silently widen to every tool on the prompt-defined route.
+  if (/^tools:/m.test(frontmatter) && tools.length === 0)
+    throw new Error(`${sourcePath}: tools must be a block list of "  - <Tool>" lines`);
 
   return {
     body: rawBody.trim(),
@@ -112,7 +133,7 @@ function parseClaudeAgent(source, sourcePath, plugin) {
     plugin,
     skills: parseInlineList(frontmatter, "skills"),
     sourcePath,
-    tools: parseBlockList(frontmatter, "tools"),
+    tools,
   };
 }
 
@@ -234,7 +255,7 @@ export function expectedAgentFiles(repoRoot) {
 }
 
 function renderRuntimeMap(agents) {
-  const headers = ["Logical id", "Claude Code", "Codex", "Tier", "Needs"];
+  const headers = ["Logical id", "Claude Code", "Codex", "Tier", "Needs", "Limits"];
   const rows = agents.map((agent) => {
     const logicalName = `${agent.plugin}:${agent.name}`;
     return [
@@ -243,6 +264,7 @@ function renderRuntimeMap(agents) {
       `\`${codexAgentName(agent.plugin, agent.name)}\``,
       agentTier(agent),
       agentNeeds(agent).join(", "),
+      agentLimits(agent),
     ];
   });
   const widths = headers.map((header, index) =>
@@ -270,15 +292,19 @@ route the active runtime supports:
    subagent from a prompt (Antigravity: \`define_subagent\`, then \`invoke_subagent\`)
    defines it once per conversation and reuses it for every invocation:
    - name: the Codex column's name;
-   - system prompt: the body of \`agents/<agent>.md\` in this plugin root, after its
-     frontmatter;
+   - system prompt: the **Limits** cell as opening instructions (stop within the turn cap,
+     read and follow each preloaded skill first, call no MCP tool outside the list), then
+     the body of \`agents/<agent>.md\` in the root of the plugin named by the logical id,
+     after its frontmatter;
    - capabilities: exactly **Needs**. \`shell\` or \`write\` enables write tools (on
      Antigravity that switch also gates command execution), \`mcp\` enables MCP tools,
-     \`agents\` enables subagent tools, \`all\` enables every switch; enable nothing else;
+     \`agents\` enables subagent tools, \`all\` enables every switch; enable nothing else.
+     Antigravity's MCP switch grants every MCP tool, so the **Limits** list is enforced by
+     the prompt alone;
    - model: **Tier**, using the parenthesized Antigravity value as \`invoke_subagent\`'s
      \`Model\` or the runtime's closest equivalent.
 3. **Inline.** Without subagent support, read that same body and perform its task yourself
-   as one bounded step under its input and output contract.
+   as one bounded step under its **Limits** and its input and output contract.
 
 ${table}
 

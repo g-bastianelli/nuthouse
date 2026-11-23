@@ -29,6 +29,7 @@ export function toClaudeInput(event, input) {
     session_id: input.conversationId,
     cwd: input.workspacePaths?.[0] ?? input.cwd,
     hook_event_name: event === "PreInvocation" ? "UserPromptSubmit" : event,
+    // agy 1.5.15 fires SessionStart only for a new conversation, never on --conversation/-c resume.
     ...(event === "SessionStart" && { source: "startup" }),
     ...(event === "PreInvocation" && { prompt: input.lastUserInput ?? "" }),
     ...(event === "PostToolUse" && {
@@ -72,9 +73,12 @@ export function runBridge(event, script, input, dataDir) {
 
   const parts = [];
   if (event === "PreInvocation") {
+    // Claim the file first so context a parallel PostToolUse appends lands in a new one.
+    const claimed = `${pending}.${process.pid}`;
     try {
-      parts.push(fs.readFileSync(pending, "utf8").trim());
-      fs.rmSync(pending);
+      fs.renameSync(pending, claimed);
+      parts.push(fs.readFileSync(claimed, "utf8").trim());
+      fs.rmSync(claimed);
     } catch {}
     // A turn's prompt does not change after its first model call.
     if (script && input.invocationNum === 0) parts.push(runScript(script, claudeInput));
