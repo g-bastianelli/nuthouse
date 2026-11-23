@@ -183,6 +183,7 @@ describe("Codex agent parity", () => {
     expect(agentLimits(agent({ tools: ["mcp__claude_ai_Linear__get__thing"] }))).toBe(
       "MCP only `Linear:get__thing`",
     );
+    expect(agentLimits(agent({ tools: ["mcp__srv"] }))).toBe("MCP only `srv:*`");
     expect(agentLimits(agent({}))).toBe("");
     expect(
       ["haiku", "sonnet", "opus", "inherit"].map((model) => agentTier(agent({ model }))),
@@ -205,6 +206,11 @@ describe("Codex agent parity", () => {
         "---\nname: reader\ndescription: Reads.\nskills:\n  - p:s\ntools:\n  - Read\n---\nBody\n",
       );
       expect(listAgentSources(root)[0].skills).toEqual(["p:s"]);
+      fs.writeFileSync(
+        path.join(directory, "reader.md"),
+        "---\nname: reader\ndescription: Reads.\nskills: []\ntools:\n  - Read\n---\nBody\n",
+      );
+      expect(listAgentSources(root)[0].skills).toEqual([]);
     } finally {
       fs.rmSync(root, { recursive: true });
     }

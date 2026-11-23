@@ -240,13 +240,13 @@ function sendListener(event, socketPath, dependencies) {
       socket.setTimeout(OPERATION_TIMEOUT_MS, () =>
         finish(result(event, written ? "unknown" : "failed", "Antigravity listener timed out")),
       );
+      // The listener replies `accepted` only after keeping the event, so a connection that
+      // ends without that reply delivered nothing and the next listener can take it.
       socket.on("error", (error) =>
         finish(
-          written
-            ? result(event, "unknown", error.message)
-            : ["ENOENT", "ECONNREFUSED"].includes(error.code)
-              ? { rearm: true, reason: error.message }
-              : result(event, "failed", error.message),
+          ["ENOENT", "ECONNREFUSED", "ECONNRESET", "EPIPE"].includes(error.code)
+            ? { rearm: true, reason: error.message }
+            : result(event, written ? "unknown" : "failed", error.message),
         ),
       );
       socket.on("connect", () => {
@@ -257,6 +257,8 @@ function sendListener(event, socketPath, dependencies) {
       socket.setEncoding("utf8");
       socket.on("data", (chunk) => {
         reply += chunk;
+        if (reply.startsWith("rejected\n"))
+          finish(result(event, "failed", "Antigravity listener rejected the event"));
         if (reply.startsWith("accepted\n"))
           finish(
             result(
@@ -267,7 +269,7 @@ function sendListener(event, socketPath, dependencies) {
           );
       });
       socket.on("close", () =>
-        finish(result(event, written ? "unknown" : "failed", "listener closed without accepting")),
+        finish({ rearm: true, reason: "listener closed without accepting" }),
       );
     });
   return (async () => {
@@ -291,34 +293,29 @@ export function listen({ socketPath, timeoutMs = 3600000, batchMs = 1000 }) {
   const destination = { kind: "local", runtime: { provider: "antigravity", socketPath } };
   return new Promise((resolve, reject) => {
     const events = [];
-    // Connections that have sent nothing; destroyed on close so an idle client cannot hold the task open.
-    const idle = new Set();
-    const open = new Set();
+    // Connections without an accepted frame. Closing cuts them at once: their senders got no
+    // `accepted`, so they retry on the next listener instead of holding this one open.
+    const unaccepted = new Set();
     let batch;
     let expiry;
+    let listening = false;
+    let closing = false;
     let recovered = false;
     let server;
     const accept = (socket) => {
+      if (closing) return socket.destroy();
       let buffer = "";
-      let handled = false;
-      idle.add(socket);
-      open.add(socket);
+      unaccepted.add(socket);
       socket.setEncoding("utf8");
-      // A frame still arriving when the batch closes may finish, within the operation bound.
-      socket.setTimeout(OPERATION_TIMEOUT_MS, () => socket.destroy());
       socket.on("error", () => {});
-      socket.on("close", () => {
-        idle.delete(socket);
-        open.delete(socket);
-      });
+      socket.on("close", () => unaccepted.delete(socket));
       socket.on("data", (chunk) => {
-        idle.delete(socket);
-        if (handled) return;
+        if (!unaccepted.has(socket)) return;
         buffer += chunk;
         if (Buffer.byteLength(buffer) > MAX_INPUT_BYTES * 2) return socket.destroy();
         const newline = buffer.indexOf("\n");
         if (newline === -1) return;
-        handled = true;
+        unaccepted.delete(socket);
         let event;
         try {
           // Any local process can connect; accept only a valid Maestro event.
@@ -327,7 +324,7 @@ export function listen({ socketPath, timeoutMs = 3600000, batchMs = 1000 }) {
             destination,
           }));
         } catch {
-          return socket.destroy();
+          return socket.end("rejected\n", () => socket.destroy());
         }
         events.push(event);
         socket.end("accepted\n", () => socket.destroy());
@@ -336,14 +333,16 @@ export function listen({ socketPath, timeoutMs = 3600000, batchMs = 1000 }) {
       });
     };
     function stop() {
+      closing = true;
       clearTimeout(expiry);
       clearTimeout(batch);
       process.off("SIGTERM", done);
       process.off("SIGINT", done);
+      for (const socket of unaccepted) socket.destroy();
     }
     function done() {
+      if (closing) return;
       stop();
-      for (const socket of idle) socket.destroy();
       // Node removes the socket file on close.
       server.close(() =>
         resolve(events.length ? { status: "received", events } : { status: "expired" }),
@@ -352,19 +351,21 @@ export function listen({ socketPath, timeoutMs = 3600000, batchMs = 1000 }) {
     // A listener that cannot report must not keep accepting events it will never print.
     function abort(error) {
       stop();
-      for (const socket of open) socket.destroy();
       try {
         server.close(() => {});
       } catch {}
       reject(error);
     }
     function armed() {
+      listening = true;
       expiry = setTimeout(done, timeoutMs);
       // A cancelled task closes cleanly, so its socket file does not block the next listener.
       process.once("SIGTERM", done);
       process.once("SIGINT", done);
     }
     function failed(error) {
+      // Accepted events were promised to their senders: print them rather than fail.
+      if (listening) return events.length ? done() : abort(error);
       if (error.code !== "EADDRINUSE" || recovered) return abort(error);
       recovered = true;
       // A killed listener leaves its socket file; remove it only when nothing answers there.
@@ -518,6 +519,7 @@ async function sendRemote(event, destination, dependencies) {
   const antigravity = destination.runtime.provider === "antigravity";
   // The remote helper may wait out the receiving master's turn before it prints a receipt.
   const receiptDeadline = now() + (antigravity ? ANTIGRAVITY_CONNECT_WINDOW_MS : 0) + 30000;
+  let slowReads = 0;
   try {
     while (now() < receiptDeadline) {
       const read = await run(
@@ -526,11 +528,13 @@ async function sendRemote(event, destination, dependencies) {
         { timeoutMs: Math.min(2000, receiptDeadline - now()) },
       );
       if (read.code !== 0) {
-        // The helper may still be waiting for the master to re-arm; one failed read is not its end.
-        if (!antigravity) break;
+        // While the helper waits for the master to re-arm, a few slow reads are not its end;
+        // any other read failure means the terminal is gone.
+        if (!antigravity || !read.timedOut || ++slowReads > 5) break;
         await sleep(Math.min(2000, Math.max(0, receiptDeadline - now())));
         continue;
       }
+      slowReads = 0;
       const snapshot = parseJson(read.stdout);
       if (snapshot?.terminalId !== terminalId) break;
       const text = snapshot.text;

@@ -290,7 +290,7 @@ describe("Antigravity listener transport", () => {
       socket.on("data", (chunk) => (data += chunk));
       socket.on("close", () => resolve(data));
     });
-    expect(reply).toBe("");
+    expect(reply).toBe("rejected\n");
     expect(await listening).toEqual({ status: "expired" });
     expect(() => listen({ socketPath: "relative.sock" })).toThrow("absolute");
   });
@@ -343,18 +343,58 @@ describe("Antigravity listener transport", () => {
     }
   });
 
-  test("lets a frame already arriving when the batch closes finish into that batch", async () => {
+  test("closes promptly despite a client trickling an unfinished frame", async () => {
     const socketPath = socketFor();
-    const listening = listen({ socketPath, timeoutMs: 5000, batchMs: 100 });
+    const listening = listen({ socketPath, timeoutMs: 1000, batchMs: 0 });
     await new Promise((resolve) => setTimeout(resolve, 50));
-    const frame = `${JSON.stringify({ event: { ...event, eventId: crypto.randomUUID() } })}\n`;
-    const late = net.createConnection(socketPath);
-    late.on("error", () => {});
-    late.write(frame.slice(0, 100));
+    const slow = net.createConnection(socketPath);
+    slow.on("error", () => {});
+    const trickle = setInterval(() => slow.writable && slow.write("x"), 100);
+    const started = Date.now();
+    expect(await listening).toEqual({ status: "expired" });
+    clearInterval(trickle);
+    slow.destroy();
+    expect(Date.now() - started).toBeLessThan(2000);
+  });
+
+  test("a sender cut before acceptance retries on the next listener", async () => {
+    // Bun's client never observes the server-side close; Node, the production runtime, does.
+    const library = path.resolve(import.meta.dir, "..", "lib", "notifications.mjs");
+    const code = `
+      import net from "node:net";
+      import { listen, notify } from ${JSON.stringify(library)};
+      const socketPath = ${JSON.stringify(socketFor())};
+      const event = ${JSON.stringify(event)};
+      // A listener closing its batch drops connections it has not accepted.
+      const closing = net.createServer((socket) => socket.destroy());
+      await new Promise((resolve) => closing.listen(socketPath, resolve));
+      const sending = notify({ event, destination: { kind: "local", runtime: { provider: "antigravity", socketPath } } });
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      await new Promise((resolve) => closing.close(resolve));
+      const received = await listen({ socketPath, timeoutMs: 5000, batchMs: 0 });
+      console.log(JSON.stringify({ sent: (await sending).status, received: received.events.length }));
+    `;
+    const run = await runBounded("node", ["--input-type=module", "-e", code]);
+    expect(JSON.parse(run.stdout)).toEqual({ sent: "written", received: 1 });
+  });
+
+  test("a rejected event fails at once instead of retrying", async () => {
+    const socketPath = socketFor();
+    const listening = listen({ socketPath, timeoutMs: 5000, batchMs: 0 });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    // A helper of another version may disagree on validity; that is not a missing listener.
+    const stale = { ...event, version: 2 };
+    const reply = await new Promise((resolve) => {
+      let data = "";
+      const socket = net.createConnection(socketPath, () =>
+        socket.write(`${JSON.stringify({ event: stale })}\n`),
+      );
+      socket.on("data", (chunk) => (data += chunk));
+      socket.on("close", () => resolve(data));
+    });
+    expect(reply).toBe("rejected\n");
     await notify({ event, destination: antigravity(socketPath) });
-    await new Promise((resolve) => setTimeout(resolve, 200));
-    late.write(frame.slice(100));
-    expect((await listening).events).toHaveLength(2);
+    expect((await listening).events).toEqual([event]);
   });
 
   test("refuses a second listener on a live socket", async () => {

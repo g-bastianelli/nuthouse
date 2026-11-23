@@ -25,7 +25,9 @@ The following was checked with `agy` 1.5.15 against every plugin in this reposit
 - Antigravity reads `agents/*.md` from the same folder as Claude Code. It rejects the Claude
   model tiers (`haiku`, `sonnet`, `opus`) and skips those agents. Its tiers are `inherit`,
   `flash_lite`, `flash` and `pro`. Its tool names differ too (`view_file`, `run_command`,
-  …), and an unknown tool name can hang a subagent.
+  …), and an unknown tool name can hang a subagent. Antigravity documents its own plugin
+  agent format in that same folder (`model`, built-in `tools`, `skills`, `inheritMcp`;
+  https://antigravity.google/docs/build-plugins), so the two formats cannot coexist there.
 - Antigravity reads hooks only from a root `hooks.json`, never from `hooks/hooks.json`, and
   that file uses a different contract:
   - hooks are grouped under names;
@@ -33,6 +35,11 @@ The following was checked with `agy` 1.5.15 against every plugin in this reposit
   - context is injected through `injectSteps`;
   - hooks run with the plugin root as the working directory;
   - there is no `UserPromptSubmit`, and `PostToolUse` cannot inject context.
+
+  The documented events are SessionStart, PreToolUse, PostToolUse, PreInvocation,
+  PostInvocation and Stop (https://antigravity.google/docs/hooks). None reports compaction
+  or a SessionStart reason. The docs also give PostInvocation an `injectSteps` output; it was
+  not tested here.
 
 ## Decision
 
@@ -61,15 +68,17 @@ first route the runtime supports:
 2. **Prompt-defined subagent** for runtimes that can define one at runtime. On
    Antigravity this means `define_subagent` followed by `invoke_subagent`:
    - the system prompt is the canonical agent body, prefixed with a generated **Limits**
-     cell (`maxTurns`, preloaded `skills`, and the exact MCP tool names);
-   - capability switches come from the Claude allowlist. Antigravity's MCP switch is
-     all-or-nothing, so the MCP allowlist is enforced only by that prompt;
+     cell (`maxTurns`, preloaded `skills`, and the allowed MCP tools written
+     `Server:tool` with the Claude-side server name);
+   - capability switches come from the Claude allowlist. Antigravity's MCP access is
+     all-or-nothing for both `EnableMCPTools` and the documented agent `inheritMcp`, so the
+     MCP allowlist is enforced only by that prompt;
    - a neutral **Tier** comes from the Claude model (`haiku`→`flash_lite`,
      `sonnet`→`flash`, `opus`→`pro`).
 3. **Inline** execution of the same body when the runtime has no subagent support.
 
 The generator derives **Tier**, **Needs** and **Limits** mechanically. It fails on a tool it
-cannot classify and on a `tools` key it cannot parse as a block list, so the map never
+cannot classify and on a `tools` or `skills` key it cannot parse, so the map never
 guesses or widens a capability. Skills do not change: they already read the
 map before delegating.
 
@@ -132,8 +141,10 @@ than the full rule text.
 - `agy plugin validate` reports the skipped agents as errors. Those errors are expected and
   are not a release gate.
 - Monkey Maestro's transport has an `antigravity` provider. Attaching a second `agy acp`
-  client forks the conversation instead of waking the live session. Completion of a
-  background task does wake it, so the receiver works like this:
+  client forks the conversation instead of waking the live session, and no inbound route
+  into a running conversation is documented (https://antigravity.google/docs/cli/headless).
+  Completion of a background task does wake it (CLI changelog, v1.5.10), so the receiver
+  works like this:
   - it runs `notify.mjs listen --socket <path>` as one bounded background task;
   - that task ends on the first event batch;
   - the session re-arms a listener on the same captured socket path before handling those
@@ -141,8 +152,14 @@ than the full rule text.
   - a listener that ends while the master is busy only wakes it after that turn, so a
     sender waits up to 15 minutes for an armed listener, then reports `failed`. Nothing
     was delivered while it waits, so the retry cannot duplicate an event;
-  - an idle client cannot keep a listener open, a cancelled listener removes its socket,
-    and the next listener reclaims the socket of a killed one.
+  - the listener replies `accepted` only after keeping an event. Closing a batch cuts every
+    connection it has not accepted, so no client can hold it open, and a sender cut that
+    way retries on the next listener. An invalid event gets `rejected` and fails at once;
+  - a cancelled listener removes its socket. The next listener reclaims a killed one's
+    socket only when it is a socket and refuses connections (`ECONNREFUSED`), the usual
+    stale-socket check (https://gavv.github.io/articles/unix-socket-reuse/). Two listeners
+    reclaiming the same path at the same instant can still race; the master holds one at a
+    time.
 
   There is no queue, no daemon and no disk state. A live run on `agy` 1.5.15 delivered a
   worker `done` event to a listening session, which woke and read it.

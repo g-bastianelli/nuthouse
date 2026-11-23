@@ -70,7 +70,7 @@ export function agentLimits(agent) {
     .filter((tool) => tool.startsWith("mcp__"))
     .map((tool) => {
       const [server, ...name] = tool.slice("mcp__".length).split("__");
-      return `\`${server.replace(/^claude_ai_/, "")}:${name.join("__")}\``;
+      return `\`${server.replace(/^claude_ai_/, "")}:${name.join("__") || "*"}\``;
     });
   return [
     agent.maxTurns ? `≤${agent.maxTurns} turns` : null,
@@ -128,7 +128,11 @@ function parseClaudeAgent(source, sourcePath, plugin) {
     throw new Error(`${sourcePath}: tools must be a block list of "  - <Tool>" lines`);
   const inlineSkills = parseInlineList(frontmatter, "skills");
   const skills = inlineSkills.length > 0 ? inlineSkills : parseBlockList(frontmatter, "skills");
-  if (/^skills:/m.test(frontmatter) && skills.length === 0)
+  if (
+    /^skills:/m.test(frontmatter) &&
+    skills.length === 0 &&
+    parseScalar(frontmatter, "skills") !== "[]"
+  )
     throw new Error(`${sourcePath}: skills must be a nonempty inline or block list`);
 
   return {
@@ -301,7 +305,9 @@ route the active runtime supports:
    defines it once per conversation and reuses it for every invocation:
    - name: the Codex column's name;
    - system prompt: the **Limits** cell as opening instructions (stop within the turn cap,
-     read and follow each preloaded skill first, call no MCP tool outside the list), then
+     read and follow each preloaded skill first, call no MCP tool outside the list; an MCP
+     tool reads \`Server:tool\` with the Claude-side server name, so match the active
+     runtime's equivalent server, and \`Server:*\` allows every tool of that server), then
      the body of \`agents/<agent>.md\` in the root of the plugin named by the logical id,
      after its frontmatter;
    - capabilities: exactly **Needs**. \`shell\` or \`write\` enables write tools (on
