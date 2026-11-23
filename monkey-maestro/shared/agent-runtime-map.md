@@ -26,9 +26,9 @@ route the active runtime supports:
 3. **Inline.** Without subagent support, read that same body and perform its task yourself
    as one bounded step under its **Limits** and its input and output contract.
 
-| Logical id                     | Claude Code                    | Codex                           | Tier                | Needs | Limits                                                                         |
-| ------------------------------ | ------------------------------ | ------------------------------- | ------------------- | ----- | ------------------------------------------------------------------------------ |
-| `monkey-maestro:linear-reader` | `monkey-maestro:linear-reader` | `monkey_maestro__linear_reader` | fast (`flash_lite`) | mcp   | ≤12 turns; MCP only `get_project`, `list_comments`, `list_issues`, `get_issue` |
+| Logical id                     | Claude Code                    | Codex                           | Tier                | Needs | Limits                                                                                                     |
+| ------------------------------ | ------------------------------ | ------------------------------- | ------------------- | ----- | ---------------------------------------------------------------------------------------------------------- |
+| `monkey-maestro:linear-reader` | `monkey-maestro:linear-reader` | `monkey_maestro__linear_reader` | fast (`flash_lite`) | mcp   | ≤12 turns; MCP only `Linear:get_project`, `Linear:list_comments`, `Linear:list_issues`, `Linear:get_issue` |
 
 On every route, pass only the input contract required by the delegated task and restate the
 agent's required output format in the delegation prompt.

@@ -332,6 +332,31 @@ describe("Antigravity listener transport", () => {
     expect((await listening).events).toEqual([event]);
   });
 
+  test("never deletes a regular file that sits on the socket path", async () => {
+    const socketPath = socketFor();
+    await writeFile(socketPath, "notes");
+    try {
+      await expect(listen({ socketPath, timeoutMs: 1000 })).rejects.toThrow();
+      expect(await readFile(socketPath, "utf8")).toBe("notes");
+    } finally {
+      await rm(socketPath, { force: true });
+    }
+  });
+
+  test("lets a frame already arriving when the batch closes finish into that batch", async () => {
+    const socketPath = socketFor();
+    const listening = listen({ socketPath, timeoutMs: 5000, batchMs: 100 });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    const frame = `${JSON.stringify({ event: { ...event, eventId: crypto.randomUUID() } })}\n`;
+    const late = net.createConnection(socketPath);
+    late.on("error", () => {});
+    late.write(frame.slice(0, 100));
+    await notify({ event, destination: antigravity(socketPath) });
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    late.write(frame.slice(100));
+    expect((await listening).events).toHaveLength(2);
+  });
+
   test("refuses a second listener on a live socket", async () => {
     const socketPath = socketFor();
     const first = listen({ socketPath, timeoutMs: 5000, batchMs: 0 });
@@ -457,6 +482,35 @@ describe("remote receipt ownership", () => {
     expect(calls[0].args).toContain("parent-space");
     expect(calls.at(-1).args).toContain("transport-only");
     expect(calls.at(-1).args.slice(0, 2)).toEqual(["terminals", "close"]);
+  });
+
+  test("keeps waiting through a failed read while a remote Antigravity master re-arms", async () => {
+    let reads = 0;
+    const result = await notify(
+      {
+        event,
+        destination: {
+          ...remote,
+          runtime: { provider: "antigravity", socketPath: "/tmp/maestro-remote.sock" },
+        },
+      },
+      {
+        newId: () => nonce,
+        ...fakeClock(),
+        run: async (executable, args) => {
+          if (args[1] === "create") return success(JSON.stringify({ terminalId: "t-1" }));
+          if (args[1] === "read") {
+            reads += 1;
+            if (reads === 2) return { code: null, stdout: "", stderr: "", timedOut: true };
+            const text = reads < 4 ? "waiting" : `MM:${nonce}:written\n`;
+            return success(JSON.stringify({ terminalId: "t-1", text }));
+          }
+          return success();
+        },
+      },
+    );
+    expect(result.status).toBe("written");
+    expect(reads).toBe(4);
   });
 
   test("quotes paths and encodes arbitrary data without creating executable text", async () => {

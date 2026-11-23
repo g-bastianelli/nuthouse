@@ -41,7 +41,7 @@ const TOOL_NEEDS = new Map([
 ]);
 const NEED_ORDER = ["read", "shell", "write", "mcp", "web", "agents"];
 
-function agentTier(agent) {
+export function agentTier(agent) {
   if (!agent.model || agent.model === "inherit") return "inherit";
   const tier = TIER_MAP.get(agent.model);
   if (!tier) throw new Error(`${agent.sourcePath}: unsupported Claude model ${agent.model}`);
@@ -65,9 +65,13 @@ export function agentNeeds(agent) {
 // Per-agent constraints a prompt-defined subagent must state itself: no runtime switch carries
 // them, and Antigravity's MCP switch grants every MCP tool.
 export function agentLimits(agent) {
+  // Keep the server: another server's tool of the same name stays outside the list.
   const mcp = agent.tools
     .filter((tool) => tool.startsWith("mcp__"))
-    .map((tool) => `\`${tool.split("__").at(-1)}\``);
+    .map((tool) => {
+      const [server, ...name] = tool.slice("mcp__".length).split("__");
+      return `\`${server.replace(/^claude_ai_/, "")}:${name.join("__")}\``;
+    });
   return [
     agent.maxTurns ? `≤${agent.maxTurns} turns` : null,
     agent.skills.length > 0
@@ -122,6 +126,10 @@ function parseClaudeAgent(source, sourcePath, plugin) {
   // An unparsed allowlist would silently widen to every tool on the prompt-defined route.
   if (/^tools:/m.test(frontmatter) && tools.length === 0)
     throw new Error(`${sourcePath}: tools must be a block list of "  - <Tool>" lines`);
+  const inlineSkills = parseInlineList(frontmatter, "skills");
+  const skills = inlineSkills.length > 0 ? inlineSkills : parseBlockList(frontmatter, "skills");
+  if (/^skills:/m.test(frontmatter) && skills.length === 0)
+    throw new Error(`${sourcePath}: skills must be a nonempty inline or block list`);
 
   return {
     body: rawBody.trim(),
@@ -131,7 +139,7 @@ function parseClaudeAgent(source, sourcePath, plugin) {
     model: parseScalar(frontmatter, "model"),
     name,
     plugin,
-    skills: parseInlineList(frontmatter, "skills"),
+    skills,
     sourcePath,
     tools,
   };

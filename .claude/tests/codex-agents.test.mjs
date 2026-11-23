@@ -6,6 +6,7 @@ import { execFileSync } from "node:child_process";
 import {
   agentLimits,
   agentNeeds,
+  agentTier,
   applyAgentPlan,
   checkAgents,
   checkRuntimeMaps,
@@ -178,8 +179,15 @@ describe("Codex agent parity", () => {
           tools: ["Read", "mcp__srv__get_issue", "mcp__srv__list_comments"],
         }),
       ),
-    ).toBe("≤7 turns; preload `p:s`; MCP only `get_issue`, `list_comments`");
+    ).toBe("≤7 turns; preload `p:s`; MCP only `srv:get_issue`, `srv:list_comments`");
+    expect(agentLimits(agent({ tools: ["mcp__claude_ai_Linear__get__thing"] }))).toBe(
+      "MCP only `Linear:get__thing`",
+    );
     expect(agentLimits(agent({}))).toBe("");
+    expect(
+      ["haiku", "sonnet", "opus", "inherit"].map((model) => agentTier(agent({ model }))),
+    ).toEqual(["fast (`flash_lite`)", "balanced (`flash`)", "strong (`pro`)", "inherit"]);
+    expect(() => agentTier(agent({ model: "gpt" }))).toThrow("unsupported Claude model gpt");
   });
 
   test("refuses an allowlist it cannot parse instead of widening it", () => {
@@ -192,6 +200,11 @@ describe("Codex agent parity", () => {
         "---\nname: reader\ndescription: Reads.\ntools: Read, Grep\n---\nBody\n",
       );
       expect(() => listAgentSources(root)).toThrow("tools must be a block list");
+      fs.writeFileSync(
+        path.join(directory, "reader.md"),
+        "---\nname: reader\ndescription: Reads.\nskills:\n  - p:s\ntools:\n  - Read\n---\nBody\n",
+      );
+      expect(listAgentSources(root)[0].skills).toEqual(["p:s"]);
     } finally {
       fs.rmSync(root, { recursive: true });
     }

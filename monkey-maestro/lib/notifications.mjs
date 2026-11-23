@@ -291,25 +291,34 @@ export function listen({ socketPath, timeoutMs = 3600000, batchMs = 1000 }) {
   const destination = { kind: "local", runtime: { provider: "antigravity", socketPath } };
   return new Promise((resolve, reject) => {
     const events = [];
-    // Connections without an accepted frame; destroyed on close so an idle client cannot hold the task open.
-    const pending = new Set();
+    // Connections that have sent nothing; destroyed on close so an idle client cannot hold the task open.
+    const idle = new Set();
+    const open = new Set();
     let batch;
     let expiry;
     let recovered = false;
     let server;
     const accept = (socket) => {
       let buffer = "";
-      pending.add(socket);
+      let handled = false;
+      idle.add(socket);
+      open.add(socket);
       socket.setEncoding("utf8");
+      // A frame still arriving when the batch closes may finish, within the operation bound.
+      socket.setTimeout(OPERATION_TIMEOUT_MS, () => socket.destroy());
       socket.on("error", () => {});
-      socket.on("close", () => pending.delete(socket));
+      socket.on("close", () => {
+        idle.delete(socket);
+        open.delete(socket);
+      });
       socket.on("data", (chunk) => {
-        if (!pending.has(socket)) return;
+        idle.delete(socket);
+        if (handled) return;
         buffer += chunk;
         if (Buffer.byteLength(buffer) > MAX_INPUT_BYTES * 2) return socket.destroy();
         const newline = buffer.indexOf("\n");
         if (newline === -1) return;
-        pending.delete(socket);
+        handled = true;
         let event;
         try {
           // Any local process can connect; accept only a valid Maestro event.
@@ -326,16 +335,28 @@ export function listen({ socketPath, timeoutMs = 3600000, batchMs = 1000 }) {
         batch ??= setTimeout(done, batchMs);
       });
     };
-    function done() {
+    function stop() {
       clearTimeout(expiry);
       clearTimeout(batch);
       process.off("SIGTERM", done);
       process.off("SIGINT", done);
-      for (const socket of pending) socket.destroy();
+    }
+    function done() {
+      stop();
+      for (const socket of idle) socket.destroy();
       // Node removes the socket file on close.
       server.close(() =>
         resolve(events.length ? { status: "received", events } : { status: "expired" }),
       );
+    }
+    // A listener that cannot report must not keep accepting events it will never print.
+    function abort(error) {
+      stop();
+      for (const socket of open) socket.destroy();
+      try {
+        server.close(() => {});
+      } catch {}
+      reject(error);
     }
     function armed() {
       expiry = setTimeout(done, timeoutMs);
@@ -344,23 +365,28 @@ export function listen({ socketPath, timeoutMs = 3600000, batchMs = 1000 }) {
       process.once("SIGINT", done);
     }
     function failed(error) {
-      if (error.code !== "EADDRINUSE" || recovered) return reject(error);
+      if (error.code !== "EADDRINUSE" || recovered) return abort(error);
       recovered = true;
       // A killed listener leaves its socket file; remove it only when nothing answers there.
       const probe = net.createConnection(socketPath);
       probe.on("connect", () => {
         probe.destroy();
-        reject(new Error(`another listener is armed on ${socketPath}`));
+        abort(new Error(`another listener is armed on ${socketPath}`));
       });
       probe.on("error", (probeError) => {
         // Bun reports a refused Unix socket as ENOENT; either way nothing answers.
-        if (!["ECONNREFUSED", "ENOENT"].includes(probeError.code)) return reject(error);
+        if (!["ECONNREFUSED", "ENOENT"].includes(probeError.code)) return abort(error);
         fs.promises
-          .unlink(socketPath)
+          .lstat(socketPath)
+          .then((stat) => {
+            // Never delete a regular file or a link that happens to sit on this path.
+            if (!stat.isSocket()) throw error;
+            return fs.promises.unlink(socketPath);
+          })
           .catch((unlinkError) => {
             if (unlinkError.code !== "ENOENT") throw unlinkError;
           })
-          .then(bind, reject);
+          .then(bind, abort);
       });
     }
     // A fresh server per attempt: Bun cannot rebind one whose listen failed.
@@ -499,7 +525,12 @@ async function sendRemote(event, destination, dependencies) {
         ["terminals", "read", ...target, "--terminal", terminalId, "--max-lines", "120", "--json"],
         { timeoutMs: Math.min(2000, receiptDeadline - now()) },
       );
-      if (read.code !== 0) break;
+      if (read.code !== 0) {
+        // The helper may still be waiting for the master to re-arm; one failed read is not its end.
+        if (!antigravity) break;
+        await sleep(Math.min(2000, Math.max(0, receiptDeadline - now())));
+        continue;
+      }
       const snapshot = parseJson(read.stdout);
       if (snapshot?.terminalId !== terminalId) break;
       const text = snapshot.text;
