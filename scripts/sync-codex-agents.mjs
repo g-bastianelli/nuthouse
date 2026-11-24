@@ -106,11 +106,20 @@ function parseBlockList(frontmatter, key) {
   if (start === -1) return [];
 
   const values = [];
-  for (const line of lines.slice(start + 1)) {
-    const match = line.match(/^  - (.+)$/);
+  let index = start + 1;
+  for (; index < lines.length; index += 1) {
+    const match = lines[index].match(/^  - (.+)$/);
     if (!match) break;
     values.push(match[1].trim());
   }
+  // An item after a blank or comment line would be silently dropped, so refuse it.
+  const rest = lines.slice(index);
+  const nextKey = rest.findIndex((line) => /^[A-Za-z_][\w-]*:/.test(line));
+  const stray = rest
+    .slice(0, nextKey === -1 ? undefined : nextKey)
+    .find((line) => /^\s*- /.test(line));
+  if (stray)
+    throw new Error(`${key}: list item ${JSON.stringify(stray)} after a break in the block list`);
   return values;
 }
 

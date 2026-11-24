@@ -157,9 +157,14 @@ than the full rule text.
     way retries on the next listener. An invalid event gets `rejected` and fails at once;
   - a cancelled listener removes its socket. The next listener reclaims a killed one's
     socket only when it is a socket and refuses connections (`ECONNREFUSED`), the usual
-    stale-socket check (https://gavv.github.io/articles/unix-socket-reuse/). Two listeners
-    reclaiming the same path at the same instant can still race; the master holds one at a
-    time.
+    stale-socket check (https://gavv.github.io/articles/unix-socket-reuse/). A plain
+    check-then-unlink let two simultaneous reclaimers both arm, one of them on an unlinked
+    socket, in about a quarter of stress rounds. The reclaimer therefore renames the file
+    aside (atomic), deletes it only when it is the inode that refused, and otherwise links a
+    live socket back and gives up. A regression test runs 40 such races.
 
-  There is no queue, no daemon and no disk state. A live run on `agy` 1.5.15 delivered a
-  worker `done` event to a listening session, which woke and read it.
+  There is no queue, no daemon and no lock file. Live runs on `agy` 1.5.15 checked that:
+  - a worker `done` event woke a listening session, which read it;
+  - a session re-armed on the same path after each wake;
+  - an event sent while no listener was armed waited 61 s, reached the re-armed listener,
+    and woke the session a second time.

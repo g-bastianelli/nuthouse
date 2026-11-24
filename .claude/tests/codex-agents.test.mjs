@@ -203,6 +203,11 @@ describe("Codex agent parity", () => {
       expect(() => listAgentSources(root)).toThrow("tools must be a block list");
       fs.writeFileSync(
         path.join(directory, "reader.md"),
+        "---\nname: reader\ndescription: Reads.\ntools:\n  - Read\n  # wide\n  - Bash\n---\nBody\n",
+      );
+      expect(() => listAgentSources(root)).toThrow('tools: list item "  - Bash" after a break');
+      fs.writeFileSync(
+        path.join(directory, "reader.md"),
         "---\nname: reader\ndescription: Reads.\nskills:\n  - p:s\ntools:\n  - Read\n---\nBody\n",
       );
       expect(listAgentSources(root)[0].skills).toEqual(["p:s"]);

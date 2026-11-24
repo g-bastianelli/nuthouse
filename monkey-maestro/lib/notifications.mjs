@@ -368,27 +368,44 @@ export function listen({ socketPath, timeoutMs = 3600000, batchMs = 1000 }) {
       if (listening) return events.length ? done() : abort(error);
       if (error.code !== "EADDRINUSE" || recovered) return abort(error);
       recovered = true;
+      const armedElsewhere = () => abort(new Error(`another listener is armed on ${socketPath}`));
       // A killed listener leaves its socket file; remove it only when nothing answers there.
-      const probe = net.createConnection(socketPath);
-      probe.on("connect", () => {
-        probe.destroy();
-        abort(new Error(`another listener is armed on ${socketPath}`));
-      });
-      probe.on("error", (probeError) => {
-        // Bun reports a refused Unix socket as ENOENT; either way nothing answers.
-        if (!["ECONNREFUSED", "ENOENT"].includes(probeError.code)) return abort(error);
-        fs.promises
-          .lstat(socketPath)
-          .then((stat) => {
-            // Never delete a regular file or a link that happens to sit on this path.
-            if (!stat.isSocket()) throw error;
-            return fs.promises.unlink(socketPath);
-          })
-          .catch((unlinkError) => {
-            if (unlinkError.code !== "ENOENT") throw unlinkError;
-          })
-          .then(bind, abort);
-      });
+      fs.promises.lstat(socketPath).then(
+        (stale) => {
+          // Never delete a regular file or a link that happens to sit on this path.
+          if (!stale.isSocket()) return abort(error);
+          const probe = net.createConnection(socketPath);
+          probe.on("connect", () => {
+            probe.destroy();
+            armedElsewhere();
+          });
+          probe.on("error", (probeError) => {
+            // Bun reports a refused Unix socket as ENOENT; either way nothing answers.
+            if (!["ECONNREFUSED", "ENOENT"].includes(probeError.code)) return abort(error);
+            reclaim(stale).then((reclaimed) => (reclaimed ? bind() : armedElsewhere()), abort);
+          });
+        },
+        (statError) => (statError.code === "ENOENT" ? bind() : abort(statError)),
+      );
+    }
+    // Another listener may reclaim the same stale file first. Moving the file aside is atomic,
+    // so only the one holding the refused inode deletes it; a live socket goes back in place.
+    async function reclaim(stale) {
+      const aside = `${socketPath}.${process.pid}.${randomUUID()}`;
+      try {
+        await fs.promises.rename(socketPath, aside);
+      } catch (renameError) {
+        if (renameError.code === "ENOENT") return true;
+        throw renameError;
+      }
+      const moved = await fs.promises.lstat(aside);
+      if (moved.ino === stale.ino && moved.dev === stale.dev) {
+        await fs.promises.unlink(aside);
+        return true;
+      }
+      await fs.promises.link(aside, socketPath).catch(() => {});
+      await fs.promises.unlink(aside);
+      return false;
     }
     // A fresh server per attempt: Bun cannot rebind one whose listen failed.
     function bind() {

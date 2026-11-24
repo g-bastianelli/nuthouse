@@ -478,6 +478,37 @@ describe("Antigravity listen command", () => {
     expect((await notify({ event, destination: destination(socketPath) })).status).toBe("written");
     expect((await listening).events).toEqual([event]);
   });
+
+  test("two listeners reclaiming one stale socket leave exactly one reachable", async () => {
+    // Separate processes: the race between two reclaims does not show in one event loop.
+    // It hits about one round in four, so run many rounds side by side.
+    const round = async () => {
+      const socketPath = socketFor();
+      const killed = start(socketPath);
+      await armed(socketPath);
+      killed.child.kill("SIGKILL");
+      await killed.exited;
+
+      const rivals = [start(socketPath), start(socketPath)];
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      expect((await notify({ event, destination: destination(socketPath) })).status).toBe(
+        "written",
+      );
+      // An orphaned rival would stay armed on an unlinked socket until its timeout.
+      const settled = await Promise.race([
+        Promise.all(rivals.map(({ exited }) => exited)),
+        new Promise((resolve) => setTimeout(() => resolve("orphan"), 2000)),
+      ]);
+      for (const { child } of rivals) child.kill("SIGTERM");
+      expect(settled).not.toBe("orphan");
+      expect(settled.filter(({ stdout }) => stdout.includes('"status":"received"'))).toHaveLength(
+        1,
+      );
+      expect(settled.filter(({ code }) => code !== 0)).toHaveLength(1);
+      expect(existsSync(socketPath)).toBe(false);
+    };
+    for (let batch = 0; batch < 4; batch += 1) await Promise.all(Array.from({ length: 10 }, round));
+  }, 60000);
 });
 
 describe("remote receipt ownership", () => {
