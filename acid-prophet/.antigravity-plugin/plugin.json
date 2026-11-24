@@ -1,0 +1,13 @@
+{
+  "$schema": "https://antigravity.google/schemas/v1/plugin.json",
+  "name": "acid-prophet",
+  "displayName": "Acid Prophet",
+  "version": "1.1.5",
+  "description": "Codebase-grounded discovery, behavioral spec review, and executable planning with stable AC traceability. Resolve consequential decisions, independently audit observable acceptance, and hand reviewed artifacts to implementation or Linear.",
+  "author": {
+    "name": "g-bastianelli"
+  },
+  "homepage": "https://github.com/g-bastianelli/nuthouse",
+  "repository": "https://github.com/g-bastianelli/nuthouse",
+  "logo": "assets/banner.png"
+}

@@ -21,6 +21,8 @@ const RUNTIMES = [
     manifest: ".codex-plugin/plugin.json",
     registry: ".agents/plugins/marketplace.json",
   },
+  // Antigravity installs a plugin straight from its repository folder: no registry.
+  { name: "Antigravity", manifest: ".antigravity-plugin/plugin.json" },
 ];
 
 const SOURCE_EXTENSIONS = new Set([".json", ".md", ".mjs", ".yaml", ".yml"]);
@@ -72,6 +74,7 @@ function checkRegistries(repoRoot, problems) {
   }
 
   for (const runtime of RUNTIMES) {
+    if (!runtime.registry) continue;
     const registry = readJson(repoRoot, runtime.registry, problems);
     if (!registry) continue;
     if (!Array.isArray(registry.plugins)) {
@@ -114,16 +117,15 @@ function checkRegistries(repoRoot, problems) {
     }
   }
 
+  // Every manifest present must match the first one (RUNTIMES order, so Claude when present).
   for (const [target, manifests] of plugins) {
-    const claude = manifests.get("Claude");
-    const codex = manifests.get("Codex");
-    if (!claude || !codex) continue;
-    if (claude.name !== codex.name)
-      problems.push(`${path.basename(target)}: Claude/Codex manifest names differ`);
-    if (claude.version !== codex.version)
-      problems.push(
-        `${path.basename(target)}: Claude/Codex versions differ (${claude.version} != ${codex.version})`,
-      );
+    const [[baseRuntime, base], ...others] = manifests;
+    for (const [runtime, manifest] of others) {
+      const pair = `${path.basename(target)}: ${baseRuntime}/${runtime}`;
+      if (manifest.name !== base.name) problems.push(`${pair} manifest names differ`);
+      if (manifest.version !== base.version)
+        problems.push(`${pair} versions differ (${base.version} != ${manifest.version})`);
+    }
   }
 }
 

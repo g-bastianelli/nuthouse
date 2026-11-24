@@ -1,0 +1,13 @@
+{
+  "$schema": "https://antigravity.google/schemas/v1/plugin.json",
+  "name": "moon-moth",
+  "displayName": "Moon Moth",
+  "version": "1.0.11",
+  "description": "Small moon helper that reports affected projects and runs their typecheck, lint, and test tasks.",
+  "author": {
+    "name": "g-bastianelli"
+  },
+  "homepage": "https://github.com/g-bastianelli/nuthouse",
+  "repository": "https://github.com/g-bastianelli/nuthouse",
+  "logo": "assets/banner.png"
+}

@@ -16,6 +16,73 @@ const MODEL_MAP = new Map([
   ["opus", "gpt-5.6-sol"],
 ]);
 
+// Runtime-neutral tier for prompt-defined subagents; the parenthesized value is
+// Antigravity's `invoke_subagent` Model (verified with agy 1.5.15, ADR 0010).
+const TIER_MAP = new Map([
+  ["haiku", "fast (`flash_lite`)"],
+  ["sonnet", "balanced (`flash`)"],
+  ["opus", "strong (`pro`)"],
+]);
+
+// Capabilities a prompt-defined subagent must be granted, derived from the Claude allowlist.
+const TOOL_NEEDS = new Map([
+  ["Read", "read"],
+  ["Glob", "read"],
+  ["Grep", "read"],
+  ["Bash", "shell"],
+  ["Write", "write"],
+  ["Edit", "write"],
+  ["MultiEdit", "write"],
+  ["NotebookEdit", "write"],
+  ["WebFetch", "web"],
+  ["WebSearch", "web"],
+  ["Agent", "agents"],
+  ["Task", "agents"],
+]);
+const NEED_ORDER = ["read", "shell", "write", "mcp", "web", "agents"];
+
+export function agentTier(agent) {
+  if (!agent.model || agent.model === "inherit") return "inherit";
+  const tier = TIER_MAP.get(agent.model);
+  if (!tier) throw new Error(`${agent.sourcePath}: unsupported Claude model ${agent.model}`);
+  return tier;
+}
+
+export function agentNeeds(agent) {
+  // An omitted Claude allowlist inherits every tool.
+  if (agent.tools.length === 0) return ["all"];
+  const needs = new Set(
+    agent.tools.map((tool) => {
+      if (tool.startsWith("mcp__")) return "mcp";
+      const need = TOOL_NEEDS.get(tool);
+      if (!need) throw new Error(`${agent.sourcePath}: no capability mapping for tool ${tool}`);
+      return need;
+    }),
+  );
+  return NEED_ORDER.filter((need) => needs.has(need));
+}
+
+// Per-agent constraints a prompt-defined subagent must state itself: no runtime switch carries
+// them, and Antigravity's MCP switch grants every MCP tool.
+export function agentLimits(agent) {
+  // Keep the server: another server's tool of the same name stays outside the list.
+  const mcp = agent.tools
+    .filter((tool) => tool.startsWith("mcp__"))
+    .map((tool) => {
+      const [server, ...name] = tool.slice("mcp__".length).split("__");
+      return `\`${server.replace(/^claude_ai_/, "")}:${name.join("__") || "*"}\``;
+    });
+  return [
+    agent.maxTurns ? `≤${agent.maxTurns} turns` : null,
+    agent.skills.length > 0
+      ? `preload ${agent.skills.map((skill) => `\`${skill}\``).join(", ")}`
+      : null,
+    mcp.length > 0 ? `MCP only ${mcp.join(", ")}` : null,
+  ]
+    .filter(Boolean)
+    .join("; ");
+}
+
 function parseScalar(frontmatter, key) {
   const match = frontmatter.match(new RegExp(`^${key}:[ \\t]*([^\\n]*)$`, "m"));
   if (!match) return undefined;
@@ -39,11 +106,20 @@ function parseBlockList(frontmatter, key) {
   if (start === -1) return [];
 
   const values = [];
-  for (const line of lines.slice(start + 1)) {
-    const match = line.match(/^  - (.+)$/);
+  let index = start + 1;
+  for (; index < lines.length; index += 1) {
+    const match = lines[index].match(/^  - (.+)$/);
     if (!match) break;
     values.push(match[1].trim());
   }
+  // An item after a blank or comment line would be silently dropped, so refuse it.
+  const rest = lines.slice(index);
+  const nextKey = rest.findIndex((line) => /^[A-Za-z_][\w-]*:/.test(line));
+  const stray = rest
+    .slice(0, nextKey === -1 ? undefined : nextKey)
+    .find((line) => /^\s*- /.test(line));
+  if (stray)
+    throw new Error(`${key}: list item ${JSON.stringify(stray)} after a break in the block list`);
   return values;
 }
 
@@ -55,6 +131,18 @@ function parseClaudeAgent(source, sourcePath, plugin) {
   const name = parseScalar(frontmatter, "name");
   const description = parseScalar(frontmatter, "description");
   if (!name || !description) throw new Error(`${sourcePath}: missing name or description`);
+  const tools = parseBlockList(frontmatter, "tools");
+  // An unparsed allowlist would silently widen to every tool on the prompt-defined route.
+  if (/^tools:/m.test(frontmatter) && tools.length === 0)
+    throw new Error(`${sourcePath}: tools must be a block list of "  - <Tool>" lines`);
+  const inlineSkills = parseInlineList(frontmatter, "skills");
+  const skills = inlineSkills.length > 0 ? inlineSkills : parseBlockList(frontmatter, "skills");
+  if (
+    /^skills:/m.test(frontmatter) &&
+    skills.length === 0 &&
+    parseScalar(frontmatter, "skills") !== "[]"
+  )
+    throw new Error(`${sourcePath}: skills must be a nonempty inline or block list`);
 
   return {
     body: rawBody.trim(),
@@ -64,9 +152,9 @@ function parseClaudeAgent(source, sourcePath, plugin) {
     model: parseScalar(frontmatter, "model"),
     name,
     plugin,
-    skills: parseInlineList(frontmatter, "skills"),
+    skills,
     sourcePath,
-    tools: parseBlockList(frontmatter, "tools"),
+    tools,
   };
 }
 
@@ -188,13 +276,16 @@ export function expectedAgentFiles(repoRoot) {
 }
 
 function renderRuntimeMap(agents) {
-  const headers = ["Logical id", "Claude Code", "Codex"];
+  const headers = ["Logical id", "Claude Code", "Codex", "Tier", "Needs", "Limits"];
   const rows = agents.map((agent) => {
     const logicalName = `${agent.plugin}:${agent.name}`;
     return [
       `\`${logicalName}\``,
       `\`${logicalName}\``,
       `\`${codexAgentName(agent.plugin, agent.name)}\``,
+      agentTier(agent),
+      agentNeeds(agent).join(", "),
+      agentLimits(agent),
     ];
   });
   const widths = headers.map((header, index) =>
@@ -212,13 +303,36 @@ function renderRuntimeMap(agents) {
 
 # Agent runtime map
 
-Resolve every logical agent id through this table before delegation. Select the exact name
-for the active runtime.
+Resolve every logical agent id through this table before delegation, then take the first
+route the active runtime supports:
+
+1. **Named agent.** Claude Code and Codex register these agents: dispatch the exact name in
+   the active runtime's column. On Codex, spawn the typed custom agent with isolated
+   task-local context. Never use a full-history fork.
+2. **Prompt-defined subagent.** A runtime without that named agent but able to define a
+   subagent from a prompt (Antigravity: \`define_subagent\`, then \`invoke_subagent\`)
+   defines it once per conversation and reuses it for every invocation:
+   - name: the Codex column's name;
+   - system prompt: the **Limits** cell as opening instructions (stop within the turn cap,
+     read and follow each preloaded skill first, call no MCP tool outside the list; an MCP
+     tool reads \`Server:tool\` with the Claude-side server name, so match the active
+     runtime's equivalent server, and \`Server:*\` allows every tool of that server), then
+     the body of \`agents/<agent>.md\` in the root of the plugin named by the logical id,
+     after its frontmatter;
+   - capabilities: exactly **Needs**. \`shell\` or \`write\` enables write tools (on
+     Antigravity that switch also gates command execution), \`mcp\` enables MCP tools,
+     \`agents\` enables subagent tools, \`all\` enables every switch; enable nothing else.
+     Antigravity's MCP switch grants every MCP tool, so the **Limits** list is enforced by
+     the prompt alone;
+   - model: **Tier**, using the parenthesized Antigravity value as \`invoke_subagent\`'s
+     \`Model\` or the runtime's closest equivalent.
+3. **Inline.** Without subagent support, read that same body and perform its task yourself
+   as one bounded step under its **Limits** and its input and output contract.
 
 ${table}
 
-On Codex, spawn a typed custom agent with isolated task-local context. Never use a
-full-history fork. Pass only the input contract required by the delegated task.
+On every route, pass only the input contract required by the delegated task and restate the
+agent's required output format in the delegation prompt.
 `;
 }
 

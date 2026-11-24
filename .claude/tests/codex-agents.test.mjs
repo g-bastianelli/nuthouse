@@ -4,6 +4,9 @@ import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import {
+  agentLimits,
+  agentNeeds,
+  agentTier,
   applyAgentPlan,
   checkAgents,
   checkRuntimeMaps,
@@ -154,6 +157,80 @@ describe("Codex agent parity", () => {
     }
 
     expect(expectedRuntimeMapFiles(REPO_ROOT).size).toBeGreaterThan(0);
+  });
+
+  test("derives prompt-defined subagent capabilities and limits from the Claude frontmatter", () => {
+    const agent = (fields) => ({ sourcePath: "x.md", skills: [], tools: [], ...fields });
+    expect(agentNeeds(agent({ tools: ["Glob", "Bash", "mcp__srv__get_issue"] }))).toEqual([
+      "read",
+      "shell",
+      "mcp",
+    ]);
+    expect(agentNeeds(agent({ tools: ["WebFetch"] }))).toEqual(["web"]);
+    expect(agentNeeds(agent({}))).toEqual(["all"]);
+    expect(() => agentNeeds(agent({ tools: ["Read", "Frobnicate"] }))).toThrow(
+      "x.md: no capability mapping for tool Frobnicate",
+    );
+    expect(
+      agentLimits(
+        agent({
+          maxTurns: "7",
+          skills: ["p:s"],
+          tools: ["Read", "mcp__srv__get_issue", "mcp__srv__list_comments"],
+        }),
+      ),
+    ).toBe("≤7 turns; preload `p:s`; MCP only `srv:get_issue`, `srv:list_comments`");
+    expect(agentLimits(agent({ tools: ["mcp__claude_ai_Linear__get__thing"] }))).toBe(
+      "MCP only `Linear:get__thing`",
+    );
+    expect(agentLimits(agent({ tools: ["mcp__srv"] }))).toBe("MCP only `srv:*`");
+    expect(agentLimits(agent({}))).toBe("");
+    expect(
+      ["haiku", "sonnet", "opus", "inherit"].map((model) => agentTier(agent({ model }))),
+    ).toEqual(["fast (`flash_lite`)", "balanced (`flash`)", "strong (`pro`)", "inherit"]);
+    expect(() => agentTier(agent({ model: "gpt" }))).toThrow("unsupported Claude model gpt");
+  });
+
+  test("refuses an allowlist it cannot parse instead of widening it", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "nuthouse-agent-tools-"));
+    const directory = path.join(root, "test-plugin", "agents");
+    try {
+      fs.mkdirSync(directory, { recursive: true });
+      fs.writeFileSync(
+        path.join(directory, "reader.md"),
+        "---\nname: reader\ndescription: Reads.\ntools: Read, Grep\n---\nBody\n",
+      );
+      expect(() => listAgentSources(root)).toThrow("tools must be a block list");
+      fs.writeFileSync(
+        path.join(directory, "reader.md"),
+        "---\nname: reader\ndescription: Reads.\ntools:\n  - Read\n  # wide\n  - Bash\n---\nBody\n",
+      );
+      expect(() => listAgentSources(root)).toThrow('tools: list item "  - Bash" after a break');
+      fs.writeFileSync(
+        path.join(directory, "reader.md"),
+        "---\nname: reader\ndescription: Reads.\nskills:\n  - p:s\ntools:\n  - Read\n---\nBody\n",
+      );
+      expect(listAgentSources(root)[0].skills).toEqual(["p:s"]);
+      fs.writeFileSync(
+        path.join(directory, "reader.md"),
+        "---\nname: reader\ndescription: Reads.\nskills: []\ntools:\n  - Read\n---\nBody\n",
+      );
+      expect(listAgentSources(root)[0].skills).toEqual([]);
+    } finally {
+      fs.rmSync(root, { recursive: true });
+    }
+  });
+
+  test("gives every runtime map the named, prompt-defined, and inline routes", () => {
+    const maps = [...expectedRuntimeMapFiles(REPO_ROOT).values()];
+    expect(maps.length).toBeGreaterThan(0);
+    for (const map of maps) {
+      expect(map).toContain("1. **Named agent.**");
+      expect(map).toContain("2. **Prompt-defined subagent.**");
+      expect(map).toContain("3. **Inline.**");
+      expect(map).toContain("| Tier ");
+      expect(map).toContain("| Limits ");
+    }
   });
 
   test("keeps generated project agents synchronized", () => {

@@ -53,8 +53,8 @@ authorized supervisor and issue workers perform subsequent delivery mutations.
    single project whose path owns the current path or Git common directory; otherwise use
    the sole listed local project.
 6. For a missing agent, run `superset agents list --host <targetHostId> --json`. Use the
-   active runtime (`codex` or `claude`) only when that exact preset or id is listed;
-   otherwise use the sole listed terminal-capable Codex or Claude agent. Exclude Superset
+   active runtime (`codex`, `claude`, or `agy`) only when that exact preset or id is listed;
+   otherwise use the sole listed terminal-capable Codex, Claude, or Antigravity agent. Exclude Superset
    chat because terminal follow-ups cannot control it. Preserve configured model/effort.
 7. Failed, malformed, empty, or ambiguous discovery supplies no value. Gather every
    unresolved selector and its deterministic available choices into one concise

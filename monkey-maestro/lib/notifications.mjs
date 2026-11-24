@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
+import fs from "node:fs";
 import net from "node:net";
 import path from "node:path";
 
@@ -17,6 +18,9 @@ const TYPES = new Set([
 ]);
 const STATUSES = new Set(["queued", "written", "failed", "unknown"]);
 const OPERATION_TIMEOUT_MS = 10000;
+// An Antigravity master re-arms only when its current turn ends, so a sender waits out one turn.
+const ANTIGRAVITY_CONNECT_WINDOW_MS = 15 * 60 * 1000;
+const MAX_SOCKET_PATH_BYTES = 100;
 
 function invalid(message) {
   throw new Error(message);
@@ -64,10 +68,15 @@ function validateRuntime(value) {
     uuid(value.threadId, "runtime.threadId");
     absolute(value.executable, "runtime.executable");
     absolute(value.home, "runtime.home");
-  } else if (value.provider === "claude") {
+  } else if (value.provider === "claude" || value.provider === "antigravity") {
     object(value, "runtime", ["provider", "socketPath"]);
     absolute(value.socketPath, "runtime.socketPath");
-  } else invalid("runtime.provider must be codex or claude");
+    if (
+      value.provider === "antigravity" &&
+      Buffer.byteLength(value.socketPath) > MAX_SOCKET_PATH_BYTES
+    )
+      invalid(`runtime.socketPath must be at most ${MAX_SOCKET_PATH_BYTES} bytes`);
+  } else invalid("runtime.provider must be codex, claude, or antigravity");
 }
 function validateOperation(value) {
   object(value, "event.operation", [
@@ -111,7 +120,8 @@ export function validateRequest(value) {
   object(event.source, "event.source", ["hostId", "workspaceId", "provider", "sessionId"]);
   for (const key of ["hostId", "workspaceId", "sessionId"])
     identifier(event.source[key], `event.source.${key}`);
-  if (!["claude", "codex"].includes(event.source.provider)) invalid("unsupported source.provider");
+  if (!["claude", "codex", "antigravity"].includes(event.source.provider))
+    invalid("unsupported source.provider");
   string(event.summary, "event.summary", 4000);
   if (event.evidence !== undefined) {
     if (!Array.isArray(event.evidence) || event.evidence.length > 8)
@@ -211,7 +221,257 @@ function commandFailure(event, command, label) {
     `${label}: ${command.timedOut ? "timed out; acceptance is unknown" : (command.error || command.stderr || `exit ${command.code}`).slice(0, 500)}`,
   );
 }
-async function sendLocal(event, runtime, run) {
+function assertPrivateDir(dir, stat) {
+  if (!stat.isDirectory())
+    invalid(`socket directory ${dir} must be a directory, not a file or link`);
+  if (typeof process.getuid === "function" && stat.uid !== process.getuid())
+    invalid(`socket directory ${dir} must be owned by the current user`);
+  if ((stat.mode & 0o777) !== 0o700) invalid(`socket directory ${dir} must have mode 0700`);
+}
+
+async function ensurePrivateDir(socketPath) {
+  const dir = path.dirname(socketPath);
+  let created = false;
+  try {
+    await fs.promises.mkdir(dir, { mode: 0o700 });
+    created = true;
+  } catch (error) {
+    if (error.code !== "EEXIST") throw error;
+  }
+  if (created) await fs.promises.chmod(dir, 0o700);
+  assertPrivateDir(dir, await fs.promises.lstat(dir));
+}
+
+// Antigravity has no native inbound route into a live session (a second `agy acp` client
+// forks the conversation), but a finished background task wakes it. Its receiver therefore
+// runs one bounded `listen` task; this sends one frame to that listener's socket.
+function sendListener(event, socketPath, dependencies) {
+  const now = dependencies.now ?? Date.now;
+  const sleep = dependencies.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
+  const deadline = now() + (dependencies.connectWindowMs ?? ANTIGRAVITY_CONNECT_WINDOW_MS);
+  const dir = path.dirname(socketPath);
+  const attempt = async () => {
+    try {
+      assertPrivateDir(dir, await fs.promises.lstat(dir));
+    } catch (error) {
+      return error.code === "ENOENT"
+        ? { rearm: true, reason: error.message }
+        : result(event, "failed", error.message);
+    }
+    return new Promise((resolve) => {
+      let written = false;
+      let reply = "";
+      const socket = net.createConnection(socketPath);
+      const finish = (outcome) => {
+        socket.destroy();
+        resolve(outcome);
+      };
+      socket.setTimeout(OPERATION_TIMEOUT_MS, () =>
+        finish(result(event, written ? "unknown" : "failed", "Antigravity listener timed out")),
+      );
+      // The listener replies `accepted` only after keeping the event, so a connection that
+      // ends without that reply delivered nothing and the next listener can take it.
+      socket.on("error", (error) =>
+        finish(
+          ["ENOENT", "ECONNREFUSED", "ECONNRESET", "EPIPE"].includes(error.code)
+            ? { rearm: true, reason: error.message }
+            : result(event, written ? "unknown" : "failed", error.message),
+        ),
+      );
+      socket.on("connect", () => {
+        socket.write(`${JSON.stringify({ event })}\n`, () => {
+          written = true;
+        });
+      });
+      socket.setEncoding("utf8");
+      socket.on("data", (chunk) => {
+        reply += chunk;
+        if (reply.startsWith("rejected\n"))
+          finish(result(event, "failed", "Antigravity listener rejected the event"));
+        if (reply.startsWith("accepted\n"))
+          finish(
+            result(
+              event,
+              "written",
+              "Antigravity listener accepted; the session wakes when its listen task ends, processing is not confirmed",
+            ),
+          );
+      });
+      socket.on("close", () =>
+        finish({ rearm: true, reason: "listener closed without accepting" }),
+      );
+    });
+  };
+  return (async () => {
+    for (;;) {
+      const outcome = await attempt();
+      if (!outcome.rearm) return outcome;
+      // Nothing was delivered, so waiting for the receiver to re-arm cannot duplicate the event.
+      if (now() >= deadline)
+        return result(event, "failed", `no armed Antigravity listener: ${outcome.reason}`);
+      await sleep(Math.min(250, deadline - now()));
+    }
+  })();
+}
+
+export function listen({ socketPath, timeoutMs = 3600000, batchMs = 1000 }) {
+  absolute(socketPath, "socketPath");
+  if (Buffer.byteLength(socketPath) > MAX_SOCKET_PATH_BYTES)
+    invalid(`socketPath must be at most ${MAX_SOCKET_PATH_BYTES} bytes`);
+  integer(timeoutMs, "timeoutMs", 1000, 86400000);
+  integer(batchMs, "batchMs", 0, 10000);
+  const destination = { kind: "local", runtime: { provider: "antigravity", socketPath } };
+  return new Promise((resolve, reject) => {
+    const events = [];
+    // Connections without an accepted frame. Closing cuts them at once: their senders got no
+    // `accepted`, so they retry on the next listener instead of holding this one open.
+    const unaccepted = new Set();
+    let batch;
+    let expiry;
+    let listening = false;
+    let closing = false;
+    let recovered = false;
+    let server;
+    const accept = (socket) => {
+      if (closing) return socket.destroy();
+      let buffer = "";
+      unaccepted.add(socket);
+      socket.setEncoding("utf8");
+      socket.on("error", () => {});
+      socket.on("close", () => unaccepted.delete(socket));
+      socket.on("data", (chunk) => {
+        if (!unaccepted.has(socket)) return;
+        buffer += chunk;
+        if (Buffer.byteLength(buffer) > MAX_INPUT_BYTES * 2) return socket.destroy();
+        const newline = buffer.indexOf("\n");
+        if (newline === -1) return;
+        unaccepted.delete(socket);
+        let event;
+        try {
+          // Any local process can connect; accept only a valid Maestro event.
+          ({ event } = validateRequest({
+            event: parseJson(buffer.slice(0, newline))?.event,
+            destination,
+          }));
+        } catch {
+          return socket.end("rejected\n", () => socket.destroy());
+        }
+        events.push(event);
+        socket.end("accepted\n", () => socket.destroy());
+        // Brief batching collects concurrent workers into one wake-up.
+        batch ??= setTimeout(done, batchMs);
+      });
+    };
+    function stop() {
+      closing = true;
+      clearTimeout(expiry);
+      clearTimeout(batch);
+      process.off("SIGTERM", done);
+      process.off("SIGINT", done);
+      for (const socket of unaccepted) socket.destroy();
+    }
+    function done() {
+      if (closing) return;
+      stop();
+      // Node removes the socket file on close.
+      server.close(() =>
+        resolve(events.length ? { status: "received", events } : { status: "expired" }),
+      );
+    }
+    // A listener that cannot report must not keep accepting events it will never print.
+    function abort(error) {
+      stop();
+      try {
+        server?.close(() => {});
+      } catch {}
+      reject(error);
+    }
+    function armed() {
+      listening = true;
+      expiry = setTimeout(done, timeoutMs);
+      // A cancelled task closes cleanly, so its socket file does not block the next listener.
+      process.once("SIGTERM", done);
+      process.once("SIGINT", done);
+    }
+    function failed(error) {
+      // Accepted events were promised to their senders: print them rather than fail.
+      if (listening) return events.length ? done() : abort(error);
+      if (error.code !== "EADDRINUSE" || recovered) return abort(error);
+      recovered = true;
+      const armedElsewhere = () => abort(new Error(`another listener is armed on ${socketPath}`));
+      // A killed listener leaves its socket file; remove it only when nothing answers there.
+      fs.promises
+        .lstat(socketPath)
+        .then(
+          async (stale) => {
+            // Never delete a regular file or a link that happens to sit on this path.
+            if (!stale.isSocket()) return abort(error);
+            if (await answers(socketPath)) return armedElsewhere();
+            return reclaim().then((reclaimed) => (reclaimed ? bind() : armedElsewhere()));
+          },
+          (statError) => (statError.code === "ENOENT" ? bind() : abort(statError)),
+        )
+        .catch(abort);
+    }
+    function answers(target) {
+      return new Promise((resolve, reject) => {
+        const probe = net.createConnection(target);
+        probe.on("connect", () => {
+          probe.destroy();
+          resolve(true);
+        });
+        // Bun reports a refused Unix socket as ENOENT; either way nothing answers.
+        probe.on("error", (probeError) =>
+          ["ECONNREFUSED", "ENOENT"].includes(probeError.code)
+            ? resolve(false)
+            : reject(probeError),
+        );
+      });
+    }
+    // Another listener may reclaim the same stale file first. Moving the file aside is atomic,
+    // and the private copy is probed again: Linux reuses inode numbers, so identity proves nothing.
+    async function reclaim() {
+      const dir = path.dirname(socketPath);
+      // Keep the probe path within Unix sun_path limits even for a 100-byte socketPath.
+      const tokenLength = Math.min(16, Math.max(3, 101 - Buffer.byteLength(dir)));
+      const aside = path.join(dir, `.${randomUUID().replaceAll("-", "").slice(0, tokenLength)}`);
+      try {
+        await fs.promises.rename(socketPath, aside);
+      } catch (renameError) {
+        if (renameError.code === "ENOENT") return true;
+        throw renameError;
+      }
+      try {
+        if (!(await answers(aside))) {
+          await fs.promises.unlink(aside);
+          return true;
+        }
+        await fs.promises.link(aside, socketPath).catch(() => {});
+        await fs.promises.unlink(aside);
+        return false;
+      } catch (probeError) {
+        await fs.promises.link(aside, socketPath).catch(() => {});
+        await fs.promises.unlink(aside).catch(() => {});
+        throw probeError;
+      }
+    }
+    // A fresh server per attempt: Bun cannot rebind one whose listen failed.
+    function bind() {
+      server = net.createServer(accept).on("error", failed).on("listening", armed);
+      server.listen(socketPath);
+    }
+    ensurePrivateDir(socketPath).then(bind, abort);
+  });
+}
+
+export function renderReceived(events) {
+  return events.map(message).join("\n\n");
+}
+
+async function sendLocal(event, runtime, dependencies) {
+  const run = dependencies.run ?? runBounded;
+  if (runtime.provider === "antigravity")
+    return sendListener(event, runtime.socketPath, dependencies);
   if (runtime.provider === "codex") {
     const env = { ...process.env, CODEX_HOME: runtime.home };
     // Queueing is not a new Superset agent lifecycle or a turn in the sender's TUI log.
@@ -321,7 +581,10 @@ async function sendRemote(event, destination, dependencies) {
     );
   let outcome = result(event, "unknown", "No runtime receipt; acceptance is unknown");
   const now = dependencies.now ?? Date.now;
-  const receiptDeadline = now() + 30000;
+  const antigravity = destination.runtime.provider === "antigravity";
+  // The remote helper may wait out the receiving master's turn before it prints a receipt.
+  const receiptDeadline = now() + (antigravity ? ANTIGRAVITY_CONNECT_WINDOW_MS : 0) + 30000;
+  let slowReads = 0;
   try {
     while (now() < receiptDeadline) {
       const read = await run(
@@ -329,7 +592,14 @@ async function sendRemote(event, destination, dependencies) {
         ["terminals", "read", ...target, "--terminal", terminalId, "--max-lines", "120", "--json"],
         { timeoutMs: Math.min(2000, receiptDeadline - now()) },
       );
-      if (read.code !== 0) break;
+      if (read.code !== 0) {
+        // While the helper waits for the master to re-arm, a few slow reads are not its end;
+        // any other read failure means the terminal is gone.
+        if (!antigravity || !read.timedOut || ++slowReads > 5) break;
+        await sleep(Math.min(2000, Math.max(0, receiptDeadline - now())));
+        continue;
+      }
+      slowReads = 0;
       const snapshot = parseJson(read.stdout);
       if (snapshot?.terminalId !== terminalId) break;
       const text = snapshot.text;
@@ -347,7 +617,7 @@ async function sendRemote(event, destination, dependencies) {
         break;
       }
       const remaining = receiptDeadline - now();
-      if (remaining > 0) await sleep(Math.min(250, remaining));
+      if (remaining > 0) await sleep(Math.min(antigravity ? 2000 : 250, remaining));
     }
   } finally {
     const cleanup = await run(
@@ -362,7 +632,7 @@ async function sendRemote(event, destination, dependencies) {
 export async function notify(value, dependencies = {}) {
   const { event, destination } = validateRequest(value);
   return destination.kind === "local"
-    ? sendLocal(event, destination.runtime, dependencies.run ?? runBounded)
+    ? sendLocal(event, destination.runtime, dependencies)
     : sendRemote(event, destination, dependencies);
 }
 

@@ -25,7 +25,22 @@ A local destination is one of:
 ```json
 {"kind":"local","runtime":{"provider":"codex","threadId":"<actual UUID>","executable":"<absolute codex executable>","home":"<actual Codex home>"}}
 {"kind":"local","runtime":{"provider":"claude","socketPath":"<actual messaging socket>"}}
+{"kind":"local","runtime":{"provider":"antigravity","socketPath":"/tmp/maestro-<fresh uuid>/notify.sock"}}
 ```
+
+Antigravity has no native inbound route into a live session: a second `agy acp` client
+forks the conversation instead of waking it. A finished background task does wake it. An
+Antigravity receiver therefore runs one bounded background task,
+`node <NOTIFY_HELPER> listen --socket <path> [--timeout-ms <n>]`. Choose one fresh absolute
+path of at most 100 bytes inside a dedicated `/tmp/maestro-<fresh uuid>` directory when
+capturing the destination, and re-arm every later listener on that same path: `listen`
+creates that `0700` directory and both sides reject a shared or foreign directory, while
+workers keep the captured path. The task ends with the received events or
+`expired`, prints each event as data, and removes the socket; the next listener reclaims a
+killed listener's stale socket. Its session id is `ANTIGRAVITY_CONVERSATION_ID`. Between two
+listeners the master may be busy with a whole turn, so a sender waits up to 15 minutes for
+an armed listener and reports `failed` when none appears; nothing is queued for later. Run
+a `send` to an Antigravity destination as a background task, not a blocking tool call.
 
 Codex must be loaded in the runtime serving that exact home/thread. A CLI binary, valid
 UUID, or daemon-version response alone does not establish the route. Do not change the
@@ -176,7 +191,10 @@ reserving/refilling. Other events normally need only their scoped facts. Do not 
 unrelated transcripts or the full project for an acknowledgment or duplicate.
 
 End the master turn when no immediate action remains. Native input wakes the loaded
-session. External Linear edits, silent worker loss, or a closed master require explicit
+session. An Antigravity master re-arms a listener on the captured path as the first action
+after each wake, before handling the delivered events, and never holds more than one
+listener at a time. A listener that ends while the master is still busy wakes it after that
+turn; senders arriving in between wait within their connect window. External Linear edits, silent worker loss, or a closed master require explicit
 inspection/resumption; there is no periodic fallback hidden in this workflow.
 
 ## Bounded worker waits
@@ -190,7 +208,7 @@ cannot prove a future worker thread's route before launch. The
 `git-gremlin:finish-pr` wait reference owns the PR observer and snapshot contract. Preserve
 its exact operation id, repository, PR number, head, and base through delivery handoffs.
 
-Claude uses a native background task completion for the one bounded observer. Codex runs
+Claude and Antigravity use a native background task completion for the one bounded observer. Codex runs
 `notify.mjs wait-and-notify` under an observable tool background/yield handle with its own
 local destination; the wrapper emits one `wait-result` after the observer ends. A
 supervised Codex worker must also supply the captured master as `failureDestination`:
@@ -223,6 +241,8 @@ reception and session settings; its complete socket frame is not a public schema
 adapter against the installed version before claiming unattended mixed-provider reception.
 [Codex queue implementation](https://github.com/openai/codex/blob/main/codex-rs/ext/queue/src/service.rs)
 wakes loaded eligible threads; queue acknowledgment is not processing.
+Antigravity listener delivery and background-task wake were observed with `agy` 1.5.15
+(ADR 0010); listener acceptance is not processing.
 [Superset SDK](https://docs.superset.sh/sdk/reference) exposes host-targeted command terminals;
 a real two-host test is required for a two-host claim. Retain observed versions and results,
 not an invented minimum-version guarantee.

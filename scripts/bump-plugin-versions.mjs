@@ -10,7 +10,11 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const MARKETPLACE_PATH = ".claude-plugin/marketplace.json";
-const MANIFEST_FILES = [".claude-plugin/plugin.json", ".codex-plugin/plugin.json"];
+const MANIFEST_FILES = [
+  ".claude-plugin/plugin.json",
+  ".codex-plugin/plugin.json",
+  ".antigravity-plugin/plugin.json",
+];
 
 export function bumpPatch(version) {
   const match = /^(\d+)\.(\d+)\.(\d+)$/.exec(version);

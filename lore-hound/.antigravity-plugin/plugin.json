@@ -1,0 +1,13 @@
+{
+  "$schema": "https://antigravity.google/schemas/v1/plugin.json",
+  "name": "lore-hound",
+  "displayName": "Lore Hound",
+  "version": "1.0.6",
+  "description": "Source-hunting research harness: fan-out web search → fetch+summarize → adversarial verification → cited synthesis. Zero parametric knowledge — answers only from verified sources.",
+  "author": {
+    "name": "g-bastianelli"
+  },
+  "homepage": "https://github.com/g-bastianelli/nuthouse",
+  "repository": "https://github.com/g-bastianelli/nuthouse",
+  "logo": "assets/banner.png"
+}

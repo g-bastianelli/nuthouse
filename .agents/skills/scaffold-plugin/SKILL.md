@@ -20,12 +20,14 @@ Create a persona-led plugin at one root. Runtime-specific code may branch; skill
    and whether project artifacts or shared contracts are expected.
 3. Reject corporate/abstract names and collisions. A nuthouse plugin must have a persona; if the
    user rejects that contract, stop instead of generating an incompatible plugin.
-4. Read the persona, Claude manifest, Codex manifest, README, and banner prompt templates
+4. Read the persona, Claude manifest, Codex manifest, Antigravity manifest, README, and banner prompt templates
    immediately before generation. Substitute their variables and fill only their explicit
    placeholders; do not restate the templates inside this skill.
 5. Create the canonical root layout:
    - `persona.md`, `assets/BANNER_PROMPT.md`, `assets/`, and `skills/`;
    - `.claude-plugin/plugin.json` plus `claudecode/` only for Claude support;
+   - `.antigravity-plugin/plugin.json` alongside the Claude manifest (Antigravity reads the same
+     root `skills/`; it has no registry);
    - `.codex-plugin/plugin.json` plus runtime-neutral `lib/` or `tests/` only when needed;
    - `shared/` only when a concrete artifact or cross-cutting contract needs it.
 6. When hooks are selected, read [references/hooks.md](references/hooks.md) before creating them.
