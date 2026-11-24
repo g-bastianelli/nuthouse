@@ -160,8 +160,9 @@ than the full rule text.
     stale-socket check (https://gavv.github.io/articles/unix-socket-reuse/). A plain
     check-then-unlink let two simultaneous reclaimers both arm, one of them on an unlinked
     socket, in about a quarter of stress rounds. The reclaimer therefore renames the file
-    aside (atomic), deletes it only when it is the inode that refused, and otherwise links a
-    live socket back and gives up. A regression test runs 40 such races.
+    aside (atomic) and probes that private copy again: it deletes the copy only when it still
+    refuses, and otherwise links the live socket back and gives up. An inode comparison is not
+    enough because Linux reuses inode numbers at once. A regression test runs 40 such races.
 
   There is no queue, no daemon and no lock file. Live runs on `agy` 1.5.15 checked that:
   - a worker `done` event woke a listening session, which read it;
