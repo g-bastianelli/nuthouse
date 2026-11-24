@@ -1,7 +1,17 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  chmod,
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  rm,
+  stat,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import net from "node:net";
 import os from "node:os";
 import path from "node:path";
@@ -238,7 +248,11 @@ process.stdout.write(JSON.stringify({ result, parentUnchanged: before === JSON.s
 });
 
 describe("Antigravity listener transport", () => {
-  const socketFor = () => `/tmp/mm-test-${crypto.randomUUID().slice(0, 8)}.sock`;
+  const socketFor = () => {
+    const directory = `/tmp/mm-test-${crypto.randomUUID().slice(0, 8)}`;
+    tempDirs.push(directory);
+    return `${directory}/s.sock`;
+  };
   const antigravity = (socketPath) => ({
     kind: "local",
     runtime: { provider: "antigravity", socketPath },
@@ -334,13 +348,10 @@ describe("Antigravity listener transport", () => {
 
   test("never deletes a regular file that sits on the socket path", async () => {
     const socketPath = socketFor();
+    await mkdir(path.dirname(socketPath), { mode: 0o700 });
     await writeFile(socketPath, "notes");
-    try {
-      await expect(listen({ socketPath, timeoutMs: 1000 })).rejects.toThrow();
-      expect(await readFile(socketPath, "utf8")).toBe("notes");
-    } finally {
-      await rm(socketPath, { force: true });
-    }
+    await expect(listen({ socketPath, timeoutMs: 1000 })).rejects.toThrow();
+    expect(await readFile(socketPath, "utf8")).toBe("notes");
   });
 
   test("closes promptly despite a client trickling an unfinished frame", async () => {
@@ -360,10 +371,12 @@ describe("Antigravity listener transport", () => {
   test("a sender cut before acceptance retries on the next listener", async () => {
     // Bun's client never observes the server-side close; Node, the production runtime, does.
     const library = path.resolve(import.meta.dir, "..", "lib", "notifications.mjs");
+    const socketPath = socketFor();
+    await mkdir(path.dirname(socketPath), { mode: 0o700 });
     const code = `
       import net from "node:net";
       import { listen, notify } from ${JSON.stringify(library)};
-      const socketPath = ${JSON.stringify(socketFor())};
+      const socketPath = ${JSON.stringify(socketPath)};
       const event = ${JSON.stringify(event)};
       // A listener closing its batch drops connections it has not accepted.
       const closing = net.createServer((socket) => socket.destroy());
@@ -405,11 +418,70 @@ describe("Antigravity listener transport", () => {
     await notify({ event, destination: antigravity(socketPath) });
     expect((await first).events).toEqual([event]);
   });
+
+  test("requires a mode 0700 directory and refuses shared or symlinked socket directories", async () => {
+    const socketPath = socketFor();
+    const listening = listen({ socketPath, timeoutMs: 5000, batchMs: 0 });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(((await stat(path.dirname(socketPath))).mode & 0o777).toString(8)).toBe("700");
+    await notify({ event, destination: antigravity(socketPath) });
+    await listening;
+
+    await expect(listen({ socketPath: "/tmp/mm-shared.sock", timeoutMs: 1000 })).rejects.toThrow(
+      /socket directory/,
+    );
+
+    const openDir = await mkdtemp(path.join(os.tmpdir(), "mm-open-"));
+    const realDir = await mkdtemp(path.join(os.tmpdir(), "mm-real-"));
+    const linkDir = `/tmp/mm-link-${crypto.randomUUID().slice(0, 8)}`;
+    tempDirs.push(openDir, realDir, linkDir);
+    await chmod(openDir, 0o755);
+    await symlink(realDir, linkDir);
+
+    let connections = 0;
+    const openServer = net.createServer((socket) => {
+      connections += 1;
+      socket.end("accepted\n");
+    });
+    const linkServer = net.createServer((socket) => {
+      connections += 1;
+      socket.end("accepted\n");
+    });
+    await new Promise((resolve) => openServer.listen(path.join(openDir, "s.sock"), resolve));
+    await new Promise((resolve) => linkServer.listen(path.join(realDir, "s.sock"), resolve));
+    try {
+      await expect(
+        listen({ socketPath: path.join(openDir, "other.sock"), timeoutMs: 1000 }),
+      ).rejects.toThrow("mode 0700");
+      await expect(
+        listen({ socketPath: path.join(linkDir, "other.sock"), timeoutMs: 1000 }),
+      ).rejects.toThrow("directory");
+
+      const openSent = await notify({
+        event,
+        destination: antigravity(path.join(openDir, "s.sock")),
+      });
+      const linkSent = await notify({
+        event,
+        destination: antigravity(path.join(linkDir, "s.sock")),
+      });
+      expect(openSent.status).toBe("failed");
+      expect(linkSent.status).toBe("failed");
+      expect(connections).toBe(0);
+    } finally {
+      await new Promise((resolve) => openServer.close(resolve));
+      await new Promise((resolve) => linkServer.close(resolve));
+    }
+  });
 });
 
 describe("Antigravity listen command", () => {
   const script = path.resolve(import.meta.dir, "..", "scripts", "notify.mjs");
-  const socketFor = () => `/tmp/mm-cli-${crypto.randomUUID().slice(0, 8)}.sock`;
+  const socketFor = () => {
+    const directory = `/tmp/mm-cli-${crypto.randomUUID().slice(0, 8)}`;
+    tempDirs.push(directory);
+    return `${directory}/s.sock`;
+  };
   const destination = (socketPath) => ({
     kind: "local",
     runtime: { provider: "antigravity", socketPath },
@@ -477,6 +549,25 @@ describe("Antigravity listen command", () => {
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect((await notify({ event, destination: destination(socketPath) })).status).toBe("written");
     expect((await listening).events).toEqual([event]);
+  });
+
+  test("reclaims a killed listener at the 100-byte socket path limit without leaving probe files", async () => {
+    const prefix = `/tmp/mm-max-${crypto.randomUUID().slice(0, 8)}-`;
+    const directory = `${prefix}${"d".repeat(100 - prefix.length - "/s.sock".length)}`;
+    tempDirs.push(directory);
+    const socketPath = `${directory}/s.sock`;
+    expect(Buffer.byteLength(socketPath)).toBe(100);
+
+    const killed = start(socketPath);
+    await armed(socketPath);
+    killed.child.kill("SIGKILL");
+    await killed.exited;
+
+    const listening = listen({ socketPath, timeoutMs: 5000, batchMs: 0 });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect((await notify({ event, destination: destination(socketPath) })).status).toBe("written");
+    expect((await listening).events).toEqual([event]);
+    expect(await readdir(directory)).toEqual([]);
   });
 
   test("two listeners reclaiming one stale socket leave exactly one reachable", async () => {
@@ -562,7 +653,7 @@ describe("remote receipt ownership", () => {
         event,
         destination: {
           ...remote,
-          runtime: { provider: "antigravity", socketPath: "/tmp/maestro-remote.sock" },
+          runtime: { provider: "antigravity", socketPath: "/tmp/maestro-remote/notify.sock" },
         },
       },
       {

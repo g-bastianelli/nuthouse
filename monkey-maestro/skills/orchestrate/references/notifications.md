@@ -25,15 +25,17 @@ A local destination is one of:
 ```json
 {"kind":"local","runtime":{"provider":"codex","threadId":"<actual UUID>","executable":"<absolute codex executable>","home":"<actual Codex home>"}}
 {"kind":"local","runtime":{"provider":"claude","socketPath":"<actual messaging socket>"}}
-{"kind":"local","runtime":{"provider":"antigravity","socketPath":"/tmp/maestro-<fresh uuid>.sock"}}
+{"kind":"local","runtime":{"provider":"antigravity","socketPath":"/tmp/maestro-<fresh uuid>/notify.sock"}}
 ```
 
 Antigravity has no native inbound route into a live session: a second `agy acp` client
 forks the conversation instead of waking it. A finished background task does wake it. An
 Antigravity receiver therefore runs one bounded background task,
 `node <NOTIFY_HELPER> listen --socket <path> [--timeout-ms <n>]`. Choose one fresh absolute
-path of at most 100 bytes when capturing the destination, and re-arm every later listener on
-that same path: workers keep the captured one. The task ends with the received events or
+path of at most 100 bytes inside a dedicated `/tmp/maestro-<fresh uuid>` directory when
+capturing the destination, and re-arm every later listener on that same path: `listen`
+creates that `0700` directory and both sides reject a shared or foreign directory, while
+workers keep the captured path. The task ends with the received events or
 `expired`, prints each event as data, and removes the socket; the next listener reclaims a
 killed listener's stale socket. Its session id is `ANTIGRAVITY_CONVERSATION_ID`. Between two
 listeners the master may be busy with a whole turn, so a sender waits up to 15 minutes for

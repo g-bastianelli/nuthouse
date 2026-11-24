@@ -221,6 +221,27 @@ function commandFailure(event, command, label) {
     `${label}: ${command.timedOut ? "timed out; acceptance is unknown" : (command.error || command.stderr || `exit ${command.code}`).slice(0, 500)}`,
   );
 }
+function assertPrivateDir(dir, stat) {
+  if (!stat.isDirectory())
+    invalid(`socket directory ${dir} must be a directory, not a file or link`);
+  if (typeof process.getuid === "function" && stat.uid !== process.getuid())
+    invalid(`socket directory ${dir} must be owned by the current user`);
+  if ((stat.mode & 0o777) !== 0o700) invalid(`socket directory ${dir} must have mode 0700`);
+}
+
+async function ensurePrivateDir(socketPath) {
+  const dir = path.dirname(socketPath);
+  let created = false;
+  try {
+    await fs.promises.mkdir(dir, { mode: 0o700 });
+    created = true;
+  } catch (error) {
+    if (error.code !== "EEXIST") throw error;
+  }
+  if (created) await fs.promises.chmod(dir, 0o700);
+  assertPrivateDir(dir, await fs.promises.lstat(dir));
+}
+
 // Antigravity has no native inbound route into a live session (a second `agy acp` client
 // forks the conversation), but a finished background task wakes it. Its receiver therefore
 // runs one bounded `listen` task; this sends one frame to that listener's socket.
@@ -228,8 +249,16 @@ function sendListener(event, socketPath, dependencies) {
   const now = dependencies.now ?? Date.now;
   const sleep = dependencies.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
   const deadline = now() + (dependencies.connectWindowMs ?? ANTIGRAVITY_CONNECT_WINDOW_MS);
-  const attempt = () =>
-    new Promise((resolve) => {
+  const dir = path.dirname(socketPath);
+  const attempt = async () => {
+    try {
+      assertPrivateDir(dir, await fs.promises.lstat(dir));
+    } catch (error) {
+      return error.code === "ENOENT"
+        ? { rearm: true, reason: error.message }
+        : result(event, "failed", error.message);
+    }
+    return new Promise((resolve) => {
       let written = false;
       let reply = "";
       const socket = net.createConnection(socketPath);
@@ -272,6 +301,7 @@ function sendListener(event, socketPath, dependencies) {
         finish({ rearm: true, reason: "listener closed without accepting" }),
       );
     });
+  };
   return (async () => {
     for (;;) {
       const outcome = await attempt();
@@ -352,7 +382,7 @@ export function listen({ socketPath, timeoutMs = 3600000, batchMs = 1000 }) {
     function abort(error) {
       stop();
       try {
-        server.close(() => {});
+        server?.close(() => {});
       } catch {}
       reject(error);
     }
@@ -401,27 +431,36 @@ export function listen({ socketPath, timeoutMs = 3600000, batchMs = 1000 }) {
     // Another listener may reclaim the same stale file first. Moving the file aside is atomic,
     // and the private copy is probed again: Linux reuses inode numbers, so identity proves nothing.
     async function reclaim() {
-      const aside = `${socketPath}.${process.pid}.${randomUUID()}`;
+      const dir = path.dirname(socketPath);
+      // Keep the probe path within Unix sun_path limits even for a 100-byte socketPath.
+      const tokenLength = Math.min(16, Math.max(3, 101 - Buffer.byteLength(dir)));
+      const aside = path.join(dir, `.${randomUUID().replaceAll("-", "").slice(0, tokenLength)}`);
       try {
         await fs.promises.rename(socketPath, aside);
       } catch (renameError) {
         if (renameError.code === "ENOENT") return true;
         throw renameError;
       }
-      if (!(await answers(aside))) {
+      try {
+        if (!(await answers(aside))) {
+          await fs.promises.unlink(aside);
+          return true;
+        }
+        await fs.promises.link(aside, socketPath).catch(() => {});
         await fs.promises.unlink(aside);
-        return true;
+        return false;
+      } catch (probeError) {
+        await fs.promises.link(aside, socketPath).catch(() => {});
+        await fs.promises.unlink(aside).catch(() => {});
+        throw probeError;
       }
-      await fs.promises.link(aside, socketPath).catch(() => {});
-      await fs.promises.unlink(aside);
-      return false;
     }
     // A fresh server per attempt: Bun cannot rebind one whose listen failed.
     function bind() {
       server = net.createServer(accept).on("error", failed).on("listening", armed);
       server.listen(socketPath);
     }
-    bind();
+    ensurePrivateDir(socketPath).then(bind, abort);
   });
 }
 
