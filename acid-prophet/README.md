@@ -48,8 +48,8 @@ within the user's delegated authority.
 
 The user reviews one coherent document. An independent `spec-auditor` reads the spec
 and relevant source/tests without receiving the writer's desired verdict. Behavioral
-contradictions, unobservable requirements, and missing consequential decisions block
-readiness. Optional improvements remain warnings. Abstractions are judged by their
+contradictions, unobservable requirements, a missing Mermaid data-model diagram, and
+missing consequential decisions block readiness. Optional improvements remain warnings. Abstractions are judged by their
 purpose and cost; component and consumer counts are not pass/fail thresholds.
 
 The complete audit reports `simplicity`, `anti-abstraction`, `behavior-consistent`,

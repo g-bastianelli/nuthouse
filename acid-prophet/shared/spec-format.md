@@ -39,6 +39,16 @@ mark proposed files `[new]` and distinguish them from paths claimed to exist. Er
 handling describes observable outcomes and side effects. Testing identifies how the
 behavior can be demonstrated, including relevant failures. Non-goals preserve scope.
 
+### Data model diagram (required)
+
+Architecture always includes one fenced Mermaid diagram of the data model under
+validation — the entities or payload/state shapes, fields that validation cares about,
+relationships, and ownership. Prefer `erDiagram` when entities or relations exist;
+otherwise a compact Mermaid diagram of the validated shapes. Required on every spec,
+including focused behavior changes that introduce no new storage: diagram the shapes
+being validated, not an invented schema. An Architecture section without a Mermaid
+fence, or with a fence that names no validated fields/shapes, fails the format contract.
+
 ## Acceptance identity and meaning
 
 Each active bullet has one stable id and one observable criterion:

@@ -53,6 +53,9 @@ Read `../../shared/spec-format.md`, then write
 - Cover one representative user journey and applicable failures in observable Acceptance:
   invalid input, authorization, repetition, conflict, dependency failure, or partial work.
 - Explain what the caller observes and what state changes or remains intact.
+- In Architecture, always include a Mermaid data-model diagram for validation (entities or
+  payload/state shapes, validated fields, relationships, ownership) per
+  `../../shared/spec-format.md` — even when no new storage is added.
 - Record consequential choices and rejected alternatives with reasons.
 - Cite existing integration points, mark proposed files `[new]`, and keep code examples
   contract-sized.

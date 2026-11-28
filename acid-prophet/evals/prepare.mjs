@@ -21,6 +21,18 @@ export function validateNote(note) {
 }
 `;
 
+const invitationDataModel = `\`\`\`mermaid
+erDiagram
+  Actor ||--o{ Invitation : creates
+  Actor {
+    string role
+  }
+  Invitation {
+    string email
+    string note
+  }
+\`\`\``;
+
 function spec({ id, solution, architecture, components, errors, acceptance, testing }) {
   return `---
 id: ${id}
@@ -41,6 +53,8 @@ ${solution}
 
 ## Architecture
 ${architecture}
+
+${invitationDataModel}
 
 ## Components
 ${components}

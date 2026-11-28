@@ -66,8 +66,10 @@ Use `spec-version: 1`, `last-reviewed: 2026-09-07`, `linear-project: _none_`, an
 retired criteria. Audit cases are drafts with `verified-by: _none_`. The planning case
 is ratified with `verified-by: spec-auditor`, matching its explicit user approval.
 Include every required section and preserve the stated requirements without adding
-policies. The common Problem is inviting colleagues without granting viewers write
-access. Common Non-goals are bulk invitations, billing changes, and automatic retries.
+policies. Architecture always includes the required Mermaid data-model diagram from the
+spec contract (Actor role and Invitation email/note is enough for these fixtures). The
+common Problem is inviting colleagues without granting viewers write access. Common
+Non-goals are bulk invitations, billing changes, and automatic retries.
 
 ### audit-contradiction
 
