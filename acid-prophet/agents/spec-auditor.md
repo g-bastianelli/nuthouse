@@ -59,6 +59,12 @@ evidence. A reversible choice following existing conventions can be ready withou
 separate user approval. Undecided product behavior or a costly unsupported boundary is
 not ready. An unresolved decision remains unresolved even without a marker or vague word.
 
+Confirm Architecture contains a Mermaid fence of the data model under validation per
+`${PLUGIN_ROOT}/shared/spec-format.md`: entities or payload/state shapes, validated
+fields, relationships, and ownership. Absence of that fence, or a fence that names no
+validated fields/shapes, is a format-contract blocker — including when the feature adds
+no new storage.
+
 Judge decomposition by independently deliverable outcomes and coupling. Judge abstractions
 by the responsibility/boundary they establish and the cost relative to a simpler option.
 One consumer can justify isolating an external dependency, permission boundary, or failure
@@ -73,9 +79,10 @@ an AC id as evidence that its behavior can be tested.
 
 - **BLOCKER**: conflicting or undefined behavior that makes implementation guess; an
   untestable/missing acceptance outcome for a stated requirement; a repository or applicable
-  constitution violation; missing essential evidence; broken metadata/identity needed by
-  downstream consumers. An internal behavioral contradiction is a blocker even if both
-  sentences are grammatical and every required heading exists.
+  constitution violation; missing essential evidence; a missing or empty Architecture
+  Mermaid data-model diagram; broken metadata/identity needed by downstream consumers.
+  An internal behavioral contradiction is a blocker even if both sentences are grammatical
+  and every required heading exists.
 - **WARNING**: a concrete improvement or bounded risk with an implementable, unambiguous
   target. The finding must explain why work can proceed. Do not hide an unanswered
   consequential decision here.
@@ -96,8 +103,9 @@ Emit every gate. All except `constitution` take only `pass | fail`.
   cost; fail on unsupported indirection with an identified simpler solution that meets
   the same constraints. Pass when none are introduced.
 - **behavior-consistent**: normative sections agree, repository claims are evidenced,
-  and consequential behavior is decided. Any conflicting outcome or essential missing
-  evidence fails.
+  consequential behavior is decided, and Architecture carries the required Mermaid
+  data-model diagram. Any conflicting outcome, essential missing evidence, or missing
+  / empty data-model diagram fails.
 - **acceptance-defined**: active Acceptance exists, each bullet follows the format contract,
   and the criteria are observable and cover consequential stated behavior.
 - **acceptance-traceable**: ids and retirement records follow the format contract, with
